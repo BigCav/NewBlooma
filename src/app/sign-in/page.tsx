@@ -1,4 +1,3 @@
-import AuthForm from '@/components/AuthForm';
-import { signIn } from '../auth-actions';
+import { AuthView } from '@/components/AuthView';
 export const metadata = { title: 'Sign in' };
-export default function Page() { return <AuthForm action={signIn} mode="in" />; }
+export default function Page() { return <AuthView mode="in" />; }
