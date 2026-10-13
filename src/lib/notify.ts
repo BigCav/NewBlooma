@@ -19,12 +19,15 @@ async function compose(r: Row): Promise<{ subject: string; text: string; html: s
   const { data: salon } = await sb.from('salons').select('name,phone,timezone,slug').eq('id', r.salon_id).single();
   if (!salon) return null;
   let when = '', who = '', manage = '';
+  let b0: unknown = null;
   if (r.booking_id) {
     const { data: b } = await sb.from('bookings').select('starts_at,status,staff(name),clients(name,reminders),booking_services(services(name))').eq('id', r.booking_id).single();
     if (!b) return null;
-    if (r.template !== 'booking_cancelled' && ['cancelled', 'no_show'].includes(b.status)) return null; // nothing to tell them
-    if (r.template === 'booking_cancelled' && b.status !== 'cancelled') return null; // it was reinstated
+    const cancelledTpl = r.template === 'booking_cancelled' || r.template === 'owner_booking_cancelled';
+    if (!cancelledTpl && ['cancelled', 'no_show'].includes(b.status)) return null; // nothing to tell them
+    if (cancelledTpl && b.status !== 'cancelled') return null; // it was reinstated
     if (r.template.startsWith('reminder') && (b as any).clients?.reminders === false) return null; // client turned reminders off
+    b0 = b;
     when = `${dateLong(b.starts_at, salon.timezone)} at ${time12(b.starts_at, salon.timezone)}`;
     who = `${(b as any).booking_services.map((x: any) => x.services.name).join(', ')} with ${(b as any).staff?.name}`;
     const { data: t } = await sb.from('booking_tokens').select('token').eq('booking_id', r.booking_id).eq('purpose', 'manage_booking').maybeSingle();
@@ -34,6 +37,8 @@ async function compose(r: Row): Promise<{ subject: string; text: string; html: s
   switch (r.template) {
     case 'booking_confirmation': subject = `Booking confirmed at ${salon.name}`; lines = [`You are booked in for ${who}.`, when]; break;
     case 'booking_cancelled': subject = `Your booking at ${salon.name} was cancelled`; lines = [`Your appointment has been cancelled: ${who}.`, `It was booked for ${when}.`, 'If this was a mistake, or you would like another time, you can book again online.']; link = `${base()}/b/${salon.slug}`; cta = 'Book again'; break;
+    case 'owner_new_booking': subject = `New booking: ${(b0 as any)?.clients?.name ?? 'a client'}`; lines = [`${(b0 as any)?.clients?.name ?? 'A client'} booked online: ${who}.`, when]; link = `${base()}/inbox`; cta = 'Open your inbox'; break;
+    case 'owner_booking_cancelled': subject = `Cancellation: ${(b0 as any)?.clients?.name ?? 'a client'}`; lines = [`${(b0 as any)?.clients?.name ?? 'A client'} cancelled: ${who}.`, `It was booked for ${when}.`]; link = `${base()}/calendar`; cta = 'Open your calendar'; break;
     case 'reminder_24h': subject = `Reminder: tomorrow at ${salon.name}`; lines = [`Just a reminder of your appointment: ${who}.`, when]; break;
     case 'reminder_2h': subject = `Reminder: today at ${salon.name}`; lines = [`See you soon: ${who}.`, when]; break;
     case 'waitlist_offer': {

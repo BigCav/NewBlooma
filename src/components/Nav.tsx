@@ -20,12 +20,13 @@ const ICON: Record<string, (s?: number, w?: number) => ReactNode> = {
   reports: (s, w) => S(<path d="M5 20v-7M12 20V5M19 20V10" />, s, w),
   store: (s, w) => S(<><path d="M4 9.5 5.2 4.5h13.6L20 9.5" /><path d="M4 9.5a2.67 2.67 0 0 0 5.33 0 2.67 2.67 0 0 0 5.34 0A2.67 2.67 0 0 0 20 9.5" /><path d="M5 12.5V20h14v-7.5" /><path d="M10 20v-4.5h4V20" /></>, s, w),
   settings: (s, w) => S(<><path d="M4 7h10M18 7h2M4 17h2M10 17h10" /><circle cx="16" cy="7" r="2" /><circle cx="8" cy="17" r="2" /></>, s, w),
+  gift: (s, w) => S(<><rect x="4" y="9" width="16" height="11" rx="2" /><path d="M12 9v11M4 13h16M12 9c-1.5-3-5-3-5-.5S10.5 9 12 9zm0 0c1.5-3 5-3 5-.5S13.5 9 12 9z" /></>, s, w),
   more: (s, w) => S(<><circle cx="5.5" cy="12" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="18.5" cy="12" r="1.2" /></>, s, w),
 };
 const RAIL: [string, string, string][] = [
   ['calendar', '/calendar', 'Calendar'], ['inbox', '/inbox', 'Inbox'], ['clients', '/clients', 'Clients'], ['waitlist', '/waitlist', 'Waitlist'],
   ['services', '/services', 'Services'], ['team', '/team', 'Team'], ['payroll', '/payroll', 'Payroll'], ['sales', '/sales', 'Sales'],
-  ['products', '/products', 'Products'], ['reviews', '/reviews', 'Reviews'], ['reports', '/reports', 'Reports'],
+  ['products', '/products', 'Products'], ['gift', '/gift-cards', 'Gift cards'], ['reviews', '/reviews', 'Reviews'], ['reports', '/reports', 'Reports'],
 ];
 
 export function SideNav({ slug, unread }: { slug: string; unread: number }) {

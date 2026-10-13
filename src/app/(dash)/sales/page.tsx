@@ -1,5 +1,5 @@
 import { requireCtx } from '@/lib/session';
-import { ymd } from '@/lib/format';
+import { ymd, time12 } from '@/lib/format';
 import { addDaysYmd, dayInfo } from '@/lib/cal';
 import { initialsOf, type PayMethod, type SaleRow } from './shared';
 import { SalesView } from './SalesView';
@@ -7,7 +7,7 @@ import { SalesView } from './SalesView';
 export const metadata = { title: 'Sales' };
 export const dynamic = 'force-dynamic';
 
-const hm = (iso: string, tz: string) => { const p = new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', hour: 'numeric', minute: '2-digit' }).formatToParts(new Date(iso)); return `${p.find((x) => x.type === 'hour')!.value}:${p.find((x) => x.type === 'minute')!.value}`; };
+const hm = (iso: string, tz: string) => time12(iso, tz);
 
 export default async function Sales({ searchParams }: { searchParams: Promise<{ sale?: string; pay?: string; card?: string }> }) {
   const sp = await searchParams;

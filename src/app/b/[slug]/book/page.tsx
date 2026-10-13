@@ -32,5 +32,5 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     return h && h.is_open ? { from: String(h.open_time).slice(0, 5), to: String(h.close_time).slice(0, 5) } : null;
   });
   return <BookingView slug={slug} name={salon.name} address={salon.address ?? ''} tz={salon.timezone} currency={salon.currency || 'NZD'} services={services} cats={cats} team={team} hours={hours}
-    today={ymd(now, salon.timezone)} nowMin={Number(get('hour')) * 60 + Number(get('minute'))} autoConfirm={settings.auto_confirm} windowDays={({ '1w': 8, '2w': 15, '4w': 29, '8w': 57 } as Record<string, number>)[settings.booking_window] ?? 29} emailOn={emailConfigured()} preselect={service && svcIds.has(service) ? service : ''} />;
+    today={ymd(now, salon.timezone)} nowMin={Number(get('hour')) * 60 + Number(get('minute'))} autoConfirm={settings.auto_confirm} windowDays={({ '1w': 8, '2w': 15, '4w': 29, '8w': 57 } as Record<string, number>)[settings.booking_window] ?? 29} emailOn={emailConfigured() && settings.email_confirmations !== false} preselect={service && svcIds.has(service) ? service : ''} />;
 }
