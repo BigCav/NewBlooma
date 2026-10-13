@@ -12,15 +12,16 @@ export type Ctx = {
 /** Signed-in staff member with a salon. Redirects otherwise. */
 export async function requireCtx(): Promise<Ctx> {
   const sb = await supabaseServer();
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user) redirect('/sign-in');
-  const { data: staff } = await sb.from('staff').select('id,name,app_role,salon_id').eq('user_id', user.id).eq('active', true).maybeSingle();
-  if (!staff) redirect('/setup');
-  const [{ data: salon }, { data: settings }] = await Promise.all([
-    sb.from('salons').select('id,name,slug,timezone,currency').eq('id', staff.salon_id).single(),
-    sb.from('salon_settings').select('*').eq('salon_id', staff.salon_id).single(),
-  ]);
-  return { sb, userId: user.id, staff: staff as Ctx['staff'], salon: salon!, settings: settings ?? {} };
+  // The middleware already verified the session with Supabase; getClaims checks the JWT locally (no extra network trip).
+  const { data: claims } = await sb.auth.getClaims();
+  const uid = claims?.claims?.sub;
+  if (!uid) redirect('/sign-in');
+  // Two round trips: staff + salon together, then settings.
+  const { data: row } = await sb.from('staff').select('id,name,app_role,salon_id,salons(id,name,slug,timezone,currency)').eq('user_id', uid).eq('active', true).maybeSingle();
+  if (!row) redirect('/setup');
+  const { data: settings } = await sb.from('salon_settings').select('*').eq('salon_id', row.salon_id).single();
+  const { salons: salon, ...staff } = row as any;
+  return { sb, userId: uid, staff: staff as Ctx['staff'], salon: salon, settings: settings ?? {} };
 }
 
 export async function requireOwner() {

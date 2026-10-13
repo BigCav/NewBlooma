@@ -15,7 +15,8 @@ export async function middleware(req: NextRequest) {
       },
     },
   });
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: claims } = await supabase.auth.getClaims();
+  const user = claims?.claims?.sub ? { id: claims.claims.sub } : null;
   const path = req.nextUrl.pathname;
   if (!user && !PUBLIC.some((r) => r.test(path))) {
     const url = req.nextUrl.clone(); url.pathname = '/sign-in'; url.search = '';
