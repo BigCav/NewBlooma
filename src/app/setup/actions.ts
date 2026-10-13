@@ -1,20 +1,33 @@
 'use server';
-import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
 import { friendly } from '@/lib/session';
+import { CATS, DAYS, PRESETS, ROLES, STARTERS, currencyFor, slugOf, type SetupInput } from './shared';
 
-export async function createSalon(_: unknown, fd: FormData) {
-  const hours = Array.from({ length: 7 }, (_, d) => ({
-    weekday: d, is_open: fd.get(`open_${d}`) === 'on',
-    open: String(fd.get(`from_${d}`) || '09:00'), close: String(fd.get(`to_${d}`) || '17:00'),
-  }));
-  for (const h of hours) if (h.is_open && h.close <= h.open) return { error: 'Closing time must be after opening time.' };
+export async function createSalon(v: SetupInput): Promise<{ error?: string; slug?: string }> {
   const sb = await supabaseServer();
-  const { error } = await sb.rpc('create_salon', {
-    p_name: String(fd.get('name') ?? ''), p_slug: String(fd.get('slug') ?? ''), p_phone: String(fd.get('phone') ?? ''),
-    p_email: String(fd.get('email') ?? ''), p_address: String(fd.get('address') ?? ''), p_timezone: String(fd.get('timezone') ?? ''),
-    p_currency: String(fd.get('currency') ?? ''), p_hours: hours, p_owner_name: String(fd.get('owner') ?? ''), p_owner_title: String(fd.get('title') ?? 'Owner'),
-  });
-  if (error) return { error: friendly(error.message) };
-  redirect('/settings?welcome=1');
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return { error: 'Please sign in again.' };
+  if (!v.name.trim()) return { error: 'Add your salon name to continue.' };
+  const cats = v.cats.filter((c) => CATS.includes(c));
+  if (!cats.length) return { error: 'Choose at least one category.' };
+  const preset = PRESETS.find((p) => p[0] === v.preset) ?? PRESETS[0];
+  const hours = DAYS.map((_, d) => ({ weekday: d, is_open: !!v.open[DAYS[d]], open: preset[3], close: preset[4] }));
+  if (!hours.some((h) => h.is_open)) return { error: 'Open at least one day.' };
+  const team = v.team.map((m) => ({ name: m.name.trim(), role: ROLES.includes(m.role) ? m.role : 'Other' })).filter((m) => m.name).slice(0, 20);
+  const categories = cats.map((c) => ({ name: c, services: STARTERS[c].map(([name, duration, price]) => ({ name, duration, price_cents: price * 100 })) }));
+  const meta = (user.user_metadata ?? {}) as Record<string, string>;
+  const email = user.email ?? '';
+  const owner = (meta.full_name || meta.name || email.split('@')[0] || 'Owner').trim();
+  const tz = v.timezone || 'UTC';
+  const base = slugOf(v.name);
+  for (let i = 0; i < 6; i++) {
+    const slug = i === 0 ? base : `${base}-${i + 1}`;
+    const { error } = await sb.rpc('setup_salon', {
+      p_name: v.name.trim(), p_slug: slug, p_phone: v.phone.trim(), p_email: email, p_address: v.address.trim(), p_timezone: tz,
+      p_currency: currencyFor(tz), p_hours: hours, p_owner_name: owner, p_categories: categories, p_team: team,
+    });
+    if (!error) return { slug };
+    if (!/salons_slug|duplicate key|unique/i.test(error.message)) return { error: friendly(error.message) };
+  }
+  return { error: 'That salon name is taken. Try a slightly different name.' };
 }
