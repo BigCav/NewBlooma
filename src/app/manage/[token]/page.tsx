@@ -16,7 +16,7 @@ export default async function Manage({ params }: { params: Promise<{ token: stri
   if (!b) notFound();
   const [{ data: salon }, { data: st }, { data: hrs }] = await Promise.all([
     sb.from('salons').select('name,slug,address,timezone,currency').eq('id', b.salon_id).single(),
-    sb.from('salon_settings').select('free_cancel_before').eq('salon_id', b.salon_id).single(),
+    sb.from('salon_settings').select('free_cancel_before,booking_window').eq('salon_id', b.salon_id).single(),
     sb.from('opening_hours').select('weekday,is_open,open_time,close_time').eq('salon_id', b.salon_id),
   ]);
   const tz = salon!.timezone;
@@ -28,5 +28,5 @@ export default async function Manage({ params }: { params: Promise<{ token: stri
   const canAct = ['pending', 'confirmed'].includes(b.status) && new Date(b.starts_at) > new Date();
   const pol = policyInfo(b.starts_at, tz, CANCEL_HOURS[st!.free_cancel_before] ?? 24);
   return <ManageView token={token} salonName={salon!.name} slug={salon!.slug} address={salon!.address ?? ''} currency={salon!.currency || 'NZD'} staffName={(b as any).staff?.name ?? ''} status={b.status}
-    items={items} startYmd={ymd(b.starts_at, tz)} startMin={minutesOfDay(b.starts_at, tz)} canAct={canAct} free={pol.free} deadline={pol.deadline} hours={hours} today={ymd(new Date(), tz)} />;
+    items={items} startYmd={ymd(b.starts_at, tz)} startMin={minutesOfDay(b.starts_at, tz)} canAct={canAct} free={pol.free} deadline={pol.deadline} hours={hours} today={ymd(new Date(), tz)} windowDays={({ '1w': 8, '2w': 15, '4w': 29, '8w': 57 } as Record<string, number>)[st!.booking_window] ?? 29} />;
 }

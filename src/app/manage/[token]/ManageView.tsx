@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's ManageBooking.dc.html and MobileManageBooking.dc.html (the client's appointment page).
 // Markup and style strings are kept as written; the {{ }} holes are the appointment's real data and the handlers are real server actions.
+import { makeMoney } from '@/lib/display';
 import { clock12 } from '@/lib/display';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { S } from '../../(dash)/calendar/pickers';
@@ -10,7 +11,7 @@ type Item = { name: string; dur: number; cents: number };
 type Props = {
   token: string; salonName: string; slug: string; address: string; currency: string; staffName: string; status: string;
   items: Item[]; startYmd: string; startMin: number; canAct: boolean; free: boolean; deadline: string;
-  hours: ({ from: string; to: string } | null)[]; today: string;
+  hours: ({ from: string; to: string } | null)[]; today: string; windowDays: number;
 };
 const DAY_ABBR = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const DAY_NAME = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -27,9 +28,8 @@ const dayInfo = (ymd: string) => {
 };
 
 function useManage(p: Props) {
-  const days = useMemo(() => { const [y, mo, d] = p.today.split('-').map(Number); return Array.from({ length: 28 }, (_, i) => dayInfo(new Date(Date.UTC(y, mo - 1, d + i)).toISOString().slice(0, 10))); }, [p.today]);
-  const cur = useMemo(() => new Intl.NumberFormat('en-NZ', { style: 'currency', currency: p.currency, currencyDisplay: 'narrowSymbol', minimumFractionDigits: 0, maximumFractionDigits: 2 }), [p.currency]);
-  const money = (c: number) => cur.format(c / 100);
+  const days = useMemo(() => { const [y, mo, d] = p.today.split('-').map(Number); return Array.from({ length: Math.min(p.windowDays, 57) }, (_, i) => dayInfo(new Date(Date.UTC(y, mo - 1, d + i)).toISOString().slice(0, 10))); }, [p.today, p.windowDays]);
+  const money = useMemo(() => makeMoney(p.currency), [p.currency]);
   const [mode, setMode] = useState<'view' | 'resched' | 'cancel'>('view');
   const [cancelled, setCancelled] = useState(p.status === 'cancelled');
   const [when, setWhen] = useState({ ymd: p.startYmd, min: p.startMin });
