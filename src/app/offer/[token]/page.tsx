@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { dateLong, time12 } from '@/lib/format';
+import { flushOutbox } from '@/lib/notify';
 
 export const metadata = { title: 'Appointment offer' };
 
@@ -9,6 +10,7 @@ async function accept(token: string) {
   const sb = supabaseAdmin();
   const { data, error } = await sb.rpc('accept_offer', { p_token: token });
   if (error) redirect(`/offer/${token}?gone=1`);
+  await flushOutbox();
   const { data: t } = await sb.from('booking_tokens').select('token').eq('booking_id', data).eq('purpose', 'manage_booking').single();
   redirect(`/manage/${t!.token}?new=1`);
 }
