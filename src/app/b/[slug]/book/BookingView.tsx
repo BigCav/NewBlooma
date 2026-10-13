@@ -12,7 +12,7 @@ type Member = { id: string; name: string; role: string; svc: string[] };
 type Props = {
   slug: string; name: string; address: string; tz: string; currency: string;
   services: Svc[]; cats: string[]; team: Member[]; hours: ({ from: string; to: string } | null)[];
-  today: string; nowMin: number; autoConfirm: boolean; emailOn: boolean; preselect: string;
+  today: string; nowMin: number; autoConfirm: boolean; windowDays: number; emailOn: boolean; preselect: string;
 };
 
 const DAY_ABBR = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -34,7 +34,7 @@ const EMPTY_WL: Wl = { open: false, done: false, name: '', phone: '', error: '' 
 function useBooking(p: Props) {
   const days = useMemo(() => {
     const [y, mo, d] = p.today.split('-').map(Number);
-    return Array.from({ length: 28 }, (_, i) => {
+    return Array.from({ length: Math.min(p.windowDays, 57) }, (_, i) => {
       const dt = new Date(Date.UTC(y, mo - 1, d + i));
       const wd = dt.getUTCDay();
       return {
@@ -42,7 +42,7 @@ function useBooking(p: Props) {
         full: DAY_NAME[wd] + ' ' + dt.getUTCDate() + ' ' + MONTH_NAME[dt.getUTCMonth()],
       };
     });
-  }, [p.today]);
+  }, [p.today, p.windowDays]);
   const money = useMemo(() => makeMoney(p.currency), [p.currency]);
 
   const [step, setStep] = useState(1);
