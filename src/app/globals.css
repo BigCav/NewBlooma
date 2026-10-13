@@ -57,3 +57,7 @@ table{width:100%;border-collapse:collapse}th{font-size:12px;text-transform:upper
 .m-cal input:focus,.m-cal textarea:focus,.d-cal textarea:focus{outline:2px solid #5B3DF5;outline-offset:2px}
 .d-cal .fw:focus-within,.m-cal .fw:focus-within{outline:2px solid #5B3DF5;outline-offset:2px}
 .d-cal fieldset:disabled button,.m-cal fieldset:disabled button{cursor:default}
+
+.bk-flow>*{flex:0 0 auto}
+.bk-list li:last-child>button{border-bottom:0 !important}
+.bkf:focus{outline:2px solid #5B3DF5;outline-offset:2px}
