@@ -203,3 +203,47 @@ export async function rebookBooking(id: string, dayYmd: string, startMin: number
   if (error) return { error: friendly(error.message) };
   revalidatePath('/calendar'); return { ok: true };
 }
+
+
+export type SearchHit = { id: string; dayYmd: string; start: number; client: string; services: string; staff: string; cat: string };
+/** Find bookings by client, service or team member (past 30 days to next 90). */
+export async function searchBookings(q: string): Promise<SearchHit[]> {
+  const { sb, salon } = await requireCtx();
+  const needle = q.trim().toLowerCase(); if (!needle) return [];
+  const a = new Date(Date.now() - 30 * 86400000), b = new Date(Date.now() + 90 * 86400000);
+  const { data } = await sb.from('bookings').select('id,starts_at,staff(name),clients(name),booking_services(services(name,service_categories(name)))')
+    .gte('starts_at', a.toISOString()).lt('starts_at', b.toISOString()).not('status', 'in', '(cancelled,no_show)').order('starts_at').limit(1000);
+  const hits: SearchHit[] = [];
+  for (const x of (data ?? []) as any[]) {
+    const lines = (x.booking_services ?? []) as any[];
+    const services = lines.map((l) => l.services?.name).filter(Boolean).join(' + ');
+    const staff = x.staff?.name ?? '', client = x.clients?.name ?? 'Client';
+    if (!(client + ' ' + services + ' ' + staff).toLowerCase().includes(needle)) continue;
+    hits.push({ id: x.id, dayYmd: ymdOf(x.starts_at, salon.timezone), start: minutesOfDay(x.starts_at, salon.timezone), client, services, staff, cat: lines[0]?.services?.service_categories?.name ?? '' });
+    if (hits.length >= 12) break;
+  }
+  return hits;
+}
+
+/** New appointment: finds or creates the client, books the main services with one team member, and any other services as separate bookings. */
+export async function createNewAppointment(name: string, clientId: string | null, staffId: string, dayYmd: string, startMin: number, serviceIds: string[], extras: { serviceId: string; staffId: string }[]): Promise<R> {
+  const { sb, salon } = await requireCtx();
+  name = name.trim(); if (!name) return { error: "Add the client's name." };
+  if (!serviceIds.length) return { error: 'Choose a service.' };
+  let cid = clientId;
+  if (!cid) {
+    const { data: ex } = await sb.from('clients').select('id').ilike('name', name.replace(/[%_]/g, '\\$&')).limit(1).maybeSingle();
+    if (ex) cid = ex.id;
+    else { const { data, error } = await sb.from('clients').insert({ salon_id: salon.id, name }).select('id').single(); if (error) return { error: friendly(error.message) }; cid = data.id; }
+  }
+  const hh = String(Math.floor(startMin / 60)).padStart(2, '0'), mi = String(startMin % 60).padStart(2, '0');
+  const at = zonedToUtc(dayYmd, `${hh}:${mi}`, salon.timezone).toISOString();
+  const main = await sb.rpc('create_booking', { p_salon: salon.id, p_client: cid, p_staff: staffId, p_starts_at: at, p_service_ids: serviceIds, p_source: 'staff', p_notes: null, p_mode: 'staff' });
+  if (main.error) return { error: friendly(main.error.message) };
+  for (const x of extras) {
+    const r = await sb.rpc('create_booking', { p_salon: salon.id, p_client: cid, p_staff: x.staffId, p_starts_at: at, p_service_ids: [x.serviceId], p_source: 'staff', p_notes: null, p_mode: 'staff' });
+    if (r.error) return { error: 'The main appointment was added, but one extra service could not be booked: ' + friendly(r.error.message), id: main.data as string };
+  }
+  revalidatePath('/calendar');
+  return { ok: true, id: main.data as string };
+}

@@ -2,317 +2,16 @@
 // 1:1 conversion of the prototype's Mobile.dc.html (+ MobileHeader, MobileTabs). Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState, useTransition } from 'react';
-import { TONE_LIST, addDaysYmd, dayInfo, fmtMin, initials, weekStartOf, type CalBlock, type CalBooking, type CalHours, type CalService, type CalSettings, type CalStaff, BLOCK_KINDS } from '@/lib/cal';
-import { addWalkIn, approveBooking, cancelBooking, checkInBooking, checkoutBooking, createBlock, dayAvailability, deleteBlock, editBooking, rebookBooking, rescheduleBooking, walkinPlan } from './actions';
+import { dayInfo, fmtMin, initials, addDaysYmd, BLOCK_KINDS } from '@/lib/cal';
+import { cancelBooking, deleteBlock } from './actions';
 import { S, ServicePicker, TeamPicker } from './pickers';
+import { HATCH, first, usd, m2, BLOCK_DURS_M, METHODS, TIP_OPTS, chip, slotCss, dayCss, note, PRIMARY, SECOND, CLOSE_BTN, H2S, ERR, DLROW, CloseX, Mag } from './calUi';
+import type { useCalendar } from './useCalendar';
+import type { Props } from './calUi';
 
-const HATCH = 'repeating-linear-gradient(135deg,#F7F8FA 0,#F7F8FA 8px,#ECEEF2 8px,#ECEEF2 16px)';
-const first = (n: string) => n.split(' ')[0];
-const usd = (c: number) => '$' + (Math.round(c) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 });
-const m2 = (c: number) => '$' + (Math.round(c) / 100).toFixed(2).replace(/\.00$/, '');
-const BLOCK_DURS_M: [number, string][] = [[30, '30 min'], [60, '1 hour'], [120, '2 hours'], [180, '3 hours'], [-1, 'All day']];
-const METHODS: [string, string][] = [['card', 'Card'], ['cash', 'Cash'], ['gift_card', 'Gift card']];
-const TIP_OPTS: [number, string][] = [[0, 'No tip'], [10, '10%'], [15, '15%'], [20, '20%']];
-const STEP = 30;
-
-const chipTone: Record<string, { t: string; bg: string; fg: string }> = {
-  live: { t: 'In progress', bg: '#5B3DF5', fg: '#FFFFFF' }, confirmed: { t: 'Confirmed', bg: '#DDF3EA', fg: '#14624A' }, done: { t: 'Done', bg: '#EEF0F3', fg: '#4A525E' },
-  pending: { t: 'Needs approval', bg: '#FFF4E5', fg: '#B25E09' },
-};
-const kindOf = (s: CalBooking['status']) => (s === 'checked_in' || s === 'in_progress' ? 'live' : s === 'completed' ? 'done' : s === 'pending' ? 'pending' : 'confirmed');
-const chip = (on: boolean, off = false) => 'flex:0 0 auto;height:44px;padding:0 16px;border-radius:999px;font-size:14px;font-weight:500;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : (off ? '#F4F5F7' : '#FFFFFF')) + ';color:' + (on ? '#FFFFFF' : (off ? '#8A93A0' : '#0E1116')) + (off ? ';cursor:default' : '');
-const slotCss = (on: boolean, why: boolean) => 'width:100%;height:44px;padding:0;border-radius:14px;font-size:14px;font-weight:500;font-family:inherit;border:1px solid ' + (on ? '#0E1116' : (why ? '#EEF0F3' : '#E1E4E9')) + ';background:' + (on ? '#0E1116' : (why ? '#F4F5F7' : '#FFFFFF')) + ';color:' + (on ? '#FFFFFF' : (why ? '#8A93A0' : '#0E1116')) + (why ? ';text-decoration:line-through;cursor:default' : '');
-const dayCss = (on: boolean, closed: boolean) => 'flex:0 0 60px;height:76px;box-sizing:border-box;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:inherit;border:1px solid ' + (on ? '#0E1116' : '#E6E8EC') + ';background:' + (on ? '#0E1116' : (closed ? '#F4F5F7' : '#FFFFFF')) + ';color:' + (on ? '#FFFFFF' : (closed ? '#8A93A0' : '#0E1116')) + (closed ? ';cursor:default' : '');
-const note = (bg: string, fg: string) => 'border-radius:16px;background:' + bg + ';color:' + fg + ';padding:12px 14px;font-size:13.5px;font-weight:500';
-const PRIMARY = 'flex:1 1 0;height:48px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;cursor:pointer';
-const SECOND = 'flex:1 1 0;height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14.5px;font-weight:500;cursor:pointer';
-const CLOSE_BTN = 'flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer';
-const H2S = 'margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em';
-const ERR = 'margin:0;color:#B42318;font-size:13.5px;font-weight:500';
-const DLROW = 'display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #EEF0F3';
-
-function CloseX({ sw = 1.9 }: { sw?: number }) {
-  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth={sw} strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>;
-}
-const Mag = ({ size, color }: { size: number; color: string }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></svg>;
-
-type Avail = { key: string; busy: { s: number; e: number }[]; open: boolean; from: number; to: number } | null;
-type Props = {
-  day: string; today: string; view: 'day' | 'week'; nowMin: number; team: CalStaff[]; bookings: CalBooking[]; blocks: CalBlock[]; hours: CalHours[]; services: CalService[];
-  offers: Record<string, string[]>; cfg: CalSettings; slug: string; tz: string;
-};
-
-export function MobileCalendar(props: Props) {
-  const { day, today, view, nowMin, tz, team, bookings, blocks, hours, services, offers, cfg } = props;
-  const router = useRouter();
-  const [busy, startT] = useTransition();
-  const [query, setQuery] = useState('');
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<'view' | 'checkout' | 'edit' | 'blockview' | 'block' | 'walkin' | 'resched'>('view');
-  const [selId, setSelId] = useState<string | null>(null);
-  const [blockId, setBlockId] = useState<string | null>(null);
-  const [notice, setNotice] = useState('');
-  const [error, setError] = useState('');
-  const [wkOpen, setWkOpen] = useState<Record<string, boolean>>({});
-  const [bf, setBf] = useState<{ s: string; kind: string; day: string; dur: number; start: number | null }>({ s: '', kind: 'lunch', day: today, dur: 60, start: null });
-  const [rs, setRs] = useState<{ day: string; time: number | null; rebook: boolean }>({ day: today, time: null, rebook: false });
-  const [wi, setWi] = useState<{ name: string; svc: string | null; pro: string; cat: string }>({ name: '', svc: null, pro: 'any', cat: '' });
-  const [co, setCo] = useState<{ method: string; tip: number; code: string }>({ method: 'card', tip: 0, code: '' });
-  const [ed, setEd] = useState<{ ids: string[]; start: number | null }>({ ids: [], start: null });
-  const [avail, setAvail] = useState<Avail>(null);
-  const [plan, setPlan] = useState<Awaited<ReturnType<typeof walkinPlan>> | null>(null);
-
-  const staffName = (id: string) => team.find((t) => t.id === id)?.name ?? '';
-  const hrsOf = (ymd: string) => hours[dayInfo(ymd).wd];
-  const go = (d: string, v: 'day' | 'week' = view) => { setNotice(''); setOpen(false); setMode('view'); startT(() => router.push(`/calendar?d=${d}&v=${v}`)); };
-  const refresh = () => router.refresh();
-
-  const cur = bookings.find((b) => b.id === selId) ?? null;
-  const bvB = blocks.find((b) => b.id === blockId) ?? null;
-  const dayB = bookings.filter((b) => b.dayYmd === day);
-  const sq = query.trim().toLowerCase();
-
-  /* ---------- availability for block / reschedule ---------- */
-  const availKey = mode === 'block' ? `${bf.day}|${bf.s}` : mode === 'resched' && cur ? `${rs.day}|${cur.staffId}` : '';
-  useEffect(() => {
-    if (!availKey) return;
-    const [d, s] = availKey.split('|');
-    if (!s) { setAvail(null); return; }
-    let live = true;
-    dayAvailability(d, s, mode === 'resched' && cur && !rs.rebook ? cur.id : undefined).then((r) => { if (live) setAvail({ key: availKey, ...r }); });
-    return () => { live = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [availKey]);
-  const av = avail && avail.key === availKey ? avail : null;
-  const reason = (d: string, t: number, dur: number) => {
-    if (!av) return 'loading';
-    if (!av.open) return 'closed';
-    if (d === today && t < nowMin) return 'past';
-    if (t < av.from || t + dur > av.to) return 'late';
-    if (av.busy.some((x) => t < x.e && x.s < t + dur)) return 'busy';
-    return '';
-  };
-  const slotsFor = av && av.open ? Array.from({ length: Math.max(0, Math.floor((av.to - av.from) / STEP)) }, (_, i) => av.from + i * STEP) : [];
-  const days14 = Array.from({ length: 14 }, (_, i) => { const d = addDaysYmd(today, i); const info = dayInfo(d); return { ...info, closed: !hrsOf(d)?.open }; });
-
-  /* ---------- walk-in plan ---------- */
-  useEffect(() => {
-    if (mode !== 'walkin' || !wi.svc) { setPlan(null); return; }
-    let live = true;
-    walkinPlan(wi.svc, wi.pro).then((r) => { if (live) setPlan(r); });
-    return () => { live = false; };
-  }, [mode, wi.svc, wi.pro]);
-
-  /* ---------- view-models ---------- */
-  const vm = (b: CalBooking) => {
-    const k = kindOf(b.status), ct = chipTone[k], tone = TONE_LIST[b.tone % 4];
-    const time = fmtMin(b.start) + ' – ' + fmtMin(b.end);
-    const f = first(staffName(b.staffId));
-    return {
-      b, k, tone, time, f,
-      line: b.services + ' with ' + f + ', ' + (k === 'live' ? 'until ' + fmtMin(b.end) : time),
-      sub: b.services + ' with ' + f, priceText: usd(b.priceCents),
-      label: b.client + ', ' + b.services + ', ' + time,
-      chipText: ct.t, chipStyle: 'display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;background:' + ct.bg + ';color:' + ct.fg,
-      avatarStyle: 'flex:0 0 52px;width:52px;height:52px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;background:' + tone.bg + ';color:' + tone.fg,
-      primaryLabel: k === 'live' ? 'Start checkout' : k === 'confirmed' ? 'Check in' : k === 'pending' ? 'Approve' : b.saleId ? 'View sale' : 'Done',
-      secondaryLabel: k === 'done' ? 'Rebook' : 'Reschedule',
-      canEdit: k !== 'done',
-      style: 'flex:1 1 0;min-width:0;min-height:64px;box-sizing:border-box;padding:10px 16px;border:0;border-radius:18px;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;background:' + tone.bg + ';color:' + tone.fg,
-    };
-  };
-  const act = (fn: () => Promise<{ error?: string; note?: string; ok?: true } | void>, ok: string, done?: () => void) => startT(async () => {
-    setError(''); const r = await fn();
-    if (r && r.error) { setError(r.error); return; }
-    setNotice((r && r.note) || ok); done?.(); refresh();
-  });
-  const openBooking = (id: string) => { setSelId(id); setOpen(true); setMode('view'); setError(''); setNotice(''); };
-  const openBlock = (id: string) => { setBlockId(id); setOpen(true); setMode('blockview'); setError(''); setNotice(''); };
-  const startCheckout = (id: string) => { setSelId(id); setOpen(true); setMode('checkout'); setCo({ method: 'card', tip: cfg.askTip ? cfg.tipDefault : 0, code: '' }); setError(''); setNotice(''); };
-  const primary = (b: CalBooking) => {
-    const k = kindOf(b.status);
-    if (k === 'confirmed') act(() => checkInBooking(b.id), first(b.client) + ' checked in');
-    else if (k === 'pending') act(() => approveBooking(b.id), first(b.client) + ' approved');
-    else if (k === 'live') startCheckout(b.id);
-    else if (b.saleId) router.push(`/sales/${b.saleId}`);
-  };
-  const startResched = (b: CalBooking, rebook: boolean) => {
-    let d = rebook ? addDaysYmd(b.dayYmd, 7) : b.dayYmd;
-    if (d < today) d = today;
-    if (!hrsOf(d)?.open) for (let i = 1; i < 8; i++) { const n = addDaysYmd(d, i); if (hrsOf(n)?.open) { d = n; break; } }
-    setSelId(b.id); setOpen(true); setMode('resched'); setRs({ day: d, time: null, rebook }); setError(''); setNotice('');
-  };
-
-  /* ---------- derived lists (as Mobile.dc.html renderVals) ---------- */
-  const todayList = dayB.filter((b) => !sq || (b.client + ' ' + b.services + ' ' + staffName(b.staffId)).toLowerCase().includes(sq)).sort((a, b) => a.start - b.start).map(vm);
-  const activeCards = todayList.filter((x) => x.k === 'live');
-  const upcoming = todayList.filter((x) => x.k !== 'done' && x.k !== 'live');
-  const cards = activeCards.length ? activeCards : upcoming.slice(0, 1);
-  const laterBk = upcoming.filter((x) => !cards.includes(x));
-  const doneBk = todayList.filter((x) => x.k === 'done');
-  const blockRows = blocks.filter((b) => b.dayYmd === day && (day !== today || b.end > nowMin) && !sq).map((b) => ({
-    start: b.start, startText: fmtMin(b.start), client: BLOCK_KINDS.find((k) => k[0] === b.kind)?.[1] ?? 'Blocked', priceText: '',
-    sub: first(staffName(b.staffId)) + ', until ' + fmtMin(b.end),
-    label: (BLOCK_KINDS.find((k) => k[0] === b.kind)?.[1] ?? 'Blocked') + ', ' + first(staffName(b.staffId)) + ', ' + fmtMin(b.start) + ' to ' + fmtMin(b.end),
-    id: b.id, isBlock: true as const,
-  }));
-  const row = (x: (typeof todayList)[number]) => ({ start: x.b.start, startText: fmtMin(x.b.start), client: x.b.client, sub: x.sub, priceText: x.priceText, label: x.label, id: x.b.id, style: x.style, isBlock: false as const });
-  const later = [...[...laterBk.map(row), ...blockRows].sort((a, b) => a.start - b.start), ...doneBk.map(row)];
-
-  const dayHrs = hrsOf(day);
-  const statCount = dayB.length, statRevenue = usd(dayB.reduce((a, b) => a + b.priceCents, 0));
-  let statNext = dayHrs?.open ? 'None left' : 'Closed';
-  if (dayHrs?.open) {
-    for (let t = Math.max(dayHrs.from, day === today ? Math.ceil(nowMin / STEP) * STEP : 0); t + STEP <= dayHrs.to; t += STEP) {
-      if (team.some((m) => !dayB.some((b) => b.staffId === m.id && t < b.end && b.start < t + STEP) && !blocks.some((b) => b.staffId === m.id && b.dayYmd === day && t < b.end && b.start < t + STEP))) { statNext = fmtMin(t); break; }
-    }
-  }
-
-  const di = dayInfo(day);
-  const ws = weekStartOf(day), thisWs = weekStartOf(today);
-  const weekDays = Array.from({ length: 7 }, (_, i) => dayInfo(addDaysYmd(ws, i)));
-  const wkTitle = ws === thisWs ? 'This week' : ws === addDaysYmd(thisWs, 7) ? 'Next week' : ws === addDaysYmd(thisWs, -7) ? 'Last week' : weekDays[0].short;
-  const wkRange = weekDays[0].short + ' to ' + weekDays[6].short;
-  const pageTitle = view === 'week' ? wkTitle : day === today ? 'Today' : di.weekday;
-  const pageSubtitle = view === 'week' ? wkRange : di.weekday + ', ' + di.num + ' ' + di.month;
-  const strip = weekDays;
-
-  /* ---------- checkout math ---------- */
-  const coMath = (priceC: number) => {
-    const tip = cfg.askTip ? Math.round(priceC * co.tip / 100) : 0;
-    const taxAmt = cfg.taxInclusive ? Math.round(priceC * cfg.taxRate / (100 + cfg.taxRate)) : Math.round(priceC * cfg.taxRate / 100);
-    return { tip, taxAmt, total: priceC + tip + (cfg.taxInclusive ? 0 : taxAmt), taxLabel: (cfg.taxInclusive ? 'Includes ' : 'Tax ') + cfg.taxRate + '%' };
-  };
-  const charge = () => {
-    if (!cur) return;
-    const method = co.method as 'card' | 'cash' | 'gift_card';
-    startT(async () => {
-      setError('');
-      const r = await checkoutBooking(cur.id, method, cfg.askTip ? co.tip : 0, co.code);
-      if (r.error) { setError(r.error); return; }
-      if (method === 'card' && r.saleId) { router.push(`/sales/${r.saleId}`); return; }
-      setMode('view'); setNotice(''); refresh();
-    });
-  };
-
-  /* ---------- edit booking ---------- */
-  const svcMap = new Map(services.map((s) => [s.id, s]));
-  const offered = (sid: string, staffId: string) => (offers[sid] ?? []).includes(staffId);
-  const editPlan = () => {
-    if (!cur) return null;
-    const hrs = hrsOf(cur.dayYmd), close = hrs?.open ? hrs.to : 24 * 60, openAt = hrs?.open ? hrs.from : 0;
-    const removed = cur.serviceIds.filter((id) => svcMap.has(id) && !ed.ids.includes(id));
-    const added = ed.ids.filter((id) => !cur.serviceIds.includes(id) && offered(id, cur.staffId));
-    const extraIds = ed.ids.filter((id) => !cur.serviceIds.includes(id) && !offered(id, cur.staffId));
-    const dur = (cur.end - cur.start) - removed.reduce((a, id) => a + svcMap.get(id)!.dur, 0) + added.reduce((a, id) => a + (svcMap.get(id)?.dur ?? 0), 0);
-    const priceC = cur.priceCents - removed.reduce((a, id) => a + svcMap.get(id)!.priceCents, 0) + added.reduce((a, id) => a + (svcMap.get(id)?.priceCents ?? 0), 0);
-    const start = ed.start ?? cur.start;
-    const occ = (staffId: string, except?: string) => [
-      ...bookings.filter((x) => x.dayYmd === cur.dayYmd && x.staffId === staffId && x.id !== except).map((x) => ({ s: x.start, e: x.end, who: x.client })),
-      ...blocks.filter((x) => x.dayYmd === cur.dayYmd && x.staffId === staffId).map((x) => ({ s: x.start, e: x.end, who: 'a blocked period' })),
-    ];
-    const clash = (t: number) => {
-      if (t + dur > close) return { kind: 'late' as const };
-      const c = occ(cur.staffId, cur.id).find((e) => t < e.e && e.s < t + dur);
-      return c ? { kind: 'busy' as const, with: c } : null;
-    };
-    const problem = dur > 0 ? clash(start) : null;
-    const slots: number[] = []; for (let t = openAt; t + STEP <= close; t += STEP) slots.push(t);
-    const alts = problem ? slots.filter((t) => !clash(t) && !(cur.dayYmd === today && t < nowMin)).sort((x, y) => Math.abs(x - cur.start) - Math.abs(y - cur.start)).slice(0, 8).sort((x, y) => x - y) : [];
-    const mainEnd = start + dur;
-    const taken: { s: string; start: number; end: number }[] = [];
-    const extras = extraIds.map((id) => {
-      const svc = svcMap.get(id)!, sid = (offers[id] ?? [])[0];
-      let at: number | undefined;
-      if (sid) {
-        const free = (t: number) => (cur.dayYmd !== today || t >= nowMin) && t + svc.dur <= close && !occ(sid).some((e) => t < e.e && e.s < t + svc.dur) && !taken.some((k) => k.s === sid && t < k.end && k.start < t + svc.dur);
-        at = slots.find((t) => t >= mainEnd && free(t)) ?? slots.find((t) => t + svc.dur <= start && free(t));
-        if (at !== undefined) taken.push({ s: sid, start: at, end: at + svc.dur });
-      }
-      return { svc, sid, member: sid ? staffName(sid) : '', f: sid ? first(staffName(sid)) : '', at };
-    });
-    return { removed, added, extras, dur, priceC, start, problem, alts, mainEnd, f: first(staffName(cur.staffId)), empty: dur <= 0 };
-  };
-  const saveEdit = () => {
-    const pl = editPlan(); if (!pl || !cur) return;
-    if (pl.empty) { setError('Keep at least one service on the booking.'); return; }
-    if (pl.problem) { setError('The extra time does not fit yet. Pick one of the start times above, or remove a service.'); return; }
-    const bad = pl.extras.find((x) => x.at === undefined);
-    if (bad) { setError((bad.f || 'Nobody') + ' has no free time for ' + bad.svc.name + ' that day. Remove it or pick another day first.'); return; }
-    const msg = pl.extras.length ? 'Updated, ' + pl.extras.map((x) => x.svc.name + ' with ' + x.f + ' at ' + fmtMin(x.at!)).join(', ') : first(cur.client) + "'s booking updated";
-    act(() => editBooking(cur.id, cur.dayYmd, pl.start, pl.removed, pl.added, pl.extras.map((x) => ({ serviceId: x.svc.id, staffId: x.sid!, startMin: x.at! }))), msg, () => { setOpen(false); setMode('view'); });
-  };
-
-  /* ---------- block ---------- */
-  const bfDur = bf.dur === -1 ? (av ? av.to - av.from : 0) : bf.dur;
-  const saveBlock = () => {
-    if (!bf.s) { setError('Choose a team member.'); return; }
-    if (bf.start === null) { setError('Choose a start time from the list.'); return; }
-    if (reason(bf.day, bf.start, bfDur)) { setError('That time is not free. Pick another from the list.'); return; }
-    const label = BLOCK_KINDS.find((k) => k[0] === bf.kind)![1];
-    act(() => createBlock(bf.s, bf.day, bf.start!, bfDur, bf.kind), label + ' blocked for ' + first(staffName(bf.s)), () => { setOpen(false); setMode('view'); });
-  };
-
-  /* ---------- reschedule ---------- */
-  const moveBooking = () => {
-    if (!cur) return;
-    if (rs.time === null) { setError('Choose a new time from the list.'); return; }
-    if (reason(rs.day, rs.time, cur.end - cur.start)) { setError('That time is no longer free. Pick another from the list.'); return; }
-    const when = dayInfo(rs.day).short + ', ' + fmtMin(rs.time);
-    if (rs.rebook) act(() => rebookBooking(cur.id, rs.day, rs.time!), first(cur.client) + ' rebooked for ' + when, () => { setOpen(false); setMode('view'); });
-    else act(() => rescheduleBooking(cur.id, rs.day, rs.time!), first(cur.client) + ' moved to ' + when, () => { setOpen(false); setMode('view'); });
-  };
-
-  /* ---------- walk-in ---------- */
-  const wiSvc = wi.svc ? svcMap.get(wi.svc) ?? null : null;
-  let wiPlanText = 'Pick a service to see who is free.', wiPlanCss = note('#F4F5F7', '#5E6673');
-  if (wiSvc && plan) {
-    if ('startsAt' in plan) { wiPlanText = first(plan.staff) + ' is free ' + (plan.nowish ? 'now' : 'from ' + plan.label) + '. ' + plan.label + ' to ' + fmtMin(minutesFromIso(plan.startsAt!) + wiSvc.dur) + ', ' + wiSvc.dur + ' min, ' + usd(wiSvc.priceCents) + '.'; wiPlanCss = note('#DDF3EA', '#14624A'); }
-    else if ('none' in plan) { wiPlanText = 'No free time today for ' + wiSvc.name + (wi.pro === 'any' ? '.' : ' with that team member.'); wiPlanCss = note('#FDECEA', '#B42318'); }
-  }
-  function minutesFromIso(iso: string) {
-    const p = new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', hour: '2-digit', minute: '2-digit' }).formatToParts(new Date(iso));
-    return Number(p.find((x) => x.type === 'hour')!.value) * 60 + Number(p.find((x) => x.type === 'minute')!.value);
-  }
-  const addWalkin = (pay: boolean) => {
-    if (!wi.name.trim()) { setError("Add the client's name."); return; }
-    if (!wi.svc) { setError('Choose a service.'); return; }
-    startT(async () => {
-      setError('');
-      const r = await addWalkIn(wi.name, wi.svc!, wi.pro);
-      if (r.error) { setError(r.error); return; }
-      setWi({ name: '', svc: null, pro: 'any', cat: '' });
-      if (pay && r.id) { await checkInBooking(r.id); startCheckout(r.id); }
-      else { setOpen(false); setMode('view'); setNotice(r.note ?? ''); }
-      refresh();
-    });
-  };
-
-  const close = () => { setOpen(false); setMode('view'); setError(''); };
-  const backToView = () => { setMode('view'); setError(''); };
-  const hasError = !!error;
-  const sel = cur ? vm(cur) : null;
-  const seg = (on: boolean) => 'flex:1 1 0;height:44px;border:0;border-radius:999px;font-size:14px;font-weight:500;background:' + (on ? '#0E1116' : 'transparent') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
+export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>; props: Props }) {
+  const { HOUR_PX, act, activeCards, addWalkin, amap, av, avail, availKey, backToView, bf, bfDur, blank, blockId, blockRows, blocks, bookings, busy, bvB, cards, cfg, charge, chk, close, co, coMath, createNew, cur, day, dayB, dayHrs, days14, di, doneBk, ed, editPlan, error, firstOpenDay, gEnd, gHours, gStart, go, hasError, hours, hrsOf, later, laterBk, minutesFromIso, mode, moveBooking, nFirstSvc, nKeyStr, nKeys, nOffers, nPickSvc, nPlan, nSlots, nWhy, nf, notice, now, nowTop, offered, offers, open, openBlock, openBooking, openDays, openNew, pageSubtitle, pageTitle, pendingSel, plan, primary, query, reason, refresh, router, row, rs, saveBlock, saveEdit, searchOpen, seg, sel, selId, services, setAmap, setAvail, setBf, setBlockId, setCo, setEd, setError, setMode, setNf, setNotice, setNow, setOpen, setPendingSel, setPlan, setQuery, setRs, setSearchOpen, setSelId, setSres, setStaffSel, setWi, setWkOpen, slotsFor, sq, sres, staffName, staffSel, startCheckout, startResched, startT, statCount, statRevenue, statNext, strip, svcMap, team, today, todayList, tz, upcoming, view, viewEvents, vm, weekDays, wi, wiPlanText, wiPlanCss, wiSvc, wkCards, wkOpen, wkRange, wkStaff, wkTitle, ws } = c;
   const errP = () => hasError ? <p role="alert" style={S(ERR)}>{error}</p> : null;
-
-  /* ---------- week cards ---------- */
-  const wkCards = view === 'week' ? weekDays.map((d) => {
-    const hrs = hrsOf(d.ymd);
-    const bk = bookings.filter((b) => b.dayYmd === d.ymd);
-    const revenue = bk.reduce((a, b) => a + b.priceCents, 0), booked = bk.reduce((a, b) => a + (b.end - b.start), 0);
-    const rows = [
-      ...bk.map((b) => { const v = vm(b); return { start: b.start, startText: fmtMin(b.start), client: b.client, sub: b.services + ' with ' + v.f + (b.walkin ? ', walk-in' : ''), priceText: v.priceText, dot: v.tone.fg, isBlock: false, pick: () => openBooking(b.id) }; }),
-      ...blocks.filter((b) => b.dayYmd === d.ymd).map((b) => ({ start: b.start, startText: fmtMin(b.start), client: BLOCK_KINDS.find((k) => k[0] === b.kind)?.[1] ?? 'Blocked', sub: first(staffName(b.staffId)) + ', until ' + fmtMin(b.end), priceText: '', dot: '#B5BBC5', isBlock: true, pick: () => openBlock(b.id) })),
-    ].sort((a, b) => a.start - b.start);
-    const cap = hrs?.open ? Math.max(1, team.length) * (hrs.to - hrs.from) : 0;
-    const util = cap ? Math.min(100, Math.round(booked / cap * 100)) : 0;
-    const isOpen = !!wkOpen[d.ymd], limit = 5;
-    return { d, hrs, rows, shown: isOpen ? rows : rows.slice(0, limit), util, isOpen, limit, summary: !hrs?.open ? 'Closed' : bk.length + ' appointments, ' + usd(revenue) };
-  }) : [];
-
   const tabsA = (id: string, href: string, label: string, on: boolean, svg: React.ReactNode) => (
     <Link key={id} href={href} aria-current={on ? 'page' : 'false'} style={S('width:100%;min-height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;text-decoration:none;font-size:12px;font-weight:' + (on ? 600 : 500) + ';color:' + (on ? '#0E1116' : '#5E6673'))}>
       {svg}{label}
@@ -454,9 +153,9 @@ export function MobileCalendar(props: Props) {
       <nav aria-label="Main" style={S("box-sizing:border-box;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center;justify-items:center;padding:10px 8px 22px;background:#FFFFFF;border-top:1px solid #E6E8EC;font-family:'Geist',system-ui,sans-serif")}>
         {tabsA('calendar', '/calendar', 'Calendar', true, ic('#0E1116', <><rect x="3.5" y="5" width="17" height="15.5" rx="3" /><path d="M3.5 10h17M8 3v4M16 3v4" /></>))}
         {tabsA('services', '/services', 'Services', false, ic('#5E6673', <><circle cx="6" cy="7" r="2.5" /><circle cx="6" cy="17" r="2.5" /><path d="M8 8.5 20 18M8 15.5 20 6" /></>))}
-        <Link href="/calendar/new" aria-label="New appointment" style={S('width:48px;height:48px;border-radius:999px;background:#0E1116;display:flex;align-items:center;justify-content:center;text-decoration:none')}>
+        <button onClick={openNew} aria-label="New appointment" style={S('width:48px;height:48px;padding:0;border:0;border-radius:999px;background:#0E1116;display:flex;align-items:center;justify-content:center;text-decoration:none;cursor:pointer')}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
-        </Link>
+        </button>
         {tabsA('clients', '/clients', 'Clients', false, ic('#5E6673', <><circle cx="9" cy="8.5" r="3.5" /><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5" /><path d="M16 5.2a3.4 3.4 0 0 1 0 6.6M18.5 14.8c1.6.8 2.6 2.4 3 5.2" /></>))}
         {tabsA('more', '/more', 'More', false, ic('#5E6673', <><circle cx="5.5" cy="12" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="18.5" cy="12" r="1.2" /></>))}
       </nav>
@@ -606,6 +305,31 @@ export function MobileCalendar(props: Props) {
               <div style={S('display:flex;gap:10px')}>
                 <button onClick={() => addWalkin(true)} disabled={busy} style={S(PRIMARY)}>Add &amp; check out</button>
                 <button onClick={() => addWalkin(false)} disabled={busy} style={S(SECOND)}>Add to calendar</button>
+              </div>
+            </>)}
+
+            {mode === 'new' && (<>
+              <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><div style={S('min-width:0')}><h2 style={S(H2S)}>New appointment</h2></div><button onClick={close} aria-label="Close" style={S(CLOSE_BTN)}><CloseX /></button></div>
+              <div style={S('display:flex;flex-direction:column;gap:8px')}>
+                <label htmlFor="ap-client" style={S('font-size:14px;font-weight:600')}>Client</label>
+                <input id="ap-client" type="text" value={nf.client} onChange={(e) => { setNf({ ...nf, client: e.target.value }); setError(''); }} placeholder="Client name" style={{ ...S('box-sizing:border-box;width:100%;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF'), minHeight: 0 }} />
+                {props.recent.length > 0 && <div role="group" className="hscroll" aria-label="Recent clients" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
+                  {props.recent.map((r) => <button key={r.id} onClick={() => { setNf({ ...nf, client: r.name }); setError(''); }} aria-pressed={nf.client.trim() === r.name} style={S(chip(nf.client.trim() === r.name))}>{r.name}</button>)}</div>}
+              </div>
+              <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="ap-service-label" style={S('font-size:14px;font-weight:600')}>Service</span>
+                <ServicePicker services={services} selected={nf.services} initialCat={nFirstSvc?.cat} chipHeight={44} onPick={nPickSvc} note={(x) => (nf.staff && !offered(x.id, nf.staff) ? ((offers[x.id] ?? [])[0] ? 'separate booking with ' + first(staffName(offers[x.id][0])) : 'no one offers this') : '')} /></div>
+              <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="ap-staff-label" style={S('font-size:14px;font-weight:600')}>Team member</span>
+                <TeamPicker team={team} selected={nf.staff} offers={nOffers} onPick={(id) => { setNf({ ...nf, staff: id, time: null }); setError(''); }} /></div>
+              <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="ap-day-label" style={S('font-size:14px;font-weight:600')}>Day</span>
+                <div role="group" className="hscroll" aria-labelledby="ap-day-label" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
+                  {days14.map((d) => <button key={d.ymd} onClick={() => { if (!d.closed) { setNf({ ...nf, day: d.ymd, time: null }); setError(''); } }} disabled={d.closed} aria-pressed={nf.day === d.ymd} aria-label={d.full + (d.closed ? ', closed' : '')} style={S(dayCss(nf.day === d.ymd, d.closed))}><span style={S('font-size:12.5px')}>{d.abbr}</span><span style={S('font-size:17px;font-weight:600')}>{d.num}</span></button>)}</div></div>
+              <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="ap-time-label" style={S('font-size:14px;font-weight:600')}>Time</span>
+                <div role="group" aria-labelledby="ap-time-label" style={S('display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px')}>
+                  {nSlots.map((t) => { const why = nWhy(t); const on = nf.time === t && !why; return <button key={t} onClick={() => { if (!why) { setNf({ ...nf, time: t }); setError(''); } }} disabled={!!why} aria-pressed={on} aria-label={fmtMin(t) + (why ? ', unavailable' : '')} style={S(slotCss(on, !!why))}>{fmtMin(t)}</button>; })}</div></div>
+              {errP()}
+              <div style={S('display:flex;gap:10px')}>
+                <button onClick={createNew} disabled={busy} style={S(PRIMARY)}>Create appointment</button>
+                <button onClick={backToView} style={S(SECOND)}>Cancel</button>
               </div>
             </>)}
 

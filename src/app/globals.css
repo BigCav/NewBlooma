@@ -41,3 +41,13 @@ table{width:100%;border-collapse:collapse}th{font-size:12px;text-transform:upper
 .m-cal .page>*,.m-cal .sheet>*{flex:0 0 auto}
 .m-cal *{scrollbar-width:none;-ms-overflow-style:none}.m-cal *::-webkit-scrollbar{display:none;width:0;height:0}.m-cal .hscroll{padding-bottom:2px !important}
 @media (max-width:900px){body:has(.m-cal) .tabs-bar{display:none !important}.main:has(.m-cal){padding:0}}
+/* Desktop calendar (Main.dc.html): disabled buttons keep full opacity except the ghost nav arrows. */
+.d-cal button:disabled{opacity:1}
+.d-cal .ghost:hover{background:#F4F5F7}
+.d-cal .ghost:disabled{opacity:.4;cursor:default}
+.d-cal .search:focus-within{outline:2px solid #5B3DF5;outline-offset:2px}
+.d-cal input:focus{outline:2px solid #5B3DF5;outline-offset:2px}
+
+.d-cal .hscroll{padding-bottom:2px !important}
+.d-cal *{scrollbar-width:none;-ms-overflow-style:none}.d-cal *::-webkit-scrollbar{display:none;width:0;height:0}
+.d-cal h1,.d-cal h2{font-family:inherit}

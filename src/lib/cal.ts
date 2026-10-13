@@ -1,10 +1,10 @@
 // Shared calendar helpers (pure, safe for client and server).
 export type Tone = { bg: string; fg: string; dot: string };
 export const TONE_LIST: Tone[] = [
-  { bg: '#ECE8FF', fg: '#3B2BB5', dot: '#5B3DF5' }, // hair
-  { bg: '#DFEEFF', fg: '#1B4A8A', dot: '#2F7FE0' }, // barber
-  { bg: '#DDF3EA', fg: '#14624A', dot: '#1F9D74' }, // nails
-  { bg: '#FFEBD0', fg: '#7A4204', dot: '#E58A1F' }, // colour
+  { bg: '#ECE8FF', fg: '#3B2BB5', dot: '#7A64FF' }, // hair
+  { bg: '#DFEEFF', fg: '#1B4A8A', dot: '#4C93F0' }, // barber
+  { bg: '#DDF3EA', fg: '#14624A', dot: '#2FB985' }, // nails
+  { bg: '#FFEBD0', fg: '#7A4204', dot: '#F0A044' }, // colour
 ];
 const KEYS: [RegExp, number][] = [[/hair|cut|style|blow/i, 0], [/barber|beard|shave/i, 1], [/nail|mani|pedi/i, 2], [/colou?r|tint|foil|balayage/i, 3]];
 export function toneFor(category: string | null | undefined, index = 0): Tone {
