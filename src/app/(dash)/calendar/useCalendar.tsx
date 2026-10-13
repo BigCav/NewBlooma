@@ -278,7 +278,9 @@ export function useCalendar(props: Props) {
     const others = nf.staff ? sel.filter((x) => !offered(x.id, nf.staff)).map((x) => ({ svc: x, sid: (offers[x.id] ?? [])[0] as string | undefined })) : [];
     return { sel, same, others, dur: same.length ? same.reduce((a, x) => a + x.dur, 0) : 30, priceC: sel.reduce((a, x) => a + x.priceCents, 0), mins: sel.reduce((a, x) => a + x.dur, 0) };
   };
-  const nKeys = mode === 'new' && nf.staff ? Array.from(new Set([nf.staff, ...(nPlan().others.map((o) => o.sid).filter(Boolean) as string[])])).map((sid) => `${nf.day}|${sid}`) : [];
+  // With no team member picked yet, a slot is free if anyone who offers every chosen service is free.
+  const nCands = () => team.filter((t) => nf.services.every((id) => offered(id, t.id))).map((t) => t.id);
+  const nKeys = mode !== 'new' ? [] : (nf.staff ? Array.from(new Set([nf.staff, ...(nPlan().others.map((o) => o.sid).filter(Boolean) as string[])])) : nCands()).map((sid) => `${nf.day}|${sid}`);
   const nKeyStr = nKeys.join(',');
   useEffect(() => {
     nKeys.filter((k) => !amap[k]).forEach((k) => {
@@ -289,7 +291,12 @@ export function useCalendar(props: Props) {
   }, [nKeyStr]);
   const nWhy = (t: number) => {
     const p = nPlan();
-    if (!nf.staff) { const h = hrsOf(nf.day); if (!h?.open) return 'closed'; if (nf.day === today && t < now) return 'past'; if (t + p.dur > h.to) return 'late'; return ''; }
+    if (!nf.staff) {
+      const h = hrsOf(nf.day); if (!h?.open) return 'closed'; if (nf.day === today && t < now) return 'past'; if (t + p.dur > h.to) return 'late';
+      const ws = nCands().map((sid) => chk(amap[`${nf.day}|${sid}`], nf.day, t, p.dur));
+      if (!ws.length) return 'busy';
+      return ws.includes('') ? '' : ws.includes('loading') ? 'loading' : 'busy';
+    }
     const w = chk(amap[`${nf.day}|${nf.staff}`], nf.day, t, p.dur); if (w) return w;
     for (const o of p.others) { if (!o.sid || chk(amap[`${nf.day}|${o.sid}`], nf.day, t, o.svc.dur)) return 'busy'; }
     return '';
