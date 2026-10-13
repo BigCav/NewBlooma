@@ -1,61 +1,37 @@
 import { requireCtx } from '@/lib/session';
-import ActionForm from '@/components/ActionForm';
-import { WEEKDAYS } from '@/lib/format';
-import { saveMember, setActive, inviteMember } from './actions';
+import { ymd } from '@/lib/format';
+import { dayInfo } from '@/lib/cal';
+import { SHIFTS, clock24, shortRange, type TeamRow } from './shared';
+import { TeamView } from './TeamView';
 
 export const metadata = { title: 'Team' };
+export const dynamic = 'force-dynamic';
 
 export default async function Team() {
-  const { sb, staff: me } = await requireCtx();
-  const owner = me.app_role === 'owner';
-  const [{ data: team }, { data: shifts }] = await Promise.all([
-    sb.from('staff').select('*').order('active', { ascending: false }).order('name'),
-    sb.from('staff_shifts').select('*'),
+  const { sb, salon, staff } = await requireCtx();
+  const todayWd = dayInfo(ymd(new Date(), salon.timezone)).wd;
+  const [{ data: team }, { data: shifts }, { data: cats }, { data: svcs }, { data: links }] = await Promise.all([
+    sb.from('staff').select('id,name,role_title,online_bookable').eq('active', true).order('created_at'),
+    sb.from('staff_shifts').select('staff_id,weekday,start_time,end_time'),
+    sb.from('service_categories').select('id,name').order('sort').order('name'),
+    sb.from('services').select('id,category_id').eq('active', true),
+    sb.from('service_staff').select('service_id,staff_id'),
   ]);
-  const Form = ({ m }: { m?: any }) => (
-    <ActionForm action={saveMember} submit={m ? 'Save' : 'Add team member'} resetOnOk={!m}>
-      {m && <input type="hidden" name="id" value={m.id} />}
-      <div className="grid g3">
-        <div className="field"><label>Name</label><input name="name" defaultValue={m?.name} required /></div>
-        <div className="field"><label>Title</label><input name="role_title" defaultValue={m?.role_title ?? 'Stylist'} /></div>
-        <div className="field"><label>Access</label><select name="app_role" defaultValue={m?.app_role ?? 'stylist'}><option value="stylist">Stylist</option><option value="reception">Reception</option><option value="owner">Owner</option></select></div>
-        <div className="field"><label>Commission (%)</label><input name="commission_pct" type="number" step="0.5" min="0" max="100" defaultValue={m ? Number(m.commission_pct) : 0} /></div>
-      </div>
-      <label className="row field"><input type="checkbox" name="online_bookable" defaultChecked={m ? m.online_bookable : true} /> Bookable online</label>
-      <div className="lbl" style={{ marginBottom: 6 }}>Weekly shifts</div>
-      <div className="stack" style={{ gap: 6, marginBottom: 14 }}>
-        {WEEKDAYS.map((d, i) => { const sh = (shifts ?? []).find((x) => x.staff_id === m?.id && x.weekday === i); return (
-          <div className="row wrap" key={d}>
-            <label className="row" style={{ width: 130 }}><input type="checkbox" name={`work_${i}`} defaultChecked={m ? !!sh : i < 5} /> {d}</label>
-            <input type="time" name={`from_${i}`} defaultValue={sh?.start_time?.slice(0, 5) ?? '09:00'} style={{ width: 130 }} aria-label={`${d} start`} />
-            <span className="muted">to</span>
-            <input type="time" name={`to_${i}`} defaultValue={sh?.end_time?.slice(0, 5) ?? '17:00'} style={{ width: 130 }} aria-label={`${d} end`} />
-          </div>); })}
-      </div>
-    </ActionForm>
-  );
-  return (
-    <>
-      <div className="page-head"><div><h1>Team</h1><div className="muted">{team?.filter((t) => t.active).length ?? 0} active</div></div></div>
-      {owner && <div className="card"><h2 style={{ marginBottom: 12 }}>Add a team member</h2><Form /></div>}
-      {(team ?? []).map((m) => (
-        <div className="card" key={m.id}>
-          <details>
-            <summary className="row between" style={{ cursor: 'pointer', listStyle: 'none' }}>
-              <span><b>{m.name}</b> {!m.active && <span className="pill">Inactive</span>}<div className="muted small">{m.role_title}{m.user_id ? ' · has a login' : ''}</div></span>
-              <span className="pill">{m.app_role}</span>
-            </summary>
-            {owner && <div style={{ paddingTop: 14 }}>
-              <Form m={m} />
-              <div className="row wrap" style={{ marginTop: 10 }}>
-                <form action={setActive}><input type="hidden" name="id" value={m.id} /><input type="hidden" name="active" value={String(!m.active)} /><button className="btn sm">{m.active ? 'Deactivate' : 'Reactivate'}</button></form>
-                {!m.user_id && <ActionForm action={inviteMember} submit="Create login invite"><input type="hidden" name="id" value={m.id} /></ActionForm>}
-              </div>
-            </div>}
-          </details>
-        </div>
-      ))}
-      {!team?.length && <div className="card empty">No team members yet.</div>}
-    </>
-  );
+  const rows: TeamRow[] = (team ?? []).map((m) => {
+    const mine = (shifts ?? []).filter((s) => s.staff_id === m.id);
+    const at = (d: number) => mine.find((s) => s.weekday === d);
+    const days = mine.map((s) => s.weekday).sort((a, b) => a - b);
+    const f = (t: string) => t.slice(0, 5);
+    const same = mine.length > 0 && mine.every((s) => f(s.start_time) === f(mine[0].start_time) && f(s.end_time) === f(mine[0].end_time));
+    const preset = same ? SHIFTS.find((p) => p.from === f(mine[0].start_time) && p.to === f(mine[0].end_time)) : undefined;
+    const offered = new Set((links ?? []).filter((l) => l.staff_id === m.id).map((l) => l.service_id));
+    const t = at(todayWd);
+    return {
+      id: m.id, name: m.name, role: m.role_title, online: m.online_bookable, days, shift: preset?.id ?? null,
+      cats: (cats ?? []).filter((c) => (svcs ?? []).some((s) => s.category_id === c.id && offered.has(s.id))).map((c) => c.name),
+      cells: Array.from({ length: 7 }, (_, d) => { const s = at(d); return s ? shortRange(f(s.start_time), f(s.end_time)) : 'Off'; }),
+      todayOn: !!t, todayLabel: t ? `${clock24(f(t.start_time))} to ${clock24(f(t.end_time))}` : '',
+    };
+  });
+  return <TeamView rows={rows} cats={(cats ?? []).map((c) => c.name)} todayWd={todayWd} owner={staff.app_role === 'owner'} />;
 }
