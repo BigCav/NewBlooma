@@ -51,7 +51,7 @@ export async function loadInbox(ctx: Pick<Ctx, 'sb' | 'salon'>): Promise<InboxIt
       ...((msgs ?? []) as any[]).filter((m) => m.item_id === i.id).map((m) => ({ mine: m.mine as boolean, text: m.body as string, at: stamp(m.created_at, tz, today) })),
     ] : [];
     if (type === 'message') summary = (thread.filter((m) => !m.mine).pop()?.text ?? thread[0]?.text ?? 'Message').slice(0, 120);
-    const cancelled = ['booking', 'request', 'reschedule'].includes(type) && ['cancelled', 'no_show'].includes(b?.status);
+    const cancelled = ['booking', 'request', 'reschedule'].includes(type) && ['cancelled', 'no_show'].includes(b?.status) && i.status !== 'declined';
     return { id: i.id, type, client, email: i.clients?.email ?? '', time: stamp(i.created_at, tz, today), unread: i.unread, status, cancelled, summary, rows, note, thread, calendarDay: b ? ymd(b.starts_at, tz) : null };
   });
 }
