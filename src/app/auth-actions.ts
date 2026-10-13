@@ -1,6 +1,6 @@
 'use server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { sendWelcomeEmail } from '@/lib/notify';
+import { sendPasswordResetEmail, sendWelcomeEmail } from '@/lib/notify';
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { supabaseServer } from '@/lib/supabase/server';
@@ -35,8 +35,13 @@ export async function signUp(input: { name: string; email: string; password: str
 export async function requestReset(input: { email: string }): Promise<R> {
   const email = input.email.trim();
   if (!EMAIL.test(email)) return { error: 'Enter a valid email address.' };
-  const sb = await supabaseServer();
-  await sb.auth.resetPasswordForEmail(email, { redirectTo: `${await origin()}/auth/callback?next=/reset-password` });
+  // The reset link is made here and emailed through Resend. Supabase's own mailer is only the fallback.
+  const { data } = await supabaseAdmin().auth.admin.generateLink({ type: 'recovery', email });
+  const hash = data?.properties?.hashed_token;
+  if (hash) {
+    const link = `${await origin()}/auth/confirm?token_hash=${encodeURIComponent(hash)}&type=recovery&next=/reset-password`;
+    if (!(await sendPasswordResetEmail(email, link))) { const sb = await supabaseServer(); await sb.auth.resetPasswordForEmail(email, { redirectTo: `${await origin()}/auth/callback?next=/reset-password` }); }
+  }
   return { status: 'sent' }; // same answer whether or not the email has an account
 }
 

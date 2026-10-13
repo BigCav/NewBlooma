@@ -136,3 +136,18 @@ Set up your salon: ${link}`;
     await sendEmail(to, { subject: 'Welcome to Aster', text, html, from: fromFor('Aster') });
   } catch { /* welcome emails are a courtesy */ }
 }
+
+/** Password reset email through Resend. Returns false when it could not be sent so the caller can fall back. */
+export async function sendPasswordResetEmail(to: string, link: string): Promise<boolean> {
+  if (!emailConfigured()) return false;
+  try {
+    const text = `We got a request to reset your Aster password.
+
+Choose a new password: ${link}
+
+If you did not ask for this, you can ignore this email. The link works once and expires soon.`;
+    const html = `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:auto"><h2>Reset your password</h2><p>We got a request to reset your Aster password.</p><p><a href="${link}" style="background:#5B3DF5;color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none;display:inline-block">Choose a new password</a></p><p style="color:#5E6673;font-size:13px">If you did not ask for this, you can ignore this email. The link works once and expires soon.</p></div>`;
+    await sendEmail(to, { subject: 'Reset your Aster password', text, html, from: fromFor('Aster') });
+    return true;
+  } catch { return false; }
+}
