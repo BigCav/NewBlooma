@@ -5,7 +5,9 @@ import { dateLong, time12 } from '@/lib/format';
 const base = () => process.env.NEXT_PUBLIC_APP_URL ?? '';
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 
-export const emailConfigured = () => !!process.env.RESEND_API_KEY;
+// Email goes through the "send-email" Supabase edge function (which holds the Resend key), or straight to Resend if RESEND_API_KEY is set here.
+const viaSupabase = () => !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+export const emailConfigured = () => !!process.env.RESEND_API_KEY || viaSupabase();
 /** EMAIL_FROM overrides the sender; otherwise mail goes out as "<Salon name> <bookings@blooma.co.nz>", an address already verified in Resend. */
 const fromFor = (salonName: string) => process.env.EMAIL_FROM || `${salonName.replace(/[<>",]/g, '').trim() || 'Bookings'} <bookings@blooma.co.nz>`;
 export const smsConfigured = () => !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM);
@@ -43,9 +45,17 @@ async function compose(r: Row): Promise<{ subject: string; text: string; html: s
 }
 
 async function sendEmail(to: string, m: { subject: string; text: string; html: string; from: string }) {
-  const res = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+  if (process.env.RESEND_API_KEY) {
+    const res = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: m.from, to, subject: m.subject, text: m.text, html: m.html }) });
+    if (!res.ok) { const b = await res.json().catch(() => ({})) as { message?: string }; throw new Error(`email ${res.status}${b.message ? ': ' + b.message : ''}`); }
+    return;
+  }
+  const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-email`, { method: 'POST',
+    headers: { Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ from: m.from, to, subject: m.subject, text: m.text, html: m.html }) });
-  if (!res.ok) { const b = await res.json().catch(() => ({})) as { message?: string }; throw new Error(`email ${res.status}${b.message ? ': ' + b.message : ''}`); }
+  const b = await res.json().catch(() => ({})) as { sent?: boolean; error?: string };
+  if (!res.ok || !b.sent) throw new Error(`email ${res.status}${b.error ? ': ' + b.error : ''}`);
 }
 async function sendSms(to: string, body: string) {
   const sid = process.env.TWILIO_ACCOUNT_SID!;
