@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getPublicSalon } from '@/lib/public';
+import { emailConfigured } from '@/lib/notify';
 import { ymd } from '@/lib/format';
 import { BookingView } from './BookingView';
 
@@ -31,5 +32,5 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     return h && h.is_open ? { from: String(h.open_time).slice(0, 5), to: String(h.close_time).slice(0, 5) } : null;
   });
   return <BookingView slug={slug} name={salon.name} address={salon.address ?? ''} tz={salon.timezone} currency={salon.currency || 'NZD'} services={services} cats={cats} team={team} hours={hours}
-    today={ymd(now, salon.timezone)} nowMin={Number(get('hour')) * 60 + Number(get('minute'))} autoConfirm={settings.auto_confirm} preselect={service && svcIds.has(service) ? service : ''} />;
+    today={ymd(now, salon.timezone)} nowMin={Number(get('hour')) * 60 + Number(get('minute'))} autoConfirm={settings.auto_confirm} emailOn={emailConfigured()} preselect={service && svcIds.has(service) ? service : ''} />;
 }

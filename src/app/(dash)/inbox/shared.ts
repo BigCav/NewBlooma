@@ -2,7 +2,7 @@ export type ItemType = 'request' | 'reschedule' | 'message' | 'cancellation' | '
 export type ItemStatus = 'new' | 'accepted' | 'declined' | 'done';
 export type InboxItem = {
   id: string; type: ItemType; client: string; email: string; time: string; unread: boolean; status: ItemStatus; summary: string;
-  rows: [string, string][]; note: string; thread: { mine: boolean; text: string; at: string }[]; calendarDay: string | null;
+  cancelled: boolean; rows: [string, string][]; note: string; thread: { mine: boolean; text: string; at: string }[]; calendarDay: string | null;
 };
 export const TYPES: Record<ItemType, { label: string; bg: string; fg: string }> = {
   request: { label: 'Booking request', bg: '#E9F0FF', fg: '#1B4A8A' },

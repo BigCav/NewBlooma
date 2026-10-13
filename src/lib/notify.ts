@@ -94,3 +94,9 @@ export async function sendCustomMessage(salonId: string, to: { phone?: string | 
   await sb.from('notifications_outbox').insert({ ...row, status: 'sent', attempts: 1, sent_at: new Date().toISOString() });
   return { ok: true, via: channel };
 }
+
+/** Sends whatever is queued right now so a confirmation does not wait for the next scheduled run. Never throws. */
+export async function flushOutbox() {
+  if (!emailConfigured() && !smsConfigured()) return;
+  try { await processOutbox(20); } catch { /* the scheduled run will retry */ }
+}

@@ -1,4 +1,6 @@
 'use server';
+import { flushOutbox } from '@/lib/notify';
+import { checkPhone } from '@/lib/phone';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { friendly } from '@/lib/session';
 import { minutesOfDay } from '@/lib/format';
@@ -22,9 +24,11 @@ export type BookInput = { services: string[]; slot: string; name: string; email:
 
 export async function publicBook(slug: string, i: BookInput): Promise<{ error?: string; staffName?: string }> {
   if (i.website) return { error: 'Could not complete your booking.' }; // honeypot
-  const name = i.name.trim(), email = i.email.trim().toLowerCase(), phone = i.phone.trim();
+  const name = i.name.trim(), email = i.email.trim().toLowerCase(); let phone = i.phone.trim();
   if (!name) return { error: 'Please add your name.' };
   if (!/^\S+@\S+\.\S+$/.test(email)) return { error: 'Please add a valid email so we can confirm your booking.' };
+  const ph = checkPhone(phone); if (ph.error) return { error: ph.error };
+  phone = ph.value;
   if (!i.services.length || !i.slot) return { error: 'Choose your services and a time.' };
   const [staffId, startsAt] = i.slot.split('|');
   const sb = supabaseAdmin();
@@ -38,14 +42,17 @@ export async function publicBook(slug: string, i: BookInput): Promise<{ error?: 
   }
   const { error } = await sb.rpc('create_booking', { p_salon: salon.id, p_client: client.id, p_staff: staffId, p_starts_at: startsAt, p_service_ids: i.services, p_source: 'online', p_notes: i.notes.trim() || null, p_mode: 'public' });
   if (error) return { error: friendly(error.message) };
+  await flushOutbox();
   const { data: st } = await sb.from('staff').select('name').eq('id', staffId).maybeSingle();
   return { staffName: st?.name ?? '' };
 }
 
 export async function publicWaitlist(slug: string, i: { name: string; phone: string; serviceId: string; staffId: string }): Promise<{ error?: string }> {
-  const name = i.name.trim(), phone = i.phone.trim();
+  const name = i.name.trim(); let phone = i.phone.trim();
   if (!name) return { error: 'Add your name.' };
   if (phone.replace(/\D/g, '').length < 7) return { error: 'Add a mobile number so we can reach you.' };
+  const ph = checkPhone(phone, true); if (ph.error) return { error: ph.error };
+  phone = ph.value;
   const sb = supabaseAdmin();
   const { data: salon } = await sb.from('salons').select('id').eq('slug', slug).maybeSingle();
   if (!salon) return { error: 'This booking page is not available.' };

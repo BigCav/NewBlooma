@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's SalonProfile.dc.html and MobileSalonProfile.dc.html (the public salon page).
 // Markup and style strings are kept as written; the {{ }} holes are the salon's real data.
+import { clockStr } from '@/lib/display';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { S } from '../../(dash)/calendar/pickers';
@@ -28,7 +29,7 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
   const t = p.hours[today];
   const open = !!t && p.nowMin >= toMin(t.from) && p.nowMin < toMin(t.to);
   const openStyle = 'display:inline-block;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:500;background:' + (open ? '#DDF3EA' : '#EEF0F3') + ';color:' + (open ? '#14624A' : '#4A525E');
-  const openText = open ? 'Open now, until ' + t!.to : 'Closed now';
+  const openText = open ? 'Open now, until ' + clockStr(t!.to) : 'Closed now';
   const book = (svc?: string) => `/b/${p.slug}/book` + (svc ? `?service=${svc}` : '');
   const tiles = TILES.filter(([, n]) => p.cats.some((c) => c.toLowerCase() === n.toLowerCase()));
   const chips = ['All', ...p.cats].map((c) => ({ c, label: c === 'All' ? 'All services' : c, on: cat === c }));
@@ -80,7 +81,7 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
     <section aria-label="Opening hours and contact" style={S(CARD(m ? 20 : 24, 16))}>
       <h2 style={S('margin:0;font-size:18px;font-weight:600;letter-spacing:-0.01em')}>Opening hours</h2>
       <div style={S('display:flex;flex-direction:column;margin-top:-8px')}>
-        {DAYS.map((d, i) => <div key={d} style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid #EEF0F3;font-weight:' + (i === today ? 600 : 400) + ';color:' + (i === today ? '#0E1116' : '#5E6673'))}><span>{d}</span><span>{p.hours[i] ? p.hours[i]!.from + ' to ' + p.hours[i]!.to : 'Closed'}</span></div>)}
+        {DAYS.map((d, i) => <div key={d} style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid #EEF0F3;font-weight:' + (i === today ? 600 : 400) + ';color:' + (i === today ? '#0E1116' : '#5E6673'))}><span>{d}</span><span>{p.hours[i] ? clockStr(p.hours[i]!.from) + ' to ' + clockStr(p.hours[i]!.to) : 'Closed'}</span></div>)}
       </div>
       {!!(p.address || p.phone || p.email) && <>
         <h2 style={S('margin:4px 0 0;font-size:18px;font-weight:600;letter-spacing:-0.01em')}>Find us</h2>

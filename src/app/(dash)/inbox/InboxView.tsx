@@ -12,7 +12,9 @@ import { FILTERS, QUICK, REASONS, STATUS, TYPES, initialsOf, isAction, type Inbo
 type Mode = 'view' | 'decline' | 'compose';
 const typeStyle = (t: InboxItem['type']) => 'flex:0 0 auto;display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;white-space:nowrap;background:' + TYPES[t].bg + ';color:' + TYPES[t].fg;
 const statusStyle = (k: Exclude<InboxItem['status'], 'new'>) => 'flex:0 0 auto;display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;white-space:nowrap;background:' + STATUS[k].bg + ';color:' + STATUS[k].fg;
-const statusText = (i: InboxItem) => (i.status === 'new' ? '' : STATUS[i.status].t);
+const statusText = (i: InboxItem) => (i.cancelled ? 'Booking cancelled' : i.status === 'new' ? '' : STATUS[i.status].t);
+const hasChip = (i: InboxItem) => i.cancelled || i.status !== 'new';
+const chipStyle = (i: InboxItem) => statusStyle(i.cancelled || i.status === 'new' ? 'declined' : i.status);
 
 function useInbox(props: { items: InboxItem[] }) {
   const router = useRouter();
@@ -63,11 +65,11 @@ function useInbox(props: { items: InboxItem[] }) {
 
   const q = query.trim().toLowerCase();
   const rows = items.filter((i) =>
-    (filter === 'all' || (filter === 'action' && isAction(i.type) && i.status === 'new') || (filter === 'message' && i.type === 'message') || (filter === 'cancellation' && i.type === 'cancellation'))
+    (filter === 'all' || (filter === 'action' && isAction(i.type) && i.status === 'new' && !i.cancelled) || (filter === 'message' && i.type === 'message') || (filter === 'cancellation' && i.type === 'cancellation'))
     && (!q || (i.client + ' ' + i.summary + ' ' + TYPES[i.type].label).toLowerCase().includes(q)));
-  const needs = items.filter((i) => isAction(i.type) && i.status === 'new').length;
+  const needs = items.filter((i) => isAction(i.type) && i.status === 'new' && !i.cancelled).length;
   const unread = items.filter((i) => i.unread).length;
-  const handled = items.filter((i) => i.status !== 'new').length;
+  const handled = items.filter((i) => hasChip(i)).length;
   return { items, narrow, selectedId, filter, setFilter, query, setQuery, mode, setMode, reason, setReason, draft, setDraft, notice, setNotice, error, setError, open, setOpen, sel, rows, needs, unread, handled, select, accept, sendDecline, sendReply, finish, cancel, busy };
 }
 type C = ReturnType<typeof useInbox>;
@@ -82,7 +84,7 @@ function Panel({ c, m }: { c: C; m: boolean }) {
   const pill = (on: boolean) => 'flex:0 0 auto;height:' + (m ? 44 : 40) + 'px;padding:0 16px;border-radius:999px;font-size:13.5px;font-weight:500;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
   const err = c.error ? <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p> : null;
   const isMsg = sel.type === 'message', isCancel = sel.type === 'cancellation', isResched = sel.type === 'reschedule';
-  const actionable = sel.type === 'request' && sel.status === 'new';
+  const actionable = sel.type === 'request' && sel.status === 'new' && !sel.cancelled;
   const followUp = (isCancel || isResched) && sel.status === 'new';
   const calHref = sel.calendarDay ? `/calendar?d=${sel.calendarDay}` : '/calendar';
   const LINK1 = 'height:' + bh + 'px;box-sizing:border-box;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none';
@@ -91,7 +93,7 @@ function Panel({ c, m }: { c: C; m: boolean }) {
   return (<>
     <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:8px')}>
       <span style={S(typeStyle(sel.type))}>{TYPES[sel.type].label}</span>
-      {sel.status !== 'new' && <span style={S(statusStyle(sel.status))}>{statusText(sel)}</span>}
+      {hasChip(sel) && <span style={S(chipStyle(sel))}>{statusText(sel)}</span>}
       {!!c.notice && <span role="status" style={S('padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.notice}</span>}
     </div>
     <div style={S('display:flex;align-items:center;gap:14px')}>
@@ -171,7 +173,7 @@ function Row({ c, i, m }: { c: C; i: InboxItem; m: boolean }) {
       <span style={S('flex:1 1 auto;min-width:0')}>
         <span style={S('display:flex;align-items:center;gap:8px;min-width:0')}><span style={S('min-width:0;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{i.client}</span>{i.unread && <span aria-hidden="true" style={S('flex:0 0 8px;width:8px;height:8px;border-radius:999px;background:#5B3DF5')} />}</span>
         <span style={S('display:block;margin-top:2px;font-size:13px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{i.summary}</span>
-        <span style={S('display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap')}><span style={S(typeStyle(i.type))}>{TYPES[i.type].label}</span>{i.status !== 'new' && <span style={S(statusStyle(i.status))}>{statusText(i)}</span>}</span>
+        <span style={S('display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap')}><span style={S(typeStyle(i.type))}>{TYPES[i.type].label}</span>{hasChip(i) && <span style={S(chipStyle(i))}>{statusText(i)}</span>}</span>
       </span>
       <span style={S('flex:0 0 auto;align-self:flex-start;margin-top:4px;font-size:12.5px;color:#5E6673')}>{i.time}</span>
     </button>

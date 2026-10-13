@@ -13,5 +13,9 @@ export async function getPublicSalon(slug: string) {
     sb.from('opening_hours').select('weekday,is_open,open_time,close_time').eq('salon_id', salon.id).order('weekday'),
     sb.from('service_staff').select('staff_id,service_id'),
   ]);
-  return { salon, settings: settings!, services: services ?? [], team: team ?? [], cats: cats ?? [], hours: hours ?? [], links: (links ?? []) as { staff_id: string; service_id: string }[] };
+  const staffIds = new Set((team ?? []).map((t) => t.id));
+  const allLinks = (links ?? []) as { staff_id: string; service_id: string }[];
+  // A service nobody bookable can perform would only lead clients to a dead end, so it is not listed.
+  const offered = new Set(allLinks.filter((l) => staffIds.has(l.staff_id)).map((l) => l.service_id));
+  return { salon, settings: settings!, services: (services ?? []).filter((s) => offered.has(s.id)), team: team ?? [], cats: cats ?? [], hours: hours ?? [], links: allLinks };
 }

@@ -1,7 +1,7 @@
 import { type CalBlock, type CalBooking, type CalHours, type CalService, type CalSettings, type CalStaff } from '@/lib/cal';
 export const HATCH = 'repeating-linear-gradient(135deg,#F7F8FA 0,#F7F8FA 8px,#ECEEF2 8px,#ECEEF2 16px)';
 export const first = (n: string) => n.split(' ')[0];
-export const usd = (c: number) => '$' + (Math.round(c) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 });
+export const usd = (c: number) => '$' + (Math.round(c) / 100).toLocaleString('en-US', { minimumFractionDigits: Math.round(c) % 100 ? 2 : 0, maximumFractionDigits: 2 });
 export const m2 = (c: number) => '$' + (Math.round(c) / 100).toFixed(2).replace(/\.00$/, '');
 export const BLOCK_DURS_M: [number, string][] = [[30, '30 min'], [60, '1 hour'], [120, '2 hours'], [180, '3 hours'], [-1, 'All day']];
 export const METHODS: [string, string][] = [['card', 'Card'], ['cash', 'Cash'], ['gift_card', 'Gift card']];

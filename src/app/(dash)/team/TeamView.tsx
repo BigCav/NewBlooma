@@ -11,7 +11,7 @@ import { DAYS, DAY_FULL, FILTERS, SHIFTS, initialsOf, type TeamRow } from './sha
 
 type Props = { rows: TeamRow[]; cats: string[]; todayWd: number; owner: boolean };
 type Draft = { name: string; role: string; cats: string[]; days: number[]; shift: string | null; online: boolean };
-const blank = (): Draft => ({ name: '', role: '', cats: [], days: [1, 2, 3, 4, 5], shift: '9-17', online: true });
+const blank = (): Draft => ({ name: '', role: '', cats: [], days: [0, 1, 2, 3, 4], shift: '9-17', online: true });
 const draftOf = (m: TeamRow): Draft => ({ name: m.name, role: m.role, cats: m.cats.slice(), days: m.days.slice(), shift: m.shift, online: m.online });
 
 function useTeam(props: Props) {

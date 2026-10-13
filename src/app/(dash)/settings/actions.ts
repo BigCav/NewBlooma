@@ -1,4 +1,5 @@
 'use server';
+import { checkPhone } from '@/lib/phone';
 import { revalidatePath } from 'next/cache';
 import { requireCtx, friendly } from '@/lib/session';
 import { validate, type Values } from './shared';
@@ -10,7 +11,7 @@ export async function saveSettings(v: Values): Promise<{ error?: string; section
   if (staff.app_role !== 'owner') return { error: 'Only the owner can change settings.' };
   const bad = validate(v);
   if (bad) return bad;
-  const r1 = await sb.from('salons').update({ name: v.bizName.trim(), phone: v.bizPhone.trim() || null, email: v.bizEmail.trim(), address: v.bizAddress.trim() || null }).eq('id', salon.id);
+  const r1 = await sb.from('salons').update({ name: v.bizName.trim(), phone: checkPhone(v.bizPhone).value || null, email: v.bizEmail.trim(), address: v.bizAddress.trim() || null }).eq('id', salon.id);
   if (r1.error) return { error: friendly(r1.error.message), section: 'business' };
   const r2 = await sb.from('salon_settings').update({
     online_booking: !!v.online, booking_window: pick(v.window, ['1w', '2w', '4w', '8w'], '4w'), min_notice: pick(v.notice, ['none', '1h', '2h', '24h'], '2h'),

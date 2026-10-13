@@ -1,4 +1,5 @@
 'use server';
+import { checkPhone } from '@/lib/phone';
 import { revalidatePath } from 'next/cache';
 import { requireCtx, friendly } from '@/lib/session';
 import { ymd } from '@/lib/format';
@@ -12,6 +13,8 @@ export async function createClient(name: string, email: string, phone: string): 
   name = name.trim(); email = email.trim(); phone = phone.trim();
   if (!name) return { error: "Add the client's name." };
   if (!/\S+@\S+\.\S+/.test(email)) return { error: 'Add a valid email address.' };
+  const ph = checkPhone(phone); if (ph.error) return { error: ph.error };
+  phone = ph.value;
   const { data, error } = await sb.from('clients').insert({ salon_id: salon.id, name, email, phone: phone || null }).select('id').single();
   if (error) return { error: error.code === '23505' ? 'A client with that email already exists.' : friendly(error.message) };
   revalidatePath('/clients');

@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's Setup.dc.html and MobileSetup.dc.html (first-run wizard).
 // Markup and style strings are kept as written; the last step creates the real salon, categories, starter services and team.
+import { phoneInput, checkPhone } from '@/lib/phone';
 import Link from 'next/link';
 import { useEffect, useState, useTransition } from 'react';
 import { S } from '../(dash)/calendar/pickers';
@@ -37,6 +38,7 @@ function useSetup() {
   const openCount = DAYS.filter((d) => open[d]).length;
   const next = () => {
     if (step === 0 && !name.trim()) { setError('Add your salon name to continue.'); return; }
+    if (step === 0 && checkPhone(phone).error) { setError(checkPhone(phone).error); return; }
     if (step === 1 && cats.length === 0) { setError('Choose at least one category.'); return; }
     if (step === 2 && !DAYS.some((d) => open[d])) { setError('Open at least one day.'); return; }
     if (step === 3) {
@@ -63,7 +65,7 @@ const Label = ({ id, children }: { id: string; children: React.ReactNode }) => <
 function StepBody({ c, m }: { c: C; m: boolean }) {
   const g = m ? 16 : 18;
   const inp = (id: string, label: string, val: string, set: (v: string) => void, ph: string, type = 'text') => (
-    <div style={S('display:flex;flex-direction:column;gap:6px')}><Label id={id}>{label}</Label><input id={id} type={type} value={val} onChange={(e) => { set(e.target.value); c.setError(''); }} placeholder={ph} style={{ ...S(INPUT), ...noMin }} /></div>
+    <div style={S('display:flex;flex-direction:column;gap:6px')}><Label id={id}>{label}</Label><input id={id} type={type} value={val} onChange={(e) => { set(type === 'tel' ? phoneInput(e.target.value) : e.target.value); c.setError(''); }} placeholder={ph} style={{ ...S(INPUT), ...noMin }} /></div>
   );
   return (<>
     {c.step === 0 && (

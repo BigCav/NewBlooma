@@ -1,4 +1,5 @@
 'use server';
+import { emailConfigured, flushOutbox } from '@/lib/notify';
 import { revalidatePath } from 'next/cache';
 import { requireCtx, friendly } from '@/lib/session';
 
@@ -17,6 +18,8 @@ export async function requestReviews(): Promise<Res> {
   const { sb } = await requireCtx();
   const { data, error } = await sb.rpc('request_reviews');
   if (error) return { error: friendly(error.message) };
+  await flushOutbox();
   revalidatePath('/reviews');
-  return { notice: data === 0 ? 'No one new to ask right now' : `Review requests sent to ${data} client${data === 1 ? '' : 's'} from the last two weeks` };
+  const n = `${data} client${data === 1 ? '' : 's'}`;
+  return { notice: data === 0 ? 'No one new to ask right now' : emailConfigured() ? `Review requests sent to ${n} from the last two weeks` : `Review requests are ready for ${n}, but email is not set up yet so nothing was sent` };
 }

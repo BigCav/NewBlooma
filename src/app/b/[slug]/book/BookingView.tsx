@@ -1,6 +1,8 @@
 'use client';
 // 1:1 conversion of the prototype's Booking.dc.html and MobileBooking.dc.html (the public online booking flow).
 // Markup and style strings are kept as written; the {{ }} holes are the salon's real data and the handlers are real server actions.
+import { clock12, clockStr, makeMoney } from '@/lib/display';
+import { phoneInput } from '@/lib/phone';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { S } from '../../../(dash)/calendar/pickers';
 import { publicBook, publicSlots, publicWaitlist, type Slot } from './actions';
@@ -10,7 +12,7 @@ type Member = { id: string; name: string; role: string; svc: string[] };
 type Props = {
   slug: string; name: string; address: string; tz: string; currency: string;
   services: Svc[]; cats: string[]; team: Member[]; hours: ({ from: string; to: string } | null)[];
-  today: string; nowMin: number; autoConfirm: boolean; preselect: string;
+  today: string; nowMin: number; autoConfirm: boolean; emailOn: boolean; preselect: string;
 };
 
 const DAY_ABBR = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -19,7 +21,7 @@ const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep
 const MONTH_NAME = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const TITLES = ['Choose your services', 'Choose a professional', 'Pick a date and time', 'Your details'];
 const LABELS = ['Services', 'Professional', 'Time', 'Details'];
-const hhmm = (m: number) => Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0');
+const hhmm = clock12;
 const fmtDur = (m: number) => { const h = Math.floor(m / 60); const r = m % 60; return h ? h + ' hr' + (r ? ' ' + r + ' min' : '') : m + ' min'; };
 const toMin = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
 const initialsOf = (n: string) => n.split(' ').filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
@@ -41,8 +43,7 @@ function useBooking(p: Props) {
       };
     });
   }, [p.today]);
-  const cur = useMemo(() => new Intl.NumberFormat('en-NZ', { style: 'currency', currency: p.currency, currencyDisplay: 'narrowSymbol', minimumFractionDigits: 0, maximumFractionDigits: 2 }), [p.currency]);
-  const money = (cents: number) => cur.format(cents / 100);
+  const money = useMemo(() => makeMoney(p.currency), [p.currency]);
 
   const [step, setStep] = useState(1);
   const [done, setDone] = useState<{ staffName: string; email: string; first: string; when: string; count: string; dur: string; total: string } | null>(null);
@@ -253,7 +254,7 @@ function Steps({ m, o }: { m: M; o: O }) {
                 <span style={S('font-size:15px;font-weight:600')}>Join the waitlist</span>
                 <span style={S('font-size:13.5px;color:#5E6673')}>We will message you if a time opens up for your services.</span>
                 <div style={S('display:flex;flex-direction:column;gap:6px')}><label htmlFor="wl-n" style={S('font-size:14px;font-weight:600')}>Full name</label><input id="wl-n" className="bkf" type="text" value={wl.name} onChange={(e) => m.setWlField('name', e.target.value)} placeholder="Your name" style={S(INPUT)} /></div>
-                <div style={S('display:flex;flex-direction:column;gap:6px')}><label htmlFor="wl-p" style={S('font-size:14px;font-weight:600')}>Mobile number</label><input id="wl-p" className="bkf" type="tel" value={wl.phone} onChange={(e) => m.setWlField('phone', e.target.value)} placeholder="Your number" style={S(INPUT)} /></div>
+                <div style={S('display:flex;flex-direction:column;gap:6px')}><label htmlFor="wl-p" style={S('font-size:14px;font-weight:600')}>Mobile number</label><input id="wl-p" className="bkf" type="tel" value={wl.phone} onChange={(e) => m.setWlField('phone', phoneInput(e.target.value))} placeholder="Your number" style={S(INPUT)} /></div>
                 {!!wl.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{wl.error}</p>}
                 <div style={S('display:flex;gap:10px')}><button onClick={m.submitWl} style={S('flex:1 1 0;height:44px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500')}>Join waitlist</button><button className="ghost" onClick={() => m.setWl({ ...wl, open: false, error: '' })} style={S('flex:1 1 0;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>Cancel</button></div>
               </div>
@@ -269,13 +270,13 @@ function Steps({ m, o }: { m: M; o: O }) {
         <input tabIndex={-1} autoComplete="off" aria-hidden="true" name="website" value={m.hp} onChange={(e) => m.setHp(e.target.value)} style={S('position:absolute;left:-9999px;width:1px;height:1px;min-height:0;padding:0;opacity:0')} />
         <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="bk-name" style={S('font-size:14px;font-weight:600')}>Full name</label><input id="bk-name" className="bkf" type="text" autoComplete="name" value={m.form.name} onChange={(e) => m.setField('name', e.target.value)} placeholder="Your name" style={S(INPUT)} /></div>
         <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="bk-email" style={S('font-size:14px;font-weight:600')}>Email</label><input id="bk-email" className="bkf" type="email" autoComplete="email" value={m.form.email} onChange={(e) => m.setField('email', e.target.value)} placeholder="you@example.com" style={S(INPUT)} /></div>
-        <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="bk-phone" style={S('font-size:14px;font-weight:600')}>Phone (optional)</label><input id="bk-phone" className="bkf" type="tel" inputMode="tel" autoComplete="tel" value={m.form.phone} onChange={(e) => m.setField('phone', e.target.value)} placeholder="Optional" style={S(INPUT)} /></div>
+        <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="bk-phone" style={S('font-size:14px;font-weight:600')}>Phone (optional)</label><input id="bk-phone" className="bkf" type="tel" inputMode="tel" autoComplete="tel" value={m.form.phone} onChange={(e) => m.setField('phone', phoneInput(e.target.value))} placeholder="Optional" style={S(INPUT)} /></div>
         <div style={S('display:flex;flex-direction:column;gap:8px')}>
           <label htmlFor="bk-notes" style={S('font-size:14px;font-weight:600')}>Notes for the salon (optional)</label>
           <textarea id="bk-notes" className="bkf" value={m.form.notes} onChange={(e) => m.setField('notes', e.target.value)} placeholder="Anything we should know before you arrive" style={S('box-sizing:border-box;width:100%;min-height:96px;resize:vertical;padding:12px 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;color:#0E1116;background:#FFFFFF')} />
         </div>
         <p style={S('margin:0;font-size:13px;color:#5E6673')}>You pay at the salon after your appointment.</p>
-        {!p.autoConfirm && <p style={S('margin:0;font-size:13px;color:#5E6673')}>The salon will confirm your request by email.</p>}
+        {!p.autoConfirm && <p style={S('margin:0;font-size:13px;color:#5E6673')}>{m.p.emailOn ? 'The salon will confirm your request by email.' : 'The salon will confirm your request.'}</p>}
         {!!m.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{m.error}</p>}
       </div>
     )}
@@ -295,7 +296,7 @@ function DoneCard({ m }: { m: M }) {
       <div style={S('flex:0 0 56px;width:56px;height:56px;border-radius:999px;background:#DDF3EA;display:flex;align-items:center;justify-content:center')}><Check size={26} color="#14624A" w={2.2} /></div>
       <div>
         <h1 style={S('margin:0;font-size:30px;line-height:1.15;font-weight:600;letter-spacing:-0.03em;overflow-wrap:anywhere')}>{booked ? `You're booked, ${d.first}` : `Request sent, ${d.first}`}</h1>
-        <p style={S('margin:8px 0 0;color:#5E6673;font-size:15px;overflow-wrap:anywhere')}>{booked ? `We've sent the details to ${d.email}.` : `We'll email ${d.email} once the salon confirms.`}</p>
+        <p style={S('margin:8px 0 0;color:#5E6673;font-size:15px;overflow-wrap:anywhere')}>{booked ? (m.p.emailOn ? `We've sent the details to ${d.email}.` : 'Your booking is confirmed. Keep these details handy.') : (m.p.emailOn ? `We'll email ${d.email} once the salon confirms.` : 'The salon will confirm your request soon.')}</p>
       </div>
       <dl style={S('margin:0;display:flex;flex-direction:column')}>
         {row('When', d.when)}{row('With', d.staffName)}{row('Services', `${d.count}, ${d.dur}`)}{row('Total to pay at the salon', d.total, true, true)}
@@ -320,7 +321,7 @@ function Desktop({ m }: { m: M }) {
   const o: O = { rowH: 88, rowPad: '16px 24px', dayW: 84, cols: 'repeat(auto-fill,minmax(92px,1fr))', btnH: 48 };
   const t = p.hours[m.days[0].dow];
   const pillOn = !!t && p.nowMin < toMin(t.to);
-  const pill = pillOn ? 'Open today until ' + t!.to : t ? 'Closed for today' : 'Closed today';
+  const pill = pillOn ? 'Open today until ' + clockStr(t!.to) : t ? 'Closed for today' : 'Closed today';
   const hasWhen = m.slotMin !== null;
   return (
     <div style={S('max-width:1180px;margin:0 auto;box-sizing:border-box;padding:24px 32px 56px;display:flex;flex-direction:column;gap:28px')}>

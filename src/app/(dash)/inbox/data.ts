@@ -26,7 +26,7 @@ const dayLabel = (iso: string, tz: string, today: string) => {
 export async function loadInbox(ctx: Pick<Ctx, 'sb' | 'salon'>): Promise<InboxItem[]> {
   const { sb, salon } = ctx, tz = salon.timezone, today = ymd(new Date(), tz);
   const { data } = await sb.from('inbox_items')
-    .select('id,type,body,unread,status,created_at,clients(name,email),bookings(starts_at,ends_at,notes,staff(name),booking_services(price_cents,duration_min,services(name)))')
+    .select('id,type,body,unread,status,created_at,clients(name,email),bookings(status,starts_at,ends_at,notes,staff(name),booking_services(price_cents,duration_min,services(name)))')
     .order('created_at', { ascending: false }).limit(200);
   const ids = (data ?? []).filter((i: any) => i.type === 'message').map((i: any) => i.id);
   const { data: msgs } = ids.length ? await sb.from('inbox_messages').select('item_id,mine,body,created_at').in('item_id', ids).order('created_at') : { data: [] as any[] };
@@ -51,7 +51,8 @@ export async function loadInbox(ctx: Pick<Ctx, 'sb' | 'salon'>): Promise<InboxIt
       ...((msgs ?? []) as any[]).filter((m) => m.item_id === i.id).map((m) => ({ mine: m.mine as boolean, text: m.body as string, at: stamp(m.created_at, tz, today) })),
     ] : [];
     if (type === 'message') summary = (thread.filter((m) => !m.mine).pop()?.text ?? thread[0]?.text ?? 'Message').slice(0, 120);
-    return { id: i.id, type, client, email: i.clients?.email ?? '', time: stamp(i.created_at, tz, today), unread: i.unread, status, summary, rows, note, thread, calendarDay: b ? ymd(b.starts_at, tz) : null };
+    const cancelled = ['booking', 'request', 'reschedule'].includes(type) && ['cancelled', 'no_show'].includes(b?.status);
+    return { id: i.id, type, client, email: i.clients?.email ?? '', time: stamp(i.created_at, tz, today), unread: i.unread, status, cancelled, summary, rows, note, thread, calendarDay: b ? ymd(b.starts_at, tz) : null };
   });
 }
 export { fmtDay };

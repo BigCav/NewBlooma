@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
-import { adjustStock, createProduct, saveProduct } from './actions';
+import { adjustStock, createProduct, removeProduct, saveProduct } from './actions';
 import { FILTERS, STATUS, initialsOf, money, toneOf, type ProductRow } from './shared';
 
 type Props = { rows: ProductRow[]; cats: string[] };
@@ -41,6 +41,7 @@ function useProducts(props: Props) {
   const [qty, setQty] = useState(12);
   const [ef, setEf] = useState({ name: '', brand: '', price: '', reorder: '' });
   const [nf, setNf] = useState(blankNew());
+  const [confirmDel, setConfirmDel] = useState(false);
   const sel = rows.find((p) => p.id === selectedId) ?? rows[0] ?? null;
 
   const pick = (id: string) => { setSelectedId(id); setMode('view'); setNotice(''); setError(''); setOpen(true); };
@@ -56,14 +57,15 @@ function useProducts(props: Props) {
     if (r.error) { setError(r.error); return; }
     setSelectedId(r.id ?? null); setFilter('all'); setMode('view'); setNf(blankNew()); setError(''); setNotice(r.notice ?? ''); setOpen(mobile); router.refresh();
   });
-  const cancel = () => { setMode('view'); setError(''); setOpen(mobile ? mode !== 'new' : false); };
+  const cancel = () => { setMode('view'); setError(''); setConfirmDel(false); setOpen(mobile ? mode !== 'new' : false); };
+  const remove = () => { if (!sel) return; startT(async () => { const r = await removeProduct(sel.id); if (r.error) { setError(r.error); return; } setConfirmDel(false); setSelectedId(null); setMode('view'); setError(''); setNotice(r.notice ?? ''); setOpen(false); router.refresh(); }); };
   const sq = query.trim().toLowerCase();
   const list = rows.filter((p) => (filter === 'all' || p.status === filter) && (!sq || (p.name + ' ' + p.brand + ' ' + p.cat + ' ' + p.sku).toLowerCase().includes(sq)));
   return { ...props, busy, narrow, rows, list, sel, filter, setFilter, query, setQuery, mode, setMode, open, notice, setNotice, error, setError, qty, setQty, ef, setEf, nf, setNf,
-    pick, nudge, restock, saveEdit, create, cancel, close: () => { setOpen(false); setMode('view'); setError(''); },
+    pick, nudge, restock, saveEdit, create, cancel, remove, confirmDel, setConfirmDel, close: () => { setOpen(false); setMode('view'); setError(''); },
     openNew: () => { setMode('new'); setNf(blankNew()); setError(''); setNotice(''); setOpen(true); },
     openRestock: () => { setMode('restock'); setQty(12); setError(''); setNotice(''); },
-    openEdit: () => { if (!sel) return; setMode('edit'); setEf({ name: sel.name, brand: sel.brand, price: String(sel.priceCents / 100), reorder: String(sel.reorder) }); setError(''); setNotice(''); },
+    openEdit: () => { if (!sel) return; setConfirmDel(false); setMode('edit'); setEf({ name: sel.name, brand: sel.brand, price: String(sel.priceCents / 100), reorder: String(sel.reorder) }); setError(''); setNotice(''); },
     low: rows.filter((p) => p.status === 'Low stock').length, out: rows.filter((p) => p.status === 'Out of stock').length };
 }
 type C = ReturnType<typeof useProducts>;
@@ -88,8 +90,8 @@ function Body({ c, m }: { c: C; m: boolean }) {
       <Field id="nf-brand" label="Brand"><input id="nf-brand" type="text" value={c.nf.brand} onChange={(e) => { c.setNf({ ...c.nf, brand: e.target.value }); c.setError(''); }} placeholder="Brand (optional)" style={inputS} /></Field>
       <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="nf-cat-label" style={S('font-size:14px;font-weight:600')}>Category</span><div role="group" className="hscroll" aria-labelledby="nf-cat-label" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>{c.cats.map((x) => <button key={x} onClick={() => c.setNf({ ...c.nf, cat: x })} aria-pressed={c.nf.cat === x} style={S(pill(c.nf.cat === x, m))}>{x}</button>)}</div></div>
       <Field id="nf-price" label="Price"><Dollar id="nf-price" v={c.nf.price} on={(v) => { c.setNf({ ...c.nf, price: v }); c.setError(''); }} /></Field>
-      <Field id="nf-stock" label="Starting stock (units)"><input id="nf-stock" type="text" value={c.nf.stock} onChange={(e) => { c.setNf({ ...c.nf, stock: e.target.value }); c.setError(''); }} placeholder="0" style={inputS} /></Field>
-      <Field id="nf-reorder" label="Reorder at (units)"><input id="nf-reorder" type="text" value={c.nf.reorder} onChange={(e) => { c.setNf({ ...c.nf, reorder: e.target.value }); c.setError(''); }} placeholder="6" style={inputS} /></Field>
+      <Field id="nf-stock" label="Starting stock (units)"><input id="nf-stock" type="text" inputMode="numeric" value={c.nf.stock} onChange={(e) => { c.setNf({ ...c.nf, stock: e.target.value.replace(/\D/g, '') }); c.setError(''); }} placeholder="0" style={inputS} /></Field>
+      <Field id="nf-reorder" label="Reorder at (units)"><input id="nf-reorder" type="text" inputMode="numeric" value={c.nf.reorder} onChange={(e) => { c.setNf({ ...c.nf, reorder: e.target.value.replace(/\D/g, '') }); c.setError(''); }} placeholder="6" style={inputS} /></Field>
       {err}
       <div style={S('display:flex;gap:10px')}><button onClick={c.create} disabled={c.busy} style={S(DARK(h))}>Add product</button><button className="ghost" onClick={c.cancel} style={S(GHOST(h))}>Cancel</button></div>
     </div>
@@ -110,9 +112,19 @@ function Body({ c, m }: { c: C; m: boolean }) {
       <Field id="ef-name" label="Name"><input id="ef-name" type="text" value={c.ef.name} onChange={(e) => { c.setEf({ ...c.ef, name: e.target.value }); c.setError(''); }} placeholder="Product name" style={inputS} /></Field>
       <Field id="ef-brand" label="Brand"><input id="ef-brand" type="text" value={c.ef.brand} onChange={(e) => { c.setEf({ ...c.ef, brand: e.target.value }); c.setError(''); }} placeholder="Brand" style={inputS} /></Field>
       <Field id="ef-price" label="Price"><Dollar id="ef-price" v={c.ef.price} on={(v) => { c.setEf({ ...c.ef, price: v }); c.setError(''); }} /></Field>
-      <Field id="ef-reorder" label="Reorder at (units)"><input id="ef-reorder" type="text" value={c.ef.reorder} onChange={(e) => { c.setEf({ ...c.ef, reorder: e.target.value }); c.setError(''); }} placeholder="0" style={inputS} /></Field>
+      <Field id="ef-reorder" label="Reorder at (units)"><input id="ef-reorder" type="text" inputMode="numeric" value={c.ef.reorder} onChange={(e) => { c.setEf({ ...c.ef, reorder: e.target.value.replace(/\D/g, '') }); c.setError(''); }} placeholder="0" style={inputS} /></Field>
       {err}
-      <div style={S('display:flex;gap:10px')}><button onClick={c.saveEdit} disabled={c.busy} style={S(DARK(h))}>Save product</button><button className="ghost" onClick={c.cancel} style={S(GHOST(h))}>Cancel</button></div>
+      {!c.confirmDel && <div style={S('display:flex;gap:10px')}><button onClick={c.saveEdit} disabled={c.busy} style={S(DARK(h))}>Save product</button><button className="ghost" onClick={c.cancel} style={S(GHOST(h))}>Cancel</button><button className="ghost" onClick={() => c.setConfirmDel(true)} style={S(GHOST(h))}>Delete</button></div>}
+      {c.confirmDel && (
+        <div role="alert" style={S('display:flex;flex-direction:column;gap:12px;border-radius:16px;background:#FDECEA;padding:14px 16px')}>
+          <div style={S('font-size:14.5px;font-weight:600')}>Delete this product?</div>
+          <div style={S('font-size:13.5px;color:#5E6673')}>It will disappear from your product list. Past sales are not affected.</div>
+          <div style={S('display:flex;gap:10px')}>
+            <button onClick={c.remove} disabled={c.busy} style={S('flex:1 1 0;height:' + h + 'px;border:0;border-radius:999px;background:#C0261B;color:#FFFFFF;font-size:14px;font-weight:500')}>Delete product</button>
+            <button className="ghost" onClick={() => c.setConfirmDel(false)} style={S(GHOST(h))}>Keep it</button>
+          </div>
+        </div>
+      )}
     </div>
   );
   const fill = Math.min(100, s.reorder ? Math.round(s.stock / (s.reorder * 3) * 100) : s.stock ? 100 : 0);

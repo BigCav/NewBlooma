@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's Settings.dc.html and MobileSettings.dc.html. Markup and style strings are kept as written;
 // the {{ }} holes are real salon settings and Save writes them through a server action.
+import { phoneInput } from '@/lib/phone';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
@@ -87,7 +88,7 @@ function Group({ c, m, id, title, k }: { c: C; m: boolean; id: string; title: st
 function Field({ id, label, k, c, type, mode, ph }: { id: string; label: string; k: 'bizName' | 'bizPhone' | 'bizEmail' | 'bizAddress' | 'tax'; c: C; type: string; mode?: string; ph: string }) {
   return (
     <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor={id} style={S('font-size:14px;font-weight:600')}>{label}</label>
-      <input id={id} type={type} inputMode={mode as any} value={c.v[k]} onChange={(e) => c.set(k, e.target.value)} placeholder={ph} style={{ ...S(INPUT), ...noMin }} /></div>
+      <input id={id} type={type} inputMode={mode as any} value={c.v[k]} onChange={(e) => c.set(k, k === 'bizPhone' ? phoneInput(e.target.value) : e.target.value)} placeholder={ph} style={{ ...S(INPUT), ...noMin }} /></div>
   );
 }
 

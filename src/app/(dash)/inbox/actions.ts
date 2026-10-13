@@ -2,7 +2,7 @@
 import { revalidatePath } from 'next/cache';
 import { requireCtx, friendly } from '@/lib/session';
 import { dateLong, time12 } from '@/lib/format';
-import { sendCustomMessage } from '@/lib/notify';
+import { emailConfigured, flushOutbox, sendCustomMessage } from '@/lib/notify';
 
 type R = { error?: string; ok?: boolean; notice?: string };
 const refresh = () => { revalidatePath('/inbox'); revalidatePath('/', 'layout'); };
@@ -28,9 +28,11 @@ export async function acceptRequest(id: string): Promise<R> {
   const { error } = await sb.rpc('confirm_booking', { p_booking: it.booking_id });
   if (error && !error.message.includes('booking_not_pending')) return { error: friendly(error.message) };
   await sb.from('inbox_items').update({ status: 'handled', unread: false }).eq('id', id);
+  await flushOutbox();
   refresh();
   const c = (it as any).clients;
-  return { ok: true, notice: c?.email ? `Accepted. ${first(c.name)} will get a confirmation email.` : `Accepted. ${first(c?.name)} has no email on file, so no confirmation was sent.` };
+  const notice = !c?.email ? `Accepted. ${first(c?.name)} has no email on file, so no confirmation was sent.` : emailConfigured() ? `Accepted. ${first(c.name)} will get a confirmation email.` : 'Accepted. Email is not set up yet, so no confirmation was sent.';
+  return { ok: true, notice };
 }
 
 const REASON_TEXT: Record<string, string> = { 'Not available then': 'that time is not available', 'Fully booked': 'we are fully booked then', 'Something else': 'something has come up on our side' };
