@@ -26,7 +26,9 @@ function useSales(props: Props) {
     return () => mq.removeEventListener('change', f);
   }, []);
   const first = props.methods[0]?.id ?? 'cash';
-  const blankPay = () => ({ method: first as PayMethod['id'], tip: '0', code: '' });
+  const blankPay = (tip = '0') => ({ method: first as PayMethod['id'], tip, code: '' });
+  // A sale started at the calendar already has a tip; keep it when payment opens instead of resetting to none.
+  const tipPctOf = (r?: { amount: number; tip: number }) => (r && r.amount > 0 && r.tip > 0 ? String(Math.round((r.tip * 100) / r.amount)) : '0');
   const blankNew = () => ({ client: '', service: null as string | null, method: first as PayMethod['id'], tip: '0', code: '' });
   const rows = props.rows;
   const startSel = props.initial.sale && rows.some((r) => r.id === props.initial.sale) ? props.initial.sale : rows[0]?.id ?? null;
@@ -39,7 +41,7 @@ function useSales(props: Props) {
   const [notice, setNotice] = useState('');
   const [error, setError] = useState(props.initial.card ? CARD_MSG[props.initial.card] ?? '' : '');
   const [confirmRefund, setConfirmRefund] = useState(false);
-  const [pay, setPay] = useState(blankPay());
+  const [pay, setPay] = useState(blankPay(tipPctOf(rows.find((r) => r.id === startSel))));
   const [editAmount, setEditAmount] = useState('');
   const [nw, setNw] = useState(blankNew());
   const [txn, setTxn] = useState('');
@@ -107,7 +109,7 @@ function useSales(props: Props) {
   const sq = query.trim().toLowerCase();
   const list = rows.filter((t) => (filter === 'all' || t.status === filter) && (!sq || (t.client + ' ' + t.service + ' ' + t.staffName + ' ' + t.status).toLowerCase().includes(sq)));
   return { ...props, busy, narrow, rows, list, sel, selectedId, filter, setFilter, query, setQuery, mode, setMode, open, notice, error, setError, confirmRefund, setConfirmRefund,
-    pay, setPay, editAmount, setEditAmount, nw, setNw, txn, wait, pick, openNew, cancel, close, takePayment, saveEdit, doRefund, receipt, createSale,
+    pay, setPay, tipPctOf, editAmount, setEditAmount, nw, setNw, txn, wait, pick, openNew, cancel, close, takePayment, saveEdit, doRefund, receipt, createSale,
     paidTotal: props.todayTotal, pendingCount: rows.filter((r) => r.status === 'Pending').length };
 }
 type C = ReturnType<typeof useSales>;
@@ -201,7 +203,7 @@ function Panel({ c, m }: { c: C; m: boolean }) {
     </dl>
     {!c.confirmRefund && (
       <div style={S('display:flex;gap:10px')}>
-        <button onClick={() => { if (s.status === 'Pending') { c.setPay({ method: c.methods[0]?.id ?? 'cash', tip: '0', code: '' }); c.setMode('pay'); c.setError(''); } else c.receipt(); }} disabled={c.busy} style={S(DARK(h))}>{s.status === 'Pending' ? 'Take payment' : 'Send receipt'}</button>
+        <button onClick={() => { if (s.status === 'Pending') { c.setPay({ method: c.methods[0]?.id ?? 'cash', tip: c.tipPctOf(s), code: '' }); c.setMode('pay'); c.setError(''); } else c.receipt(); }} disabled={c.busy} style={S(DARK(h))}>{s.status === 'Pending' ? 'Take payment' : 'Send receipt'}</button>
         {secondary && <button className="ghost" onClick={() => { if (s.status === 'Paid') c.setConfirmRefund(true); else { c.setEditAmount(String(s.amount / 100)); c.setMode('edit'); c.setError(''); } }} style={S(GHOST(h))}>{secondary}</button>}
       </div>
     )}
