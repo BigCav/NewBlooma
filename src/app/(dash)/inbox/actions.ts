@@ -1,18 +1,68 @@
 'use server';
 import { revalidatePath } from 'next/cache';
-import { requireCtx } from '@/lib/session';
+import { requireCtx, friendly } from '@/lib/session';
+import { dateLong, time12 } from '@/lib/format';
+import { sendCustomMessage } from '@/lib/notify';
 
-export async function handleItem(fd: FormData) {
+type R = { error?: string; ok?: boolean; notice?: string };
+const refresh = () => { revalidatePath('/inbox'); revalidatePath('/', 'layout'); };
+const first = (n?: string | null) => String(n ?? 'Client').split(' ')[0];
+
+export async function markRead(id: string): Promise<R> {
   const { sb } = await requireCtx();
-  const id = String(fd.get('id')), act = String(fd.get('act'));
-  const bookingId = String(fd.get('booking') ?? '');
-  if (act === 'approve' && bookingId) await sb.rpc('confirm_booking', { p_booking: bookingId });
-  else if (act === 'decline' && bookingId) await sb.from('bookings').update({ status: 'cancelled', cancelled_at: new Date().toISOString() }).eq('id', bookingId);
-  await sb.from('inbox_items').update({ unread: false, status: act === 'decline' ? 'declined' : 'handled' }).eq('id', id);
-  revalidatePath('/inbox'); revalidatePath('/', 'layout');
+  await sb.from('inbox_items').update({ unread: false }).eq('id', id);
+  refresh(); return { ok: true };
 }
-export async function markRead(fd: FormData) {
+
+export async function markDone(id: string): Promise<R> {
   const { sb } = await requireCtx();
-  await sb.from('inbox_items').update({ unread: false }).eq('id', String(fd.get('id')));
-  revalidatePath('/inbox'); revalidatePath('/', 'layout');
+  const { error } = await sb.from('inbox_items').update({ status: 'handled', unread: false }).eq('id', id);
+  if (error) return { error: friendly(error.message) };
+  refresh(); return { ok: true };
+}
+
+export async function acceptRequest(id: string): Promise<R> {
+  const { sb } = await requireCtx();
+  const { data: it } = await sb.from('inbox_items').select('booking_id,clients(name,email)').eq('id', id).maybeSingle();
+  if (!it?.booking_id) return { error: 'This request has no booking.' };
+  const { error } = await sb.rpc('confirm_booking', { p_booking: it.booking_id });
+  if (error && !error.message.includes('booking_not_pending')) return { error: friendly(error.message) };
+  await sb.from('inbox_items').update({ status: 'handled', unread: false }).eq('id', id);
+  refresh();
+  const c = (it as any).clients;
+  return { ok: true, notice: c?.email ? `Accepted. ${first(c.name)} will get a confirmation email.` : `Accepted. ${first(c?.name)} has no email on file, so no confirmation was sent.` };
+}
+
+const REASON_TEXT: Record<string, string> = { 'Not available then': 'that time is not available', 'Fully booked': 'we are fully booked then', 'Something else': 'something has come up on our side' };
+export async function declineRequest(id: string, reason: string): Promise<R> {
+  const { sb, salon } = await requireCtx();
+  if (!REASON_TEXT[reason]) return { error: 'Choose a reason.' };
+  const { data: it } = await sb.from('inbox_items').select('booking_id,clients(name,email,phone),bookings(starts_at,status,booking_services(services(name)))').eq('id', id).maybeSingle();
+  if (!it?.booking_id) return { error: 'This request has no booking.' };
+  const b = (it as any).bookings, c = (it as any).clients;
+  if (b?.status === 'pending') {
+    const { error } = await sb.from('bookings').update({ status: 'cancelled', cancelled_at: new Date().toISOString() }).eq('id', it.booking_id);
+    if (error) return { error: friendly(error.message) };
+  }
+  await sb.from('inbox_items').update({ status: 'declined', unread: false }).eq('id', id);
+  refresh();
+  const svc = (b?.booking_services ?? []).map((l: any) => l.services?.name).filter(Boolean).join(' + ') || 'your booking';
+  const text = `Hi ${first(c?.name)}, sorry, we can't take your booking for ${svc} on ${dateLong(b.starts_at, salon.timezone)} at ${time12(b.starts_at, salon.timezone)}: ${REASON_TEXT[reason]}. Please pick another time on our booking page.`;
+  const r = await sendCustomMessage(salon.id, c ?? {}, text);
+  return { ok: true, notice: r.ok ? `Declined. ${first(c?.name)} has been told.` : `Declined. ${first(c?.name)} was not told: ${r.error}` };
+}
+
+export async function replyToItem(id: string, text: string): Promise<R> {
+  const { sb, salon } = await requireCtx();
+  text = text.trim(); if (!text) return { error: 'Write a reply first.' };
+  if (text.length > 600) return { error: 'Keep the message under 600 characters.' };
+  const { data: it } = await sb.from('inbox_items').select('type,clients(name,email,phone)').eq('id', id).maybeSingle();
+  if (!it) return { error: 'Item not found.' };
+  const c = (it as any).clients;
+  const r = await sendCustomMessage(salon.id, c ?? {}, text);
+  if (!r.ok) return { error: r.error };
+  if (it.type === 'message') await sb.from('inbox_messages').insert({ salon_id: salon.id, item_id: id, mine: true, body: text });
+  await sb.from('inbox_items').update({ unread: false }).eq('id', id);
+  refresh();
+  return { ok: true, notice: it.type === 'message' ? 'Reply sent' : `Message sent to ${first(c?.name)}` };
 }
