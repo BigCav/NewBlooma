@@ -115,3 +115,19 @@ export async function flushOutbox() {
   if (!emailConfigured() && !smsConfigured()) return;
   try { await processOutbox(20); } catch { /* the scheduled run will retry */ }
 }
+
+/** Welcome email for a new owner account. Best effort: a failure here must never block signing up. */
+export async function sendWelcomeEmail(to: string, name: string) {
+  if (!emailConfigured()) return;
+  try {
+    const first = esc(name.trim().split(/\s+/)[0] || 'there');
+    const link = `${base()}/setup`;
+    const text = `Hi ${name.trim().split(/\s+/)[0] || 'there'}, welcome to Aster.
+
+Your account is ready. Set up your salon in a few minutes and start taking bookings.
+
+Set up your salon: ${link}`;
+    const html = `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:auto"><h2>Welcome to Aster, ${first}</h2><p>Your account is ready. Set up your salon in a few minutes and start taking bookings.</p><p><a href="${link}" style="background:#5B3DF5;color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none;display:inline-block">Set up your salon</a></p></div>`;
+    await sendEmail(to, { subject: 'Welcome to Aster', text, html, from: fromFor('Aster') });
+  } catch { /* welcome emails are a courtesy */ }
+}

@@ -84,7 +84,10 @@ function useBooking(p: Props) {
     if (m && !next.every((x) => m.svc.includes(x))) setStaff('');
     setSel(next);
   };
-  const back = () => { if (step > 1) { setStep(step - 1); setError(''); } };
+  // On the first step, back returns to the salon page instead of doing nothing.
+  const back = () => { if (step > 1) { setStep(step - 1); setError(''); } else window.location.assign('/b/' + p.slug); };
+  // Every step starts at the top: the phone layout scrolls inside .bk-flow, the desktop layout scrolls the window.
+  useEffect(() => { window.scrollTo(0, 0); document.querySelectorAll('.bk-flow').forEach((el) => { el.scrollTop = 0; }); }, [step, done]);
   const goStep = (n: number) => { if (n < step) { setStep(n); setError(''); } };
   const setField = (k: keyof Form, v: string) => { setForm((f) => ({ ...f, [k]: v })); setError(''); };
   const setWlField = (k: 'name' | 'phone', v: string) => setWl((w) => ({ ...w, [k]: v, error: '' }));
@@ -327,6 +330,9 @@ function Desktop({ m }: { m: M }) {
     <div style={S('max-width:1180px;margin:0 auto;box-sizing:border-box;padding:24px 32px 56px;display:flex;flex-direction:column;gap:28px')}>
       <header style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px')}>
         <div style={S('display:flex;align-items:center;gap:12px')}>
+          <button className="ghost" onClick={m.back} aria-label={m.step <= 1 ? `Back to ${p.name}` : 'Back to previous step'} style={S('flex:0 0 44px;width:44px;height:44px;padding:0;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center')}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 6 8.5 12l6 6" /></svg>
+          </button>
           <div>
             <div style={S('font-size:17px;font-weight:600;letter-spacing:-0.01em')}>{p.name}</div>
             <div style={S('font-size:13px;color:#5E6673')}>Online booking</div>
@@ -398,7 +404,7 @@ function Mobile({ m }: { m: M }) {
   );
   return <>
     <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px')}>
-      <button className="ghost" onClick={m.back} disabled={m.step <= 1} aria-label="Back to previous step" style={S('flex:0 0 44px;width:44px;height:44px;padding:0;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center')}>
+      <button className="ghost" onClick={m.back} aria-label={m.step <= 1 ? `Back to ${p.name}` : 'Back to previous step'} style={S('flex:0 0 44px;width:44px;height:44px;padding:0;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center')}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 6 8.5 12l6 6" /></svg>
       </button>
       <div style={S('flex:1 1 auto;min-width:0')}>

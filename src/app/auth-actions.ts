@@ -1,4 +1,6 @@
 'use server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
+import { sendWelcomeEmail } from '@/lib/notify';
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { supabaseServer } from '@/lib/supabase/server';
@@ -20,10 +22,14 @@ export async function signUp(input: { name: string; email: string; password: str
   if (!name) return { error: 'Add your name.' };
   if (!EMAIL.test(email)) return { error: 'Enter a valid email address.' };
   if (input.password.length < 8) return { error: 'Use at least 8 characters for your password.' };
+  // No confirmation email: the account is created already verified and signed in, and a welcome email follows.
+  const { error } = await supabaseAdmin().auth.admin.createUser({ email, password: input.password, email_confirm: true, user_metadata: { full_name: name } });
+  if (error) return { error: /already|registered|exists/i.test(error.message) ? 'An account with that email already exists. Try signing in.' : /password/i.test(error.message) ? 'Choose a stronger password.' : 'Could not create your account. Please try again.' };
   const sb = await supabaseServer();
-  const { data, error } = await sb.auth.signUp({ email, password: input.password, options: { emailRedirectTo: `${await origin()}/auth/callback`, data: { full_name: name } } });
-  if (error) return { error: /already|registered/i.test(error.message) ? 'An account with that email already exists. Try signing in.' : /password/i.test(error.message) ? 'Choose a stronger password.' : 'Could not create your account. Please try again.' };
-  return { status: data.session ? 'created' : 'confirm' };
+  const { error: inErr } = await sb.auth.signInWithPassword({ email, password: input.password });
+  if (inErr) return { error: 'Your account was created. Please sign in.' };
+  await sendWelcomeEmail(email, name);
+  return { status: 'created' };
 }
 
 export async function requestReset(input: { email: string }): Promise<R> {
