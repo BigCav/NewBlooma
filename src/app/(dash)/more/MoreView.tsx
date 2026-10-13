@@ -1,3 +1,4 @@
+'use client';
 import Link from 'next/link';
 import { MobileHeader, MobileTabs } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
