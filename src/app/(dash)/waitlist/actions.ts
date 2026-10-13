@@ -1,4 +1,5 @@
 'use server';
+import { clock12 } from '@/lib/display';
 import { revalidatePath } from 'next/cache';
 import { requireCtx, friendly } from '@/lib/session';
 import { minutesOfDay, ymd, zonedToUtc } from '@/lib/format';
@@ -8,7 +9,7 @@ import type { WlSlot } from './shared';
 
 type R = { error?: string; ok?: boolean; notice?: string };
 const first = (n?: string | null) => String(n ?? 'Client').split(' ')[0];
-const clock = (m: number) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
+const clock = clock12;
 
 export async function findTimes(entryId: string): Promise<{ error?: string; slots?: WlSlot[] }> {
   const { sb, salon } = await requireCtx();

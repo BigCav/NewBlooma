@@ -1,3 +1,4 @@
+import { clock12 } from '@/lib/display';
 import { requireCtx } from '@/lib/session';
 import { minutesOfDay, ymd } from '@/lib/format';
 import { dayInfo, type CalService } from '@/lib/cal';
@@ -9,7 +10,7 @@ export const metadata = { title: 'Waitlist' };
 export const dynamic = 'force-dynamic';
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const clock = (m: number) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
+const clock = clock12;
 const first = (n?: string | null) => String(n ?? '').split(' ')[0];
 
 export default async function Waitlist() {

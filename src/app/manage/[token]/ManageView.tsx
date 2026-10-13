@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's ManageBooking.dc.html and MobileManageBooking.dc.html (the client's appointment page).
 // Markup and style strings are kept as written; the {{ }} holes are the appointment's real data and the handlers are real server actions.
+import { clock12 } from '@/lib/display';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { S } from '../../(dash)/calendar/pickers';
 import { cancelBooking, manageSlots, moveBooking } from './actions';
@@ -16,7 +17,7 @@ const DAY_NAME = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frida
 const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const MONTH_NAME = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const REASONS = ['Change of plans', 'Found another time', 'Something else'];
-const hhmm = (m: number) => Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0');
+const hhmm = clock12;
 const fmtDur = (m: number) => { const h = Math.floor(m / 60); const r = m % 60; return h ? h + ' hr' + (r ? ' ' + r + ' min' : '') : m + ' min'; };
 const toMin = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
 const dayInfo = (ymd: string) => {
