@@ -37,10 +37,11 @@ export type CalStaff = { id: string; name: string; role: string };
 export type CalBooking = {
   id: string; staffId: string; clientId: string; client: string; services: string; dayYmd: string; start: number; end: number;
   status: 'pending' | 'confirmed' | 'checked_in' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
-  priceCents: number; paid: boolean; saleId: string | null; tone: number; walkin: boolean; notes: string | null;
+  priceCents: number; paid: boolean; paidText: string; saleId: string | null; serviceIds: string[]; tone: number; walkin: boolean; notes: string | null;
 };
 export type CalBlock = { id: string; staffId: string; dayYmd: string; start: number; end: number; kind: string; note: string | null };
 export type CalService = { id: string; name: string; dur: number; priceCents: number; cat: string };
+export type CalSettings = { taxRate: number; taxInclusive: boolean; askTip: boolean; tipDefault: number; acceptCard: boolean; acceptCash: boolean; acceptGift: boolean };
 export type CalHours = { wd: number; open: boolean; from: number; to: number };
 export const BLOCK_KINDS: [string, string][] = [['lunch', 'Lunch'], ['break', 'Break'], ['time_off', 'Time off'], ['other', 'Other']];
 export const BLOCK_DURS: [number, string][] = [[30, '30 min'], [60, '1 hour'], [120, '2 hours'], [180, '3 hours']];

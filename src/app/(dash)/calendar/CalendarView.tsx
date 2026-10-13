@@ -6,6 +6,8 @@ import {
   BLOCK_DURS, BLOCK_KINDS, TONE_LIST, addDaysYmd, dayInfo, dollars, fmtMin, hourLabel, initials, slotsBetween, weekStartOf,
   type CalBlock, type CalBooking, type CalHours, type CalService, type CalStaff,
 } from '@/lib/cal';
+import { MobileCalendar } from './MobileCalendar';
+import type { CalSettings } from '@/lib/cal';
 import { addWalkIn, approveBooking, cancelBooking, checkInBooking, createBlock, dayAvailability, deleteBlock, noShowBooking, rescheduleBooking, startCheckout, walkinPlan } from './actions';
 
 const PX = 72;
@@ -39,7 +41,7 @@ function nowIn(tz: string) {
 
 export function CalendarView(props: {
   day: string; today: string; view: 'day' | 'week'; nowMin: number; tz: string; team: CalStaff[]; bookings: CalBooking[]; blocks: CalBlock[];
-  hours: CalHours[]; services: CalService[]; staffFilter: string; slug: string;
+  hours: CalHours[]; services: CalService[]; staffFilter: string; slug: string; offers: Record<string, string[]>; cfg: CalSettings;
 }) {
   const { day, today, view, tz, team, bookings, blocks, hours, services } = props;
   const router = useRouter();
@@ -583,7 +585,7 @@ export function CalendarView(props: {
   return (
     <div className="cal-root">
       {desktop}
-      {mobile}
+      <MobileCalendar day={day} today={today} view={view} nowMin={nowMin} tz={tz} team={team} bookings={bookings} blocks={blocks} hours={hours} services={services} offers={props.offers} cfg={props.cfg} slug={props.slug} />
       {/* Desktop modes open in the side panel; on mobile they open in the sheet. */}
     </div>
   );

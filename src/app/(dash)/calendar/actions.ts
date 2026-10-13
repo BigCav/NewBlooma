@@ -147,3 +147,59 @@ export async function addWalkIn(name: string, serviceId: string, staffId: string
   revalidatePath('/calendar');
   return { ok: true, id: data as string, note: `${name.split(' ')[0]} added with ${plan.staff.split(' ')[0]} at ${plan.label}` };
 }
+
+
+/** Create (or recreate with a new tip) the sale for a booking and take payment. Card returns the sale id for the payment screen. */
+export async function checkoutBooking(bookingId: string, method: 'card' | 'cash' | 'gift_card', tipPct: number, giftCode?: string): Promise<R & { saleId?: string; total?: number }> {
+  const { sb } = await requireCtx();
+  const { data: ex } = await sb.from('sales').select('id,status').eq('booking_id', bookingId).neq('status', 'refunded').maybeSingle();
+  if (ex?.status === 'paid') return { error: 'This appointment is already paid.' };
+  if (ex) { const v = await sb.rpc('void_pending_sale', { p_sale: ex.id }); if (v.error) return { error: friendly(v.error.message) }; }
+  const { data: id, error } = await sb.rpc('create_sale', { p_booking: bookingId, p_client: null, p_items: [], p_tip_pct: tipPct, p_description: null });
+  if (error) return { error: friendly(error.message) };
+  if (method === 'card') return { ok: true, saleId: id as string };
+  if (method === 'gift_card' && !String(giftCode ?? '').trim()) { await sb.rpc('void_pending_sale', { p_sale: id }); return { error: 'Enter the gift card code.' }; }
+  const done = await sb.rpc('complete_sale', { p_sale: id, p_method: method, p_gift_code: method === 'gift_card' ? String(giftCode).trim() : null });
+  if (done.error) { await sb.rpc('void_pending_sale', { p_sale: id }); return { error: friendly(done.error.message) }; }
+  revalidatePath('/calendar'); revalidatePath('/sales');
+  return { ok: true, saleId: id as string };
+}
+
+/** Change the services on a booking (and optionally its start), and book services another team member performs as separate appointments. */
+export async function editBooking(id: string, dayYmd: string, startMin: number, remove: string[], add: string[], extras: { serviceId: string; staffId: string; startMin: number }[]): Promise<R> {
+  const { sb, salon } = await requireCtx();
+  const { data: b } = await sb.from('bookings').select('id,client_id,staff_id,starts_at,ends_at').eq('id', id).single();
+  if (!b) return { error: 'Booking not found.' };
+  const { data: lines } = await sb.from('booking_services').select('service_id,duration_min,price_cents').eq('booking_id', id);
+  const keep = (lines ?? []).filter((l) => !remove.includes(l.service_id));
+  const { data: adds } = add.length ? await sb.from('services').select('id,duration_min,price_cents').in('id', add) : { data: [] as any[] };
+  const dur = keep.reduce((a, l) => a + l.duration_min, 0) + (adds ?? []).reduce((a: number, l: any) => a + l.duration_min, 0);
+  if (!keep.length && !(adds ?? []).length && !extras.length) return { error: 'Keep at least one service on the booking.' };
+  if (dur > 0) {
+    const hh = String(Math.floor(startMin / 60)).padStart(2, '0'), mi = String(startMin % 60).padStart(2, '0');
+    const s0 = zonedToUtc(dayYmd, `${hh}:${mi}`, salon.timezone), e0 = new Date(s0.getTime() + dur * 60000);
+    const up = await sb.from('bookings').update({ starts_at: s0.toISOString(), ends_at: e0.toISOString() }).eq('id', id);
+    if (up.error) return { error: friendly(up.error.message) };
+    if (remove.length) { const d = await sb.from('booking_services').delete().eq('booking_id', id).in('service_id', remove); if (d.error) return { error: friendly(d.error.message) }; }
+    if ((adds ?? []).length) { const i = await sb.from('booking_services').insert((adds as any[]).map((a) => ({ booking_id: id, service_id: a.id, price_cents: a.price_cents, duration_min: a.duration_min }))); if (i.error) return { error: friendly(i.error.message) }; }
+  }
+  for (const x of extras) {
+    const hh = String(Math.floor(x.startMin / 60)).padStart(2, '0'), mi = String(x.startMin % 60).padStart(2, '0');
+    const r = await sb.rpc('create_booking', { p_salon: salon.id, p_client: b.client_id, p_staff: x.staffId, p_starts_at: zonedToUtc(dayYmd, `${hh}:${mi}`, salon.timezone).toISOString(), p_service_ids: [x.serviceId], p_source: 'staff', p_notes: null, p_mode: 'staff' });
+    if (r.error) return { error: friendly(r.error.message) };
+  }
+  if (dur === 0) { const c = await sb.from('bookings').update({ status: 'cancelled', cancelled_at: new Date().toISOString() }).eq('id', id); if (c.error) return { error: friendly(c.error.message) }; }
+  revalidatePath('/calendar'); return { ok: true };
+}
+
+/** Book the same services again with the same team member. */
+export async function rebookBooking(id: string, dayYmd: string, startMin: number): Promise<R> {
+  const { sb, salon } = await requireCtx();
+  const { data: b } = await sb.from('bookings').select('client_id,staff_id').eq('id', id).single();
+  const { data: lines } = await sb.from('booking_services').select('service_id').eq('booking_id', id);
+  if (!b || !lines?.length) return { error: 'Booking not found.' };
+  const hh = String(Math.floor(startMin / 60)).padStart(2, '0'), mi = String(startMin % 60).padStart(2, '0');
+  const { error } = await sb.rpc('create_booking', { p_salon: salon.id, p_client: b.client_id, p_staff: b.staff_id, p_starts_at: zonedToUtc(dayYmd, `${hh}:${mi}`, salon.timezone).toISOString(), p_service_ids: lines.map((l) => l.service_id), p_source: 'staff', p_notes: null, p_mode: 'staff' });
+  if (error) return { error: friendly(error.message) };
+  revalidatePath('/calendar'); return { ok: true };
+}
