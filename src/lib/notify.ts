@@ -5,12 +5,14 @@ import { dateLong, time12 } from '@/lib/format';
 const base = () => process.env.NEXT_PUBLIC_APP_URL ?? '';
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 
-export const emailConfigured = () => !!(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
+export const emailConfigured = () => !!process.env.RESEND_API_KEY;
+/** EMAIL_FROM overrides the sender; otherwise mail goes out as "<Salon name> <bookings@blooma.co.nz>", an address already verified in Resend. */
+const fromFor = (salonName: string) => process.env.EMAIL_FROM || `${salonName.replace(/[<>",]/g, '').trim() || 'Bookings'} <bookings@blooma.co.nz>`;
 export const smsConfigured = () => !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM);
 
 type Row = { id: string; salon_id: string; booking_id: string | null; channel: 'email' | 'sms'; to_address: string; template: string; payload: any; attempts: number };
 
-async function compose(r: Row): Promise<{ subject: string; text: string; html: string } | null> {
+async function compose(r: Row): Promise<{ subject: string; text: string; html: string; from: string } | null> {
   const sb = supabaseAdmin();
   const { data: salon } = await sb.from('salons').select('name,phone,timezone').eq('id', r.salon_id).single();
   if (!salon) return null;
@@ -37,13 +39,13 @@ async function compose(r: Row): Promise<{ subject: string; text: string; html: s
   }
   const text = `${lines.join('\n')}\n\n${cta}: ${link}\n\n${salon.name}${salon.phone ? ` · ${salon.phone}` : ''}`;
   const html = `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:auto"><h2>${esc(salon.name)}</h2>${lines.map((l) => `<p>${esc(l)}</p>`).join('')}<p><a href="${link}" style="background:#5B3DF5;color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none;display:inline-block">${esc(cta)}</a></p></div>`;
-  return { subject, text, html };
+  return { subject, text, html, from: fromFor(salon.name) };
 }
 
-async function sendEmail(to: string, m: { subject: string; text: string; html: string }) {
+async function sendEmail(to: string, m: { subject: string; text: string; html: string; from: string }) {
   const res = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: process.env.EMAIL_FROM, to, subject: m.subject, text: m.text, html: m.html }) });
-  if (!res.ok) throw new Error(`email ${res.status}`);
+    body: JSON.stringify({ from: m.from, to, subject: m.subject, text: m.text, html: m.html }) });
+  if (!res.ok) { const b = await res.json().catch(() => ({})) as { message?: string }; throw new Error(`email ${res.status}${b.message ? ': ' + b.message : ''}`); }
 }
 async function sendSms(to: string, body: string) {
   const sid = process.env.TWILIO_ACCOUNT_SID!;
@@ -86,7 +88,7 @@ export async function sendCustomMessage(salonId: string, to: { phone?: string | 
   const row = { salon_id: salonId, channel, to_address: address, template: 'custom_message', payload: { text } };
   try {
     if (channel === 'sms') await sendSms(address, `${salon.name}: ${text}`);
-    else await sendEmail(address, { subject: `Message from ${salon.name}`, text: `${text}\n\n${salon.name}${salon.phone ? ` · ${salon.phone}` : ''}`, html: `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:auto"><h2>${esc(salon.name)}</h2>${text.split(/\n+/).map((l) => `<p>${esc(l)}</p>`).join('')}</div>` });
+    else await sendEmail(address, { from: fromFor(salon.name), subject: `Message from ${salon.name}`, text: `${text}\n\n${salon.name}${salon.phone ? ` · ${salon.phone}` : ''}`, html: `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:auto"><h2>${esc(salon.name)}</h2>${text.split(/\n+/).map((l) => `<p>${esc(l)}</p>`).join('')}</div>` });
   } catch (e: any) {
     await sb.from('notifications_outbox').insert({ ...row, status: 'failed', attempts: 1, error: String(e.message).slice(0, 200) });
     return { ok: false, error: 'The message could not be sent. Try again in a moment.' };
