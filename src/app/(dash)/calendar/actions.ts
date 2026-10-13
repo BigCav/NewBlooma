@@ -92,11 +92,21 @@ export async function dayAvailability(dayYmd: string, staffId: string, ignoreBoo
   return { busy, open, from, to };
 }
 
+/** Why a staff member cannot take [startMin, startMin + dur) on a day, or '' if they can. */
+async function slotProblem(dayYmd: string, staffId: string, startMin: number, dur: number, ignoreBooking?: string) {
+  const a = await dayAvailability(dayYmd, staffId, ignoreBooking);
+  if (!a.open) return 'That team member is not working that day.';
+  if (startMin < a.from || startMin + dur > a.to) return 'That would run past closing time. Pick an earlier time.';
+  if (a.busy.some((x) => startMin < x.e && x.s < startMin + dur)) return 'That time is already booked. Pick another time.';
+  return '';
+}
+
 export async function rescheduleBooking(id: string, dayYmd: string, startMin: number): Promise<R> {
   const { sb, salon } = await requireCtx();
-  const { data: b } = await sb.from('bookings').select('starts_at,ends_at').eq('id', id).single();
+  const { data: b } = await sb.from('bookings').select('starts_at,ends_at,staff_id').eq('id', id).single();
   if (!b) return { error: 'Booking not found.' };
   const dur = Math.round((new Date(b.ends_at).getTime() - new Date(b.starts_at).getTime()) / 60000);
+  const why = await slotProblem(dayYmd, b.staff_id, startMin, dur, id); if (why) return { error: why };
   const hh = String(Math.floor(startMin / 60)).padStart(2, '0'), mi = String(startMin % 60).padStart(2, '0');
   const s = zonedToUtc(dayYmd, `${hh}:${mi}`, salon.timezone);
   const e = new Date(s.getTime() + dur * 60000);
@@ -230,6 +240,10 @@ export async function createNewAppointment(name: string, clientId: string | null
   const { sb, salon } = await requireCtx();
   name = name.trim(); if (!name) return { error: "Add the client's name." };
   if (!serviceIds.length) return { error: 'Choose a service.' };
+  const durOf = async (ids: string[]) => ((await sb.from('services').select('duration_min').in('id', ids)).data ?? []).reduce((t: number, x: any) => t + x.duration_min, 0);
+  for (const [sid, ids] of [[staffId, serviceIds], ...extras.map((x) => [x.staffId, [x.serviceId]] as const)] as const) {
+    const why = await slotProblem(dayYmd, sid, startMin, await durOf([...ids])); if (why) return { error: why };
+  }
   let cid = clientId;
   if (!cid) {
     const { data: ex } = await sb.from('clients').select('id').ilike('name', name.replace(/[%_]/g, '\\$&')).limit(1).maybeSingle();
