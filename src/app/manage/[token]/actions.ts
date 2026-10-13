@@ -1,4 +1,5 @@
 'use server';
+import { flushOutbox } from '@/lib/notify';
 import { revalidatePath } from 'next/cache';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { minutesOfDay } from '@/lib/format';
@@ -36,6 +37,7 @@ export async function moveBooking(token: string, startsAtIso: string): Promise<{
 export async function cancelBooking(token: string, reason: string): Promise<{ error?: string }> {
   const { error } = await supabaseAdmin().rpc('client_cancel', { p_token: token, p_reason: reason.slice(0, 200) });
   if (error) return { error: error.message.includes('not_cancellable') ? 'This appointment can no longer be cancelled.' : 'This link has expired.' };
+  await flushOutbox();
   revalidatePath(`/manage/${token}`);
   return {};
 }

@@ -1,4 +1,5 @@
 'use server';
+import { flushOutbox } from '@/lib/notify';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireCtx, friendly } from '@/lib/session';
@@ -31,6 +32,7 @@ export async function setStatus(fd: FormData) {
   const id = String(fd.get('id')), status = String(fd.get('status'));
   if (status === 'confirmed' && fd.get('approve')) await sb.rpc('confirm_booking', { p_booking: id });
   else await sb.from('bookings').update({ status, ...(status === 'cancelled' ? { cancelled_at: new Date().toISOString() } : {}) }).eq('id', id);
+  if (status === 'cancelled') await flushOutbox();
   revalidatePath('/calendar'); revalidatePath(`/calendar/${id}`);
 }
 
@@ -64,6 +66,7 @@ export async function cancelBooking(id: string): Promise<R> {
   const { sb } = await requireCtx();
   const { error } = await sb.from('bookings').update({ status: 'cancelled', cancelled_at: new Date().toISOString() }).eq('id', id);
   if (error) return { error: friendly(error.message) };
+  await flushOutbox();
   revalidatePath('/calendar'); return { ok: true };
 }
 export async function noShowBooking(id: string): Promise<R> {
@@ -198,7 +201,7 @@ export async function editBooking(id: string, dayYmd: string, startMin: number, 
     const r = await sb.rpc('create_booking', { p_salon: salon.id, p_client: b.client_id, p_staff: x.staffId, p_starts_at: zonedToUtc(dayYmd, `${hh}:${mi}`, salon.timezone).toISOString(), p_service_ids: [x.serviceId], p_source: 'staff', p_notes: null, p_mode: 'staff' });
     if (r.error) return { error: friendly(r.error.message) };
   }
-  if (dur === 0) { const c = await sb.from('bookings').update({ status: 'cancelled', cancelled_at: new Date().toISOString() }).eq('id', id); if (c.error) return { error: friendly(c.error.message) }; }
+  if (dur === 0) { const c = await sb.from('bookings').update({ status: 'cancelled', cancelled_at: new Date().toISOString() }).eq('id', id); if (c.error) return { error: friendly(c.error.message) }; await flushOutbox(); }
   revalidatePath('/calendar'); return { ok: true };
 }
 

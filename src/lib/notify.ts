@@ -16,12 +16,14 @@ type Row = { id: string; salon_id: string; booking_id: string | null; channel: '
 
 async function compose(r: Row): Promise<{ subject: string; text: string; html: string; from: string } | null> {
   const sb = supabaseAdmin();
-  const { data: salon } = await sb.from('salons').select('name,phone,timezone').eq('id', r.salon_id).single();
+  const { data: salon } = await sb.from('salons').select('name,phone,timezone,slug').eq('id', r.salon_id).single();
   if (!salon) return null;
   let when = '', who = '', manage = '';
   if (r.booking_id) {
     const { data: b } = await sb.from('bookings').select('starts_at,status,staff(name),clients(name,reminders),booking_services(services(name))').eq('id', r.booking_id).single();
-    if (!b || ['cancelled', 'no_show'].includes(b.status)) return null; // nothing to tell them
+    if (!b) return null;
+    if (r.template !== 'booking_cancelled' && ['cancelled', 'no_show'].includes(b.status)) return null; // nothing to tell them
+    if (r.template === 'booking_cancelled' && b.status !== 'cancelled') return null; // it was reinstated
     if (r.template.startsWith('reminder') && (b as any).clients?.reminders === false) return null; // client turned reminders off
     when = `${dateLong(b.starts_at, salon.timezone)} at ${time12(b.starts_at, salon.timezone)}`;
     who = `${(b as any).booking_services.map((x: any) => x.services.name).join(', ')} with ${(b as any).staff?.name}`;
@@ -31,6 +33,7 @@ async function compose(r: Row): Promise<{ subject: string; text: string; html: s
   let subject = '', lines: string[] = [], link = manage, cta = 'View or change your appointment';
   switch (r.template) {
     case 'booking_confirmation': subject = `Booking confirmed at ${salon.name}`; lines = [`You are booked in for ${who}.`, when]; break;
+    case 'booking_cancelled': subject = `Your booking at ${salon.name} was cancelled`; lines = [`Your appointment has been cancelled: ${who}.`, `It was booked for ${when}.`, 'If this was a mistake, or you would like another time, you can book again online.']; link = `${base()}/b/${salon.slug}`; cta = 'Book again'; break;
     case 'reminder_24h': subject = `Reminder: tomorrow at ${salon.name}`; lines = [`Just a reminder of your appointment: ${who}.`, when]; break;
     case 'reminder_2h': subject = `Reminder: today at ${salon.name}`; lines = [`See you soon: ${who}.`, when]; break;
     case 'waitlist_offer': {
