@@ -51,3 +51,9 @@ table{width:100%;border-collapse:collapse}th{font-size:12px;text-transform:upper
 .d-cal .hscroll{padding-bottom:2px !important}
 .d-cal *{scrollbar-width:none;-ms-overflow-style:none}.d-cal *::-webkit-scrollbar{display:none;width:0;height:0}
 .d-cal h1,.d-cal h2{font-family:inherit}
+.d-cal .s-row:hover{background:#F7F8FA !important}
+.d-cal .s-row:last-child{border-bottom:0 !important}
+.m-cal li:last-child>button{border-bottom:0 !important}
+.m-cal input:focus,.m-cal textarea:focus,.d-cal textarea:focus{outline:2px solid #5B3DF5;outline-offset:2px}
+.d-cal .fw:focus-within,.m-cal .fw:focus-within{outline:2px solid #5B3DF5;outline-offset:2px}
+.d-cal fieldset:disabled button,.m-cal fieldset:disabled button{cursor:default}
