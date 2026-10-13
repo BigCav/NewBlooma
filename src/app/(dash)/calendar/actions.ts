@@ -190,11 +190,9 @@ export async function editBooking(id: string, dayYmd: string, startMin: number, 
   if (!keep.length && !(adds ?? []).length && !extras.length) return { error: 'Keep at least one service on the booking.' };
   if (dur > 0) {
     const hh = String(Math.floor(startMin / 60)).padStart(2, '0'), mi = String(startMin % 60).padStart(2, '0');
-    const s0 = zonedToUtc(dayYmd, `${hh}:${mi}`, salon.timezone), e0 = new Date(s0.getTime() + dur * 60000);
-    const up = await sb.from('bookings').update({ starts_at: s0.toISOString(), ends_at: e0.toISOString() }).eq('id', id);
+    const s0 = zonedToUtc(dayYmd, `${hh}:${mi}`, salon.timezone);
+    const up = await sb.rpc('edit_booking', { p_booking: id, p_starts_at: s0.toISOString(), p_remove: remove, p_add: add });
     if (up.error) return { error: friendly(up.error.message) };
-    if (remove.length) { const d = await sb.from('booking_services').delete().eq('booking_id', id).in('service_id', remove); if (d.error) return { error: friendly(d.error.message) }; }
-    if ((adds ?? []).length) { const i = await sb.from('booking_services').insert((adds as any[]).map((a) => ({ booking_id: id, service_id: a.id, price_cents: a.price_cents, duration_min: a.duration_min }))); if (i.error) return { error: friendly(i.error.message) }; }
   }
   for (const x of extras) {
     const hh = String(Math.floor(x.startMin / 60)).padStart(2, '0'), mi = String(x.startMin % 60).padStart(2, '0');
