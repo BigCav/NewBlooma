@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's Clients.dc.html and MobileClients.dc.html. Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
+import { phoneInput } from '@/lib/phone';
 import Link from 'next/link';
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
@@ -89,7 +90,7 @@ function Panel({ c, m }: { c: C; m: boolean }) {
   );
   const pill = 'flex:0 0 auto;height:' + (m ? 44 : 40) + 'px;padding:0 16px;border-radius:999px;font-size:13.5px;font-weight:500;border:1px solid #E1E4E9;background:#FFFFFF;color:#0E1116';
   return (<>
-    {c.mode === 'view' && !sel && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No clients yet. Add your first client to get started.</p>}
+    {c.mode === 'view' && !sel && c.items.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No clients yet. Add your first client to get started.</p>}
     {c.mode === 'view' && sel && (<>
       <div style={S('display:flex;align-items:center;gap:8px;flex-wrap:wrap')}>
         <span style={S(tagStyle(sel.tag))}>{sel.tag}</span>
@@ -141,7 +142,7 @@ function Panel({ c, m }: { c: C; m: boolean }) {
         <div><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>New client</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>They start with the New tag.</p></div>
         <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="nc-name" style={S('font-size:14px;font-weight:600')}>Full name</label><input id="nc-name" type="text" value={c.nc.name} onChange={(e) => { c.setNc({ ...c.nc, name: e.target.value }); c.setError(''); }} placeholder="Client name" style={inp(INP)} /></div>
         <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="nc-email" style={S('font-size:14px;font-weight:600')}>Email</label><input id="nc-email" type="email" value={c.nc.email} onChange={(e) => { c.setNc({ ...c.nc, email: e.target.value }); c.setError(''); }} placeholder="name@example.com" style={inp(INP)} /></div>
-        <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="nc-phone" style={S('font-size:14px;font-weight:600')}>Phone (optional)</label><input id="nc-phone" type="tel" value={c.nc.phone} onChange={(e) => { c.setNc({ ...c.nc, phone: e.target.value }); c.setError(''); }} placeholder="Optional" style={inp(INP)} /></div>
+        <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="nc-phone" style={S('font-size:14px;font-weight:600')}>Phone (optional)</label><input id="nc-phone" type="tel" inputMode="tel" value={c.nc.phone} onChange={(e) => { c.setNc({ ...c.nc, phone: phoneInput(e.target.value) }); c.setError(''); }} placeholder="Optional" style={inp(INP)} /></div>
         {err}
         <div style={S('display:flex;gap:10px')}><button onClick={c.create} disabled={c.busy} style={S(BTN)}>Add client</button><button className="ghost" onClick={c.cancel} style={S(BTN2)}>Cancel</button></div>
       </div>
