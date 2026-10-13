@@ -38,10 +38,10 @@ export async function startCheckout(fd: FormData) {
   const { sb } = await requireCtx();
   const id = String(fd.get('id'));
   const { data: existing } = await sb.from('sales').select('id').eq('booking_id', id).neq('status', 'refunded').maybeSingle();
-  if (existing) redirect(`/sales/${existing.id}`);
+  if (existing) redirect(`/sales?sale=${existing.id}&pay=1`);
   const { data, error } = await sb.rpc('create_sale', { p_booking: id, p_client: null, p_items: [], p_tip_pct: 0, p_description: null });
   if (error) redirect(`/calendar/${id}?err=${encodeURIComponent(friendly(error.message))}`);
-  redirect(`/sales/${data}`);
+  redirect(`/sales?sale=${data}&pay=1`);
 }
 
 /* ---------- Calendar panel actions (return values, no redirects) ---------- */

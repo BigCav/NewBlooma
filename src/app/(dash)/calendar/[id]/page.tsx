@@ -39,7 +39,7 @@ export default async function Appt({ params, searchParams }: { params: Promise<{
             {b.status === 'confirmed' && <Btn status="checked_in" label="Check in" />}
             {b.status === 'checked_in' && <Btn status="in_progress" label="Start" />}
             {live && b.status !== 'pending' && !sale && <form action={startCheckout}><input type="hidden" name="id" value={b.id} /><button className="btn primary">Checkout</button></form>}
-            {sale && <Link className="btn primary" href={`/sales/${sale.id}`}>{sale.status === 'paid' ? 'View sale' : 'Continue checkout'}</Link>}
+            {sale && <Link className="btn primary" href={`/sales?sale=${sale.id}&pay=1`}>{sale.status === 'paid' ? 'View sale' : 'Continue checkout'}</Link>}
             {live && <Btn status="no_show" label="No-show" />}
             {live && <Btn status="cancelled" label="Cancel" cls="danger" />}
           </div>

@@ -4,7 +4,7 @@ import { supabaseServer } from '@/lib/supabase/server';
 export type Ctx = {
   sb: Awaited<ReturnType<typeof supabaseServer>>;
   userId: string;
-  staff: { id: string; name: string; app_role: 'owner' | 'staff'; salon_id: string };
+  staff: { id: string; name: string; app_role: 'owner' | 'stylist' | 'reception'; salon_id: string };
   salon: { id: string; name: string; slug: string; timezone: string; currency: string };
   settings: Record<string, any>;
 };
@@ -38,6 +38,8 @@ export function friendly(msg?: string | null) {
     already_has_salon: 'This account already has a salon.', invalid_timezone: 'Pick a valid timezone.', sale_already_exists: 'This appointment already has a sale.',
     empty_sale: 'Add at least one service or product.', gift_card_insufficient: 'Gift card balance is too low.', gift_card_not_found: 'Gift card not found.',
     method_disabled: 'That payment method is switched off in Settings.', staff_cannot_perform: 'That team member does not offer these services.',
+    price_not_editable: 'This sale has more than one service, so its price can only be changed on the appointment.', client_required: 'Add the client\'s name.',
+    service_not_found: 'That service is no longer available.', card_payment_in_progress: 'A card payment is in progress for this sale.', sale_not_pending: 'This sale is already settled.', invalid_price: 'Enter a price above zero, like 45 or 45.50.',
   };
   for (const k of Object.keys(map)) if (msg.includes(k)) return map[k];
   if (msg.includes('duplicate key') && msg.includes('slug')) return 'That web address is taken. Try another.';

@@ -104,7 +104,7 @@ export function useCalendar(props: Props) {
     if (k === 'confirmed') act(() => checkInBooking(b.id), first(b.client) + ' checked in');
     else if (k === 'pending') act(() => approveBooking(b.id), first(b.client) + ' approved');
     else if (k === 'live') startCheckout(b.id);
-    else if (b.saleId) router.push(`/sales/${b.saleId}`);
+    else if (b.saleId) router.push(`/sales?sale=${b.saleId}`);
   };
   const startResched = (b: CalBooking, rebook: boolean) => {
     let d = rebook ? addDaysYmd(b.dayYmd, 7) : b.dayYmd;
@@ -160,7 +160,7 @@ export function useCalendar(props: Props) {
       setError('');
       const r = await checkoutBooking(cur.id, method, cfg.askTip ? co.tip : 0, co.code);
       if (r.error) { setError(r.error); return; }
-      if (method === 'card' && r.saleId) { router.push(`/sales/${r.saleId}`); return; }
+      if (method === 'card' && r.saleId) { router.push(`/sales?sale=${r.saleId}&pay=1`); return; }
       setMode('view'); setNotice(''); refresh();
     });
   };
