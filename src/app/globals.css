@@ -48,7 +48,7 @@ table{width:100%;border-collapse:collapse}th{font-size:12px;text-transform:upper
 .d-cal .search:focus-within{outline:2px solid #5B3DF5;outline-offset:2px}
 .d-cal input:focus{outline:2px solid #5B3DF5;outline-offset:2px}
 
-.d-cal .hscroll{padding-bottom:2px !important}
+.d-cal .hscroll{padding-bottom:2px !important}@media (hover:hover) and (pointer:fine){.d-cal .hscroll{padding-bottom:14px !important}}
 .d-cal *{scrollbar-width:none;-ms-overflow-style:none}.d-cal *::-webkit-scrollbar{display:none;width:0;height:0}
 .d-cal h1,.d-cal h2{font-family:inherit}
 .d-cal .s-row:hover{background:#F7F8FA !important}
