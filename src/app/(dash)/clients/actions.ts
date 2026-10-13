@@ -1,21 +1,68 @@
 'use server';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import { requireCtx, friendly } from '@/lib/session';
+import { ymd } from '@/lib/format';
+import { sendCustomMessage } from '@/lib/notify';
+import { type ClientRow } from './shared';
 
-const s = (fd: FormData, k: string) => String(fd.get(k) ?? '').trim();
+type R = { error?: string; ok?: boolean };
 
-export async function addClient(_: unknown, fd: FormData) {
+export async function createClient(name: string, email: string, phone: string): Promise<R & { row?: ClientRow }> {
   const { sb, salon } = await requireCtx();
-  const name = s(fd, 'name'); if (!name) return { error: 'Enter a name.' };
-  const { data, error } = await sb.from('clients').insert({ salon_id: salon.id, name, email: s(fd, 'email') || null, phone: s(fd, 'phone') || null, notes: s(fd, 'notes') || null }).select('id').single();
+  name = name.trim(); email = email.trim(); phone = phone.trim();
+  if (!name) return { error: "Add the client's name." };
+  if (!/\S+@\S+\.\S+/.test(email)) return { error: 'Add a valid email address.' };
+  const { data, error } = await sb.from('clients').insert({ salon_id: salon.id, name, email, phone: phone || null }).select('id').single();
   if (error) return { error: error.code === '23505' ? 'A client with that email already exists.' : friendly(error.message) };
-  revalidatePath('/clients'); redirect(`/clients/${data.id}`);
+  revalidatePath('/clients');
+  return { ok: true, row: { id: data.id, name, email, phone, tag: 'New', last: 'None yet', lastService: 'No visits', next: 'Not booked', staff: 'Not set', visits: 0, spentCents: 0 } };
 }
 
-export async function updateClient(_: unknown, fd: FormData) {
+export async function sendClientMessage(clientId: string, text: string): Promise<R> {
+  const { sb, salon } = await requireCtx();
+  text = text.trim(); if (!text) return { error: 'Write a message first.' };
+  if (text.length > 600) return { error: 'Keep the message under 600 characters.' };
+  const { data: c } = await sb.from('clients').select('phone,email').eq('id', clientId).maybeSingle();
+  if (!c) return { error: 'Client not found.' };
+  const r = await sendCustomMessage(salon.id, c, text);
+  return r.ok ? { ok: true } : { error: r.error };
+}
+
+export async function addNote(clientId: string, text: string): Promise<R & { id?: string }> {
+  const { sb, salon, staff } = await requireCtx();
+  text = text.trim(); if (!text) return { error: 'Write a note first.' };
+  const { data, error } = await sb.from('client_notes').insert({ salon_id: salon.id, client_id: clientId, body: text, created_by: staff.id }).select('id').single();
+  if (error) return { error: friendly(error.message) };
+  return { ok: true, id: data.id };
+}
+export async function removeNote(id: string): Promise<R> {
   const { sb } = await requireCtx();
-  const { error } = await sb.from('clients').update({ name: s(fd, 'name'), email: s(fd, 'email') || null, phone: s(fd, 'phone') || null, notes: s(fd, 'notes') || null }).eq('id', s(fd, 'id'));
-  if (error) return { error: error.code === '23505' ? 'Another client already uses that email.' : friendly(error.message) };
-  revalidatePath('/clients'); return { ok: 'Saved.' };
+  const { error } = await sb.from('client_notes').delete().eq('id', id);
+  return error ? { error: friendly(error.message) } : { ok: true };
+}
+
+export async function setAllergies(clientId: string, list: string[]): Promise<R> {
+  const { sb } = await requireCtx();
+  const clean = Array.from(new Set(list.map((x) => x.trim()).filter(Boolean))).slice(0, 30);
+  const { error } = await sb.from('clients').update({ allergies: clean }).eq('id', clientId);
+  return error ? { error: friendly(error.message) } : { ok: true };
+}
+
+export async function recordPatchTest(clientId: string): Promise<R & { on?: string }> {
+  const { sb, salon } = await requireCtx();
+  const on = ymd(new Date(), salon.timezone);
+  const { error } = await sb.from('clients').update({ patch_test_on: on }).eq('id', clientId);
+  return error ? { error: friendly(error.message) } : { ok: true, on };
+}
+
+export async function saveFormula(clientId: string, formula: string): Promise<R> {
+  const { sb } = await requireCtx();
+  const { error } = await sb.from('clients').update({ colour_formula: formula.trim() || null }).eq('id', clientId);
+  return error ? { error: friendly(error.message) } : { ok: true };
+}
+
+export async function setPreference(clientId: string, key: 'reminders' | 'marketing', value: boolean): Promise<R> {
+  const { sb } = await requireCtx();
+  const { error } = await sb.from('clients').update({ [key]: value }).eq('id', clientId);
+  return error ? { error: friendly(error.message) } : { ok: true };
 }

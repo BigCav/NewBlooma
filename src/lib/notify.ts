@@ -16,8 +16,9 @@ async function compose(r: Row): Promise<{ subject: string; text: string; html: s
   if (!salon) return null;
   let when = '', who = '', manage = '';
   if (r.booking_id) {
-    const { data: b } = await sb.from('bookings').select('starts_at,status,staff(name),clients(name),booking_services(services(name))').eq('id', r.booking_id).single();
+    const { data: b } = await sb.from('bookings').select('starts_at,status,staff(name),clients(name,reminders),booking_services(services(name))').eq('id', r.booking_id).single();
     if (!b || ['cancelled', 'no_show'].includes(b.status)) return null; // nothing to tell them
+    if (r.template.startsWith('reminder') && (b as any).clients?.reminders === false) return null; // client turned reminders off
     when = `${dateLong(b.starts_at, salon.timezone)} at ${time12(b.starts_at, salon.timezone)}`;
     who = `${(b as any).booking_services.map((x: any) => x.services.name).join(', ')} with ${(b as any).staff?.name}`;
     const { data: t } = await sb.from('booking_tokens').select('token').eq('booking_id', r.booking_id).eq('purpose', 'manage_booking').maybeSingle();
@@ -72,4 +73,24 @@ export async function processOutbox(limit = 50) {
     }
   }
   return stats;
+}
+
+/** Sends a one-off message typed by staff, right away, and keeps a record of it in the outbox. */
+export async function sendCustomMessage(salonId: string, to: { phone?: string | null; email?: string | null }, text: string): Promise<{ ok: true; via: 'sms' | 'email' } | { ok: false; error: string }> {
+  const sb = supabaseAdmin();
+  const { data: salon } = await sb.from('salons').select('name,phone').eq('id', salonId).single();
+  if (!salon) return { ok: false, error: 'Salon not found.' };
+  const channel: 'sms' | 'email' | null = smsConfigured() && to.phone ? 'sms' : emailConfigured() && to.email ? 'email' : null;
+  if (!channel) return { ok: false, error: smsConfigured() || emailConfigured() ? 'This client has no phone or email that can receive messages.' : 'Messaging is not set up yet. Add the Twilio or Resend keys to send.' };
+  const address = (channel === 'sms' ? to.phone : to.email)!;
+  const row = { salon_id: salonId, channel, to_address: address, template: 'custom_message', payload: { text } };
+  try {
+    if (channel === 'sms') await sendSms(address, `${salon.name}: ${text}`);
+    else await sendEmail(address, { subject: `Message from ${salon.name}`, text: `${text}\n\n${salon.name}${salon.phone ? ` · ${salon.phone}` : ''}`, html: `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:auto"><h2>${esc(salon.name)}</h2>${text.split(/\n+/).map((l) => `<p>${esc(l)}</p>`).join('')}</div>` });
+  } catch (e: any) {
+    await sb.from('notifications_outbox').insert({ ...row, status: 'failed', attempts: 1, error: String(e.message).slice(0, 200) });
+    return { ok: false, error: 'The message could not be sent. Try again in a moment.' };
+  }
+  await sb.from('notifications_outbox').insert({ ...row, status: 'sent', attempts: 1, sent_at: new Date().toISOString() });
+  return { ok: true, via: channel };
 }

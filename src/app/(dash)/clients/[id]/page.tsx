@@ -1,51 +1,49 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { requireCtx } from '@/lib/session';
-import ActionForm from '@/components/ActionForm';
-import { dateLong, money, time12, STATUS_LABEL } from '@/lib/format';
-import { updateClient } from '../actions';
+import { emailConfigured, smsConfigured } from '@/lib/notify';
+import { minutesOfDay, ymd } from '@/lib/format';
+import { fmtClock, fmtDay, loadOverview } from '../data';
+import { sinceText } from '../shared';
+import { ProfileView, type ProfileData } from './ProfileView';
 
 export const metadata = { title: 'Client' };
+export const dynamic = 'force-dynamic';
 
-export default async function Client({ params }: { params: Promise<{ id: string }> }) {
+const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const METHOD: Record<string, string> = { card: 'Card', cash: 'Cash', gift_card: 'Gift card' };
+const SHOWN = 6;
+
+export default async function ClientProfile({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { sb, salon } = await requireCtx();
-  const { data: c } = await sb.from('clients').select('*').eq('id', id).maybeSingle();
-  if (!c) notFound();
-  const [{ data: bookings }, { data: sales }] = await Promise.all([
-    sb.from('bookings').select('id,starts_at,status,staff(name),booking_services(services(name))').eq('client_id', id).order('starts_at', { ascending: false }).limit(50),
-    sb.from('sales').select('total_cents,status').eq('client_id', id),
+  const ctx = await requireCtx();
+  const { sb, salon } = ctx;
+  if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
+  const tz = salon.timezone, today = ymd(new Date(), tz);
+  const [{ data: c }, ov, { data: notes }, { data: hist }] = await Promise.all([
+    sb.from('clients').select('id,name,email,phone,created_at,allergies,patch_test_on,colour_formula,reminders,marketing').eq('id', id).maybeSingle(),
+    loadOverview(ctx),
+    sb.from('client_notes').select('id,body').eq('client_id', id).order('created_at'),
+    sb.from('bookings').select('id,starts_at,staff(name),booking_services(price_cents,services(name)),sales(status,method,total_cents)').eq('client_id', id).eq('status', 'completed').order('starts_at', { ascending: false }).limit(SHOWN),
   ]);
-  const spent = (sales ?? []).filter((x) => x.status === 'paid').reduce((a, x) => a + x.total_cents, 0);
-  const visits = (bookings ?? []).filter((b) => b.status === 'completed').length;
-  return (
-    <>
-      <div className="page-head"><div><Link href="/clients" className="muted small">‹ Clients</Link><h1>{c.name}</h1></div>
-        <Link className="btn primary" href={`/calendar/new?client=${c.id}`}>Book appointment</Link></div>
-      <div className="grid g3" style={{ marginBottom: 16 }}>
-        <div className="card"><div className="muted small">Visits</div><div className="big">{visits}</div></div>
-        <div className="card"><div className="muted small">Total spent</div><div className="big">{money(spent, salon.currency)}</div></div>
-        <div className="card"><div className="muted small">Client since</div><div className="big" style={{ fontSize: 22 }}>{dateLong(c.created_at, salon.timezone)}</div></div>
-      </div>
-      <div className="grid g2" style={{ alignItems: 'start' }}>
-        <div className="card">
-          <h2 style={{ marginBottom: 12 }}>Details</h2>
-          <ActionForm action={updateClient}>
-            <input type="hidden" name="id" value={c.id} />
-            <div className="field"><label>Name</label><input name="name" defaultValue={c.name} required /></div>
-            <div className="grid g2"><div className="field"><label>Email</label><input name="email" type="email" defaultValue={c.email ?? ''} /></div><div className="field"><label>Phone</label><input name="phone" defaultValue={c.phone ?? ''} /></div></div>
-            <div className="field"><label>Notes</label><textarea name="notes" rows={4} defaultValue={c.notes ?? ''} /></div>
-          </ActionForm>
-        </div>
-        <div className="card">
-          <h2 style={{ marginBottom: 8 }}>History</h2>
-          {!bookings?.length ? <div className="empty">No appointments yet.</div> : (bookings as any[]).map((b) => (
-            <Link key={b.id} href={`/calendar/${b.id}`} className="row between" style={{ padding: '10px 0', borderTop: '1px solid var(--line)' }}>
-              <span><b>{dateLong(b.starts_at, salon.timezone)}</b> <span className="muted">{time12(b.starts_at, salon.timezone)}</span><div className="muted small">{b.booking_services.map((x: any) => x.services.name).join(', ')} · {b.staff?.name}</div></span>
-              <span className="pill">{STATUS_LABEL[b.status]}</span></Link>
-          ))}
-        </div>
-      </div>
-    </>
-  );
+  if (!c) notFound();
+  const row = ov.rows.find((r) => r.id === id)!;
+  const history: ProfileData['history'] = ((hist ?? []) as any[]).map((b) => {
+    const lines = (b.booking_services ?? []) as any[];
+    const sale = ((b.sales ?? []) as any[]).find((s) => s.status === 'paid');
+    const cents = sale ? sale.total_cents : lines.reduce((a, l) => a + l.price_cents, 0);
+    const d = ymd(b.starts_at, tz), [Y, M, D] = d.split('-').map(Number);
+    const wd = WD[new Date(`${d}T00:00:00Z`).getUTCDay()];
+    const staffFirst = String(b.staff?.name ?? '').split(' ')[0];
+    return {
+      id: b.id, date: fmtDay(b.starts_at, tz, today), service: lines.map((l) => l.services?.name).filter(Boolean).join(' + ') || 'Visit', staff: staffFirst, cents,
+      when: `${wd} ${D} ${MON[M - 1]}, ${fmtClock(b.starts_at, tz)}`, paid: sale ? `${METHOD[sale.method] ?? 'Paid'}, $${(sale.total_cents / 100).toFixed(sale.total_cents % 100 ? 2 : 0)}` : 'Not recorded',
+    };
+  });
+  const switcher = ov.rows.slice(0, 12).map((r) => ({ id: r.id, label: r.name.split(' ')[0] }));
+  if (!switcher.some((s) => s.id === id)) switcher.push({ id, label: c.name.split(' ')[0] });
+  const data: ProfileData = {
+    row, since: sinceText(c.created_at), allergies: c.allergies ?? [], patchOn: c.patch_test_on, formula: c.colour_formula ?? '', reminders: c.reminders, marketing: c.marketing,
+    notes: (notes ?? []).map((n) => ({ id: n.id, text: n.body })), history, historyTotal: row.visits, switcher, today, channels: { sms: smsConfigured(), email: emailConfigured() },
+  };
+  return <ProfileView key={id} data={data} />;
 }
