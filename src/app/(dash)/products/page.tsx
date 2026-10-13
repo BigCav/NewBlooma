@@ -1,49 +1,25 @@
 import { requireCtx } from '@/lib/session';
-import ActionForm from '@/components/ActionForm';
-import { money, dateLong } from '@/lib/format';
-import { saveProduct, adjustStock, setProductActive, issueGiftCard } from './actions';
+import { statusOf, type ProductRow } from './shared';
+import { ProductsView } from './ProductsView';
 
 export const metadata = { title: 'Products' };
+export const dynamic = 'force-dynamic';
 
 export default async function Products() {
-  const { sb, salon, staff } = await requireCtx();
-  const owner = staff.app_role === 'owner';
-  const [{ data: products }, { data: cards }] = await Promise.all([
-    sb.from('products').select('*').order('active', { ascending: false }).order('name'),
-    sb.from('gift_cards').select('id,code,balance_cents,issued_at').order('issued_at', { ascending: false }).limit(50),
+  const { sb } = await requireCtx();
+  const since = new Date(Date.now() - 7 * 86400e3).toISOString();
+  const [{ data: prods }, { data: cats }, { data: sold }] = await Promise.all([
+    sb.from('products').select('id,name,brand,category,sku,price_cents,stock,reorder_level').eq('active', true).order('name'),
+    sb.from('service_categories').select('name').order('sort').order('name'),
+    sb.from('sale_items').select('product_id,qty,sales!inner(status,paid_at)').not('product_id', 'is', null).eq('sales.status', 'paid').gte('sales.paid_at', since),
   ]);
-  const Form = ({ p }: { p?: any }) => (
-    <ActionForm action={saveProduct} submit={p ? 'Save' : 'Add product'} resetOnOk={!p}>
-      {p && <input type="hidden" name="id" value={p.id} />}
-      <div className="grid g3">
-        <div className="field"><label>Name</label><input name="name" defaultValue={p?.name} required /></div>
-        <div className="field"><label>Brand</label><input name="brand" defaultValue={p?.brand ?? ''} /></div>
-        <div className="field"><label>Category</label><input name="category" defaultValue={p?.category ?? ''} /></div>
-        <div className="field"><label>SKU</label><input name="sku" defaultValue={p?.sku ?? ''} /></div>
-        <div className="field"><label>Price ({salon.currency})</label><input name="price" inputMode="decimal" defaultValue={p ? (p.price_cents / 100).toFixed(2) : ''} required /></div>
-        <div className="grid g2"><div className="field"><label>In stock</label><input name="stock" type="number" defaultValue={p?.stock ?? 0} /></div><div className="field"><label>Reorder at</label><input name="reorder_level" type="number" min="0" defaultValue={p?.reorder_level ?? 0} /></div></div>
-      </div>
-    </ActionForm>
-  );
-  return (
-    <>
-      <div className="page-head"><div><h1>Products</h1><div className="muted">{products?.filter((p) => p.active).length ?? 0} active</div></div></div>
-      {owner && <div className="card"><h2 style={{ marginBottom: 12 }}>Add a product</h2><Form /></div>}
-      <div className="card">
-        {!products?.length ? <div className="empty">No products yet.</div> : products.map((p) => (
-          <details key={p.id} style={{ borderTop: '1px solid var(--line)', padding: '10px 0' }}>
-            <summary className="row between" style={{ cursor: 'pointer', listStyle: 'none' }}>
-              <span><b>{p.name}</b> {!p.active && <span className="pill">Archived</span>} {p.active && p.stock <= p.reorder_level && <span className="pill warn">Low stock</span>}<div className="muted small">{[p.brand, p.category, p.sku].filter(Boolean).join(' · ')}</div></span>
-              <span className="right"><b>{money(p.price_cents, salon.currency)}</b><div className="muted small">{p.stock} in stock</div></span></summary>
-            <div style={{ paddingTop: 12 }}>
-              <div className="row wrap" style={{ marginBottom: 12 }}>{[-1, 1, 5].map((d) => <form action={adjustStock} key={d}><input type="hidden" name="id" value={p.id} /><input type="hidden" name="delta" value={d} /><button className="btn sm">{d > 0 ? `+${d}` : d} stock</button></form>)}</div>
-              {owner && <><Form p={p} /><form action={setProductActive} style={{ marginTop: 8 }}><input type="hidden" name="id" value={p.id} /><input type="hidden" name="active" value={String(!p.active)} /><button className="btn sm">{p.active ? 'Archive' : 'Restore'}</button></form></>}
-            </div></details>))}
-      </div>
-      <div className="card"><h2 style={{ marginBottom: 12 }}>Gift cards</h2>
-        {owner && <ActionForm action={issueGiftCard} submit="Issue gift card" resetOnOk><div className="grid g2"><div className="field"><label>Code</label><input name="code" required minLength={4} style={{ textTransform: 'uppercase' }} /></div><div className="field"><label>Amount ({salon.currency})</label><input name="amount" inputMode="decimal" required /></div></div></ActionForm>}
-        {!cards?.length ? <div className="empty">No gift cards issued.</div> : cards.map((g) => <div className="row between" key={g.id} style={{ padding: '8px 0', borderTop: '1px solid var(--line)' }}><span><b>{g.code}</b> <span className="muted small">issued {dateLong(g.issued_at, salon.timezone)}</span></span><b>{money(g.balance_cents, salon.currency)}</b></div>)}
-      </div>
-    </>
-  );
+  const soldBy = new Map<string, number>();
+  for (const r of (sold ?? []) as any[]) soldBy.set(r.product_id, (soldBy.get(r.product_id) ?? 0) + r.qty);
+  const catList = [...new Set([...(cats ?? []).map((c) => c.name), ...(prods ?? []).map((p) => p.category).filter(Boolean) as string[]])];
+  const rank = (c: string | null) => { const i = catList.indexOf(c ?? ''); return i < 0 ? 99 : i; };
+  const rows: ProductRow[] = (prods ?? []).slice().sort((a, b) => rank(a.category) - rank(b.category) || (a.brand ?? '').localeCompare(b.brand ?? '') || a.name.localeCompare(b.name)).map((p) => ({
+    id: p.id, name: p.name, brand: p.brand ?? '', cat: p.category ?? 'Other', sku: p.sku ?? 'None', priceCents: p.price_cents, stock: p.stock, reorder: p.reorder_level,
+    sold: soldBy.get(p.id) ?? 0, status: statusOf(p.stock, p.reorder_level),
+  }));
+  return <ProductsView rows={rows} cats={catList} />;
 }
