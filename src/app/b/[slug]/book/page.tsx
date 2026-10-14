@@ -3,6 +3,7 @@ import { getPublicSalon } from '@/lib/public';
 import { emailConfigured } from '@/lib/notify';
 import { ymd } from '@/lib/format';
 import { BookingView } from './BookingView';
+import { clientMe } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +19,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   if (!d) notFound();
   const { salon, settings } = d;
   if (!settings.online_booking) return <div className="auth"><div className="card"><h1>{salon.name}</h1><p className="muted">Online booking is not available right now. Please contact the salon{salon.phone ? ` on ${salon.phone}` : ''}.</p></div></div>;
+  const account = await clientMe();
   const now = new Date();
   const parts = new Intl.DateTimeFormat('en-GB', { timeZone: salon.timezone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(now);
   const get = (t: string) => parts.find((x) => x.type === t)?.value ?? '';
@@ -32,5 +34,5 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     return h && h.is_open ? { from: String(h.open_time).slice(0, 5), to: String(h.close_time).slice(0, 5) } : null;
   });
   return <BookingView slug={slug} name={salon.name} address={salon.address ?? ''} tz={salon.timezone} currency={salon.currency || 'NZD'} services={services} cats={cats} team={team} hours={hours}
-    today={ymd(now, salon.timezone)} nowMin={Number(get('hour')) * 60 + Number(get('minute'))} autoConfirm={settings.auto_confirm} windowDays={({ '1w': 8, '2w': 15, '4w': 29, '8w': 57 } as Record<string, number>)[settings.booking_window] ?? 29} emailOn={emailConfigured() && settings.email_confirmations !== false} preselect={service && svcIds.has(service) ? service : ''} />;
+    today={ymd(now, salon.timezone)} nowMin={Number(get('hour')) * 60 + Number(get('minute'))} autoConfirm={settings.auto_confirm} windowDays={({ '1w': 8, '2w': 15, '4w': 29, '8w': 57 } as Record<string, number>)[settings.booking_window] ?? 29} emailOn={emailConfigured() && settings.email_confirmations !== false} account={account} preselect={service && svcIds.has(service) ? service : ''} />;
 }

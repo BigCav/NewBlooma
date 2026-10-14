@@ -5,14 +5,14 @@ import { clock12, clockStr, makeMoney } from '@/lib/display';
 import { phoneInput } from '@/lib/phone';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { S } from '../../../(dash)/calendar/pickers';
-import { publicBook, publicSlots, publicWaitlist, type Slot } from './actions';
+import { clientSignIn, clientSignOut, publicBook, publicSlots, publicWaitlist, type Account, type Slot } from './actions';
 
 type Svc = { id: string; name: string; desc: string; cat: string; dur: number; cents: number };
 type Member = { id: string; name: string; role: string; svc: string[] };
 type Props = {
   slug: string; name: string; address: string; tz: string; currency: string;
   services: Svc[]; cats: string[]; team: Member[]; hours: ({ from: string; to: string } | null)[];
-  today: string; nowMin: number; autoConfirm: boolean; windowDays: number; emailOn: boolean; preselect: string;
+  today: string; nowMin: number; autoConfirm: boolean; windowDays: number; emailOn: boolean; preselect: string; account: Account | null;
 };
 
 const DAY_ABBR = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -25,11 +25,15 @@ const hhmm = clock12;
 const fmtDur = (m: number) => { const h = Math.floor(m / 60); const r = m % 60; return h ? h + ' hr' + (r ? ' ' + r + ' min' : '') : m + ' min'; };
 const toMin = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
 const initialsOf = (n: string) => n.split(' ').filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+const firstOf = (a: Account) => (a.name.trim().split(' ')[0] || a.email.split('@')[0]);
 
 type Form = { name: string; email: string; phone: string; notes: string };
 type Wl = { open: boolean; done: boolean; name: string; phone: string; error: string };
 const EMPTY_FORM: Form = { name: '', email: '', phone: '', notes: '' };
 const EMPTY_WL: Wl = { open: false, done: false, name: '', phone: '', error: '' };
+type Au = { panel: 'none' | 'in'; email: string; pw: string; show: boolean; error: string; busy: boolean };
+const EMPTY_AU: Au = { panel: 'none', email: '', pw: '', show: false, error: '', busy: false };
+const formFor = (a: Account | null, notes = ''): Form => ({ name: a?.name ?? '', email: a?.email ?? '', phone: a?.phone ?? '', notes });
 
 function useBooking(p: Props) {
   const days = useMemo(() => {
@@ -46,14 +50,18 @@ function useBooking(p: Props) {
   const money = useMemo(() => makeMoney(p.currency), [p.currency]);
 
   const [step, setStep] = useState(1);
-  const [done, setDone] = useState<{ staffName: string; email: string; first: string; when: string; count: string; dur: string; total: string } | null>(null);
+  const [done, setDone] = useState<{ staffName: string; email: string; first: string; when: string; count: string; dur: string; total: string; note: string } | null>(null);
+  const [acct, setAcct] = useState<Account | null>(p.account);
+  const [au, setAuState] = useState<Au>(EMPTY_AU);
+  const [save, setSave] = useState(false);
+  const [savePw, setSavePw] = useState('');
   const [sel, setSel] = useState<string[]>(p.preselect ? [p.preselect] : []);
   const [cat, setCat] = useState('All');
   const [staff, setStaff] = useState('');
   const [day, setDay] = useState(0);
   const [slot, setSlot] = useState('');
   const [slotMin, setSlotMin] = useState<number | null>(null);
-  const [form, setForm] = useState<Form>(EMPTY_FORM);
+  const [form, setForm] = useState<Form>(formFor(p.account));
   const [hp, setHp] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -91,7 +99,25 @@ function useBooking(p: Props) {
   const goStep = (n: number) => { if (n < step) { setStep(n); setError(''); } };
   const setField = (k: keyof Form, v: string) => { setForm((f) => ({ ...f, [k]: v })); setError(''); };
   const setWlField = (k: 'name' | 'phone', v: string) => setWl((w) => ({ ...w, [k]: v, error: '' }));
-  const reset = () => { setStep(1); setDone(null); setSel([]); setCat('All'); setStaff(''); setDay(0); setSlot(''); setSlotMin(null); setForm(EMPTY_FORM); setError(''); setCalOpen(false); setWl(EMPTY_WL); };
+  const reset = () => { setStep(1); setDone(null); setSel([]); setCat('All'); setStaff(''); setDay(0); setSlot(''); setSlotMin(null); setForm(formFor(acct)); setError(''); setCalOpen(false); setWl(EMPTY_WL); setSave(false); setSavePw(''); setAuState(EMPTY_AU); };
+  const setAu = (v: Partial<Au>) => setAuState((a) => ({ ...a, ...v }));
+  const openIn = () => setAu({ panel: 'in', error: '' });
+  const closePanel = () => setAu({ panel: 'none', error: '', pw: '' });
+  const submitIn = async () => {
+    if (au.busy) return;
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(au.email.trim())) { setAu({ error: 'Enter a valid email address.' }); return; }
+    if (!au.pw) { setAu({ error: 'Enter your password.' }); return; }
+    setAu({ busy: true, error: '' });
+    try {
+      const r = await clientSignIn({ email: au.email, password: au.pw });
+      if (r.error || !r.account) { setAu({ busy: false, error: r.error ?? 'Email or password is incorrect.' }); return; }
+      setAcct(r.account); setForm((f) => formFor(r.account ?? null, f.notes)); setSave(false); setSavePw(''); setError(''); setAuState(EMPTY_AU);
+    } catch { setAu({ busy: false, error: 'Something went wrong. Please try again.' }); }
+  };
+  const signOutNow = async () => {
+    try { await clientSignOut(); } catch { /* the session is cleared on the next load either way */ }
+    setAcct(null); setForm((f) => formFor(null, f.notes)); setError(''); setAuState(EMPTY_AU);
+  };
 
   const whenOf = (min: number) => days[day].full + ', ' + hhmm(min) + ' to ' + hhmm(min + totalDur);
   const countText = list.length + (list.length === 1 ? ' service' : ' services');
@@ -105,11 +131,16 @@ function useBooking(p: Props) {
     if (step === 4) {
       if (!form.name.trim()) { setError('Please add your name.'); return; }
       if (!/\S+@\S+\.\S+/.test(form.email)) { setError('Please add a valid email so we can confirm your booking.'); return; }
+      const wantsAccount = !acct && save;
+      if (wantsAccount && savePw.length < 8) { setError('Choose a password with at least 8 characters.'); return; }
       setBusy(true);
       try {
-        const r = await publicBook(p.slug, { services: sel, slot, name: form.name, email: form.email, phone: form.phone, notes: form.notes, website: hp });
+        const r = await publicBook(p.slug, { services: sel, slot, name: form.name, email: form.email, phone: form.phone, notes: form.notes, website: hp, password: wantsAccount ? savePw : undefined });
         if (r.error) { setError(r.error); return; }
-        setDone({ staffName: r.staffName || member?.name || 'The team', email: form.email.trim(), first: form.name.trim().split(' ')[0] || 'there', when: whenOf(slotMin ?? 0), count: countText, dur: durText, total: money(totalCents) });
+        const note = r.account === 'created' ? 'Your account is ready. Sign in next time to skip the details step.' : r.account === 'saved' ? 'Saved to your account.' : r.account === 'exists' ? 'You already have an account with this email. Sign in next time to skip the details step.' : '';
+        if (r.account === 'created') setAcct({ name: form.name.trim(), email: form.email.trim().toLowerCase(), phone: form.phone.trim() });
+        else if (r.account === 'saved' && acct) setAcct({ ...acct, phone: form.phone.trim() || acct.phone });
+        setDone({ staffName: r.staffName || member?.name || 'The team', email: form.email.trim(), first: form.name.trim().split(' ')[0] || 'there', when: whenOf(slotMin ?? 0), count: countText, dur: durText, total: money(totalCents), note });
         setError('');
       } catch { setError('Something went wrong. Please try again.'); } finally { setBusy(false); }
       return;
@@ -151,7 +182,7 @@ function useBooking(p: Props) {
   })();
 
   const canGo = (step === 1 && sel.length > 0) || (step === 2 && !!staff) || (step === 3 && !!slot) || step === 4;
-  return { p, days, money, step, done, sel, cat, setCat, staff, setStaff, day, setDay, slot, setSlot, slotMin, setSlotMin, form, setField, hp, setHp, error, busy, calOpen, setCalOpen, wl, setWl, setWlField, submitWl,
+  return { p, acct, au, setAu, openIn, closePanel, submitIn, signOutNow, save, setSave, savePw, setSavePw, setError, days, money, step, done, sel, cat, setCat, staff, setStaff, day, setDay, slot, setSlot, slotMin, setSlotMin, form, setField, hp, setHp, error, busy, calOpen, setCalOpen, wl, setWl, setWlField, submitWl,
     slots, loading, slotErr, list, totalDur, totalCents, member, hoursToday, toggle, back, goStep, reset, next, whenOf, countText, durText, grid, open, calLinks, canGo };
 }
 type M = ReturnType<typeof useBooking>;
@@ -164,7 +195,7 @@ const Arrow = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" 
 const INPUT = 'box-sizing:border-box;width:100%;height:48px;min-height:0;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;color:#0E1116;background:#FFFFFF';
 const circle = (on: boolean) => 'flex:0 0 32px;width:32px;height:32px;border-radius:999px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border:1.5px solid ' + (on ? '#0E1116' : '#D5D9E0') + ';background:' + (on ? '#0E1116' : '#FFFFFF');
 
-type O = { rowH: number; rowPad: string; dayW: number; cols: string; btnH: number };
+type O = { rowH: number; rowPad: string; dayW: number; cols: string; btnH: number; mob: boolean };
 
 function Steps({ m, o }: { m: M; o: O }) {
   const { p } = m;
@@ -271,13 +302,60 @@ function Steps({ m, o }: { m: M; o: O }) {
     {m.step === 4 && (
       <div className="bk-flow" style={S('position:relative;display:flex;flex-direction:column;gap:18px;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px')}>
         <input tabIndex={-1} autoComplete="off" aria-hidden="true" name="website" value={m.hp} onChange={(e) => m.setHp(e.target.value)} style={S('position:absolute;left:-9999px;width:1px;height:1px;min-height:0;padding:0;opacity:0')} />
-        <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="bk-name" style={S('font-size:14px;font-weight:600')}>Full name</label><input id="bk-name" className="bkf" type="text" autoComplete="name" value={m.form.name} onChange={(e) => m.setField('name', e.target.value)} placeholder="Your name" style={S(INPUT)} /></div>
-        <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="bk-email" style={S('font-size:14px;font-weight:600')}>Email</label><input id="bk-email" className="bkf" type="email" autoComplete="email" value={m.form.email} onChange={(e) => m.setField('email', e.target.value)} placeholder="you@example.com" style={S(INPUT)} /></div>
-        <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="bk-phone" style={S('font-size:14px;font-weight:600')}>Phone (optional)</label><input id="bk-phone" className="bkf" type="tel" inputMode="tel" autoComplete="tel" value={m.form.phone} onChange={(e) => m.setField('phone', phoneInput(e.target.value))} placeholder="Optional" style={S(INPUT)} /></div>
+        {!m.acct && m.au.panel === 'none' && (
+          <div style={S(o.mob ? 'display:flex;flex-direction:column;align-items:stretch;gap:12px;padding:16px;border-radius:16px;background:#F4F5F7' : 'display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;padding:14px 16px;border-radius:16px;background:#F4F5F7')}>
+            <span style={S(o.mob ? 'font-size:14px;line-height:1.45;color:#5E6673' : 'flex:1 1 220px;font-size:14px;color:#5E6673')}>Have an account? Sign in to use your saved details.</span>
+            <button className="ghost" onClick={m.openIn} style={S('height:' + (o.mob ? 48 : 44) + 'px;padding:0 20px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>Sign in</button>
+          </div>
+        )}
+        {!m.acct && m.au.panel === 'in' && (
+          <div role="group" aria-label="Sign in" style={S('display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:20px;background:#F4F5F7')}>
+            <div style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 12px')}><span style={S('font-size:16px;font-weight:600')}>Sign in</span><button className="ghost" onClick={m.closePanel} style={S('min-height:44px;padding:0 14px;border:0;border-radius:999px;background:transparent;color:#5E6673;font-size:14px;font-weight:500')}>Continue as guest</button></div>
+            <div style={S('display:flex;flex-direction:column;gap:6px')}><label htmlFor="ac-email" style={S('font-size:14px;font-weight:600')}>Email</label><input id="ac-email" className="bkf" type="email" value={m.au.email} onChange={(e) => m.setAu({ email: e.target.value, error: '' })} placeholder="you@example.com" autoComplete="email" style={S(INPUT)} /></div>
+            <div style={S('display:flex;flex-direction:column;gap:6px')}>
+              <label htmlFor="ac-pw" style={S('font-size:14px;font-weight:600')}>Password</label>
+              <div style={S('position:relative')}>
+                <input id="ac-pw" className="bkf" type={m.au.show ? 'text' : 'password'} value={m.au.pw} onChange={(e) => m.setAu({ pw: e.target.value, error: '' })} onKeyDown={(e) => { if (e.key === 'Enter') m.submitIn(); }} placeholder="Password" autoComplete="current-password" style={S(INPUT + ';padding-right:76px')} />
+                <button type="button" onClick={() => m.setAu({ show: !m.au.show })} style={S('position:absolute;right:6px;top:4px;height:40px;padding:0 12px;border:0;border-radius:999px;background:transparent;color:#5B3DF5;font-size:13.5px;font-weight:600')}>{m.au.show ? 'Hide' : 'Show'}</button>
+              </div>
+            </div>
+            {!!m.au.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{m.au.error}</p>}
+            <button onClick={m.submitIn} disabled={m.au.busy} style={S('height:48px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;padding:0 24px')}>{m.au.busy ? 'Signing in…' : 'Sign in'}</button>
+          </div>
+        )}
+        {m.acct && (
+          <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:14px 16px;border-radius:16px;background:#F4F5F7')}>
+            <span aria-hidden="true" style={S('flex:0 0 44px;width:44px;height:44px;border-radius:999px;background:#0E1116;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600')}>{initialsOf(m.acct.name || m.acct.email)}</span>
+            <div style={S('flex:1 1 140px;min-width:0')}><div style={S('font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{m.acct.name || m.acct.email}</div><div style={S('font-size:13px;color:#5E6673;overflow-wrap:anywhere')}>{m.acct.email}</div></div>
+            <button className="ghost" onClick={m.signOutNow} style={S('flex:0 0 auto;min-height:44px;padding:0 14px;border:0;border-radius:999px;background:transparent;color:#5B3DF5;font-size:13.5px;font-weight:600')}>Not you? Sign out</button>
+          </div>
+        )}
+        {!m.acct && m.au.panel === 'none' && <>
+          <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="bk-name" style={S('font-size:14px;font-weight:600')}>Full name</label><input id="bk-name" className="bkf" type="text" autoComplete="name" value={m.form.name} onChange={(e) => m.setField('name', e.target.value)} placeholder="Your name" style={S(INPUT)} /></div>
+          <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="bk-email" style={S('font-size:14px;font-weight:600')}>Email</label><input id="bk-email" className="bkf" type="email" autoComplete="email" value={m.form.email} onChange={(e) => m.setField('email', e.target.value)} placeholder="you@example.com" style={S(INPUT)} /></div>
+        </>}
+        <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="bk-phone" style={S('font-size:14px;font-weight:600')}>Phone</label><input id="bk-phone" className="bkf" type="tel" inputMode="tel" autoComplete="tel" value={m.form.phone} onChange={(e) => m.setField('phone', phoneInput(e.target.value))} placeholder="Optional" style={S(INPUT)} /></div>
         <div style={S('display:flex;flex-direction:column;gap:8px')}>
-          <label htmlFor="bk-notes" style={S('font-size:14px;font-weight:600')}>Notes for the salon (optional)</label>
-          <textarea id="bk-notes" className="bkf" value={m.form.notes} onChange={(e) => m.setField('notes', e.target.value)} placeholder="Anything we should know before you arrive" style={S('box-sizing:border-box;width:100%;min-height:96px;resize:vertical;padding:12px 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;color:#0E1116;background:#FFFFFF')} />
+          <label htmlFor="bk-notes" style={S('font-size:14px;font-weight:600')}>Notes for the salon</label>
+          <textarea id="bk-notes" className="bkf" value={m.form.notes} onChange={(e) => m.setField('notes', e.target.value)} placeholder="Optional" style={S('box-sizing:border-box;width:100%;min-height:96px;resize:vertical;padding:12px 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;color:#0E1116;background:#FFFFFF')} />
         </div>
+        {!m.acct && m.au.panel === 'none' && (
+          <div style={S('display:flex;flex-direction:column;gap:14px;padding:16px;border:1px solid #E6E8EC;border-radius:18px')}>
+            <button type="button" role="checkbox" aria-checked={m.save} onClick={() => { m.setSave(!m.save); m.setError(''); }} style={S('display:flex;align-items:flex-start;gap:12px;min-height:44px;padding:0;border:0;background:transparent;text-align:left;font:inherit;color:#0E1116')}>
+              <span style={S('flex:0 0 22px;width:22px;height:22px;margin-top:1px;border-radius:7px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border:1.5px solid ' + (m.save ? '#0E1116' : '#D5D9E0') + ';background:' + (m.save ? '#0E1116' : '#FFFFFF'))}>{m.save && <Check size={14} w={3} />}</span>
+              <span><span style={S('display:block;font-size:14px;font-weight:600')}>Save my details for next time</span><span style={S('display:block;margin-top:2px;font-size:13px;color:#5E6673')}>Create an account so you can skip this step on your next booking.</span></span>
+            </button>
+            {m.save && (
+              <div style={S('display:flex;flex-direction:column;gap:6px')}>
+                <label htmlFor="bk-pw" style={S('font-size:14px;font-weight:600')}>Choose a password</label>
+                <div style={S('position:relative')}>
+                  <input id="bk-pw" className="bkf" type={m.au.show ? 'text' : 'password'} value={m.savePw} onChange={(e) => { m.setSavePw(e.target.value); m.setError(''); }} placeholder="At least 8 characters" autoComplete="new-password" style={S(INPUT + ';padding-right:76px')} />
+                  <button type="button" onClick={() => m.setAu({ show: !m.au.show })} style={S('position:absolute;right:6px;top:4px;height:40px;padding:0 12px;border:0;border-radius:999px;background:transparent;color:#5B3DF5;font-size:13.5px;font-weight:600')}>{m.au.show ? 'Hide' : 'Show'}</button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         <p style={S('margin:0;font-size:13px;color:#5E6673')}>You pay at the salon after your appointment.</p>
         {!p.autoConfirm && <p style={S('margin:0;font-size:13px;color:#5E6673')}>{m.p.emailOn ? 'The salon will confirm your request by email.' : 'The salon will confirm your request.'}</p>}
         {!!m.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{m.error}</p>}
@@ -290,20 +368,34 @@ const HINTS = ['Choose at least one service to continue.', 'Choose who you would
 const primaryLabel = (m: M) => m.busy ? (m.p.autoConfirm ? 'Booking…' : 'Sending…') : m.step === 4 ? (m.p.autoConfirm ? 'Confirm booking' : 'Request booking') : 'Continue';
 const primaryStyle = (m: M, h: number) => 'width:100%;height:' + h + 'px;border:0;border-radius:999px;font-size:14.5px;font-weight:500;font-family:inherit;background:' + (m.canGo ? '#0E1116' : '#D5D9E0') + ';color:' + (m.canGo ? '#FFFFFF' : '#5E6673') + ';cursor:' + (m.canGo ? 'pointer' : 'default');
 
-function DoneCard({ m }: { m: M }) {
+function DoneCard({ m, wide = false }: { m: M; wide?: boolean }) {
   const d = m.done!;
   const row = (k: string, v: string, last = false, bold = false) => <div style={S('display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #EEF0F3' + (last ? ';border-bottom:1px solid #EEF0F3' : ''))}><dt style={S('color:#5E6673')}>{k}</dt><dd style={S('margin:0;font-weight:' + (bold ? 600 : 500) + ';text-align:right' + (k === 'With' ? ';overflow-wrap:anywhere' : ''))}>{v}</dd></div>;
   const booked = m.p.autoConfirm;
   return (
-    <div role="status" style={S('display:flex;flex-direction:column;gap:20px;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:28px')}>
+    <div role="status" style={S(wide ? 'display:flex;flex-wrap:wrap;align-items:center;gap:32px 56px;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:40px' : 'display:flex;flex-direction:column;gap:20px;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:28px')}>
+      <div style={S(wide ? 'flex:1 1 380px;min-width:0;display:flex;flex-direction:column;gap:20px' : 'display:contents')}>
       <div style={S('flex:0 0 56px;width:56px;height:56px;border-radius:999px;background:#DDF3EA;display:flex;align-items:center;justify-content:center')}><Check size={26} color="#14624A" w={2.2} /></div>
       <div>
         <h1 style={S('margin:0;font-size:30px;line-height:1.15;font-weight:600;letter-spacing:-0.03em;overflow-wrap:anywhere')}>{booked ? `You're booked, ${d.first}` : `Request sent, ${d.first}`}</h1>
         <p style={S('margin:8px 0 0;color:#5E6673;font-size:15px;overflow-wrap:anywhere')}>{booked ? (m.p.emailOn ? `We've sent the details to ${d.email}.` : 'Your booking is confirmed. Keep these details handy.') : (m.p.emailOn ? `We'll email ${d.email} once the salon confirms.` : 'The salon will confirm your request soon.')}</p>
+        {!!d.note && <p style={S('margin:8px 0 0;color:#14624A;font-size:14px;font-weight:500')}>{d.note}</p>}
       </div>
+      {wide && <DoneActions m={m} />}
+      </div>
+      <div style={S(wide ? 'flex:1 1 380px;min-width:0' : 'display:contents')}>
       <dl style={S('margin:0;display:flex;flex-direction:column')}>
         {row('When', d.when)}{row('With', d.staffName)}{row('Services', `${d.count}, ${d.dur}`)}{row('Total to pay at the salon', d.total, true, true)}
       </dl>
+      </div>
+      {!wide && <DoneActions m={m} />}
+    </div>
+  );
+}
+
+function DoneActions({ m }: { m: M }) {
+  return (
+    <>
       <div style={S('display:flex;gap:10px')}>
         <button onClick={m.reset} style={S('flex:1 1 0;height:48px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500')}>Book another</button>
         <button className="ghost" onClick={() => m.setCalOpen(!m.calOpen)} aria-expanded={m.calOpen} aria-haspopup="menu" style={S('flex:1 1 0;height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14.5px;font-weight:500')}>Add to calendar</button>
@@ -315,13 +407,13 @@ function DoneCard({ m }: { m: M }) {
           ))}
         </div>
       )}
-    </div>
+    </>
   );
 }
 
 function Desktop({ m }: { m: M }) {
   const { p } = m;
-  const o: O = { rowH: 88, rowPad: '16px 24px', dayW: 84, cols: 'repeat(auto-fill,minmax(92px,1fr))', btnH: 48 };
+  const o: O = { rowH: 88, rowPad: '16px 24px', dayW: 84, cols: 'repeat(auto-fill,minmax(92px,1fr))', btnH: 48, mob: false };
   const t = p.hours[m.days[0].dow];
   const pillOn = !!t && p.nowMin < toMin(t.to);
   const pill = pillOn ? 'Open today until ' + clockStr(t!.to) : t ? 'Closed for today' : 'Closed today';
@@ -338,7 +430,16 @@ function Desktop({ m }: { m: M }) {
             <div style={S('font-size:13px;color:#5E6673')}>Online booking</div>
           </div>
         </div>
-        <span style={S('padding:6px 14px;border-radius:999px;font-size:13px;font-weight:500;background:' + (pillOn ? '#DDF3EA' : '#EEF0F3') + ';color:' + (pillOn ? '#14624A' : '#4A525E'))}>{pill}</span>
+        <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:10px')}>
+          {m.acct && (
+            <div style={S('display:flex;align-items:center;gap:8px;min-height:44px;box-sizing:border-box;padding:0 6px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF')}>
+              <span aria-hidden="true" style={S('flex:0 0 32px;width:32px;height:32px;border-radius:999px;background:#0E1116;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600')}>{initialsOf(m.acct.name || m.acct.email)}</span>
+              <span style={S('font-size:14px;font-weight:500')}>{firstOf(m.acct)}</span>
+              <button className="ghost" onClick={m.signOutNow} style={S('height:32px;padding:0 12px;border:0;border-radius:999px;background:transparent;color:#5B3DF5;font-size:13px;font-weight:600')}>Sign out</button>
+            </div>
+          )}
+          <span style={S('padding:6px 14px;border-radius:999px;font-size:13px;font-weight:500;background:' + (pillOn ? '#DDF3EA' : '#EEF0F3') + ';color:' + (pillOn ? '#14624A' : '#4A525E'))}>{pill}</span>
+        </div>
       </header>
 
       {!m.done && <>
@@ -388,14 +489,14 @@ function Desktop({ m }: { m: M }) {
         </div>
       </>}
 
-      {m.done && <div style={S('width:100%;max-width:560px;margin:0 auto;box-sizing:border-box')}><DoneCard m={m} /></div>}
+      {m.done && <div style={S('width:100%;margin:0;box-sizing:border-box')}><DoneCard m={m} wide /></div>}
     </div>
   );
 }
 
 function Mobile({ m }: { m: M }) {
   const { p } = m;
-  const o: O = { rowH: 80, rowPad: '14px 16px', dayW: 60, cols: 'repeat(4,minmax(0,1fr))', btnH: 48 };
+  const o: O = { rowH: 80, rowPad: '14px 16px', dayW: 60, cols: 'repeat(4,minmax(0,1fr))', btnH: 48, mob: true };
   if (m.done) return (
     <div className="bk-flow" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:28px 20px 20px;display:flex;flex-direction:column;gap:20px')}>
       <div style={S('display:flex;align-items:center;gap:12px')}><span style={S('font-size:17px;font-weight:600')}>{p.name}</span></div>
@@ -432,7 +533,7 @@ export function BookingView(p: Props) {
   useEffect(() => { const mq = window.matchMedia('(max-width:900px)'); const f = () => setNarrow(mq.matches); f(); mq.addEventListener('change', f); return () => mq.removeEventListener('change', f); }, []);
   const m = useBooking(p);
   return <>
-    {narrow !== false && <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}><Mobile m={m} /></div>}
-    {narrow !== true && <div className="only-d d-cal cal-root" style={S("box-sizing:border-box;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4;min-height:100vh")}><Desktop m={m} /></div>}
+    {narrow !== false && <div className="only-m m-cal cal-root bk-app" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}><Mobile m={m} /></div>}
+    {narrow !== true && <div className="only-d d-cal cal-root bk-app" style={S("box-sizing:border-box;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4;min-height:100vh")}><Desktop m={m} /></div>}
   </>;
 }
