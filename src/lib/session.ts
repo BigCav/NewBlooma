@@ -9,6 +9,11 @@ export type Ctx = {
   settings: Record<string, any>;
 };
 
+/** Client accounts (made when someone saves their details at booking) belong on the salon's booking page, never the staff app or salon setup. */
+export function clientHome(meta: Record<string, any> | null | undefined): string | null {
+  return meta?.client && meta.salon ? `/b/${meta.salon}` : null;
+}
+
 /** Signed-in staff member with a salon. Redirects otherwise. */
 export async function requireCtx(): Promise<Ctx> {
   const sb = await supabaseServer();
@@ -18,7 +23,7 @@ export async function requireCtx(): Promise<Ctx> {
   if (!uid) redirect('/sign-in');
   // Two round trips: staff + salon together, then settings.
   const { data: row } = await sb.from('staff').select('id,name,app_role,salon_id,salons(id,name,slug,timezone,currency)').eq('user_id', uid).eq('active', true).maybeSingle();
-  if (!row) redirect('/setup');
+  if (!row) redirect(clientHome((claims?.claims as any)?.user_metadata) ?? '/setup');
   const { data: settings } = await sb.from('salon_settings').select('*').eq('salon_id', row.salon_id).single();
   const { salons: salon, ...staff } = row as any;
   return { sb, userId: uid, staff: staff as Ctx['staff'], salon: salon, settings: settings ?? {} };

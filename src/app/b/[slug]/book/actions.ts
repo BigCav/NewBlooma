@@ -78,9 +78,12 @@ export async function publicBook(slug: string, i: BookInput): Promise<{ error?: 
   const { data: me } = await ssb.auth.getUser();
   if (me.user?.email) {
     account = 'saved';
-    if (phone && phone !== (me.user.user_metadata?.phone ?? '')) await ssb.auth.updateUser({ data: { phone } });
+    const patch: Record<string, string> = {};
+    if (phone && phone !== (me.user.user_metadata?.phone ?? '')) patch.phone = phone;
+    if (!me.user.user_metadata?.full_name && name) patch.full_name = name; // first booking fills in a missing name
+    if (Object.keys(patch).length) await ssb.auth.updateUser({ data: patch });
   } else if (i.password) {
-    const made = await sb.auth.admin.createUser({ email, password: i.password, email_confirm: true, user_metadata: { full_name: name, phone, client: true } });
+    const made = await sb.auth.admin.createUser({ email, password: i.password, email_confirm: true, user_metadata: { full_name: name, phone, client: true, salon: slug } });
     if (made.error) account = 'exists';
     else { const si = await ssb.auth.signInWithPassword({ email, password: i.password }); account = si.error ? 'exists' : 'created'; }
   }

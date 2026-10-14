@@ -139,7 +139,7 @@ function useBooking(p: Props) {
         if (r.error) { setError(r.error); return; }
         const note = r.account === 'created' ? 'Your account is ready. Sign in next time to skip the details step.' : r.account === 'saved' ? 'Saved to your account.' : r.account === 'exists' ? 'You already have an account with this email. Sign in next time to skip the details step.' : '';
         if (r.account === 'created') setAcct({ name: form.name.trim(), email: form.email.trim().toLowerCase(), phone: form.phone.trim() });
-        else if (r.account === 'saved' && acct) setAcct({ ...acct, phone: form.phone.trim() || acct.phone });
+        else if (r.account === 'saved' && acct) setAcct({ ...acct, name: acct.name || form.name.trim(), phone: form.phone.trim() || acct.phone });
         setDone({ staffName: r.staffName || member?.name || 'The team', email: form.email.trim(), first: form.name.trim().split(' ')[0] || 'there', when: whenOf(slotMin ?? 0), count: countText, dur: durText, total: money(totalCents), note });
         setError('');
       } catch { setError('Something went wrong. Please try again.'); } finally { setBusy(false); }
@@ -329,6 +329,9 @@ function Steps({ m, o }: { m: M; o: O }) {
             <div style={S('flex:1 1 140px;min-width:0')}><div style={S('font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{m.acct.name || m.acct.email}</div><div style={S('font-size:13px;color:#5E6673;overflow-wrap:anywhere')}>{m.acct.email}</div></div>
             <button className="ghost" onClick={m.signOutNow} style={S('flex:0 0 auto;min-height:44px;padding:0 14px;border:0;border-radius:999px;background:transparent;color:#5B3DF5;font-size:13.5px;font-weight:600')}>Not you? Sign out</button>
           </div>
+        )}
+        {m.acct && !m.acct.name && (
+          <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="bk-name" style={S('font-size:14px;font-weight:600')}>Full name</label><input id="bk-name" className="bkf" type="text" autoComplete="name" value={m.form.name} onChange={(e) => m.setField('name', e.target.value)} placeholder="Your name" style={S(INPUT)} /></div>
         )}
         {!m.acct && m.au.panel === 'none' && <>
           <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="bk-name" style={S('font-size:14px;font-weight:600')}>Full name</label><input id="bk-name" className="bkf" type="text" autoComplete="name" value={m.form.name} onChange={(e) => m.setField('name', e.target.value)} placeholder="Your name" style={S(INPUT)} /></div>
