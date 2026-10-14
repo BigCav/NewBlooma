@@ -341,7 +341,7 @@ function Steps({ m, o }: { m: M; o: O }) {
         {!(m.acct && m.acct.phone) && <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="bk-phone" style={S('font-size:14px;font-weight:600')}>Phone</label><input id="bk-phone" className="bkf" type="tel" inputMode="tel" autoComplete="tel" value={m.form.phone} onChange={(e) => m.setField('phone', phoneInput(e.target.value))} placeholder="Required" style={S(INPUT)} /></div>}
         <div style={S('display:flex;flex-direction:column;gap:8px')}>
           <label htmlFor="bk-notes" style={S('font-size:14px;font-weight:600')}>Notes for the salon</label>
-          <textarea id="bk-notes" className="bkf" value={m.form.notes} onChange={(e) => m.setField('notes', e.target.value)} placeholder="Optional" style={S('box-sizing:border-box;width:100%;min-height:96px;resize:vertical;padding:12px 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;color:#0E1116;background:#FFFFFF')} />
+          <textarea id="bk-notes" className="bkf" value={m.form.notes} onChange={(e) => m.setField('notes', e.target.value)} placeholder="Optional" style={S('box-sizing:border-box;width:100%;min-height:96px;resize:none;padding:12px 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;color:#0E1116;background:#FFFFFF')} />
         </div>
         {!m.acct && m.au.panel === 'none' && (
           <div style={S('display:flex;flex-direction:column;gap:14px;padding:16px;border:1px solid #E6E8EC;border-radius:18px')}>
