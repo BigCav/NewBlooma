@@ -37,12 +37,23 @@ export async function clientSignIn(input: { slug: string; email: string; passwor
   const email = input.email.trim().toLowerCase();
   if (!EMAIL.test(email)) return { error: 'Enter a valid email address.' };
   if (!input.password) return { error: 'Enter your password.' };
-  const id = await salonIdFor(input.slug); if (!id) return { error: 'This booking page is not available.' };
-  const { data, error } = await supabaseAdmin().rpc('client_login', { p_salon: id, p_email: email, p_password: input.password });
-  if (error) return { error: /too_many_attempts/.test(error.message) ? 'Too many attempts. Try again in 15 minutes.' : 'Email or password is incorrect.' };
-  if (!data) return { error: 'Email or password is incorrect.' };
-  await setClientCookie(String(data));
-  return { account: toAccount(await currentClient(id))! };
+  try {
+    const id = await salonIdFor(input.slug); if (!id) return { error: 'This booking page is not available.' };
+    const { data, error } = await supabaseAdmin().rpc('client_login', { p_salon: id, p_email: email, p_password: input.password });
+    if (error) {
+      if (/too_many_attempts/.test(error.message)) return { error: 'Too many attempts. Try again in 15 minutes.' };
+      if (!/bad_login/.test(error.message)) console.error('client_login failed', error.message);
+      return { error: 'Email or password is incorrect.' };
+    }
+    if (!data) return { error: 'Email or password is incorrect.' };
+    await setClientCookie(String(data));
+    const account = toAccount(await currentClient(id));
+    if (!account) { console.error('client_login: session not readable after sign-in'); return { error: 'Signed in, but we could not load your details. Please refresh and try again.' }; }
+    return { account };
+  } catch (e) {
+    console.error('clientSignIn threw', e);
+    return { error: 'Something went wrong. Please try again.' };
+  }
 }
 
 export async function clientSignOut(): Promise<void> {
