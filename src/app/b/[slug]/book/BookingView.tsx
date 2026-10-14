@@ -2,7 +2,7 @@
 // 1:1 conversion of the prototype's Booking.dc.html and MobileBooking.dc.html (the public online booking flow).
 // Markup and style strings are kept as written; the {{ }} holes are the salon's real data and the handlers are real server actions.
 import { clock12, clockStr, makeMoney } from '@/lib/display';
-import { phoneInput } from '@/lib/phone';
+import { checkPhone, phoneInput } from '@/lib/phone';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { S } from '../../../(dash)/calendar/pickers';
 import { clientSignIn, clientSignOut, publicBook, publicSlots, publicWaitlist, type Account, type Slot } from './actions';
@@ -93,7 +93,7 @@ function useBooking(p: Props) {
     setSel(next);
   };
   // On the first step, back returns to the salon page instead of doing nothing.
-  const back = () => { if (step > 1) { setStep(step - 1); setError(''); } else window.location.assign('/b/' + p.slug); };
+  const back = () => { if (done) window.location.assign('/b/' + p.slug); else if (step > 1) { setStep(step - 1); setError(''); } else window.location.assign('/b/' + p.slug); };
   // Every step starts at the top: the phone layout scrolls inside .bk-flow, the desktop layout scrolls the window.
   useEffect(() => { window.scrollTo(0, 0); document.querySelectorAll('.bk-flow').forEach((el) => { el.scrollTop = 0; }); }, [step, done]);
   const goStep = (n: number) => { if (n < step) { setStep(n); setError(''); } };
@@ -109,7 +109,7 @@ function useBooking(p: Props) {
     if (!au.pw) { setAu({ error: 'Enter your password.' }); return; }
     setAu({ busy: true, error: '' });
     try {
-      const r = await clientSignIn({ email: au.email, password: au.pw });
+      const r = await clientSignIn({ slug: p.slug, email: au.email, password: au.pw });
       if (r.error || !r.account) { setAu({ busy: false, error: r.error ?? 'Email or password is incorrect.' }); return; }
       setAcct(r.account); setForm((f) => formFor(r.account ?? null, f.notes)); setSave(false); setSavePw(''); setError(''); setAuState(EMPTY_AU);
     } catch { setAu({ busy: false, error: 'Something went wrong. Please try again.' }); }
@@ -131,6 +131,7 @@ function useBooking(p: Props) {
     if (step === 4) {
       if (!form.name.trim()) { setError('Please add your name.'); return; }
       if (!/\S+@\S+\.\S+/.test(form.email)) { setError('Please add a valid email so we can confirm your booking.'); return; }
+      if (!(acct && acct.phone)) { const ph = checkPhone(form.phone, true); if (ph.error) { setError(ph.error); return; } }
       const wantsAccount = !acct && save;
       if (wantsAccount && savePw.length < 8) { setError('Choose a password with at least 8 characters.'); return; }
       setBusy(true);
@@ -337,7 +338,7 @@ function Steps({ m, o }: { m: M; o: O }) {
           <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="bk-name" style={S('font-size:14px;font-weight:600')}>Full name</label><input id="bk-name" className="bkf" type="text" autoComplete="name" value={m.form.name} onChange={(e) => m.setField('name', e.target.value)} placeholder="Your name" style={S(INPUT)} /></div>
           <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="bk-email" style={S('font-size:14px;font-weight:600')}>Email</label><input id="bk-email" className="bkf" type="email" autoComplete="email" value={m.form.email} onChange={(e) => m.setField('email', e.target.value)} placeholder="you@example.com" style={S(INPUT)} /></div>
         </>}
-        <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="bk-phone" style={S('font-size:14px;font-weight:600')}>Phone</label><input id="bk-phone" className="bkf" type="tel" inputMode="tel" autoComplete="tel" value={m.form.phone} onChange={(e) => m.setField('phone', phoneInput(e.target.value))} placeholder="Optional" style={S(INPUT)} /></div>
+        {!(m.acct && m.acct.phone) && <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="bk-phone" style={S('font-size:14px;font-weight:600')}>Phone</label><input id="bk-phone" className="bkf" type="tel" inputMode="tel" autoComplete="tel" value={m.form.phone} onChange={(e) => m.setField('phone', phoneInput(e.target.value))} placeholder="Required" style={S(INPUT)} /></div>}
         <div style={S('display:flex;flex-direction:column;gap:8px')}>
           <label htmlFor="bk-notes" style={S('font-size:14px;font-weight:600')}>Notes for the salon</label>
           <textarea id="bk-notes" className="bkf" value={m.form.notes} onChange={(e) => m.setField('notes', e.target.value)} placeholder="Optional" style={S('box-sizing:border-box;width:100%;min-height:96px;resize:vertical;padding:12px 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;color:#0E1116;background:#FFFFFF')} />
@@ -403,6 +404,7 @@ function DoneActions({ m }: { m: M }) {
         <button onClick={m.reset} style={S('flex:1 1 0;height:48px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500')}>Book another</button>
         <button className="ghost" onClick={() => m.setCalOpen(!m.calOpen)} aria-expanded={m.calOpen} aria-haspopup="menu" style={S('flex:1 1 0;height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14.5px;font-weight:500')}>Add to calendar</button>
       </div>
+      <a href={'/b/' + m.p.slug} style={S('display:flex;align-items:center;justify-content:center;height:48px;border:1px solid #E1E4E9;border-radius:999px;color:#0E1116;text-decoration:none;font-size:14.5px;font-weight:500')}>Back to {m.p.name}</a>
       {m.calOpen && (
         <div role="menu" aria-label="Add to calendar" style={S('display:flex;flex-direction:column;border:1px solid #E6E8EC;border-radius:18px;overflow:hidden;background:#FFFFFF')}>
           {([['Google Calendar', m.calLinks.google], ['Outlook', m.calLinks.outlook], ['Yahoo Calendar', m.calLinks.yahoo]] as const).map(([l, h], i) => (

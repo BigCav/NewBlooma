@@ -2,7 +2,7 @@
 import { flushOutbox } from '@/lib/notify';
 import { checkPhone } from '@/lib/phone';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { supabaseServer } from '@/lib/supabase/server';
+import { currentClient, salonIdFor, clearClientCookie, clientToken, setClientCookie, type ClientAccount } from '@/lib/client-auth';
 import { friendly } from '@/lib/session';
 import { minutesOfDay } from '@/lib/format';
 
@@ -25,43 +25,47 @@ export type BookInput = { services: string[]; slot: string; name: string; email:
 
 export type Account = { name: string; email: string; phone: string };
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-const toAccount = (u: { email?: string | null; user_metadata?: Record<string, any> } | null | undefined): Account | null =>
-  u?.email ? { name: String(u.user_metadata?.full_name ?? ''), email: u.email, phone: String(u.user_metadata?.phone ?? '') } : null;
+const toAccount = (c: ClientAccount | null): Account | null => (c ? { name: c.name, email: c.email, phone: c.phone } : null);
 
-/** The signed-in client, if any. Details come only from what the account holder entered themselves (their own sign-up), never from salon records. */
-export async function clientMe(): Promise<Account | null> {
-  const sb = await supabaseServer();
-  const { data } = await sb.auth.getUser();
-  return toAccount(data.user);
+/** The signed-in customer for this salon, if any. Separate from staff logins. */
+export async function clientMe(slug: string): Promise<Account | null> {
+  const id = await salonIdFor(slug); if (!id) return null;
+  return toAccount(await currentClient(id));
 }
 
-export async function clientSignIn(input: { email: string; password: string }): Promise<{ error?: string; account?: Account }> {
-  if (!EMAIL.test(input.email.trim())) return { error: 'Enter a valid email address.' };
+export async function clientSignIn(input: { slug: string; email: string; password: string }): Promise<{ error?: string; account?: Account }> {
+  const email = input.email.trim().toLowerCase();
+  if (!EMAIL.test(email)) return { error: 'Enter a valid email address.' };
   if (!input.password) return { error: 'Enter your password.' };
-  const sb = await supabaseServer();
-  const { data, error } = await sb.auth.signInWithPassword({ email: input.email.trim(), password: input.password });
-  if (error || !data.user) return { error: 'Email or password is incorrect.' };
-  return { account: toAccount(data.user)! };
+  const id = await salonIdFor(input.slug); if (!id) return { error: 'This booking page is not available.' };
+  const { data, error } = await supabaseAdmin().rpc('client_login', { p_salon: id, p_email: email, p_password: input.password });
+  if (error) return { error: /too_many_attempts/.test(error.message) ? 'Too many attempts. Try again in 15 minutes.' : 'Email or password is incorrect.' };
+  if (!data) return { error: 'Email or password is incorrect.' };
+  await setClientCookie(String(data));
+  return { account: toAccount(await currentClient(id))! };
 }
 
 export async function clientSignOut(): Promise<void> {
-  const sb = await supabaseServer();
-  await sb.auth.signOut();
+  const t = await clientToken();
+  if (t) await supabaseAdmin().rpc('client_logout', { p_token: t });
+  await clearClientCookie();
 }
 
 export async function publicBook(slug: string, i: BookInput): Promise<{ error?: string; staffName?: string; account?: 'created' | 'exists' | 'saved' }> {
   if (i.website) return { error: 'Could not complete your booking.' }; // honeypot
-  const name = i.name.trim(), email = i.email.trim().toLowerCase(); let phone = i.phone.trim();
-  if (!name) return { error: 'Please add your name.' };
-  if (!/^\S+@\S+\.\S+$/.test(email)) return { error: 'Please add a valid email so we can confirm your booking.' };
-  const ph = checkPhone(phone); if (ph.error) return { error: ph.error };
-  phone = ph.value;
-  if (!i.services.length || !i.slot) return { error: 'Choose your services and a time.' };
-  if (i.password !== undefined && i.password.length < 8) return { error: 'Choose a password with at least 8 characters.' };
-  const [staffId, startsAt] = i.slot.split('|');
   const sb = supabaseAdmin();
   const { data: salon } = await sb.from('salons').select('id').eq('slug', slug).maybeSingle();
   if (!salon) return { error: 'This booking page is not available.' };
+  const me = await currentClient(salon.id);
+  const name = (me?.name || i.name).trim(), email = (me?.email || i.email).trim().toLowerCase();
+  let phone = (i.phone.trim() || me?.phone || '').trim();
+  if (!name) return { error: 'Please add your name.' };
+  if (!/^\S+@\S+\.\S+$/.test(email)) return { error: 'Please add a valid email so we can confirm your booking.' };
+  const ph = checkPhone(phone, true); if (ph.error) return { error: ph.error };
+  phone = ph.value;
+  if (!i.services.length || !i.slot) return { error: 'Choose your services and a time.' };
+  if (!me && i.password !== undefined && i.password.length < 8) return { error: 'Choose a password with at least 8 characters.' };
+  const [staffId, startsAt] = i.slot.split('|');
   let { data: client } = await sb.from('clients').select('id').eq('salon_id', salon.id).ilike('email', email.replace(/[%_]/g, '\\$&')).maybeSingle();
   if (!client) {
     const ins = await sb.from('clients').insert({ salon_id: salon.id, name, email, phone: phone || null }).select('id').single();
@@ -72,20 +76,14 @@ export async function publicBook(slug: string, i: BookInput): Promise<{ error?: 
   if (error) return { error: friendly(error.message) };
   await flushOutbox();
   const { data: st } = await sb.from('staff').select('name').eq('id', staffId).maybeSingle();
-  // Account: keep a signed-in client's saved phone current, or create an account when they asked to save their details.
   let account: 'created' | 'exists' | 'saved' | undefined;
-  const ssb = await supabaseServer();
-  const { data: me } = await ssb.auth.getUser();
-  if (me.user?.email) {
+  if (me) {
     account = 'saved';
-    const patch: Record<string, string> = {};
-    if (phone && phone !== (me.user.user_metadata?.phone ?? '')) patch.phone = phone;
-    if (!me.user.user_metadata?.full_name && name) patch.full_name = name; // first booking fills in a missing name
-    if (Object.keys(patch).length) await ssb.auth.updateUser({ data: patch });
+    await sb.rpc('client_update', { p_account: me.id, p_name: me.name || name, p_phone: phone });
   } else if (i.password) {
-    const made = await sb.auth.admin.createUser({ email, password: i.password, email_confirm: true, user_metadata: { full_name: name, phone, client: true, salon: slug } });
-    if (made.error) account = 'exists';
-    else { const si = await ssb.auth.signInWithPassword({ email, password: i.password }); account = si.error ? 'exists' : 'created'; }
+    const { data: token, error: ce } = await sb.rpc('client_register', { p_salon: salon.id, p_name: name, p_email: email, p_phone: phone, p_password: i.password });
+    if (ce || !token) account = 'exists';
+    else { await setClientCookie(String(token)); account = 'created'; }
   }
   return { staffName: st?.name ?? '', account };
 }
