@@ -33,8 +33,13 @@ export async function createWalkin(client: string, serviceId: string, tipPct: nu
  * Take payment for an open sale. Cash and gift card settle at once; the terminal returns a transaction to poll;
  * on-screen card returns the hosted payment page to go to.
  */
-export async function payFlow(saleId: string, method: 'terminal' | 'online' | 'cash' | 'gift_card', tipPct: number, code: string): Promise<Res & { txn?: string; url?: string }> {
+export async function payFlow(saleId: string, method: 'terminal' | 'online' | 'cash' | 'gift_card', tipPct: number, code: string, disc?: { kind: string; value: string; note: string }): Promise<Res & { txn?: string; url?: string }> {
   const { sb } = await requireCtx();
+  if (disc) {
+    const v = Number(String(disc.value).replace(/[^0-9.]/g, ''));
+    const d = await sb.rpc('set_sale_discount', { p_sale: saleId, p_kind: disc.kind, p_value: disc.kind === 'amount' ? Math.round(v * 100) : v || 0, p_note: disc.note });
+    if (d.error) return { error: friendly(d.error.message) };
+  }
   const t = await sb.rpc('set_sale_tip', { p_sale: saleId, p_pct: tipPct });
   if (t.error) return { error: friendly(t.error.message) };
   if (method === 'cash' || method === 'gift_card') {
@@ -72,12 +77,13 @@ export async function refundSale(saleId: string): Promise<Res> {
 
 export async function sendReceipt(saleId: string): Promise<Res> {
   const { sb, salon } = await requireCtx();
-  const { data: s } = await sb.from('sales').select('status,method,subtotal_cents,tip_cents,tax_cents,tax_inclusive,total_cents,paid_at,clients(name,phone,email),sale_items(label,qty,price_cents)').eq('id', saleId).single();
+  const { data: s } = await sb.from('sales').select('status,method,subtotal_cents,discount_cents,discount_note,tip_cents,tax_cents,tax_inclusive,total_cents,paid_at,clients(name,phone,email),sale_items(label,qty,price_cents)').eq('id', saleId).single();
   if (!s) return { error: 'Sale not found.' };
   const c: any = s.clients;
   if (!c) return { error: 'This sale has no client to send a receipt to.' };
   const first = String(c.name).split(' ')[0];
   const lines = (s.sale_items as any[]).map((i) => `${i.label}${i.qty > 1 ? ` x${i.qty}` : ''} ${fmt(i.price_cents * i.qty)}`);
+  if (s.discount_cents) lines.push(`Discount${s.discount_note ? ` (${s.discount_note})` : ''} -${fmt(s.discount_cents)}`);
   if (s.tip_cents) lines.push(`Tip ${fmt(s.tip_cents)}`);
   if (!s.tax_inclusive && s.tax_cents) lines.push(`Tax ${fmt(s.tax_cents)}`);
   const how = s.method === 'gift_card' ? 'gift card' : s.method;

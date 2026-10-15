@@ -15,7 +15,7 @@ export default async function Sales({ searchParams }: { searchParams: Promise<{ 
   const tz = salon.timezone, today = ymd(new Date(), tz);
   const since = new Date(Date.now() - 15 * 86400e3).toISOString();
   const [{ data: sales }, { data: svcs }, { data: pay }] = await Promise.all([
-    sb.from('sales').select('id,status,method,subtotal_cents,tip_cents,tax_cents,tax_inclusive,total_cents,created_at,paid_at,clients(name),staff(name),sale_items(label,qty,price_cents,service_id)')
+    sb.from('sales').select('id,status,method,subtotal_cents,discount_cents,discount_note,tax_rate,tip_cents,tax_cents,tax_inclusive,total_cents,created_at,paid_at,clients(name),staff(name),sale_items(label,qty,price_cents,service_id)')
       .or(`created_at.gte.${since},status.eq.pending`).order('created_at', { ascending: false }).limit(300),
     sb.from('services').select('id,name,price_cents,service_categories(name,sort)').eq('active', true).order('name'),
     sb.from('salon_payment_settings').select('online_cards_enabled,terminal_enabled').eq('salon_id', salon.id).maybeSingle(),
@@ -33,7 +33,7 @@ export default async function Sales({ searchParams }: { searchParams: Promise<{ 
       service: first ? `${first.label}${first.qty > 1 ? ` x${first.qty}` : ''}${extra > 0 ? ` +${extra} more` : ''}` : 'Sale',
       time: status === 'Pending' ? 'In progress' : day === today ? hm(when, tz) : dayInfo(day).short,
       method: status === 'Pending' ? 'Not taken yet' : METHOD[s.method] ?? '', status,
-      amount: s.subtotal_cents, tip: s.tip_cents, tax: s.tax_inclusive ? 0 : s.tax_cents, total: s.total_cents,
+      amount: s.subtotal_cents + s.discount_cents, discount: s.discount_cents, discountNote: s.discount_note ?? '', taxRate: Number(s.tax_rate), taxIncl: !!s.tax_inclusive, tip: s.tip_cents, tax: s.tax_inclusive ? 0 : s.tax_cents, total: s.total_cents,
       canEdit: status === 'Pending' && canEdit && items.filter((i) => i.service_id).length === 1,
     };
     return { row, day, paid: s.status === 'paid' };
@@ -54,6 +54,6 @@ export default async function Sales({ searchParams }: { searchParams: Promise<{ 
 
   const t = dayInfo(today);
   const services = ((svcs ?? []) as any[]).sort((a, b) => (a.service_categories?.sort ?? 0) - (b.service_categories?.sort ?? 0)).map((s) => ({ id: s.id as string, name: s.name as string, priceCents: s.price_cents as number }));
-  return <SalesView rows={rows} bars={bars} todayTotal={todayTotal} paidCount={todayPaid.length} subtitle={`${t.weekday}, ${t.num} ${t.month}`}
+  return <SalesView canDiscount={canEdit} rows={rows} bars={bars} todayTotal={todayTotal} paidCount={todayPaid.length} subtitle={`${t.weekday}, ${t.num} ${t.month}`}
     methods={methods} services={services} askTip={st.ask_for_tip} initial={{ sale: sp.sale ?? null, pay: sp.pay === '1', card: sp.card ?? '' }} />;
 }

@@ -6,11 +6,11 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
 import { createWalkin, payFlow, refundSale, sendReceipt, setPrice, terminalCancel, terminalPoll } from './actions';
-import { FILTERS, STATUS, TIP_OPTS, fmt, type PayMethod, type SaleRow, type SvcOpt } from './shared';
+import { DISC_PCTS, FILTERS, NO_DISC, STATUS, TIP_OPTS, discOf, discountCents, fmt, type DiscPick, type PayMethod, type SaleRow, type SvcOpt } from './shared';
 
 type Props = {
   rows: SaleRow[]; bars: { day: string; cents: number; today: boolean }[]; todayTotal: number; paidCount: number; subtitle: string;
-  methods: PayMethod[]; services: SvcOpt[]; askTip: boolean; initial: { sale: string | null; pay: boolean; card: string };
+  methods: PayMethod[]; services: SvcOpt[]; askTip: boolean; canDiscount: boolean; initial: { sale: string | null; pay: boolean; card: string };
 };
 type Mode = 'view' | 'pay' | 'edit' | 'new';
 const CARD_MSG: Record<string, string> = { declined: 'The card payment was not completed.', pending: 'Still waiting for the bank. Refresh in a moment.', unknown: 'The card payment could not be confirmed.' };
@@ -26,10 +26,10 @@ function useSales(props: Props) {
     return () => mq.removeEventListener('change', f);
   }, []);
   const first = props.methods[0]?.id ?? 'cash';
-  const blankPay = (tip = '0') => ({ method: first as PayMethod['id'], tip, code: '' });
+  const blankPay = (tip = '0', disc: DiscPick = NO_DISC) => ({ method: first as PayMethod['id'], tip, code: '', disc });
   // A sale started at the calendar already has a tip; keep it when payment opens instead of resetting to none.
   const tipPctOf = (r?: { amount: number; tip: number }) => (r && r.amount > 0 && r.tip > 0 ? String(Math.round((r.tip * 100) / r.amount)) : '0');
-  const blankNew = () => ({ client: '', service: null as string | null, method: first as PayMethod['id'], tip: '0', code: '' });
+  const blankNew = () => ({ client: '', service: null as string | null, method: first as PayMethod['id'], tip: '0', code: '', disc: NO_DISC as DiscPick });
   const rows = props.rows;
   const startSel = props.initial.sale && rows.some((r) => r.id === props.initial.sale) ? props.initial.sale : rows[0]?.id ?? null;
   const startPay = !!props.initial.pay && rows.find((r) => r.id === startSel)?.status === 'Pending';
@@ -41,7 +41,7 @@ function useSales(props: Props) {
   const [notice, setNotice] = useState('');
   const [error, setError] = useState(props.initial.card ? CARD_MSG[props.initial.card] ?? '' : '');
   const [confirmRefund, setConfirmRefund] = useState(false);
-  const [pay, setPay] = useState(blankPay(tipPctOf(rows.find((r) => r.id === startSel))));
+  const [pay, setPay] = useState(blankPay(tipPctOf(rows.find((r) => r.id === startSel)), discOf(rows.find((r) => r.id === startSel))));
   const [editAmount, setEditAmount] = useState('');
   const [nw, setNw] = useState(blankNew());
   const [txn, setTxn] = useState('');
@@ -85,7 +85,7 @@ function useSales(props: Props) {
   const takePayment = () => {
     if (!sel) return;
     if (!props.methods.length) { setError('No payment methods are switched on. Turn some on in Settings.'); return; }
-    startT(async () => { setError(''); settle(await payFlow(sel.id, pay.method, parseInt(pay.tip, 10) || 0, pay.code)); });
+    startT(async () => { setError(''); settle(await payFlow(sel.id, pay.method, parseInt(pay.tip, 10) || 0, pay.code, props.canDiscount ? pay.disc : undefined)); });
   };
   const saveEdit = () => { if (sel) startT(async () => { const r = await setPrice(sel.id, editAmount); if (r.error) { setError(r.error); return; } setMode('view'); setError(''); setNotice(r.notice ?? ''); router.refresh(); }); };
   const doRefund = () => { if (sel) startT(async () => { const r = await refundSale(sel.id); setConfirmRefund(false); if (r.error) { setError(r.error); return; } setError(''); setNotice(r.notice ?? ''); router.refresh(); }); };
@@ -98,7 +98,7 @@ function useSales(props: Props) {
       const c = await createWalkin(nw.client, nw.service!, parseInt(nw.tip, 10) || 0);
       if (c.error || !c.saleId) { setError(c.error ?? 'Could not record the sale.'); return; }
       setSelectedId(c.saleId); setFilter('all'); setOpen(true);
-      const r = await payFlow(c.saleId, nw.method, parseInt(nw.tip, 10) || 0, nw.code);
+      const r = await payFlow(c.saleId, nw.method, parseInt(nw.tip, 10) || 0, nw.code, props.canDiscount ? nw.disc : undefined);
       if (!r.error && (r.txn || r.url)) setMode('pay');
       const ok = settle(r.error ? { error: r.error + ' The sale was saved as pending.' } : r.notice ? { notice: 'Sale recorded' } : r);
       if (!ok) { setMode('view'); }
@@ -109,7 +109,7 @@ function useSales(props: Props) {
   const sq = query.trim().toLowerCase();
   const list = rows.filter((t) => (filter === 'all' || t.status === filter) && (!sq || (t.client + ' ' + t.service + ' ' + t.staffName + ' ' + t.status).toLowerCase().includes(sq)));
   return { ...props, busy, narrow, rows, list, sel, selectedId, filter, setFilter, query, setQuery, mode, setMode, open, notice, error, setError, confirmRefund, setConfirmRefund,
-    pay, setPay, tipPctOf, editAmount, setEditAmount, nw, setNw, txn, wait, pick, openNew, cancel, close, takePayment, saveEdit, doRefund, receipt, createSale,
+    canDiscount: props.canDiscount, pay, setPay, tipPctOf, editAmount, setEditAmount, nw, setNw, txn, wait, pick, openNew, cancel, close, takePayment, saveEdit, doRefund, receipt, createSale,
     paidTotal: props.todayTotal, pendingCount: rows.filter((r) => r.status === 'Pending').length };
 }
 type C = ReturnType<typeof useSales>;
@@ -140,17 +140,30 @@ function Panel({ c, m }: { c: C; m: boolean }) {
     <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor={id} style={S('font-size:14px;font-weight:600')}>Gift card code</label>
       <input id={id} type="text" value={v} onChange={(e) => on(e.target.value)} placeholder="Gift card code" style={inputS(h)} /></div>
   );
+  const discountControl = (cur: DiscPick, on: (d: DiscPick) => void, id: string) => c.canDiscount && (
+    <>
+      <Chips id={id + '-label'} label="Discount">
+        <button onClick={() => on(NO_DISC)} aria-pressed={cur.kind === 'none'} style={S(pill(cur.kind === 'none', m))}>None</button>
+        {DISC_PCTS.map((v) => <button key={v} onClick={() => on({ ...cur, kind: 'percent', value: v })} aria-pressed={cur.kind === 'percent' && cur.value === v} style={S(pill(cur.kind === 'percent' && cur.value === v, m))}>{v}%</button>)}
+        <button onClick={() => on({ ...cur, kind: 'amount', value: cur.kind === 'amount' ? cur.value : '' })} aria-pressed={cur.kind === 'amount'} style={S(pill(cur.kind === 'amount', m))}>$ off</button>
+      </Chips>
+      {cur.kind === 'amount' && <input aria-label="Discount amount in dollars" inputMode="decimal" value={cur.value} onChange={(e) => on({ ...cur, value: e.target.value.replace(/[^0-9.]/g, '') })} placeholder="Amount off, like 10 or 7.50" style={inputS(h)} />}
+      {cur.kind !== 'none' && <input aria-label="Discount reason" maxLength={60} value={cur.note} onChange={(e) => on({ ...cur, note: e.target.value })} placeholder="Reason (optional), e.g. Staff discount" style={inputS(h)} />}
+    </>
+  );
   if (c.mode === 'new') {
     const svc = c.services.find((x) => x.id === c.nw.service) ?? null;
     const tipAmt = svc && c.askTip ? Math.round(svc.priceCents * (parseInt(c.nw.tip, 10) || 0) / 100) : 0;
+    const nwDisc = svc && c.canDiscount ? discountCents(svc.priceCents, c.nw.disc) : 0;
     return (<>
       <div style={S('display:flex;flex-direction:column;gap:18px')}>
-        <div><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>New sale</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>{svc ? svc.name + ', ' + fmt(svc.priceCents) + (tipAmt ? ' plus ' + fmt(tipAmt) + ' tip' : '') + ', total ' + fmt(svc.priceCents + tipAmt) : 'Choose a service to see the total.'}</p></div>
+        <div><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>New sale</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>{svc ? svc.name + ', ' + fmt(svc.priceCents) + (nwDisc ? ' less ' + fmt(nwDisc) + ' discount' : '') + (tipAmt ? ' plus ' + fmt(tipAmt) + ' tip' : '') + ', total ' + fmt(svc.priceCents - nwDisc + tipAmt) : 'Choose a service to see the total.'}</p></div>
         <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="nw-client" style={S('font-size:14px;font-weight:600')}>Client</label>
           <input id="nw-client" type="text" value={c.nw.client} onChange={(e) => { c.setNw({ ...c.nw, client: e.target.value }); c.setError(''); }} placeholder="Client name" style={inputS(48)} /></div>
         <Chips id="nw-service-label" label="Service">{c.services.map((x) => <button key={x.id} onClick={() => { c.setNw({ ...c.nw, service: x.id }); c.setError(''); }} aria-pressed={c.nw.service === x.id} style={S(pill(c.nw.service === x.id, m))}>{x.name}</button>)}</Chips>
         {methodChips(c.nw.method, (v) => c.setNw({ ...c.nw, method: v }), 'nw-method-label')}
         {c.nw.method === 'gift_card' && codeField(c.nw.code, (v) => c.setNw({ ...c.nw, code: v }), 'nw-code')}
+        {discountControl(c.nw.disc, (d) => c.setNw({ ...c.nw, disc: d }), 'nw-disc')}
         {tipChips(c.nw.tip, (v) => c.setNw({ ...c.nw, tip: v }), 'nw-tip-label')}
         {err}
         <div style={S('display:flex;gap:10px')}><button onClick={c.createSale} disabled={c.busy} style={S(DARK(h))}>Record sale</button><button className="ghost" onClick={c.cancel} style={S(GHOST(h))}>Cancel</button></div>
@@ -161,14 +174,17 @@ function Panel({ c, m }: { c: C; m: boolean }) {
   if (c.mode === 'pay') {
     const pct = c.askTip ? parseInt(c.pay.tip, 10) || 0 : 0;
     const svcCents = s.amount, tipAmt = Math.round(svcCents * pct / 100);
+    const disc = c.canDiscount ? discountCents(svcCents, c.pay.disc) : s.discount, net = svcCents - disc;
+    const tax = s.taxIncl || !s.taxRate ? 0 : Math.round(net * s.taxRate / 100);
     return (
       <div style={S('display:flex;flex-direction:column;gap:18px')}>
         <div><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Take payment</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px;overflow-wrap:anywhere')}>{s.client}, {s.service}</p></div>
         {methodChips(c.pay.method, (v) => c.setPay({ ...c.pay, method: v }), 'pay-method-label')}
         {c.pay.method === 'gift_card' && codeField(c.pay.code, (v) => c.setPay({ ...c.pay, code: v }), 'pay-code')}
+        {discountControl(c.pay.disc, (d) => c.setPay({ ...c.pay, disc: d }), 'pay-disc')}
         {tipChips(c.pay.tip, (v) => c.setPay({ ...c.pay, tip: v }), 'pay-tip-label')}
         <dl style={S('margin:0;display:flex;flex-direction:column')}>
-          {DL('Service', fmt(svcCents))}{DL('Tip', tipAmt ? fmt(tipAmt) : 'None')}{s.tax ? DL('Tax', fmt(s.tax)) : null}{DL('Total', fmt(svcCents + tipAmt + s.tax), { last: true, bold: true })}
+          {DL('Service', fmt(svcCents))}{disc ? DL('Discount', '-' + fmt(disc)) : null}{DL('Tip', tipAmt ? fmt(tipAmt) : 'None')}{tax ? DL('Tax', fmt(tax)) : null}{DL('Total', fmt(net + tipAmt + tax), { last: true, bold: true })}
         </dl>
         {!!c.wait && <p role="status" style={S('margin:0;color:#5E6673;font-size:13.5px')}>{c.wait}</p>}
         {err}
@@ -199,11 +215,11 @@ function Panel({ c, m }: { c: C; m: boolean }) {
       <div style={S('min-width:0')}><div style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em;line-height:1.2;overflow-wrap:anywhere')}>{s.client}</div><div style={S('font-size:14px;color:#5E6673;overflow-wrap:anywhere')}>{s.service}</div></div>
     </div>
     <dl style={S('margin:0;display:flex;flex-direction:column')}>
-      {DL('Time', s.time)}{DL('With', s.staffName, { wrap: true })}{DL('Payment', s.method, { wrap: true })}{DL('Service', fmt(s.amount))}{DL('Tip', s.tip ? fmt(s.tip) : 'None')}{s.tax ? DL('Tax', fmt(s.tax)) : null}{DL('Total', fmt(s.total), { last: true, bold: true })}
+      {DL('Time', s.time)}{DL('With', s.staffName, { wrap: true })}{DL('Payment', s.method, { wrap: true })}{DL('Service', fmt(s.amount))}{s.discount ? DL('Discount' + (s.discountNote ? ' (' + s.discountNote + ')' : ''), '-' + fmt(s.discount), { wrap: true }) : null}{DL('Tip', s.tip ? fmt(s.tip) : 'None')}{s.tax ? DL('Tax', fmt(s.tax)) : null}{DL('Total', fmt(s.total), { last: true, bold: true })}
     </dl>
     {!c.confirmRefund && (
       <div style={S('display:flex;gap:10px')}>
-        <button onClick={() => { if (s.status === 'Pending') { c.setPay({ method: c.methods[0]?.id ?? 'cash', tip: c.tipPctOf(s), code: '' }); c.setMode('pay'); c.setError(''); } else c.receipt(); }} disabled={c.busy} style={S(DARK(h))}>{s.status === 'Pending' ? 'Take payment' : 'Send receipt'}</button>
+        <button onClick={() => { if (s.status === 'Pending') { c.setPay({ method: c.methods[0]?.id ?? 'cash', tip: c.tipPctOf(s), code: '', disc: discOf(s) }); c.setMode('pay'); c.setError(''); } else c.receipt(); }} disabled={c.busy} style={S(DARK(h))}>{s.status === 'Pending' ? 'Take payment' : 'Send receipt'}</button>
         {secondary && <button className="ghost" onClick={() => { if (s.status === 'Paid') c.setConfirmRefund(true); else { c.setEditAmount(String(s.amount / 100)); c.setMode('edit'); c.setError(''); } }} style={S(GHOST(h))}>{secondary}</button>}
       </div>
     )}

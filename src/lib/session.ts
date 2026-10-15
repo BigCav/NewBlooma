@@ -45,7 +45,7 @@ export function friendly(msg?: string | null) {
     method_disabled: 'That payment method is switched off in Settings.', staff_cannot_perform: 'That team member does not offer these services.',
     price_not_editable: 'This sale has more than one service, so its price can only be changed on the appointment.', client_required: 'Add the client\'s name.',
     booking_not_found: 'That booking no longer exists.', booking_not_editable: 'This booking can no longer be changed.', booking_needs_service: 'Keep at least one service on the booking.',
-    service_not_found: 'That service is no longer available.', card_payment_in_progress: 'A card payment is in progress for this sale.', sale_not_pending: 'This sale is already settled.', invalid_price: 'Enter a price above zero, like 45 or 45.50.',
+    service_not_found: 'That service is no longer available.', card_payment_in_progress: 'A card payment is in progress for this sale.', sale_not_pending: 'This sale is already settled.', invalid_discount: 'Enter a valid discount.', discount_too_large: 'The discount has to be less than the sale total.', remove_discount_first: 'Remove the discount before changing this price.', invalid_price: 'Enter a price above zero, like 45 or 45.50.',
   };
   for (const k of Object.keys(map)) if (msg.includes(k)) return map[k];
   if (msg.includes('duplicate key') && msg.includes('slug')) return 'That web address is taken. Try another.';
