@@ -1,6 +1,6 @@
 export type TeamRow = {
   id: string; name: string; role: string; cats: string[]; days: number[]; shift: string | null; online: boolean;
-  cells: string[]; todayOn: boolean; todayLabel: string;
+  cells: string[]; todayOn: boolean; todayLabel: string; photo: string | null;
 };
 export type ShiftPreset = { id: string; label: string; short: string; from: string; to: string };
 export const SHIFTS: ShiftPreset[] = [
@@ -9,6 +9,16 @@ export const SHIFTS: ShiftPreset[] = [
   { id: '10-18', label: '10:00 to 18:00', short: '10–18', from: '10:00', to: '18:00' },
   { id: '9-13', label: '9:00 to 13:00', short: '9–13', from: '09:00', to: '13:00' },
 ];
+/** Style to append to an avatar circle when the member has a photo. */
+export const photoCss = (url: string | null) => (url ? ';background-image:url(' + url + ');background-size:cover;background-position:center;color:transparent' : '');
+/** Browser only: crop to a centred square, shrink to 480px and encode as JPEG so uploads stay small. */
+export async function squarePhoto(file: File): Promise<Blob> {
+  const bmp = await createImageBitmap(file);
+  const side = Math.min(bmp.width, bmp.height), size = Math.min(480, side);
+  const cv = document.createElement('canvas'); cv.width = cv.height = size;
+  cv.getContext('2d')!.drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, size, size);
+  return await new Promise<Blob>((res, rej) => cv.toBlob((b) => (b ? res(b) : rej(new Error('encode'))), 'image/jpeg', 0.85));
+}
 export const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 export const DAY_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 export const FILTERS = [{ id: 'all', label: 'All team' }, { id: 'today', label: 'Working today' }, { id: 'online', label: 'Bookable online' }];

@@ -1,10 +1,46 @@
 'use server';
 import { revalidatePath } from 'next/cache';
 import { requireOwner, friendly } from '@/lib/session';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 import { SHIFTS } from './shared';
 
 type Input = { id: string | null; name: string; role: string; cats: string[]; days: number[]; shift: string | null; online: boolean };
 type Res = { error?: string; id?: string; notice?: string };
+
+const BUCKET = 'staff-photos';
+const keyOf = (url: string | null) => (url && url.includes(`/${BUCKET}/`) ? url.split(`/${BUCKET}/`)[1].split('?')[0] : null);
+
+/** Owner uploads a (client-resized) JPEG for a team member. The old file is removed once the new one is saved. */
+export async function uploadPhoto(staffId: string, fd: FormData): Promise<Res & { url?: string }> {
+  const { sb, salon } = await requireOwner();
+  const file = fd.get('photo');
+  if (!(file instanceof File) || !file.size) return { error: 'Choose a photo.' };
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) return { error: 'Use a JPG, PNG or WebP photo.' };
+  if (file.size > 900_000) return { error: 'That photo is too large. Try a smaller one.' };
+  const { data: m } = await sb.from('staff').select('id,photo_url').eq('id', staffId).eq('salon_id', salon.id).maybeSingle();
+  if (!m) return { error: 'Team member not found.' };
+  const admin = supabaseAdmin();
+  const path = `${salon.id}/${staffId}-${Date.now()}.jpg`;
+  const up = await admin.storage.from(BUCKET).upload(path, Buffer.from(await file.arrayBuffer()), { contentType: file.type, upsert: false });
+  if (up.error) return { error: 'Could not upload the photo. Please try again.' };
+  const url = admin.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+  const { error } = await sb.from('staff').update({ photo_url: url }).eq('id', staffId);
+  if (error) { await admin.storage.from(BUCKET).remove([path]); return { error: friendly(error.message) }; }
+  const old = keyOf(m.photo_url); if (old) await admin.storage.from(BUCKET).remove([old]);
+  revalidatePath('/team'); revalidatePath(`/b/${salon.slug}`);
+  return { url, notice: 'Photo saved' };
+}
+
+export async function removePhoto(staffId: string): Promise<Res> {
+  const { sb, salon } = await requireOwner();
+  const { data: m } = await sb.from('staff').select('id,photo_url').eq('id', staffId).eq('salon_id', salon.id).maybeSingle();
+  if (!m) return { error: 'Team member not found.' };
+  const { error } = await sb.from('staff').update({ photo_url: null }).eq('id', staffId);
+  if (error) return { error: friendly(error.message) };
+  const old = keyOf(m.photo_url); if (old) await supabaseAdmin().storage.from(BUCKET).remove([old]);
+  revalidatePath('/team'); revalidatePath(`/b/${salon.slug}`);
+  return { notice: 'Photo removed' };
+}
 
 export async function saveMember(i: Input): Promise<Res> {
   const { sb, salon } = await requireOwner();

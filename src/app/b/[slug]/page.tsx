@@ -32,5 +32,5 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
   const next = settings.online_booking ? await nextAvailableLabel(salon.id, salon.timezone).catch(() => null) : null;
   return <ProfileView slug={slug} name={salon.name} headline={salon.headline || salon.name} intro={salon.intro || 'Book your next visit online in under a minute, with the team member you like and a time that suits you.'}
     about={salon.about || ''} address={salon.address || ''} phone={salon.phone || ''} email={salon.email || ''}
-    services={services} cats={cats} team={d.team.map((t) => ({ name: t.name, role: t.role_title }))} hours={hours} today={today} nowMin={nowMin} cancel={cancel} bookable={settings.online_booking} next={next} />;
+    services={services} cats={cats} team={d.team.map((t) => ({ name: t.name, role: t.role_title, photo: t.photo_url ?? null }))} hours={hours} today={today} nowMin={nowMin} cancel={cancel} bookable={settings.online_booking} next={next} />;
 }

@@ -10,7 +10,7 @@ import { ART } from './art';
 type Svc = { id: string; name: string; desc: string; cat: string; dur: number; price: string };
 type Props = {
   slug: string; name: string; headline: string; intro: string; about: string; address: string; phone: string; email: string;
-  services: Svc[]; cats: string[]; team: { name: string; role: string }[]; hours: ({ from: string; to: string } | null)[];
+  services: Svc[]; cats: string[]; team: { name: string; role: string; photo: string | null }[]; hours: ({ from: string; to: string } | null)[];
   today: number; nowMin: number; cancel: string; bookable: boolean; next: string | null;
 };
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -66,7 +66,7 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
       <h2 style={S('margin:0;font-size:22px;font-weight:600;letter-spacing:-0.02em')}>Team</h2>
       <ul style={S('margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px')}>
         {p.team.map((x) => (
-          <li key={x.name} style={S('display:flex;align-items:center;gap:12px;padding:14px;border:1px solid #E6E8EC;border-radius:18px')}><span style={S('flex:0 0 48px;width:48px;height:48px;border-radius:999px;background:#EEF0F3;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600')}>{initialsOf(x.name)}</span><span style={S('min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{x.name}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{x.role}</span></span></li>
+          <li key={x.name} style={S('display:flex;align-items:center;gap:12px;padding:14px;border:1px solid #E6E8EC;border-radius:18px')}><span style={S('flex:0 0 48px;width:48px;height:48px;border-radius:999px;background:#EEF0F3;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600' + (x.photo ? ';background-image:url(' + x.photo + ');background-size:cover;background-position:center' : ''))}>{x.photo ? '' : initialsOf(x.name)}</span><span style={S('min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{x.name}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{x.role}</span></span></li>
         ))}
       </ul>
     </section>

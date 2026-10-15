@@ -29,7 +29,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const cats = d.cats.map((c) => c.name).filter((n) => services.some((s) => s.cat === n));
   if (services.some((s) => s.cat === 'Other')) cats.push('Other');
   const svcIds = new Set(services.map((s) => s.id));
-  const team = d.team.map((t) => ({ id: t.id, name: t.name, role: t.role_title, svc: d.links.filter((l) => l.staff_id === t.id && svcIds.has(l.service_id)).map((l) => l.service_id) }));
+  const team = d.team.map((t) => ({ id: t.id, name: t.name, role: t.role_title, photo: t.photo_url ?? null, svc: d.links.filter((l) => l.staff_id === t.id && svcIds.has(l.service_id)).map((l) => l.service_id) }));
   const hours = Array.from({ length: 7 }, (_, i) => {
     const h = d.hours.find((x: any) => x.weekday === i) as any;
     return h && h.is_open ? { from: String(h.open_time).slice(0, 5), to: String(h.close_time).slice(0, 5) } : null;

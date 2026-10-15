@@ -9,7 +9,7 @@ import { clientSignIn, clientSignOut, nextAvailable, publicBook, publicSlots, pu
 
 type Svc = { id: string; name: string; desc: string; cat: string; dur: number; cents: number };
 type Addon = Svc & { parents: string[] };
-type Member = { id: string; name: string; role: string; svc: string[] };
+type Member = { id: string; name: string; role: string; photo?: string | null; svc: string[] };
 type Props = {
   slug: string; name: string; address: string; tz: string; currency: string;
   services: Svc[]; addons: Addon[]; cats: string[]; team: Member[]; hours: ({ from: string; to: string } | null)[];
@@ -274,8 +274,8 @@ function Steps({ m, o }: { m: M; o: O }) {
           const on = m.staff === t.id;
           return <li key={t.id}>
             <button onClick={() => { if (!bad) m.setStaff(t.id); }} aria-pressed={on} aria-disabled={!!bad} aria-label={t.name + ', ' + (bad ? "doesn't offer " + bad.name : t.role)} style={S(rowStyle(on) + (bad ? ';cursor:default' : ''))}>
-              <span style={S('flex:0 0 48px;width:48px;height:48px;border-radius:999px;background:#EEF0F3;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:#0E1116')}>
-                {t.id !== 'any' && initialsOf(t.name)}
+              <span style={S('flex:0 0 48px;width:48px;height:48px;border-radius:999px;background:#EEF0F3;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:#0E1116' + ('photo' in t && t.photo ? ';background-image:url(' + t.photo + ');background-size:cover;background-position:center' : ''))}>
+                {t.id !== 'any' && !('photo' in t && t.photo) && initialsOf(t.name)}
                 {t.id === 'any' && <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8.5" r="3.5" /><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5" /><path d="M16 5.2a3.4 3.4 0 0 1 0 6.6M18.5 14.8c1.6.8 2.6 2.4 3 5.2" /></svg>}
               </span>
               <span style={S('flex:1 1 auto;min-width:0;color:' + (bad ? '#8A93A0' : '#0E1116'))}>

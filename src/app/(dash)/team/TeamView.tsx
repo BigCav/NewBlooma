@@ -6,8 +6,8 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
-import { removeMember, saveMember } from './actions';
-import { DAYS, DAY_FULL, FILTERS, SHIFTS, initialsOf, type TeamRow } from './shared';
+import { removeMember, removePhoto, saveMember, uploadPhoto } from './actions';
+import { DAYS, DAY_FULL, FILTERS, SHIFTS, initialsOf, photoCss, squarePhoto, type TeamRow } from './shared';
 
 type Props = { rows: TeamRow[]; cats: string[]; todayWd: number; owner: boolean };
 type Draft = { name: string; role: string; cats: string[]; days: number[]; shift: string | null; online: boolean };
@@ -68,9 +68,29 @@ function useTeam(props: Props) {
     router.refresh();
   });
 
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const pickPhoto = async (file: File | undefined) => {
+    if (!file || !selectedId) return;
+    setPhotoBusy(true); setError(''); setNotice('');
+    try {
+      const blob = await squarePhoto(file);
+      const fd = new FormData(); fd.append('photo', new File([blob], 'photo.jpg', { type: 'image/jpeg' }));
+      const r = await uploadPhoto(selectedId, fd);
+      if (r.error) setError(r.error); else { setNotice(r.notice ?? ''); router.refresh(); }
+    } catch { setError('Could not read that photo. Try a JPG or PNG.'); }
+    setPhotoBusy(false);
+  };
+  const dropPhoto = async () => {
+    if (!selectedId) return;
+    setPhotoBusy(true); setError('');
+    const r = await removePhoto(selectedId);
+    if (r.error) setError(r.error); else { setNotice(r.notice ?? ''); router.refresh(); }
+    setPhotoBusy(false);
+  };
+
   const sq = query.trim().toLowerCase();
   const list = items.filter((m) => (filter === 'all' || (filter === 'today' && m.todayOn) || (filter === 'online' && m.online)) && (!sq || (m.name + ' ' + m.role).toLowerCase().includes(sq)));
-  return { ...props, items, busy, narrow, selectedId, mode, draft, setDraft, flip, filter, setFilter, query, setQuery, confirm, setConfirm, error, notice, open, setOpen, select, startNew, cancelNew, save, remove, list,
+  return { ...props, items, photoBusy, pickPhoto, dropPhoto, busy, narrow, selectedId, mode, draft, setDraft, flip, filter, setFilter, query, setQuery, confirm, setConfirm, error, notice, open, setOpen, select, startNew, cancelNew, save, remove, list,
     close: () => { setOpen(false); setConfirm(false); setError(''); } };
 }
 type C = ReturnType<typeof useTeam>;
@@ -93,6 +113,23 @@ function Form({ c, m }: { c: C; m: boolean }) {
   );
   return (
     <div style={S('display:flex;flex-direction:column;gap:18px')}>
+      {(() => {
+        const cur = c.items.find((x) => x.id === c.selectedId) ?? null;
+        return (
+          <div style={S('display:flex;align-items:center;gap:16px')}>
+            <span aria-hidden="true" style={S('flex:0 0 72px;width:72px;height:72px;border-radius:999px;background:#EEF0F3;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600' + photoCss(cur?.photo ?? null))}>{cur?.photo ? '' : initialsOf(d.name || '?')}</span>
+            {isNew ? <span style={S('font-size:13px;color:#5E6673')}>Save the team member first, then add a photo.</span> : (
+              <div style={S('display:flex;flex-wrap:wrap;gap:8px')}>
+                <label style={S('display:inline-flex;align-items:center;justify-content:center;height:40px;padding:0 16px;border-radius:999px;border:1px solid #E1E4E9;background:#FFFFFF;font-size:13.5px;font-weight:500;cursor:pointer')}>
+                  {c.photoBusy ? 'Uploading…' : cur?.photo ? 'Change photo' : 'Add photo'}
+                  <input type="file" accept="image/jpeg,image/png,image/webp" disabled={c.photoBusy} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; c.pickPhoto(f); }} style={S('position:absolute;width:1px;height:1px;opacity:0;pointer-events:none')} />
+                </label>
+                {!!cur?.photo && <button type="button" className="ghost" onClick={c.dropPhoto} disabled={c.photoBusy} style={S('height:40px;padding:0 16px;border-radius:999px;border:1px solid #E1E4E9;background:#FFFFFF;font-size:13.5px;font-weight:500')}>Remove</button>}
+              </div>
+            )}
+          </div>
+        );
+      })()}
       <div style={S('display:flex;flex-direction:column;gap:8px')}>
         <label htmlFor="tm-name" style={S('font-size:14px;font-weight:600')}>Name</label>
         <input id="tm-name" type="text" value={d.name} onChange={(e) => c.setDraft('name', e.target.value)} placeholder="Full name" style={inp(h)} />
@@ -166,7 +203,7 @@ function Desktop({ c }: { c: C }) {
                 <button key={m.id} className="s-row" onClick={() => c.select(m.id)} aria-label={`${m.name}, ${m.role}, ${m.todayOn ? 'working today' : 'off today'}, ${m.online ? 'bookable online' : 'hidden online'}`}
                   style={S('display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:64px;padding:8px 20px;border:0;border-bottom:1px solid #EEF0F3;text-align:left;font:inherit;font-size:14px;color:#0E1116;background:' + (c.mode === 'edit' && c.selectedId === m.id ? '#F4F5F7' : 'transparent'))}>
                   <span style={S('flex:2.6 1 0;min-width:0;display:flex;align-items:center;gap:12px')}>
-                    <span style={S('flex:0 0 40px;width:40px;height:40px;border-radius:999px;background:#EEF0F3;color:#0E1116;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600')}>{initialsOf(m.name)}</span>
+                    <span style={S('flex:0 0 40px;width:40px;height:40px;border-radius:999px;background:#EEF0F3;color:#0E1116;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600' + photoCss(m.photo))}>{m.photo ? '' : initialsOf(m.name)}</span>
                     <span style={S('min-width:0')}>
                       <span style={S('display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{m.name}</span>
                       <span style={S('display:block;font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{m.role}</span>
@@ -214,7 +251,7 @@ function Mobile({ c }: { c: C }) {
             <li key={m.id}>
               <button onClick={() => c.select(m.id)} aria-label={`${m.name}, ${m.role}, ${m.todayOn ? 'working today' : 'off today'}, ${m.online ? 'bookable online' : 'hidden online'}`}
                 style={S('display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:68px;padding:10px 16px;border:0;border-bottom:1px solid #EEF0F3;background:transparent;text-align:left;font:inherit;color:#0E1116;cursor:pointer')}>
-                <span style={S('flex:0 0 44px;width:44px;height:44px;border-radius:999px;background:#EEF0F3;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600')}>{initialsOf(m.name)}</span>
+                <span style={S('flex:0 0 44px;width:44px;height:44px;border-radius:999px;background:#EEF0F3;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600' + photoCss(m.photo))}>{m.photo ? '' : initialsOf(m.name)}</span>
                 <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{m.name}</span><span style={S('display:block;font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{m.role}, {m.todayOn ? 'Today, ' + m.todayLabel : 'Off today'}</span></span>
                 <span style={S('flex:0 0 auto')}><span style={S(onlinePill(m.online))}>{m.online ? 'Online' : 'Hidden'}</span></span>
               </button>
