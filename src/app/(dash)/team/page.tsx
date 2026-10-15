@@ -14,7 +14,7 @@ export default async function Team() {
     sb.from('staff').select('id,name,role_title,online_bookable').eq('active', true).order('created_at'),
     sb.from('staff_shifts').select('staff_id,weekday,start_time,end_time'),
     sb.from('service_categories').select('id,name').order('sort').order('name'),
-    sb.from('services').select('id,category_id').eq('active', true),
+    sb.from('services').select('id,category_id').eq('active', true).eq('is_addon', false),
     sb.from('service_staff').select('service_id,staff_id'),
   ]);
   const rows: TeamRow[] = (team ?? []).map((m) => {

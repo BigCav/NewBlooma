@@ -2,7 +2,7 @@
 import { revalidatePath } from 'next/cache';
 import { requireOwner, friendly } from '@/lib/session';
 
-export type SvcInput = { id?: string; name: string; categoryId: string; dur: number; price: string; desc: string; online: boolean; staffIds: string[] };
+export type SvcInput = { id?: string; name: string; categoryId: string; dur: number; price: string; desc: string; online: boolean; staffIds: string[]; addon: boolean; parentIds: string[] };
 
 export async function addCategory(name: string): Promise<{ error?: string; id?: string; name?: string }> {
   const { sb, salon } = await requireOwner();
@@ -21,7 +21,8 @@ export async function saveService(i: SvcInput): Promise<{ error?: string; id?: s
   if (isNaN(price) || price < 0) return { error: 'Enter a price, like 45 or 45.50.' };
   if (!i.categoryId) return { error: 'Choose a category.' };
   if (!(i.dur > 0)) return { error: 'Choose how long it takes.' };
-  const row = { salon_id: salon.id, category_id: i.categoryId, name, description: i.desc.trim() || null, duration_min: i.dur, price_cents: Math.round(price * 100), online_bookable: i.online };
+  if (i.addon && !i.parentIds.length) return { error: 'Choose at least one service this add-on goes with.' };
+  const row = { salon_id: salon.id, category_id: i.categoryId, name, description: i.desc.trim() || null, duration_min: i.dur, price_cents: Math.round(price * 100), online_bookable: i.online, is_addon: i.addon };
   let id = i.id;
   if (id) {
     const { error } = await sb.from('services').update(row).eq('id', id); if (error) return { error: friendly(error.message) };
@@ -31,7 +32,14 @@ export async function saveService(i: SvcInput): Promise<{ error?: string; id?: s
   }
   const { error: de } = await sb.from('service_staff').delete().eq('service_id', id!);
   if (de) return { error: friendly(de.message) };
-  if (i.staffIds.length) {
+  const { error: ae } = await sb.from('service_addons').delete().eq('addon_id', id!);
+  if (ae) return { error: friendly(ae.message) };
+  if (i.addon) {
+    const parents = i.parentIds.filter((p) => p !== id);
+    if (!parents.length) return { error: 'Choose at least one service this add-on goes with.' };
+    const { error } = await sb.from('service_addons').insert(parents.map((service_id) => ({ addon_id: id!, service_id })));
+    if (error) return { error: friendly(error.message) };
+  } else if (i.staffIds.length) {
     const { error } = await sb.from('service_staff').insert(i.staffIds.map((staff_id) => ({ service_id: id!, staff_id })));
     if (error) return { error: friendly(error.message) };
   }

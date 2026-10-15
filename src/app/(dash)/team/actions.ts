@@ -32,7 +32,7 @@ export async function saveMember(i: Input): Promise<Res> {
   // Services they offer: a category turned on links every service in it; turned off unlinks them. Untouched categories keep partial setups.
   const [{ data: cats }, { data: svcs }, { data: links }] = await Promise.all([
     sb.from('service_categories').select('id,name'),
-    sb.from('services').select('id,category_id'),
+    sb.from('services').select('id,category_id').eq('is_addon', false),
     sb.from('service_staff').select('service_id').eq('staff_id', sid),
   ]);
   const have = new Set((links ?? []).map((l) => l.service_id));

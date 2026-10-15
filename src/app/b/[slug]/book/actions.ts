@@ -85,6 +85,14 @@ export async function publicBook(slug: string, i: BookInput): Promise<{ error?: 
   if (!i.services.length || !i.slot) return { error: 'Choose your services and a time.' };
   if (!me && i.password !== undefined && i.password.length < 8) return { error: 'Choose a password with at least 8 characters.' };
   const [staffId, startsAt] = i.slot.split('|');
+  // Extras must go with a chosen service; an extra on its own is not a booking.
+  const { data: picked } = await sb.from('services').select('id,is_addon').eq('salon_id', salon.id).in('id', i.services);
+  const extras = (picked ?? []).filter((s) => s.is_addon).map((s) => s.id);
+  if (!(picked ?? []).some((s) => !s.is_addon)) return { error: 'Choose a service to book.' };
+  if (extras.length) {
+    const { data: links } = await sb.from('service_addons').select('addon_id,service_id').in('addon_id', extras);
+    if (extras.some((a) => !(links ?? []).some((l) => l.addon_id === a && i.services.includes(l.service_id)))) return { error: 'One of the extras you chose does not go with these services.' };
+  }
   let { data: client } = await sb.from('clients').select('id').eq('salon_id', salon.id).ilike('email', email.replace(/[%_]/g, '\\$&')).maybeSingle();
   if (!client) {
     const ins = await sb.from('clients').insert({ salon_id: salon.id, name, email, phone: phone || null }).select('id').single();

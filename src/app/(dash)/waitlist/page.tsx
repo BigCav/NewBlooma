@@ -19,7 +19,7 @@ export default async function Waitlist() {
   const since = new Date(Date.now() - 14 * 86400e3).toISOString();
   const [{ data: ent }, { data: svc }, { data: team }, { data: ss }] = await Promise.all([
     sb.from('waitlist_entries').select('id,status,weekdays,earliest_time,latest_time,offered_start,offered_staff_id,created_at,added_by,clients(name),services(name,duration_min,price_cents),staff:staff_id(name),adder:added_by(name)').or(`status.in.(waiting,offered),and(status.eq.booked,created_at.gte.${since})`).order('created_at', { ascending: false }),
-    sb.from('services').select('id,name,duration_min,price_cents,service_categories(name)').eq('active', true).order('name'),
+    sb.from('services').select('id,name,duration_min,price_cents,service_categories(name)').eq('active', true).eq('is_addon', false).order('name'),
     sb.from('staff').select('id,name,role_title').eq('active', true).order('name'),
     sb.from('service_staff').select('service_id,staff_id'),
   ]);

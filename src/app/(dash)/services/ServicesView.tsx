@@ -8,13 +8,13 @@ import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
 import { addCategory, deleteService, saveService } from './actions';
 
-export type SvcRow = { id: string; name: string; desc: string; catId: string; cat: string; catIdx: number; dur: number; priceCents: number; online: boolean; staffIds: string[] };
+export type SvcRow = { id: string; name: string; desc: string; catId: string; cat: string; catIdx: number; dur: number; priceCents: number; online: boolean; staffIds: string[]; addon: boolean; parentIds: string[] };
 type Props = { services: SvcRow[]; cats: { id: string; name: string }[]; team: { id: string; name: string }[]; canEdit: boolean };
-type Draft = { name: string; catId: string; dur: number; price: string; desc: string; online: boolean; staff: string[] };
+type Draft = { name: string; catId: string; dur: number; price: string; desc: string; online: boolean; staff: string[]; addon: boolean; parents: string[] };
 
 const DURS = [15, 30, 45, 60, 75, 90, 120, 150, 180];
 const money = (c: number) => { const n = c / 100; return '$' + (n % 1 === 0 ? String(n) : n.toFixed(2)); };
-const draftOf = (s: SvcRow): Draft => ({ name: s.name, catId: s.catId, dur: s.dur, price: String(s.priceCents / 100), desc: s.desc, online: s.online, staff: s.staffIds.slice() });
+const draftOf = (s: SvcRow): Draft => ({ name: s.name, catId: s.catId, dur: s.dur, price: String(s.priceCents / 100), desc: s.desc, online: s.online, staff: s.staffIds.slice(), addon: s.addon, parents: s.parentIds.slice() });
 
 function useServices(props: Props) {
   const router = useRouter();
@@ -22,7 +22,7 @@ function useServices(props: Props) {
   const { services, team } = props;
   const [extraCats, setExtraCats] = useState<{ id: string; name: string }[]>([]);
   const cats = [...props.cats, ...extraCats.filter((e) => !props.cats.some((c) => c.id === e.id))];
-  const blank = (): Draft => ({ name: '', catId: cats[0]?.id ?? '', dur: 60, price: '', desc: '', online: true, staff: [] });
+  const blank = (): Draft => ({ name: '', catId: cats[0]?.id ?? '', dur: 60, price: '', desc: '', online: true, staff: [], addon: false, parents: [] });
   const [selectedId, setSelectedId] = useState<string | null>(services[0]?.id ?? null);
   const [mode, setMode] = useState<'edit' | 'new'>(services.length ? 'edit' : 'new');
   const [draft, setDraft] = useState<Draft>(services[0] ? draftOf(services[0]) : blank());
@@ -52,8 +52,9 @@ function useServices(props: Props) {
     if (!name) { setError('Give the service a name.'); return; }
     if (isNaN(price) || price < 0) { setError('Enter a price, like 45 or 45.50.'); return; }
     if (!draft.catId) { setError('Choose a category.'); return; }
+    if (draft.addon && !draft.parents.length) { setError('Choose at least one service this add-on goes with.'); return; }
     startT(async () => {
-      const r = await saveService({ id: mode === 'edit' ? selectedId ?? undefined : undefined, name, categoryId: draft.catId, dur: draft.dur, price: draft.price, desc: draft.desc, online: draft.online, staffIds: draft.staff });
+      const r = await saveService({ id: mode === 'edit' ? selectedId ?? undefined : undefined, name, categoryId: draft.catId, dur: draft.dur, price: draft.price, desc: draft.desc, online: draft.online, staffIds: draft.staff, addon: draft.addon, parentIds: draft.parents });
       if (r.error) { setError(r.error); return; }
       setError(''); setConfirm(false); setFilter('all');
       if (r.created) { setSelectedId(r.id!); setMode('edit'); setNotice('Service created'); } else setNotice('Changes saved');
@@ -88,7 +89,8 @@ function useServices(props: Props) {
   const sq = query.trim().toLowerCase();
   const rows = services.filter((s) => (filter === 'all' || s.catId === filter) && (!sq || (s.name + ' ' + s.cat + ' ' + s.desc).toLowerCase().includes(sq)));
   const durs = Array.from(new Set([...DURS, draft.dur])).sort((a, b) => a - b);
-  return { busy, cats, services, team, narrow, canEdit: props.canEdit, selectedId, mode, draft, set, filter, setFilter, query, setQuery, confirm, setConfirm, error, notice, open, setOpen, nc, setNc,
+  const mains = services.filter((s) => !s.addon);
+  return { busy, cats, services, mains, team, narrow, canEdit: props.canEdit, selectedId, mode, draft, set, filter, setFilter, query, setQuery, confirm, setConfirm, error, notice, open, setOpen, nc, setNc,
     select, startNew, cancelNew, save, remove, createCat, rows, durs, catName, setError };
 }
 type C = ReturnType<typeof useServices>;
@@ -98,7 +100,7 @@ const formChip = (on: boolean, m: boolean) => 'flex:0 0 auto;white-space:nowrap;
 const tile = (cIdx: number, cat: string) => { const t = toneFor(cat, cIdx); return 'flex:0 0 40px;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;background:' + t.bg + ';color:' + t.fg; };
 const onlineCss = (on: boolean) => 'display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;white-space:nowrap;background:' + (on ? '#DDF3EA' : '#EEF0F3') + ';color:' + (on ? '#14624A' : '#4A525E');
 const ini = (n: string) => n.split(' ').filter((w) => /[A-Za-z0-9]/.test(w[0] ?? '')).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || 'S';
-const rowLabel = (s: SvcRow) => s.name + ', ' + s.dur + ' minutes, ' + money(s.priceCents) + ', ' + (s.online ? 'bookable online' : 'hidden online');
+const rowLabel = (s: SvcRow) => s.name + (s.addon ? ' (add-on)' : '') + ', ' + s.dur + ' minutes, ' + money(s.priceCents) + ', ' + (s.online ? 'bookable online' : 'hidden online');
 
 function Editor({ c, m }: { c: C; m: boolean }) {
   const { draft: d, set, cats, team, mode, confirm, error, nc, setNc, canEdit, busy } = c;
@@ -146,7 +148,7 @@ function Editor({ c, m }: { c: C; m: boolean }) {
       </div>
 
       <div style={S('display:flex;flex-direction:column;gap:8px')}>
-        <span id="svc-dur-label" style={S('font-size:14px;font-weight:600')}>Duration</span>
+        <span id="svc-dur-label" style={S('font-size:14px;font-weight:600')}>{d.addon ? 'Extra time' : 'Duration'}</span>
         <div role="group" className="hscroll" aria-labelledby="svc-dur-label" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
           {c.durs.map((x) => <button key={x} type="button" onClick={() => set('dur', x)} aria-pressed={d.dur === x} style={S(formChip(d.dur === x, m))}>{x + ' min'}</button>)}
         </div>
@@ -165,6 +167,16 @@ function Editor({ c, m }: { c: C; m: boolean }) {
         <textarea id="svc-desc" value={d.desc} onChange={(e) => set('desc', e.target.value)} placeholder="What is included, in a sentence or two" style={S('box-sizing:border-box;width:100%;min-height:88px;resize:vertical;padding:12px 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;color:#0E1116;background:#FFFFFF')} />
       </div>
 
+      {d.addon ? (
+        <div style={S('display:flex;flex-direction:column;gap:8px')}>
+          <span id="svc-parent-label" style={S('font-size:14px;font-weight:600')}>Offered with</span>
+          <div role="group" aria-labelledby="svc-parent-label" style={S('display:flex;flex-wrap:wrap;gap:8px')}>
+            {c.mains.map((p) => { const on = d.parents.includes(p.id); return <button key={p.id} type="button" onClick={() => set('parents', on ? d.parents.filter((i) => i !== p.id) : [...d.parents, p.id])} aria-pressed={on} style={S(formChip(on, m))}>{p.name}</button>; })}
+            {!c.mains.length && <span style={S('color:#5E6673;font-size:13px')}>Add a regular service first.</span>}
+          </div>
+          <div style={S('font-size:13px;color:#5E6673')}>Clients can tick this extra after choosing one of these services. Whoever does the service does the add-on.</div>
+        </div>
+      ) : (
       <div style={S('display:flex;flex-direction:column;gap:8px')}>
         <span id="svc-team-label" style={S('font-size:14px;font-weight:600')}>Who does it</span>
         <div role="group" className="hscroll" aria-labelledby="svc-team-label" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
@@ -172,6 +184,17 @@ function Editor({ c, m }: { c: C; m: boolean }) {
           {!team.length && <span style={S('color:#5E6673;font-size:13px')}>Add team members first.</span>}
         </div>
         <div style={S('font-size:13px;color:#5E6673')}>Only these team members can be booked for it.</div>
+      </div>
+      )}
+
+      <div style={S('display:flex;align-items:center;justify-content:space-between;gap:16px')}>
+        <div style={S('min-width:0')}>
+          <div id="svc-addon-label" style={S('font-size:14px;font-weight:600')}>Add-on</div>
+          <div style={S('font-size:13px;color:#5E6673')}>An extra offered with other services, such as a gloss or a scalp treatment.</div>
+        </div>
+        <button type="button" role="switch" aria-checked={d.addon} aria-labelledby="svc-addon-label" onClick={() => set('addon', !d.addon)} style={S('position:relative;flex:0 0 52px;width:52px;height:32px;padding:0;border:0;border-radius:999px;background:' + (d.addon ? '#0E1116' : '#D5D9E0'))}>
+          <span style={S('position:absolute;top:3px;left:' + (d.addon ? 23 : 3) + 'px;width:26px;height:26px;border-radius:999px;background:#FFFFFF')} />
+        </button>
       </div>
 
       <div style={S('display:flex;align-items:center;justify-content:space-between;gap:16px')}>
@@ -242,7 +265,7 @@ function Desktop({ c }: { c: C }) {
                   <span style={S('flex:3 1 0;min-width:0;display:flex;align-items:center;gap:12px')}>
                     <span style={S(tile(s.catIdx, s.cat))}>{ini(s.name)}</span>
                     <span style={S('min-width:0')}>
-                      <span style={S('display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{s.name}</span>
+                      <span style={S('display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{s.name}{s.addon && <span style={S('margin-left:8px;padding:2px 8px;border-radius:999px;background:#F2EFFE;color:#4B34C9;font-size:11.5px;font-weight:500')}>Add-on</span>}</span>
                       <span style={S('display:block;font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{s.desc}</span>
                     </span>
                   </span>
@@ -299,7 +322,7 @@ function Mobile({ c }: { c: C }) {
             <li key={s.id}>
               <button onClick={() => c.select(s.id)} aria-label={rowLabel(s)} style={S('display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:68px;padding:10px 16px;border:0;border-bottom:1px solid #EEF0F3;background:transparent;text-align:left;font:inherit;color:#0E1116;cursor:pointer')}>
                 <span style={S(tile(s.catIdx, s.cat))}>{ini(s.name)}</span>
-                <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{s.name}</span><span style={S('display:block;font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{s.dur + ' min, ' + s.cat}</span></span>
+                <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{s.name}{s.addon && <span style={S('margin-left:8px;padding:2px 8px;border-radius:999px;background:#F2EFFE;color:#4B34C9;font-size:11.5px;font-weight:500')}>Add-on</span>}</span><span style={S('display:block;font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{s.dur + ' min, ' + s.cat}</span></span>
                 <span style={S('flex:0 0 auto;text-align:right')}><span style={S('display:block;font-size:14.5px;font-weight:600')}>{money(s.priceCents)}</span><span style={S('display:block;margin-top:2px')}><span style={S(onlineCss(s.online))}>{s.online ? 'Online' : 'Hidden'}</span></span></span>
               </button>
             </li>

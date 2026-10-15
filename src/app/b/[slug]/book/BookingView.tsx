@@ -8,10 +8,11 @@ import { S } from '../../../(dash)/calendar/pickers';
 import { clientSignIn, clientSignOut, nextAvailable, publicBook, publicSlots, publicWaitlist, type Account, type Slot } from './actions';
 
 type Svc = { id: string; name: string; desc: string; cat: string; dur: number; cents: number };
+type Addon = Svc & { parents: string[] };
 type Member = { id: string; name: string; role: string; svc: string[] };
 type Props = {
   slug: string; name: string; address: string; tz: string; currency: string;
-  services: Svc[]; cats: string[]; team: Member[]; hours: ({ from: string; to: string } | null)[];
+  services: Svc[]; addons: Addon[]; cats: string[]; team: Member[]; hours: ({ from: string; to: string } | null)[];
   today: string; nowMin: number; autoConfirm: boolean; windowDays: number; emailOn: boolean; preselect: string; account: Account | null;
 };
 
@@ -74,7 +75,7 @@ function useBooking(p: Props) {
   const [slotErr, setSlotErr] = useState('');
   const req = useRef(0);
 
-  const list = p.services.filter((s) => sel.includes(s.id));
+  const list = [...p.services, ...p.addons].filter((s) => sel.includes(s.id));
   const totalDur = list.reduce((a, s) => a + s.dur, 0);
   const totalCents = list.reduce((a, s) => a + s.cents, 0);
   const member = p.team.find((t) => t.id === staff);
@@ -88,10 +89,14 @@ function useBooking(p: Props) {
       .catch(() => { if (id !== req.current) return; setSlots([]); setSlotErr('Could not load times. Please try again.'); setLoading(false); });
   }, [p.slug, sel, staff, day, hoursToday ? 1 : 0]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const addonIds = useMemo(() => new Set(p.addons.map((a) => a.id)), [p.addons]);
+  const offers = p.addons.filter((a) => a.parents.some((id) => sel.includes(id)));
   const toggle = (id: string) => {
-    const next = sel.includes(id) ? sel.filter((x) => x !== id) : [...sel, id];
+    let next = sel.includes(id) ? sel.filter((x) => x !== id) : [...sel, id];
+    // An extra only stays ticked while a service it goes with is still chosen.
+    next = next.filter((x) => !addonIds.has(x) || p.addons.find((a) => a.id === x)!.parents.some((pid) => next.includes(pid)));
     const m = p.team.find((t) => t.id === staff);
-    if (m && !next.every((x) => m.svc.includes(x))) setStaff('');
+    if (m && !next.filter((x) => !addonIds.has(x)).every((x) => m.svc.includes(x))) setStaff('');
     setSel(next);
   };
   // On the first step, back returns to the salon page instead of doing nothing.
@@ -185,7 +190,7 @@ function useBooking(p: Props) {
   })();
 
   const canGo = (step === 1 && sel.length > 0) || (step === 2 && !!staff) || (step === 3 && !!slot) || step === 4;
-  return { p, nextAt, acct, au, setAu, openIn, closePanel, submitIn, signOutNow, save, setSave, savePw, setSavePw, setError, days, money, step, done, sel, cat, setCat, staff, setStaff, day, setDay, slot, setSlot, slotMin, setSlotMin, form, setField, hp, setHp, error, busy, calOpen, setCalOpen, wl, setWl, setWlField, submitWl,
+  return { p, nextAt, offers, acct, au, setAu, openIn, closePanel, submitIn, signOutNow, save, setSave, savePw, setSavePw, setError, days, money, step, done, sel, cat, setCat, staff, setStaff, day, setDay, slot, setSlot, slotMin, setSlotMin, form, setField, hp, setHp, error, busy, calOpen, setCalOpen, wl, setWl, setWlField, submitWl,
     slots, loading, slotErr, list, totalDur, totalCents, member, hoursToday, toggle, back, goStep, reset, next, whenOf, countText, durText, grid, open, calLinks, canGo };
 }
 type M = ReturnType<typeof useBooking>;
@@ -235,13 +240,37 @@ function Steps({ m, o }: { m: M; o: O }) {
             </li>;
           })}
         </ul>
+        {m.offers.length > 0 && (
+          <div style={S('display:flex;flex-direction:column;gap:10px')}>
+            <h2 style={S('margin:0;font-size:16px;font-weight:600')}>Add an extra</h2>
+            <ul className="bk-list" style={S('margin:0;padding:0;list-style:none;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;overflow:hidden')}>
+              {m.offers.map((s) => {
+                const on = m.sel.includes(s.id);
+                return <li key={s.id}>
+                  <button onClick={() => m.toggle(s.id)} aria-pressed={on} aria-label={`${s.name}, add ${fmtDur(s.dur)}, ${m.money(s.cents)}`} style={S(rowStyle(on))}>
+                    <span style={S('flex:1 1 auto;min-width:0')}>
+                      <span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{s.name}</span>
+                      {!!s.desc && <span style={S('display:block;margin-top:2px;font-size:13px;color:#5E6673;overflow-wrap:anywhere')}>{s.desc}</span>}
+                      <span style={S('display:block;margin-top:4px;font-size:13px;color:#5E6673')}>+{fmtDur(s.dur)}</span>
+                    </span>
+                    <span style={S('flex:0 0 auto;font-size:15px;font-weight:600')}>+{m.money(s.cents)}</span>
+                    <span style={S(circle(on))}>
+                      {on && <Check />}
+                      {!on && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>}
+                    </span>
+                  </button>
+                </li>;
+              })}
+            </ul>
+          </div>
+        )}
       </div>
     )}
 
     {m.step === 2 && (
       <ul className="bk-flow bk-list" style={S('margin:0;padding:0;list-style:none;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;overflow:hidden')}>
         {[{ id: 'any', name: 'Any professional', role: 'Best available time', svc: null as string[] | null }, ...p.team].map((t) => {
-          const bad = t.svc ? m.list.find((s) => !t.svc!.includes(s.id)) : null;
+          const bad = t.svc ? m.list.find((s) => !p.addons.some((a) => a.id === s.id) && !t.svc!.includes(s.id)) : null;
           const on = m.staff === t.id;
           return <li key={t.id}>
             <button onClick={() => { if (!bad) m.setStaff(t.id); }} aria-pressed={on} aria-disabled={!!bad} aria-label={t.name + ', ' + (bad ? "doesn't offer " + bad.name : t.role)} style={S(rowStyle(on) + (bad ? ';cursor:default' : ''))}>
