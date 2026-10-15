@@ -5,6 +5,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { currentClient, salonIdFor, clearClientCookie, clientToken, setClientCookie, type ClientAccount } from '@/lib/client-auth';
 import { friendly } from '@/lib/session';
 import { minutesOfDay } from '@/lib/format';
+import { nextAvailableLabel } from '@/lib/public';
 
 export type Slot = { key: string; min: number };
 
@@ -19,6 +20,13 @@ export async function publicSlots(slug: string, date: string, serviceIds: string
   const seen = new Set<string>(); const slots: Slot[] = [];
   for (const r of data ?? []) { if (seen.has(r.starts_at)) continue; seen.add(r.starts_at); slots.push({ key: `${r.staff_id}|${r.starts_at}`, min: minutesOfDay(r.starts_at, salon.timezone) }); }
   return { slots };
+}
+
+/** Next open online time for the chosen services (or the quickest on the menu), for the banner on the first step. */
+export async function nextAvailable(slug: string, serviceIds: string[]): Promise<string | null> {
+  const { data: salon } = await supabaseAdmin().from('salons').select('id,timezone').eq('slug', slug).maybeSingle();
+  if (!salon) return null;
+  return nextAvailableLabel(salon.id, salon.timezone, serviceIds).catch(() => null);
 }
 
 export type BookInput = { services: string[]; slot: string; name: string; email: string; phone: string; notes: string; website: string; password?: string };

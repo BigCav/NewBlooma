@@ -19,3 +19,28 @@ export async function getPublicSalon(slug: string) {
   const offered = new Set(allLinks.filter((l) => staffIds.has(l.staff_id)).map((l) => l.service_id));
   return { salon, settings: settings!, services: (services ?? []).filter((s) => offered.has(s.id)), team: team ?? [], cats: cats ?? [], hours: hours ?? [], links: allLinks };
 }
+
+/** Earliest open online time ("Today, 2:30pm") for the given services, or the quickest services on the menu when none are chosen. Past times, booked times and the notice window are already excluded by available_slots. */
+export async function nextAvailableLabel(salonId: string, tz: string, serviceIds: string[] = []): Promise<string | null> {
+  const sb = supabaseAdmin();
+  let sets: string[][] = serviceIds.length ? [serviceIds] : [];
+  if (!sets.length) {
+    const { data } = await sb.from('services').select('id').eq('salon_id', salonId).eq('active', true).eq('online_bookable', true).order('duration_min').limit(4);
+    sets = (data ?? []).map((s) => [s.id]);
+  }
+  const ymd = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(d);
+  const now = new Date();
+  const from = ymd(now), to = ymd(new Date(now.getTime() + 56 * 864e5));
+  let best: Date | null = null;
+  for (const ids of sets) {
+    const { data } = await sb.rpc('available_slots', { p_salon: salonId, p_service_ids: ids, p_staff: null, p_from: from, p_to: to, p_mode: 'public' });
+    const first = (data ?? [])[0]?.starts_at;
+    if (first && (!best || new Date(first) < best)) best = new Date(first);
+  }
+  if (!best) return null;
+  const day = ymd(best);
+  const time = new Intl.DateTimeFormat('en-NZ', { timeZone: tz, hour: 'numeric', minute: '2-digit', hour12: true }).format(best).replace(/\s/g, '').toLowerCase();
+  const tomorrow = ymd(new Date(now.getTime() + 864e5));
+  const when = day === from ? 'Today' : day === tomorrow ? 'Tomorrow' : new Intl.DateTimeFormat('en-GB', { timeZone: tz, weekday: 'short', day: 'numeric', month: 'short' }).format(best).replace(',', '');
+  return `${when}, ${time}`;
+}

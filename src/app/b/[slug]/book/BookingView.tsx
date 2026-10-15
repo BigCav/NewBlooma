@@ -5,7 +5,7 @@ import { clock12, clockStr, makeMoney } from '@/lib/display';
 import { checkPhone, phoneInput } from '@/lib/phone';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { S } from '../../../(dash)/calendar/pickers';
-import { clientSignIn, clientSignOut, publicBook, publicSlots, publicWaitlist, type Account, type Slot } from './actions';
+import { clientSignIn, clientSignOut, nextAvailable, publicBook, publicSlots, publicWaitlist, type Account, type Slot } from './actions';
 
 type Svc = { id: string; name: string; desc: string; cat: string; dur: number; cents: number };
 type Member = { id: string; name: string; role: string; svc: string[] };
@@ -57,6 +57,8 @@ function useBooking(p: Props) {
   const [savePw, setSavePw] = useState('');
   const [sel, setSel] = useState<string[]>(p.preselect ? [p.preselect] : []);
   const [cat, setCat] = useState('All');
+  const [nextAt, setNextAt] = useState<string | null>(null);
+  useEffect(() => { let live = true; nextAvailable(p.slug, sel).then((l) => { if (live) setNextAt(l); }).catch(() => { if (live) setNextAt(null); }); return () => { live = false; }; }, [p.slug, sel]);
   const [staff, setStaff] = useState('');
   const [day, setDay] = useState(0);
   const [slot, setSlot] = useState('');
@@ -183,7 +185,7 @@ function useBooking(p: Props) {
   })();
 
   const canGo = (step === 1 && sel.length > 0) || (step === 2 && !!staff) || (step === 3 && !!slot) || step === 4;
-  return { p, acct, au, setAu, openIn, closePanel, submitIn, signOutNow, save, setSave, savePw, setSavePw, setError, days, money, step, done, sel, cat, setCat, staff, setStaff, day, setDay, slot, setSlot, slotMin, setSlotMin, form, setField, hp, setHp, error, busy, calOpen, setCalOpen, wl, setWl, setWlField, submitWl,
+  return { p, nextAt, acct, au, setAu, openIn, closePanel, submitIn, signOutNow, save, setSave, savePw, setSavePw, setError, days, money, step, done, sel, cat, setCat, staff, setStaff, day, setDay, slot, setSlot, slotMin, setSlotMin, form, setField, hp, setHp, error, busy, calOpen, setCalOpen, wl, setWl, setWlField, submitWl,
     slots, loading, slotErr, list, totalDur, totalCents, member, hoursToday, toggle, back, goStep, reset, next, whenOf, countText, durText, grid, open, calLinks, canGo };
 }
 type M = ReturnType<typeof useBooking>;
@@ -210,6 +212,7 @@ function Steps({ m, o }: { m: M; o: O }) {
   return <>
     {m.step === 1 && (
       <div className="bk-flow" style={S('display:flex;flex-direction:column;gap:16px')}>
+        {!!m.nextAt && <div role="status" style={S('align-self:flex-start;display:inline-flex;align-items:center;gap:8px;border-radius:999px;background:#DDF3EA;color:#14624A;padding:8px 14px;font-size:13.5px;font-weight:500')}><span style={S('width:8px;height:8px;border-radius:999px;background:#14624A')}></span>Next available: {m.nextAt}</div>}
         <div role="group" className="hscroll" aria-label="Filter services" style={S('display:flex;gap:8px;overflow-x:auto')}>
           {['All', ...p.cats].map((c) => <button key={c} onClick={() => m.setCat(c)} aria-pressed={m.cat === c} style={S(chip(m.cat === c))}>{c === 'All' ? 'All services' : c}</button>)}
         </div>

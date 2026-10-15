@@ -11,7 +11,7 @@ type Svc = { id: string; name: string; desc: string; cat: string; dur: number; p
 type Props = {
   slug: string; name: string; headline: string; intro: string; about: string; address: string; phone: string; email: string;
   services: Svc[]; cats: string[]; team: { name: string; role: string }[]; hours: ({ from: string; to: string } | null)[];
-  today: number; nowMin: number; cancel: string; bookable: boolean;
+  today: number; nowMin: number; cancel: string; bookable: boolean; next: string | null;
 };
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const fmtDur = (m: number) => { const h = Math.floor(m / 60); const r = m % 60; return h ? h + ' hr' + (r ? ' ' + r + ' min' : '') : m + ' min'; };
@@ -98,6 +98,7 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
   if (m) return (<>
     <main className="flow" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:24px 20px 24px;display:flex;flex-direction:column;gap:20px')}>
       <header style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{p.name}</span><span style={S(openStyle + ';flex:0 0 auto')}>{openText}</span></header>
+      {p.bookable && !!p.next && <span style={S('align-self:flex-start;display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:500;background:#F2EFFE;color:#4B34C9')}>Next available: {p.next}</span>}
       {photos}{services}{team}{about}{info}{manage}
     </main>
     {p.bookable && <div style={S('flex:0 0 auto;box-sizing:border-box;padding:12px 20px 24px;background:#FFFFFF;border-top:1px solid #E6E8EC')}><Link href={book()} style={S('height:48px;box-sizing:border-box;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none')}>Book now</Link></div>}
@@ -110,6 +111,7 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
       </header>
       <section aria-label="Welcome" style={S('display:flex;flex-direction:column;gap:16px;padding:16px 0 8px')}>
         <span style={S(openStyle + ';align-self:flex-start')}>{openText}</span>
+        {p.bookable && !!p.next && <span style={S('align-self:flex-start;display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:500;background:#F2EFFE;color:#4B34C9')}>Next available: {p.next}</span>}
         <h1 style={S('margin:0;font-size:56px;line-height:1.04;font-weight:600;letter-spacing:-0.04em;max-width:760px')}>{p.headline}</h1>
         <p style={S('margin:0;color:#5E6673;font-size:17px;max-width:620px')}>{p.intro}</p>
         <div style={S('display:flex;flex-wrap:wrap;gap:10px;margin-top:8px')}>
