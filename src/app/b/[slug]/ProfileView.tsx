@@ -98,6 +98,7 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
   if (m) return (<>
     <main className="flow" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:24px 20px 24px;display:flex;flex-direction:column;gap:20px')}>
       <header style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{p.name}</span><span style={S(openStyle + ';flex:0 0 auto')}>{openText}</span></header>
+      <Link href={`/b/${p.slug}/account`} style={S('align-self:flex-start;color:#5B3DF5;font-size:14px;font-weight:600;text-decoration:none')}>My bookings</Link>
       {p.bookable && !!p.next && <span style={S('align-self:flex-start;display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:500;background:#F2EFFE;color:#4B34C9')}>Next available: {p.next}</span>}
       {photos}{services}{team}{about}{info}{manage}
     </main>
@@ -107,7 +108,10 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
     <div className="flow" style={S('max-width:1180px;margin:0 auto;box-sizing:border-box;padding:24px 32px 56px;display:flex;flex-direction:column;gap:32px')}>
       <header style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px')}>
         <div style={S('display:flex;align-items:center;gap:12px')}><span style={S('font-size:17px;font-weight:600;letter-spacing:-0.01em')}>{p.name}</span></div>
-        {p.bookable && <Link href={book()} style={S(BOOKBTN(44, 14, '0 22px'))}>Book now</Link>}
+        <div style={S('display:flex;align-items:center;gap:16px')}>
+          <Link href={`/b/${p.slug}/account`} style={S('color:#0E1116;font-size:14px;font-weight:500;text-decoration:none')}>My bookings</Link>
+          {p.bookable && <Link href={book()} style={S(BOOKBTN(44, 14, '0 22px'))}>Book now</Link>}
+        </div>
       </header>
       <section aria-label="Welcome" style={S('display:flex;flex-direction:column;gap:16px;padding:16px 0 8px')}>
         <span style={S(openStyle + ';align-self:flex-start')}>{openText}</span>
