@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's SalonProfile.dc.html and MobileSalonProfile.dc.html (the public salon page).
 // Markup and style strings are kept as written; the {{ }} holes are the salon's real data.
+import { AcctChip } from './AcctChip';
 import { clockStr } from '@/lib/display';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -11,7 +12,7 @@ type Svc = { id: string; name: string; desc: string; cat: string; dur: number; p
 type Props = {
   slug: string; name: string; headline: string; intro: string; about: string; address: string; phone: string; email: string;
   services: Svc[]; cats: string[]; team: { name: string; role: string; photo: string | null }[]; hours: ({ from: string; to: string } | null)[];
-  today: number; nowMin: number; cancel: string; bookable: boolean; next: string | null;
+  today: number; nowMin: number; cancel: string; bookable: boolean; next: string | null; account: { name: string } | null;
 };
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const fmtDur = (m: number) => { const h = Math.floor(m / 60); const r = m % 60; return h ? h + ' hr' + (r ? ' ' + r + ' min' : '') : m + ' min'; };
@@ -98,7 +99,7 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
   if (m) return (<>
     <main className="flow" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:24px 20px 24px;display:flex;flex-direction:column;gap:20px')}>
       <header style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{p.name}</span><span style={S(openStyle + ';flex:0 0 auto')}>{openText}</span></header>
-      <Link href={`/b/${p.slug}/account`} style={S('align-self:flex-start;color:#5B3DF5;font-size:14px;font-weight:600;text-decoration:none')}>My bookings</Link>
+      {p.account ? <AcctChip slug={p.slug} name={p.account.name || 'Your account'} wide /> : <Link href={`/b/${p.slug}/account`} style={S('align-self:flex-start;color:#5B3DF5;font-size:14px;font-weight:600;text-decoration:none')}>Sign in</Link>}
       {p.bookable && !!p.next && <span style={S('align-self:flex-start;display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:500;background:#F2EFFE;color:#4B34C9')}>Next available: {p.next}</span>}
       {photos}{services}{team}{about}{info}{manage}
     </main>
@@ -109,7 +110,7 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
       <header style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px')}>
         <div style={S('display:flex;align-items:center;gap:12px')}><span style={S('font-size:17px;font-weight:600;letter-spacing:-0.01em')}>{p.name}</span></div>
         <div style={S('display:flex;align-items:center;gap:16px')}>
-          <Link href={`/b/${p.slug}/account`} style={S('color:#0E1116;font-size:14px;font-weight:500;text-decoration:none')}>My bookings</Link>
+          {p.account ? <AcctChip slug={p.slug} name={p.account.name || 'Your account'} /> : <Link href={`/b/${p.slug}/account`} style={S('color:#0E1116;font-size:14px;font-weight:500;text-decoration:none')}>Sign in</Link>}
           {p.bookable && <Link href={book()} style={S(BOOKBTN(44, 14, '0 22px'))}>Book now</Link>}
         </div>
       </header>

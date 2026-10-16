@@ -360,7 +360,7 @@ function Steps({ m, o }: { m: M; o: O }) {
           <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:14px 16px;border-radius:16px;background:#F4F5F7')}>
             <span aria-hidden="true" style={S('flex:0 0 44px;width:44px;height:44px;border-radius:999px;background:#0E1116;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600')}>{initialsOf(m.acct.name || m.acct.email)}</span>
             <div style={S('flex:1 1 140px;min-width:0')}><div style={S('font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{m.acct.name || m.acct.email}</div><div style={S('font-size:13px;color:#5E6673;overflow-wrap:anywhere')}>{m.acct.email}</div></div>
-            <a href={'/b/' + p.slug + '/account'} style={S('flex:0 0 auto;display:inline-flex;align-items:center;min-height:44px;padding:0 6px;color:#0E1116;font-size:13.5px;font-weight:600;text-decoration:none')}>My bookings</a>
+            <a href={'/b/' + p.slug + '/account'} style={S('flex:0 0 auto;display:inline-flex;align-items:center;min-height:44px;padding:0 6px;color:#0E1116;font-size:13.5px;font-weight:600;text-decoration:none')}>Your account</a>
             <button className="ghost" onClick={m.signOutNow} style={S('flex:0 0 auto;min-height:44px;padding:0 14px;border:0;border-radius:999px;background:transparent;color:#5B3DF5;font-size:13.5px;font-weight:600')}>Not you? Sign out</button>
           </div>
         )}

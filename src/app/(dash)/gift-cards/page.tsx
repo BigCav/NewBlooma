@@ -1,20 +1,27 @@
 import { requireCtx } from '@/lib/session';
-import ActionForm from '@/components/ActionForm';
-import { money, dateLong } from '@/lib/format';
-import { issueGiftCard } from './actions';
+import { ymd } from '@/lib/format';
+import { GiftCardsView, type GiftRow } from './GiftCardsView';
 
 export const metadata = { title: 'Gift cards' };
+export const dynamic = 'force-dynamic';
 
 export default async function GiftCards() {
   const { sb, salon, staff } = await requireCtx();
-  const { data: cards } = await sb.from('gift_cards').select('id,code,balance_cents,issued_at').order('issued_at', { ascending: false }).limit(50);
-  return (
-    <>
-      <div className="page-head"><div><h1>Gift cards</h1><div className="muted">Issue and check balances</div></div></div>
-      <div className="card">
-        {staff.app_role === 'owner' && <ActionForm action={issueGiftCard} submit="Issue gift card" resetOnOk><div className="grid g2"><div className="field"><label>Code</label><input name="code" required minLength={4} style={{ textTransform: 'uppercase' }} /></div><div className="field"><label>Amount ({salon.currency})</label><input name="amount" inputMode="decimal" required /></div></div></ActionForm>}
-        {!cards?.length ? <div className="empty">No gift cards issued.</div> : cards.map((g) => <div className="row between" key={g.id} style={{ padding: '8px 0', borderTop: '1px solid var(--line)' }}><span><b>{g.code}</b> <span className="muted small">issued {dateLong(g.issued_at, salon.timezone)}</span></span><b>{money(g.balance_cents, salon.currency)}</b></div>)}
-      </div>
-    </>
-  );
+  const tz = salon.timezone;
+  const [{ data: cards }, { data: sales }] = await Promise.all([
+    sb.from('gift_cards').select('id,code,for_name,original_cents,balance_cents,issued_at,voided_at,voided_cents').order('issued_at', { ascending: false }).limit(300),
+    sb.from('sales').select('id,gift_card_id,status,total_cents,paid_at,refunded_at,sale_items(label)').not('gift_card_id', 'is', null).order('paid_at', { ascending: false }).limit(1000),
+  ]);
+  const rows: GiftRow[] = (cards ?? []).map((g) => {
+    const hist: GiftRow['hist'] = [];
+    for (const s of (sales ?? []).filter((x) => x.gift_card_id === g.id)) {
+      const label = ((s.sale_items as any[]) ?? []).map((i) => i.label).join(' + ') || 'Sale';
+      if (s.paid_at) hist.push({ d: ymd(s.paid_at, tz), label: `${label}, redeemed at checkout`, a: -s.total_cents });
+      if (s.status === 'refunded' && s.refunded_at) hist.push({ d: ymd(s.refunded_at, tz), label: `${label}, refunded to the card`, a: s.total_cents });
+    }
+    if (g.voided_at) hist.push({ d: ymd(g.voided_at, tz), label: 'Voided by the salon', a: -g.voided_cents });
+    hist.sort((a, b) => (a.d < b.d ? 1 : a.d > b.d ? -1 : 0));
+    return { id: g.id, code: g.code, name: g.for_name ?? '', issued: ymd(g.issued_at, tz), original: g.original_cents, balance: g.balance_cents, voided: !!g.voided_at, hist };
+  });
+  return <GiftCardsView rows={rows} salonName={salon.name} month={ymd(new Date(), tz).slice(0, 7)} today={ymd(new Date(), tz)} canIssue={staff.app_role === 'owner'} />;
 }

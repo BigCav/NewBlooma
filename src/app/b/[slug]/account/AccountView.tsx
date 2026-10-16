@@ -1,83 +1,187 @@
 'use client';
+// Converted from the prototype's ClientAccount.dc.html and MobileClientAccount.dc.html. Markup and style strings follow the prototype;
+// data comes from the server and the handlers are real server actions. The same flex layout wraps to one column on phones.
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { phoneInput } from '@/lib/phone';
 import { clientSignIn, clientSignOut } from '../book/actions';
+import { changePassword, saveDetails } from './actions';
 
-export type BookingRow = { id: string; when: string; services: string; staff: string; total: string; status: string; manage: string | null; again: string | null };
-type Props = { slug: string; salon: string; account: { name: string; email: string } | null; upcoming: BookingRow[]; past: BookingRow[] };
+export type BookingRow = { id: string; date: string; when: string; what: string; who: string; meta: string; price: string; status: string; manage: string | null; again: string | null };
+type Acct = { name: string; email: string; phone: string };
+type Props = { slug: string; salon: string; account: Acct | null; upcoming: BookingRow[]; past: BookingRow[] };
 
+const initialsOf = (n: string) => n.split(' ').filter(Boolean).map((w) => w.charAt(0)).join('').slice(0, 2).toUpperCase() || 'C';
 const page: React.CSSProperties = { minHeight: '100dvh', background: '#F4F5F7', color: '#0E1116', fontFamily: "'Geist', system-ui, sans-serif", fontSize: 14, lineHeight: 1.4 };
-const wrap: React.CSSProperties = { maxWidth: 640, margin: '0 auto', padding: '24px 20px 48px', display: 'flex', flexDirection: 'column', gap: 20, boxSizing: 'border-box' };
-const card: React.CSSProperties = { background: '#FFFFFF', border: '1px solid #E6E8EC', borderRadius: 24, padding: 20, display: 'flex', flexDirection: 'column', gap: 14 };
-const btn: React.CSSProperties = { height: 44, padding: '0 20px', borderRadius: 999, border: 0, background: '#0E1116', color: '#FFFFFF', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', cursor: 'pointer', fontFamily: 'inherit' };
-const ghost: React.CSSProperties = { ...btn, background: '#FFFFFF', color: '#0E1116', border: '1px solid #E1E4E9' };
+const wrap: React.CSSProperties = { maxWidth: 1180, margin: '0 auto', padding: '24px 20px 56px', display: 'flex', flexDirection: 'column', gap: 28, boxSizing: 'border-box' };
+const card: React.CSSProperties = { boxSizing: 'border-box', background: '#FFFFFF', border: '1px solid #E6E8EC', borderRadius: 24, padding: 24, display: 'flex', flexDirection: 'column', gap: 16 };
+const dark: React.CSSProperties = { height: 44, padding: '0 22px', boxSizing: 'border-box', borderRadius: 999, border: 0, background: '#0E1116', color: '#FFFFFF', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', cursor: 'pointer', fontFamily: 'inherit' };
+const light: React.CSSProperties = { ...dark, background: '#FFFFFF', color: '#0E1116', border: '1px solid #E1E4E9' };
 const input: React.CSSProperties = { boxSizing: 'border-box', width: '100%', height: 48, padding: '0 14px', border: '1px solid #E1E4E9', borderRadius: 14, font: 'inherit', color: '#0E1116', background: '#FFFFFF' };
+const label: React.CSSProperties = { fontSize: 14, fontWeight: 600 };
+const field: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 8 };
+const notice: React.CSSProperties = { padding: '6px 14px', borderRadius: 999, background: '#DDF3EA', color: '#14624A', fontSize: 13, fontWeight: 500 };
+const err: React.CSSProperties = { margin: 0, color: '#B42318', fontSize: 13.5, fontWeight: 500 };
 
-function Item({ b, slug }: { b: BookingRow; slug: string }) {
+function Chip({ slug, name, onSignOut }: { slug: string; name: string; onSignOut: () => void }) {
   return (
-    <li style={{ listStyle: 'none', border: '1px solid #E6E8EC', borderRadius: 18, padding: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-        <span style={{ fontSize: 15, fontWeight: 600 }}>{b.when}</span>
-        <span style={{ fontSize: 12.5, fontWeight: 500, padding: '3px 10px', borderRadius: 999, background: '#EEF0F3', whiteSpace: 'nowrap', height: 'fit-content' }}>{b.status}</span>
-      </div>
-      <div style={{ color: '#5E6673', overflowWrap: 'anywhere' }}>{b.services}{b.staff ? ` with ${b.staff}` : ''}</div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <span style={{ fontWeight: 600 }}>{b.total}</span>
-        {b.manage ? <Link href={b.manage} style={{ ...ghost, height: 40 }}>Change or cancel</Link>
-          : b.again ? <Link href={`/b/${slug}/book?service=${b.again}`} style={{ ...ghost, height: 40 }}>Book again</Link> : null}
-      </div>
-    </li>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, height: 44, boxSizing: 'border-box', padding: '0 6px', border: '1px solid #E1E4E9', borderRadius: 999, background: '#FFFFFF' }}>
+      <span aria-hidden="true" style={{ flex: '0 0 32px', width: 32, height: 32, borderRadius: 999, background: '#0E1116', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12.5, fontWeight: 600 }}>{initialsOf(name)}</span>
+      <Link href={`/b/${slug}/account`} aria-label="Your account" style={{ fontSize: 14, fontWeight: 500, color: '#0E1116', textDecoration: 'none' }}>{name.split(' ')[0]}</Link>
+      <button onClick={onSignOut} style={{ display: 'flex', alignItems: 'center', height: 32, padding: '0 12px', borderRadius: 999, border: 0, background: 'transparent', color: '#5B3DF5', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Sign out</button>
+    </div>
+  );
+}
+
+function SignIn({ slug, salon }: { slug: string; salon: string }) {
+  const router = useRouter();
+  const [email, setEmail] = useState(''); const [pw, setPw] = useState(''); const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
+  const go = async () => {
+    setBusy(true); setError('');
+    try { const r = await clientSignIn({ slug, email, password: pw }); if (r.error) setError(r.error); else router.refresh(); } catch { setError('Something went wrong. Please try again.'); }
+    setBusy(false);
+  };
+  return (
+    <div style={page}><div style={{ ...wrap, maxWidth: 520 }}>
+      <Link href={`/b/${slug}`} style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: '#0E1116', textDecoration: 'none' }}>{salon}</Link>
+      <form onSubmit={(e) => { e.preventDefault(); go(); }} style={card}>
+        <h1 style={{ margin: 0, fontSize: 28, fontWeight: 600, letterSpacing: '-0.03em' }}>Your account</h1>
+        <p style={{ margin: 0, color: '#5E6673' }}>Sign in to see and manage your appointments.</p>
+        <input aria-label="Email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" style={input} />
+        <input aria-label="Password" type="password" autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Password" style={input} />
+        {!!error && <p role="alert" style={err}>{error}</p>}
+        <button type="submit" disabled={busy} style={{ ...dark, height: 48 }}>{busy ? 'Signing in…' : 'Sign in'}</button>
+        <p style={{ margin: 0, color: '#5E6673', fontSize: 13 }}>No account yet? Book an appointment and choose “Save my details for next time”.</p>
+        <Link href={`/b/${slug}/book`} style={{ ...light, height: 48 }}>Book an appointment</Link>
+      </form>
+    </div></div>
   );
 }
 
 export function AccountView({ slug, salon, account, upcoming, past }: Props) {
   const router = useRouter();
-  const [email, setEmail] = useState(''); const [pw, setPw] = useState(''); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false);
-  const signIn = async () => {
-    setBusy(true); setErr('');
-    try { const r = await clientSignIn({ slug, email, password: pw }); if (r.error) setErr(r.error); else router.refresh(); } catch { setErr('Something went wrong. Please try again.'); }
+  const [saved, setSaved] = useState<Acct>(account ?? { name: '', email: '', phone: '' });
+  const [f, setF] = useState<Acct>(saved);
+  const [error, setError] = useState(''); const [note, setNote] = useState(''); const [busy, setBusy] = useState(false);
+  const [pwOpen, setPwOpen] = useState(false); const [pw, setPw] = useState(''); const [pw2, setPw2] = useState(''); const [show, setShow] = useState(false);
+  const [pwError, setPwError] = useState(''); const [pwNote, setPwNote] = useState('');
+  const t1 = useRef<ReturnType<typeof setTimeout>>(undefined); const t2 = useRef<ReturnType<typeof setTimeout>>(undefined);
+  if (!account) return <SignIn slug={slug} salon={salon} />;
+
+  const dirty = f.name !== saved.name || f.email !== saved.email || f.phone !== saved.phone;
+  const setField = (k: keyof Acct, v: string) => { setF({ ...f, [k]: k === 'phone' ? phoneInput(v) : v }); setError(''); setNote(''); };
+  const signOut = async () => { try { await clientSignOut(); } catch { /* cleared on the next load */ } window.location.assign('/b/' + slug); };
+  const save = async () => {
+    setBusy(true); setError('');
+    const r = await saveDetails(slug, f).catch(() => ({ error: 'Something went wrong. Please try again.' } as { error?: string; notice?: string }));
     setBusy(false);
+    if (r.error) { setError(r.error); return; }
+    const v = { name: f.name.trim(), email: f.email.trim().toLowerCase(), phone: f.phone.trim() };
+    setSaved(v); setF(v); setNote(r.notice ?? 'Details saved'); clearTimeout(t1.current); t1.current = setTimeout(() => setNote(''), 3000); router.refresh();
   };
-  const signOut = async () => { try { await clientSignOut(); } catch { /* cleared on next load */ } router.refresh(); };
+  const savePw = async () => {
+    if (pw.length < 8) { setPwError('Use at least 8 characters.'); return; }
+    if (pw !== pw2) { setPwError('The two passwords do not match.'); return; }
+    setBusy(true);
+    const r = await changePassword(slug, pw).catch(() => ({ error: 'Something went wrong. Please try again.' } as { error?: string; notice?: string }));
+    setBusy(false);
+    if (r.error) { setPwError(r.error); return; }
+    setPwOpen(false); setPw(''); setPw2(''); setShow(false); setPwError(''); setPwNote(r.notice ?? 'Password updated'); clearTimeout(t2.current); t2.current = setTimeout(() => setPwNote(''), 3000);
+  };
+  const pwInput = (id: string, lab: string, val: string, on: (v: string) => void, ph: string) => (
+    <div style={field}><label htmlFor={id} style={label}>{lab}</label>
+      <div style={{ position: 'relative' }}>
+        <input id={id} type={show ? 'text' : 'password'} autoComplete="new-password" value={val} onChange={(e) => { on(e.target.value); setPwError(''); }} placeholder={ph} style={{ ...input, padding: '0 76px 0 14px' }} />
+        <button type="button" onClick={() => setShow(!show)} style={{ position: 'absolute', right: 6, top: 4, height: 40, padding: '0 12px', border: 0, borderRadius: 999, background: 'transparent', color: '#5B3DF5', fontSize: 13.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>{show ? 'Hide' : 'Show'}</button>
+      </div>
+    </div>
+  );
 
   return (
     <div style={page}>
       <div style={wrap}>
-        <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <Link href={`/b/${slug}`} style={{ fontSize: 17, fontWeight: 600, color: '#0E1116', textDecoration: 'none' }}>{salon}</Link>
-          {account && <button onClick={signOut} style={{ border: 0, background: 'transparent', color: '#5B3DF5', fontWeight: 600, fontSize: 13.5, cursor: 'pointer', fontFamily: 'inherit' }}>Sign out</button>}
+        <header style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+          <Link href={`/b/${slug}`} style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: '#0E1116', textDecoration: 'none' }}>{salon}</Link>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
+            <Chip slug={slug} name={saved.name || saved.email} onSignOut={signOut} />
+            <Link href={`/b/${slug}/book`} style={dark}>Book now</Link>
+          </div>
         </header>
-        {!account ? (
-          <form onSubmit={(e) => { e.preventDefault(); signIn(); }} style={card}>
-            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em' }}>My bookings</h1>
-            <p style={{ margin: 0, color: '#5E6673' }}>Sign in to see and manage your appointments.</p>
-            <input aria-label="Email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" style={input} />
-            <input aria-label="Password" type="password" autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Password" style={input} />
-            {!!err && <p role="alert" style={{ margin: 0, color: '#B42318', fontWeight: 500 }}>{err}</p>}
-            <button type="submit" disabled={busy} style={btn}>{busy ? 'Signing in…' : 'Sign in'}</button>
-            <p style={{ margin: 0, color: '#5E6673', fontSize: 13 }}>No account yet? Book an appointment and choose “Save my details for next time”.</p>
-            <Link href={`/b/${slug}/book`} style={ghost}>Book an appointment</Link>
-          </form>
-        ) : (
-          <>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-              <div><h1 style={{ margin: 0, fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em' }}>My bookings</h1><div style={{ color: '#5E6673' }}>{account.name || account.email}</div></div>
-              <Link href={`/b/${slug}/book`} style={btn}>Book now</Link>
-            </div>
-            <section style={card} aria-label="Upcoming">
-              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>Upcoming</h2>
-              {upcoming.length ? <ul style={{ margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>{upcoming.map((b) => <Item key={b.id} b={b} slug={slug} />)}</ul>
-                : <p style={{ margin: 0, color: '#5E6673' }}>No upcoming appointments.</p>}
+        <div><h1 style={{ margin: 0, fontSize: 34, lineHeight: 1.1, fontWeight: 600, letterSpacing: '-0.03em' }}>Your account</h1><p style={{ margin: '6px 0 0', color: '#5E6673', fontSize: 15, overflowWrap: 'anywhere' }}>{saved.name}, {saved.email}</p></div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 24 }}>
+          <div style={{ flex: '999 1 560px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 24 }}>
+            <section aria-label="Upcoming appointments" style={card}>
+              <h2 style={{ margin: 0, fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em' }}>Upcoming appointments</h2>
+              {upcoming.length ? (
+                <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {upcoming.map((u) => (
+                    <li key={u.id} style={{ borderRadius: 20, background: '#F4F5F7', padding: 18, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '12px 16px' }}>
+                      <span style={{ flex: '1 1 220px', minWidth: 0 }}>
+                        <span style={{ display: 'block', fontSize: 17, fontWeight: 600, letterSpacing: '-0.01em' }}>{u.when}</span>
+                        <span style={{ display: 'block', marginTop: 4, fontSize: 14.5, overflowWrap: 'anywhere' }}>{u.what}{u.who ? ` with ${u.who}` : ''}</span>
+                        <span style={{ display: 'block', marginTop: 2, color: '#5E6673', fontSize: 13 }}>{u.meta}, pay at the salon{u.status === 'Awaiting confirmation' ? ', awaiting confirmation' : ''}</span>
+                      </span>
+                      {u.manage && <Link href={u.manage} aria-label={`Change or cancel ${u.what} on ${u.when}`} style={{ ...dark, flex: '0 0 auto', padding: '0 20px' }}>Change or cancel</Link>}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 12 }}>
+                  <p style={{ margin: 0, color: '#5E6673', fontSize: 15 }}>You have nothing booked right now.</p>
+                  <Link href={`/b/${slug}/book`} style={dark}>Book now</Link>
+                </div>
+              )}
             </section>
-            {past.length > 0 && (
-              <section style={card} aria-label="Past">
-                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>Past</h2>
-                <ul style={{ margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>{past.map((b) => <Item key={b.id} b={b} slug={slug} />)}</ul>
-              </section>
-            )}
-          </>
-        )}
+            <section aria-label="Past visits" style={card}>
+              <h2 style={{ margin: 0, fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em' }}>Past visits</h2>
+              {past.length ? (
+                <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+                  {past.map((p) => (
+                    <li key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 0', borderTop: '1px solid #EEF0F3' }}>
+                      <span style={{ flex: '1 1 auto', minWidth: 0 }}>
+                        <span style={{ display: 'block', fontSize: 15, fontWeight: 600, overflowWrap: 'anywhere' }}>{p.what}</span>
+                        <span style={{ display: 'block', marginTop: 2, fontSize: 13, color: '#5E6673', overflowWrap: 'anywhere' }}>{p.date}{p.who ? ` with ${p.who}` : ''}</span>
+                      </span>
+                      <span style={{ flex: '0 0 auto', fontSize: 14, fontWeight: 600, color: '#5E6673' }}>{p.price}</span>
+                      <Link href={`/b/${slug}/book${p.again ? `?service=${p.again}` : ''}`} aria-label={`Book ${p.what} again`} style={{ ...light, flex: '0 0 auto', padding: '0 18px' }}>Book again</Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : <p style={{ margin: 0, color: '#5E6673', fontSize: 15 }}>Your past visits will show here.</p>}
+            </section>
+          </div>
+          <aside style={{ flex: '1 1 360px', maxWidth: 420, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <section aria-label="Your details" style={card}>
+              <div><h2 style={{ margin: 0, fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em' }}>Your details</h2><p style={{ margin: '4px 0 0', color: '#5E6673', fontSize: 14 }}>We fill these in when you book.</p></div>
+              <div style={field}><label htmlFor="ca-name" style={label}>Full name</label><input id="ca-name" type="text" autoComplete="name" value={f.name} onChange={(e) => setField('name', e.target.value)} placeholder="Your name" style={input} /></div>
+              <div style={field}><label htmlFor="ca-email" style={label}>Email</label><input id="ca-email" type="email" autoComplete="email" value={f.email} onChange={(e) => setField('email', e.target.value)} placeholder="you@example.com" style={input} /></div>
+              <div style={field}><label htmlFor="ca-phone" style={label}>Phone</label><input id="ca-phone" type="tel" inputMode="tel" autoComplete="tel" value={f.phone} onChange={(e) => setField('phone', e.target.value)} placeholder="Required" style={input} /></div>
+              {!!error && <p role="alert" style={err}>{error}</p>}
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
+                <button onClick={save} disabled={!dirty || busy} style={{ height: 48, border: 0, borderRadius: 999, padding: '0 24px', fontSize: 14.5, fontWeight: 500, fontFamily: 'inherit', cursor: dirty ? 'pointer' : 'default', background: dirty ? '#0E1116' : '#D5D9E0', color: dirty ? '#FFFFFF' : '#5E6673' }}>Save changes</button>
+                {!!note && <span role="status" style={notice}>{note}</span>}
+              </div>
+            </section>
+            <section aria-label="Password" style={card}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <div><h2 style={{ margin: 0, fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em' }}>Password</h2><p style={{ margin: '4px 0 0', color: '#5E6673', fontSize: 14 }}>Use at least 8 characters.</p></div>
+                {!pwOpen && <button onClick={() => { setPwOpen(true); setPwNote(''); }} style={{ ...light, padding: '0 20px' }}>Change password</button>}
+              </div>
+              {pwOpen && (<>
+                {pwInput('ca-pw', 'New password', pw, setPw, 'At least 8 characters')}
+                {pwInput('ca-pw2', 'Confirm new password', pw2, setPw2, 'Type it again')}
+                {!!pwError && <p role="alert" style={err}>{pwError}</p>}
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button onClick={savePw} disabled={busy} style={{ ...dark, flex: '1 1 0', height: 48, fontSize: 14.5 }}>Update password</button>
+                  <button onClick={() => { setPwOpen(false); setPw(''); setPw2(''); setPwError(''); }} style={{ ...light, flex: '1 1 0', height: 48, fontSize: 14.5 }}>Cancel</button>
+                </div>
+              </>)}
+              {!!pwNote && <span role="status" style={{ ...notice, alignSelf: 'flex-start' }}>{pwNote}</span>}
+            </section>
+            <button onClick={signOut} style={{ ...light, height: 48, fontSize: 14.5 }}>Sign out</button>
+          </aside>
+        </div>
       </div>
     </div>
   );

@@ -7,10 +7,11 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { AccountView, type BookingRow } from './AccountView';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'My bookings' };
+export const metadata = { title: 'Your account' };
 
 const STATUS: Record<string, string> = { pending: 'Awaiting confirmation', confirmed: 'Confirmed', checked_in: 'In progress', in_progress: 'In progress', completed: 'Completed', cancelled: 'Cancelled', no_show: 'Missed' };
-const DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const DAY = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'], MON = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const fmtDur = (m: number) => { const h = Math.floor(m / 60), r = m % 60; return h ? h + ' hr' + (r ? ' ' + r + ' min' : '') : m + ' min'; };
 
 export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -24,7 +25,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
   const tz = salon.timezone, money = makeMoney(salon.currency || 'NZD');
   const { data: cl } = await sb.from('clients').select('id').eq('salon_id', salon.id).ilike('email', account.email.replace(/[%_]/g, '\\$&')).maybeSingle();
   const { data: bks } = cl
-    ? await sb.from('bookings').select('id,starts_at,status,staff(name),booking_services(price_cents,service_id,services(name))').eq('client_id', cl.id).order('starts_at', { ascending: false }).limit(40)
+    ? await sb.from('bookings').select('id,starts_at,status,staff(name),booking_services(price_cents,duration_min,service_id,services(name))').eq('client_id', cl.id).order('starts_at', { ascending: false }).limit(40)
     : { data: [] as any[] };
   const now = new Date();
   const live = (bks ?? []).filter((b: any) => ['pending', 'confirmed'].includes(b.status) && new Date(b.starts_at) > now);
@@ -45,13 +46,14 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
     const [y, mo, da] = ymd(b.starts_at, tz).split('-').map(Number);
     const wd = new Date(Date.UTC(y, mo - 1, da)).getUTCDay();
     const items = (b.booking_services as any[]).map((x) => x.services?.name as string).filter(Boolean);
+    const cents = (b.booking_services as any[]).reduce((a, x) => a + x.price_cents, 0), mins = (b.booking_services as any[]).reduce((a, x) => a + x.duration_min, 0);
     return {
-      id: b.id, when: `${DAY[wd]} ${da} ${MON[mo - 1]}, ${clock12(minutesOfDay(b.starts_at, tz))}`, services: items.join(' + '), staff: b.staff?.name ?? '',
-      total: money((b.booking_services as any[]).reduce((a, x) => a + x.price_cents, 0)), status: STATUS[b.status] ?? b.status,
+      id: b.id, date: `${DAY[wd]} ${da} ${MON[mo - 1]}`, when: `${DAY[wd]} ${da} ${MON[mo - 1]}, ${clock12(minutesOfDay(b.starts_at, tz))}`, what: items.join(' + '), who: b.staff?.name ?? '',
+      meta: `${fmtDur(mins)}, ${money(cents)}`, price: money(cents), status: STATUS[b.status] ?? b.status,
       manage: liveIds.has(b.id) && tokens.get(b.id) ? `/manage/${tokens.get(b.id)}` : null, again: (b.booking_services as any[]).find((x) => x.service_id)?.service_id ?? null,
     };
   };
   const upcoming = live.slice().reverse().map(toRow);
-  const past = (bks ?? []).filter((b: any) => !liveIds.has(b.id)).slice(0, 12).map(toRow);
-  return <AccountView slug={slug} salon={salon.name} account={{ name: account.name, email: account.email }} upcoming={upcoming} past={past} />;
+  const past = (bks ?? []).filter((b: any) => b.status === 'completed').slice(0, 12).map(toRow);
+  return <AccountView slug={slug} salon={salon.name} account={{ name: account.name, email: account.email, phone: account.phone }} upcoming={upcoming} past={past} />;
 }

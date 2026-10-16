@@ -174,7 +174,7 @@ function Desktop({ m }: { m: M }) {
   return (
     <div className="bk-flow" style={S('max-width:1180px;margin:0 auto;box-sizing:border-box;padding:24px 32px 56px;display:flex;flex-direction:column;gap:28px')}>
       <header style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px')}>
-        <div style={S('display:flex;align-items:center;gap:12px')}><div><div style={S('font-size:17px;font-weight:600;letter-spacing:-0.01em')}>{p.salonName}</div><div style={S('font-size:13px;color:#5E6673')}>Manage your booking</div></div></div>
+        <div style={S('display:flex;align-items:center;gap:12px')}><div><a href={'/b/' + p.slug} style={S('display:block;font-size:17px;font-weight:600;letter-spacing:-0.01em;color:#0E1116;text-decoration:none')}>{p.salonName}</a><div style={S('font-size:13px;color:#5E6673')}>Manage your booking</div></div></div>
       </header>
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:24px')}>
         <div className="bk-flow" style={S('flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:20px')}>
@@ -233,7 +233,7 @@ function Mobile({ m }: { m: M }) {
   const half = 'flex:1 1 0;height:48px;font-size:14.5px;font-weight:500;border-radius:999px;';
   return (
     <div className="bk-flow" style={S('flex:1 1 0;min-height:0;box-sizing:border-box;overflow-y:auto;padding:24px 20px 28px;display:flex;flex-direction:column;gap:20px')}>
-      <header style={S('display:flex;align-items:center;gap:12px')}><div><div style={S('font-size:17px;font-weight:600;letter-spacing:-0.01em')}>{p.salonName}</div><div style={S('font-size:13px;color:#5E6673')}>Manage your booking</div></div></header>
+      <header style={S('display:flex;align-items:center;gap:12px')}><div><a href={'/b/' + p.slug} style={S('display:block;font-size:17px;font-weight:600;letter-spacing:-0.01em;color:#0E1116;text-decoration:none')}>{p.salonName}</a><div style={S('font-size:13px;color:#5E6673')}>Manage your booking</div></div></header>
       {view && <>
         <StatusRow m={m} />
         <h1 style={S(H1)}>Your appointment</h1>
