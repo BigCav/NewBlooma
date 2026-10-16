@@ -1,6 +1,7 @@
 import { makeMoney } from '@/lib/display';
 import { notFound } from 'next/navigation';
 import { currentClient } from '@/lib/client-auth';
+import { loadClientVisits } from '@/lib/client-visits';
 import { getPublicSalon, nextAvailableLabel } from '@/lib/public';
 import { ProfileView } from './ProfileView';
 
@@ -32,7 +33,8 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
   const cancel = ({ '2h': '2 hours', '24h': '24 hours', '48h': '48 hours' } as Record<string, string>)[settings.free_cancel_before] ?? '24 hours';
   const next = settings.online_booking ? await nextAvailableLabel(salon.id, salon.timezone).catch(() => null) : null;
   const me = await currentClient(salon.id).catch(() => null);
+  const visits = me ? await loadClientVisits(salon, me.email).catch(() => ({ upcoming: [], past: [] })) : { upcoming: [], past: [] };
   return <ProfileView slug={slug} name={salon.name} headline={salon.headline || salon.name} intro={salon.intro || 'Book your next visit online in under a minute, with the team member you like and a time that suits you.'}
     about={salon.about || ''} address={salon.address || ''} phone={salon.phone || ''} email={salon.email || ''}
-    services={services} cats={cats} team={d.team.map((t) => ({ name: t.name, role: t.role_title, photo: t.photo_url ?? null }))} hours={hours} today={today} nowMin={nowMin} cancel={cancel} bookable={settings.online_booking} next={next} account={me ? { name: me.name } : null} />;
+    services={services} cats={cats} team={d.team.map((t) => ({ name: t.name, role: t.role_title, photo: t.photo_url ?? null }))} hours={hours} today={today} nowMin={nowMin} cancel={cancel} bookable={settings.online_booking} next={next} account={me ? { name: me.name, email: me.email, phone: me.phone } : null} visits={visits} />;
 }

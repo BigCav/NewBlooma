@@ -7,12 +7,13 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { S } from '../../(dash)/calendar/pickers';
 import { ART } from './art';
+import type { BookingRow } from './account/AccountView';
 
 type Svc = { id: string; name: string; desc: string; cat: string; dur: number; price: string };
 type Props = {
   slug: string; name: string; headline: string; intro: string; about: string; address: string; phone: string; email: string;
   services: Svc[]; cats: string[]; team: { name: string; role: string; photo: string | null }[]; hours: ({ from: string; to: string } | null)[];
-  today: number; nowMin: number; cancel: string; bookable: boolean; next: string | null; account: { name: string } | null;
+  today: number; nowMin: number; cancel: string; bookable: boolean; next: string | null; account: { name: string; email: string; phone: string } | null; visits: { upcoming: BookingRow[]; past: BookingRow[] };
 };
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const fmtDur = (m: number) => { const h = Math.floor(m / 60); const r = m % 60; return h ? h + ' hr' + (r ? ' ' + r + ' min' : '') : m + ' min'; };
@@ -22,8 +23,8 @@ const initialsOf = (n: string) => n.split(' ').map((w) => w[0]).join('').slice(0
 const LABEL = 'position:absolute;left:14px;bottom:14px;padding:6px 14px;border-radius:999px;background:rgba(255,255,255,0.92);color:#0E1116;font-size:13px;font-weight:500';
 const CARD = (pad: number, gap: number) => `box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:${pad}px;display:flex;flex-direction:column;gap:${gap}px`;
 
-function Tile({ k, label, style }: { k: string; label: string; style: string }) {
-  return <div role="img" aria-label={label + ', illustration'} style={S('position:relative;overflow:hidden;border-radius:24px;' + style)}><div style={S('width:100%;height:100%')} dangerouslySetInnerHTML={{ __html: ART[k].replace('<svg ', '<svg width="100%" height="100%" aria-hidden="true" preserveAspectRatio="xMidYMid slice" style="display:block" ') }} /><span style={S(LABEL)}>{label}</span></div>;
+function Tile({ k, label, style }: { k: string; label?: string; style: string }) {
+  return <div role="img" aria-label={(label ?? 'Salon') + ', illustration'} style={S('position:relative;overflow:hidden;border-radius:24px;' + style)}><div style={S('width:100%;height:100%')} dangerouslySetInnerHTML={{ __html: ART[k].replace('<svg ', '<svg width="100%" height="100%" aria-hidden="true" preserveAspectRatio="xMidYMid slice" style="display:block" ') }} />{!!label && <span style={S(LABEL)}>{label}</span>}</div>;
 }
 
 function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string; setCat: (c: string) => void; today: number }) {
@@ -32,7 +33,9 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
   const openStyle = 'display:inline-block;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:500;background:' + (open ? '#DDF3EA' : '#EEF0F3') + ';color:' + (open ? '#14624A' : '#4A525E');
   const openText = open ? 'Open now, until ' + clockStr(t!.to) : 'Closed now';
   const book = (svc?: string) => `/b/${p.slug}/book` + (svc ? `?service=${svc}` : '');
-  const tiles = TILES.filter(([, n]) => p.cats.some((c) => c.toLowerCase() === n.toLowerCase()));
+  const matched = TILES.filter(([, n]) => p.cats.some((c) => c.toLowerCase() === n.toLowerCase())).map(([k, n]) => [k, n] as [string, string | undefined]);
+  // The design always shows four tiles next to the salon picture; a salon with fewer categories gets unlabelled illustrations in the gaps.
+  const tiles = matched.concat(TILES.filter(([k]) => !matched.some(([x]) => x === k)).map(([k]) => [k, undefined] as [string, string | undefined])).slice(0, 4);
   const chips = ['All', ...p.cats].map((c) => ({ c, label: c === 'All' ? 'All services' : c, on: cat === c }));
   const shown = p.services.filter((s) => cat === 'All' || s.cat === cat);
   const photos = (
@@ -72,10 +75,10 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
       </ul>
     </section>
   );
-  const about = !!p.about && (
+  const about = !!(p.about || p.intro) && (
     <section aria-label="About" style={S(CARD(m ? 20 : 24, 12))}>
       <h2 style={S('margin:0;font-size:22px;font-weight:600;letter-spacing:-0.02em')}>About us</h2>
-      <p style={S('margin:0;color:#5E6673;font-size:15px;line-height:1.55;white-space:pre-line')}>{p.about}</p>
+      <p style={S('margin:0;color:#5E6673;font-size:15px;line-height:1.55;white-space:pre-line')}>{[p.intro, p.about].filter(Boolean).join('\n\n')}</p>
     </section>
   );
   const info = (
@@ -93,44 +96,76 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
         </dl></>}
     </section>
   );
-  const manage = <p style={S('margin:0;text-align:center;color:#5E6673;font-size:14px')}>Already booked? <Link href="/manage" style={S('color:#0E1116;font-weight:500')}>Manage your booking</Link></p>;
+  const manage = <p style={S('margin:0;text-align:center;color:#5E6673;font-size:14px')}>Already booked? <Link href="/manage" style={S('color:#0E1116;font-weight:500')}>Manage your booking</Link>{!p.account && <> · <Link href={`/b/${p.slug}/account`} style={S('color:#0E1116;font-weight:500')}>Sign in</Link></>}</p>;
+  const nextUp = p.visits.upcoming[0] ?? null;
+  const first = (p.account?.name ?? '').split(' ')[0] || 'there';
+  const pastList = p.visits.past.slice(0, 3);
+  const againBtn = (v: BookingRow) => <Link className="ghost" href={book(v.again ?? undefined)} aria-label={'Book ' + v.what + ' again'} style={S('flex:0 0 auto;display:flex;align-items:center;height:44px;padding:0 ' + (m ? 16 : 18) + 'px;box-sizing:border-box;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;text-decoration:none')}>Book again</Link>;
+  const pastCard = (
+    <div style={S(m ? 'box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:20px 20px 8px;display:flex;flex-direction:column;gap:6px' : 'flex:2 1 360px;min-width:0;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:28px 28px 12px;display:flex;flex-direction:column;gap:8px')}>
+      <h2 style={S('margin:0;font-size:' + (m ? 18 : 20) + 'px;font-weight:600;letter-spacing:-0.02em')}>Past visits</h2>
+      {pastList.length ? <ul style={S('margin:0;padding:0;list-style:none')}>{pastList.map((v) => (
+        <li key={v.id} style={S('display:flex;align-items:center;gap:12px;padding:' + (m ? 12 : 14) + 'px 0;border-top:1px solid #EEF0F3')}><span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{v.what}</span><span style={S('display:block;margin-top:2px;font-size:13px;color:#5E6673;overflow-wrap:anywhere')}>{v.date}{v.who ? ' with ' + v.who : ''}</span></span>{p.bookable && againBtn(v)}</li>
+      ))}</ul> : <p style={S('margin:0 0 16px;color:#5E6673;font-size:14px')}>Your past visits will show here.</p>}
+    </div>
+  );
+  const visits = !!p.account && (
+    <section aria-label="Your visits" style={S(m ? 'display:flex;flex-direction:column;gap:16px;flex:0 0 auto' : 'display:flex;flex-wrap:wrap;align-items:stretch;gap:24px')}>
+      <div style={S(m ? 'box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:20px;display:flex;flex-direction:column;gap:14px' : 'flex:3 1 520px;min-width:0;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:28px;display:flex;flex-direction:column;gap:20px')}>
+        <div><h2 style={S('margin:0;font-size:' + (m ? 22 : 26) + 'px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>Welcome back, {first}</h2><p style={S('margin:' + (m ? 4 : 6) + 'px 0 0;color:#5E6673;font-size:' + (m ? 14 : 15) + 'px')}>{m ? 'Your details are saved, so booking is quick.' : 'Your details are saved, so booking takes a few taps.'}</p></div>
+        {nextUp ? (
+          <div style={S('border-radius:' + (m ? 18 : 20) + 'px;background:#F4F5F7;padding:' + (m ? 16 : 20) + 'px;display:flex;flex-direction:column;gap:' + (m ? 12 : 14) + 'px')}>
+            <span style={S('color:#5E6673;font-size:13px;font-weight:500')}>Your next appointment</span>
+            <div><div style={S('font-size:' + (m ? 18 : 20) + 'px;font-weight:600;letter-spacing:-0.02em')}>{nextUp.when}</div><div style={S('margin-top:4px;font-size:' + (m ? 14.5 : 15) + 'px;overflow-wrap:anywhere')}>{nextUp.what}{nextUp.who ? ' with ' + nextUp.who : ''}</div><div style={S('margin-top:2px;color:#5E6673;font-size:' + (m ? 13 : 13.5) + 'px')}>{nextUp.meta}, pay at the salon</div></div>
+            <div style={S('display:flex;flex-wrap:wrap;gap:10px')}>
+              {nextUp.manage && <Link href={nextUp.manage} style={S('height:' + (m ? 48 : 44) + 'px;padding:0 20px;box-sizing:border-box;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:' + (m ? 14.5 : 14) + 'px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none;' + (m ? 'flex:1 1 100%' : ''))}>Change or cancel</Link>}
+              {!m && p.bookable && <Link href={book()} style={S('height:44px;padding:0 20px;box-sizing:border-box;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;display:flex;align-items:center;text-decoration:none')}>Book another</Link>}
+            </div>
+          </div>
+        ) : (
+          <div style={S('border-radius:' + (m ? 18 : 20) + 'px;background:#F4F5F7;padding:' + (m ? 16 : 20) + 'px;display:flex;flex-direction:column;align-items:flex-start;gap:12px')}>
+            <span style={S('color:#5E6673;font-size:15px')}>You have nothing booked right now.</span>
+            {p.bookable && <Link href={book()} style={S('height:44px;padding:0 20px;box-sizing:border-box;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500;display:flex;align-items:center;text-decoration:none')}>Book now</Link>}
+          </div>
+        )}
+      </div>
+      {pastCard}
+    </section>
+  );
   const BOOKBTN = (h: number, fs: number, pad: string, extra = '') => 'height:' + h + 'px;padding:' + pad + ';box-sizing:border-box;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:' + fs + 'px;font-weight:500;display:flex;align-items:center;text-decoration:none;' + extra;
 
   if (m) return (<>
     <main className="flow" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:24px 20px 24px;display:flex;flex-direction:column;gap:20px')}>
       <header style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{p.name}</span><span style={S(openStyle + ';flex:0 0 auto')}>{openText}</span></header>
-      {p.account ? <AcctChip slug={p.slug} name={p.account.name || 'Your account'} wide /> : <Link href={`/b/${p.slug}/account`} style={S('align-self:flex-start;color:#5B3DF5;font-size:14px;font-weight:600;text-decoration:none')}>Sign in</Link>}
+      {p.account && <AcctChip slug={p.slug} name={p.account.name || 'Your account'} wide />}
       {p.bookable && !!p.next && <span style={S('align-self:flex-start;display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:500;background:#F2EFFE;color:#4B34C9')}>Next available: {p.next}</span>}
-      {photos}{services}{team}{about}{info}{manage}
+      {visits}{photos}{services}{team}{about}{info}{manage}
     </main>
     {p.bookable && <div style={S('flex:0 0 auto;box-sizing:border-box;padding:12px 20px 24px;background:#FFFFFF;border-top:1px solid #E6E8EC')}><Link href={book()} style={S('height:48px;box-sizing:border-box;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none')}>Book now</Link></div>}
   </>);
   return (
     <div className="flow" style={S('max-width:1180px;margin:0 auto;box-sizing:border-box;padding:24px 32px 56px;display:flex;flex-direction:column;gap:32px')}>
       <header style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px')}>
-        <div style={S('display:flex;align-items:center;gap:12px')}><span style={S('font-size:17px;font-weight:600;letter-spacing:-0.01em')}>{p.name}</span></div>
-        <div style={S('display:flex;align-items:center;gap:16px')}>
-          {p.account ? <AcctChip slug={p.slug} name={p.account.name || 'Your account'} /> : <Link href={`/b/${p.slug}/account`} style={S('color:#0E1116;font-size:14px;font-weight:500;text-decoration:none')}>Sign in</Link>}
+        <div style={S('display:flex;align-items:center;gap:12px')}><span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{p.name}</span><span style={S(openStyle)}>{openText}</span></div>
+        <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:10px')}>
+          {p.account && <AcctChip slug={p.slug} name={p.account.name || 'Your account'} />}
           {p.bookable && <Link href={book()} style={S(BOOKBTN(44, 14, '0 22px'))}>Book now</Link>}
         </div>
       </header>
-      <section aria-label="Welcome" style={S('display:flex;flex-direction:column;gap:16px;padding:16px 0 8px')}>
-        <span style={S(openStyle + ';align-self:flex-start')}>{openText}</span>
-        {p.bookable && !!p.next && <span style={S('align-self:flex-start;display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:500;background:#F2EFFE;color:#4B34C9')}>Next available: {p.next}</span>}
-        <h1 style={S('margin:0;font-size:56px;line-height:1.04;font-weight:600;letter-spacing:-0.04em;max-width:760px')}>{p.headline}</h1>
-        <p style={S('margin:0;color:#5E6673;font-size:17px;max-width:620px')}>{p.intro}</p>
-        <div style={S('display:flex;flex-wrap:wrap;gap:10px;margin-top:8px')}>
-          {p.bookable && <Link href={book()} style={S(BOOKBTN(52, 15, '0 28px'))}>Book an appointment</Link>}
-          {!!p.address && <span style={S('height:52px;padding:0 4px;display:flex;align-items:center;color:#5E6673;font-size:14px')}>{p.address}</span>}
-        </div>
-      </section>
       {photos}
+      {visits}
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:24px')}>
         <div className="flow" style={S('flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:24px')}>{services}{team}{about}</div>
         <aside className="flow" style={S('flex:1 1 320px;max-width:380px;min-width:0;position:sticky;top:24px;display:flex;flex-direction:column;gap:16px')}>
           <div style={S(CARD(24, 12))}>
             <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Book an appointment</h2>
             <p style={S('margin:0;color:#5E6673;font-size:14px')}>{p.bookable ? `Free cancellation up to ${p.cancel} before. You pay at the salon.` : 'Online booking is not available right now. Please contact the salon.'}</p>
+            {p.bookable && !!p.next && <span style={S('align-self:flex-start;display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:500;background:#F2EFFE;color:#4B34C9')}>Next available: {p.next}</span>}
+            {!!p.account && <dl style={S('margin:0;display:flex;flex-direction:column')}>
+              <div style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>Booking as</dt><dd style={S('margin:0;text-align:right;font-weight:500;overflow-wrap:anywhere')}>{p.account.name}</dd></div>
+              <div style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>Email</dt><dd style={S('margin:0;text-align:right;font-weight:500;overflow-wrap:anywhere')}>{p.account.email}</dd></div>
+              <div style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid #EEF0F3;border-bottom:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>Phone</dt><dd style={S('margin:0;text-align:right;font-weight:500')}>{p.account.phone || 'Not added'}</dd></div>
+            </dl>}
             {p.bookable && <Link href={book()} style={S('height:48px;box-sizing:border-box;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none')}>Book now</Link>}
           </div>
           {info}
