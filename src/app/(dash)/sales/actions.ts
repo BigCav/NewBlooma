@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireCtx, friendly } from '@/lib/session';
-import { startOnline, startTerminal, pollTerminal, cancelTerminal, refundCard } from '@/lib/windcave';
+import { releaseOnline, startOnline,startTerminal, pollTerminal, cancelTerminal, refundCard } from '@/lib/windcave';
 import { sendCustomMessage } from '@/lib/notify';
 import { dateLong } from '@/lib/format';
 import { fmt } from './shared';
@@ -35,6 +35,8 @@ export async function createWalkin(client: string, serviceId: string, tipPct: nu
  */
 export async function payFlow(saleId: string, method: 'terminal' | 'online' | 'cash' | 'gift_card', tipPct: number, code: string, disc?: { kind: string; value: string; note: string }): Promise<Res & { txn?: string; url?: string }> {
   const { sb } = await requireCtx();
+  // A hosted payment page that was closed without paying would otherwise lock the sale.
+  await releaseOnline(saleId);
   if (disc) {
     const v = Number(String(disc.value).replace(/[^0-9.]/g, ''));
     const d = await sb.rpc('set_sale_discount', { p_sale: saleId, p_kind: disc.kind, p_value: disc.kind === 'amount' ? Math.round(v * 100) : v || 0, p_note: disc.note });

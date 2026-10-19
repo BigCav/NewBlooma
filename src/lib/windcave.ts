@@ -73,6 +73,20 @@ export async function startOnline(saleId: string, origin: string): Promise<{ url
   return { url: hpp.href };
 }
 
+/**
+ * Frees a sale whose hosted payment page was closed without paying. Each open attempt is re-checked with Windcave first
+ * (so a payment that did go through is still recorded); anything still unpaid is closed so the sale can be charged again.
+ */
+export async function releaseOnline(saleId: string) {
+  const sb = supabaseAdmin();
+  const { data: open } = await sb.from('card_payments').select('id,txn_ref').eq('sale_id', saleId).eq('kind', 'online').eq('status', 'pending');
+  for (const cp of open ?? []) {
+    if ((await settleOnline(cp.txn_ref)) === 'pending') {
+      await sb.from('card_payments').update({ status: 'cancelled', response_text: 'Payment page closed without paying', resolved_at: new Date().toISOString() }).eq('id', cp.id).eq('status', 'pending');
+    }
+  }
+}
+
 /** Always confirm with Windcave server-side. Never trust the browser's return URL. Safe to call repeatedly. */
 export async function settleOnline(txn: string): Promise<'approved' | 'declined' | 'pending' | 'unknown'> {
   const sb = supabaseAdmin();
