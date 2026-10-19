@@ -29,8 +29,19 @@ const ref = (prefix: string) => `${prefix}${randomBytes(9).toString('hex')}`;
 const basic = (u: string, k: string) => 'Basic ' + Buffer.from(`${u}:${k}`).toString('base64');
 
 async function loadSale(saleId: string) {
-  const { data } = await supabaseAdmin().from('sales').select('id,salon_id,status,total_cents,salons(currency,name)').eq('id', saleId).single();
-  return data as null | { id: string; salon_id: string; status: string; total_cents: number; salons: { currency: string; name: string } };
+  const { data } = await supabaseAdmin().from('sales').select('id,salon_id,status,total_cents,clients(email,phone),salons(currency,name)').eq('id', saleId).single();
+  return data as null | { id: string; salon_id: string; status: string; total_cents: number; clients: { email: string | null; phone: string | null } | null; salons: { currency: string; name: string } };
+}
+
+const DIAL: Record<string, string> = { NZD: '64', AUD: '61' };
+/** Windcave wants an international number for 3D Secure. A local number gets the salon's country code; anything unclear is left out. */
+export function intlPhone(raw: string | null | undefined, currency: string): string | null {
+  const t = (raw ?? '').replace(/[^\d+]/g, '');
+  if (!t) return null;
+  if (t.startsWith('+')) return /^\+\d{8,15}$/.test(t) ? t : null;
+  const cc = DIAL[currency]; if (!cc) return null;
+  const n = t.replace(/^0+/, '');
+  return /^\d{7,12}$/.test(n) ? `+${cc}${n}` : null;
 }
 
 /* ---------------- Online (hosted payment page) ---------------- */
@@ -39,14 +50,21 @@ export async function startOnline(saleId: string, origin: string): Promise<{ url
   if (!sale || sale.status !== 'pending') return { error: 'This sale is not open.' };
   const c = await getCreds(sale.salon_id);
   if (!c.onlineEnabled || !c.restUser || !c.restKey) return { error: 'On-screen card payments are not set up. Add your Windcave details in Settings.' };
+  // 3D Secure needs the cardholder's email and/or phone on every request.
+  const email = sale.clients?.email?.trim() || undefined, phone = intlPhone(sale.clients?.phone, sale.salons.currency) ?? undefined;
+  if (!email && !phone) return { error: 'Add an email or mobile number to this client first. The card network needs one to check the payment (3D Secure).' };
   const txn = ref('ON');
   const back = (r: string) => `${origin}/api/windcave/return?t=${txn}&r=${r}`;
   const res = await fetch(`${REST()}/api/v1/sessions`, {
     method: 'POST', headers: { Authorization: basic(c.restUser, c.restKey), 'Content-Type': 'application/json' },
-    body: JSON.stringify({ type: 'purchase', methods: ['card'], amount: dollars(sale.total_cents), currency: sale.salons.currency, merchantReference: txn, language: 'en',
+    body: JSON.stringify({ type: 'purchase', methods: ['card'], amount: dollars(sale.total_cents), currency: sale.salons.currency, merchantReference: txn, language: 'en', customer: { ...(email ? { email } : {}), ...(phone ? { phoneNumber: phone } : {}) },
       callbackUrls: { approved: back('approved'), declined: back('declined'), cancelled: back('cancelled') }, notificationUrl: `${origin}/api/windcave/notify?t=${txn}` }),
   });
-  if (!res.ok) return { error: 'The payment provider did not accept the request.' };
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    console.error('windcave session rejected', res.status, detail.slice(0, 500));
+    return { error: res.status === 401 ? 'Windcave rejected the username or API key. Check them in Settings.' : 'The payment provider did not accept the request.' };
+  }
   const j = await res.json();
   const hpp = (j.links ?? []).find((l: any) => l.rel === 'hpp');
   if (!j.id || !hpp?.href) return { error: 'The payment provider returned an unexpected response.' };
