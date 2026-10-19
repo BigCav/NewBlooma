@@ -78,16 +78,16 @@ function Faq({ items, m, title, sub }: { items: { q: string; a: string }[]; m: b
   );
 }
 
-function Header({ m, current }: { m: boolean; current?: 'pricing' }) {
+function Header({ m, current, dash }: { m: boolean; current?: 'pricing'; dash: string | null }) {
   const home = <Link href="/" aria-label="Aster home" style={S('display:flex;align-items:center;color:#0E1116;text-decoration:none')}><span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Aster</span></Link>;
-  if (m) return <header style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>{home}<Link href="/sign-in" style={S('display:flex;align-items:center;height:44px;padding:0 18px;box-sizing:border-box;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14.5px;font-weight:500;text-decoration:none')}>Sign in</Link></header>;
+  if (m) return <header style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>{home}<Link href={dash ?? '/sign-in'} style={S('display:flex;align-items:center;height:44px;padding:0 18px;box-sizing:border-box;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14.5px;font-weight:500;text-decoration:none')}>{dash ? 'Open dashboard' : 'Sign in'}</Link></header>;
   return (
     <header style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px')}>{home}
       <nav aria-label="Main" style={S('display:flex;flex-wrap:wrap;align-items:center;gap:8px')}>
         <Link href="/#features" style={S(NAVLINK)}>Features</Link>
         <Link href="/pricing" aria-current={current === 'pricing' ? 'page' : undefined} style={S(NAVLINK)}>Pricing</Link>
-        <Link href="/sign-in" style={S(NAVLINK)}>Sign in</Link>
-        <Link href={REGISTER} style={S('display:flex;align-items:center;height:44px;padding:0 22px;box-sizing:border-box;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;text-decoration:none')}>Get started</Link>
+        {!dash && <Link href="/sign-in" style={S(NAVLINK)}>Sign in</Link>}
+        <Link href={dash ?? REGISTER} style={S('display:flex;align-items:center;height:44px;padding:0 22px;box-sizing:border-box;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;text-decoration:none')}>{dash ? 'Open dashboard' : 'Get started'}</Link>
       </nav>
     </header>
   );
@@ -103,21 +103,22 @@ function PlanCards({ m }: { m: boolean }) {
   );
 }
 
-export function LandingView() {
+export function LandingView({ dash = null }: { dash?: string | null }) {
   const narrow = useNarrow();
   const m = narrow === true;
+  const go = dash ?? REGISTER, goLabel = dash ? 'Open dashboard' : 'Get started';
   const wrap = m ? 'padding:20px 20px 32px;gap:56px' : 'max-width:1180px;margin:0 auto;padding:24px 32px 0;gap:96px';
   const h2 = (t: string) => <h2 style={S(m ? 'margin:0;font-size:28px;line-height:1.1;font-weight:600;letter-spacing:-0.03em' : 'margin:0;font-size:40px;line-height:1.1;font-weight:600;letter-spacing:-0.03em')}>{t}</h2>;
   return (
     <div style={S(ROOT)}>
       <div style={S('box-sizing:border-box;display:flex;flex-direction:column;' + wrap)}>
-        <Header m={m} />
+        <Header m={m} dash={dash} />
         <section aria-label="Intro" style={S(m ? 'display:flex;flex-direction:column;gap:20px' : 'display:flex;flex-wrap:wrap;align-items:center;gap:48px')}>
           <div style={S(m ? 'display:flex;flex-direction:column;gap:20px' : 'flex:1 1 360px;min-width:0;display:flex;flex-direction:column;gap:24px')}>
             <h1 style={S(m ? 'margin:0;font-size:36px;line-height:1.08;font-weight:600;letter-spacing:-0.04em' : 'margin:0;font-size:56px;line-height:1.05;font-weight:600;letter-spacing:-0.04em')}>Less admin, more time for clients.</h1>
             <p style={S(m ? 'margin:0;color:#4A525E;font-size:16.5px;line-height:1.5' : 'margin:0;max-width:520px;color:#4A525E;font-size:19px;line-height:1.5')}>Calendar, online booking, reminders and checkout in one simple app for independent salons and barbers.</p>
             <div style={S(m ? 'display:flex;flex-direction:column;gap:10px' : 'display:flex;flex-wrap:wrap;gap:12px')}>
-              <Link href={REGISTER} style={S('display:flex;align-items:center;justify-content:center;height:52px;padding:0 28px;box-sizing:border-box;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:15.5px;font-weight:500;text-decoration:none')}>Get started</Link>
+              <Link href={go} style={S('display:flex;align-items:center;justify-content:center;height:52px;padding:0 28px;box-sizing:border-box;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:15.5px;font-weight:500;text-decoration:none')}>{goLabel}</Link>
               <Link className="ghost" href="/pricing" style={S('display:flex;align-items:center;justify-content:center;height:52px;padding:0 28px;box-sizing:border-box;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:15.5px;font-weight:500;text-decoration:none')}>See pricing</Link>
             </div>
           </div>
@@ -145,7 +146,7 @@ export function LandingView() {
               <li key={s.t} style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:12px')}><span aria-hidden="true" style={S('width:40px;height:40px;border-radius:999px;background:#0E1116;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600')}>{i + 1}</span><h3 style={S('margin:0;font-size:19px;font-weight:600;letter-spacing:-0.02em')}>{s.t}</h3><p style={S('margin:0;color:#5E6673;font-size:15px')}>{s.d}</p></li>
             ))}
           </ol>
-          <Link href={REGISTER} style={S(m ? 'display:flex;flex-direction:column;gap:4px;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:20px;padding:18px 20px;text-decoration:none;color:#0E1116' : 'display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px 28px;text-decoration:none;color:#0E1116')}>
+          <Link href={go} style={S(m ? 'display:flex;flex-direction:column;gap:4px;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:20px;padding:18px 20px;text-decoration:none;color:#0E1116' : 'display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px 28px;text-decoration:none;color:#0E1116')}>
             <span><span style={S(`display:block;font-size:${m ? 16 : 17}px;font-weight:600`)}>Already using another system?</span><span style={S(`display:block;color:#5E6673;font-size:${m ? 14 : 14.5}px`)}>Bring your clients, services and upcoming appointments across from a CSV file.</span></span>
             <span style={S(`margin-top:${m ? 4 : 0}px;font-size:14.5px;font-weight:600;color:#5B3DF5`)}>See how importing works →</span>
           </Link>
@@ -162,19 +163,19 @@ export function LandingView() {
 
         <section aria-label="Get started" style={S(m ? 'box-sizing:border-box;border-radius:28px;background:#0E1116;color:#FFFFFF;padding:28px 24px;display:flex;flex-direction:column;gap:16px' : 'box-sizing:border-box;border-radius:32px;background:#0E1116;color:#FFFFFF;padding:56px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:24px')}>
           <div style={S('max-width:560px')}><h2 style={S(m ? 'margin:0;font-size:26px;line-height:1.1;font-weight:600;letter-spacing:-0.03em' : 'margin:0;font-size:40px;line-height:1.1;font-weight:600;letter-spacing:-0.03em')}>Ready to spend less time on admin?</h2><p style={S(`margin:10px 0 0;color:#C4C9D2;font-size:${m ? 15 : 17}px`)}>Set up in minutes and share your booking link today.</p></div>
-          <Link href={REGISTER} style={S('display:flex;align-items:center;justify-content:center;height:52px;padding:0 28px;box-sizing:border-box;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:15.5px;font-weight:600;text-decoration:none')}>Get started</Link>
+          <Link href={go} style={S('display:flex;align-items:center;justify-content:center;height:52px;padding:0 28px;box-sizing:border-box;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:15.5px;font-weight:600;text-decoration:none')}>{goLabel}</Link>
         </section>
 
         <footer style={S(m ? 'display:flex;flex-direction:column;gap:6px;color:#5E6673;font-size:13px' : 'display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:0 0 48px;color:#5E6673;font-size:13.5px')}>
           <span>Aster. Booking software for salons and barbers.</span>
-          {!m && <span style={S('display:flex;gap:20px')}><Link href="/pricing" style={S('color:#5E6673;text-decoration:none')}>Pricing</Link><Link href="/sign-in" style={S('color:#5E6673;text-decoration:none')}>Sign in</Link></span>}
+          {!m && <span style={S('display:flex;gap:20px')}><Link href="/pricing" style={S('color:#5E6673;text-decoration:none')}>Pricing</Link>{!dash && <Link href="/sign-in" style={S('color:#5E6673;text-decoration:none')}>Sign in</Link>}</span>}
         </footer>
       </div>
     </div>
   );
 }
 
-export function PricingView() {
+export function PricingView({ dash = null }: { dash?: string | null }) {
   const narrow = useNarrow();
   const m = narrow === true;
   const [n, setN] = useState(3);
@@ -191,7 +192,7 @@ export function PricingView() {
         </div></div>
       <div style={S('border-radius:20px;background:#0E1116;color:#FFFFFF;padding:24px;display:flex;flex-direction:column;gap:6px')}><span style={S('font-size:13.5px;color:#C4C9D2')}>{n === 1 ? 'Solo' : 'Team of ' + n}</span><div style={S('display:flex;align-items:baseline;gap:8px;flex-wrap:wrap')}><span aria-live="polite" style={S(`font-size:${m ? 44 : 56}px;line-height:1;font-weight:600;letter-spacing:-0.04em`)}>{'$' + total}</span><span style={S('color:#C4C9D2')}>a month</span></div><span style={S('font-size:14.5px;color:#C4C9D2')}>{n === 1 ? 'One stylist at $24 a month' : n + ' stylists at $19 each a month'}</span></div>
       <p style={S('margin:0;color:#5E6673;font-size:14px')}>{n >= 2 ? 'Teams save $5 per stylist compared with the solo price.' : 'Add a second stylist and every stylist drops to $19.'}</p>
-      <Link href={REGISTER} style={S('display:flex;align-items:center;justify-content:center;height:52px;box-sizing:border-box;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:15.5px;font-weight:500;text-decoration:none')}>Get started</Link>
+      <Link href={dash ?? REGISTER} style={S('display:flex;align-items:center;justify-content:center;height:52px;box-sizing:border-box;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:15.5px;font-weight:500;text-decoration:none')}>{dash ? 'Open dashboard' : 'Get started'}</Link>
     </div>
   );
   const included = (
@@ -207,7 +208,7 @@ export function PricingView() {
   return (
     <div style={S(ROOT)}>
       <div style={S('box-sizing:border-box;display:flex;flex-direction:column;' + (m ? 'padding:20px 20px 32px;gap:32px' : 'max-width:1180px;margin:0 auto;padding:24px 32px 64px;gap:64px'))}>
-        <Header m={m} current="pricing" />
+        <Header m={m} current="pricing" dash={dash} />
         <section aria-label="Pricing" style={S(`display:flex;flex-direction:column;gap:${m ? 10 : 12}px;max-width:720px`)}>
           <h1 style={S(m ? 'margin:0;font-size:36px;line-height:1.05;font-weight:600;letter-spacing:-0.04em' : 'margin:0;font-size:56px;line-height:1.05;font-weight:600;letter-spacing:-0.04em')}>Simple pricing.</h1>
           <p style={S(m ? 'margin:0;color:#4A525E;font-size:16px;line-height:1.5' : 'margin:0;color:#4A525E;font-size:19px;line-height:1.5')}>$24 a month for one stylist. $19 per stylist a month for teams of two or more. Every feature included.</p>

@@ -1,4 +1,3 @@
-import { redirect } from 'next/navigation';
 import { LandingView } from '@/components/Marketing';
 import { supabaseServer } from '@/lib/supabase/server';
 import { clientHome } from '@/lib/session';
@@ -9,6 +8,6 @@ export const dynamic = 'force-dynamic';
 export default async function Home() {
   const sb = await supabaseServer();
   const { data: { user } } = await sb.auth.getUser();
-  if (user) redirect(clientHome(user.user_metadata) ?? '/calendar');
-  return <LandingView />;
+  // Signed-in owners can still see the landing page; the header offers a way back to the dashboard.
+  return <LandingView dash={user ? clientHome(user.user_metadata) ?? '/calendar' : null} />;
 }
