@@ -61,7 +61,8 @@ table{width:100%;border-collapse:collapse}th{font-size:12px;text-transform:upper
 .bk-flow>*{flex:0 0 auto}
 .bk-list li:last-child>button{border-bottom:0 !important}
 .bkf:focus{outline:2px solid #5B3DF5;outline-offset:2px}
-@media (max-width:900px){.si-aside{display:none !important}}
+.si-mob{display:none}
+@media (max-width:900px){.si-aside{display:none !important}.si-mob{display:flex}.si-main{align-items:flex-start !important;padding:20px 24px 32px !important}}
 
 .bk-app,.bk-app *{scrollbar-width:none;-ms-overflow-style:none}
 .bk-app *::-webkit-scrollbar{display:none;width:0;height:0}
