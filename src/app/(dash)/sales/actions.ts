@@ -90,6 +90,18 @@ export async function sendReceipt(saleId: string): Promise<Res> {
   if (!s.tax_inclusive && s.tax_cents) lines.push(`Tax ${fmt(s.tax_cents)}`);
   const how = s.method === 'gift_card' ? 'gift card' : s.method;
   const text = `Hi ${first}, here is your receipt${s.paid_at ? ` from ${dateLong(s.paid_at, salon.timezone)}` : ''}.\n${lines.join('\n')}\nTotal ${fmt(s.total_cents)}${how ? `, paid by ${how}` : ''}. Thank you!`;
-  const r = await sendCustomMessage(salon.id, { phone: c.phone, email: c.email }, text);
+  const e = (x: string) => x.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]!));
+  const row = (l: string, v: string, bold = false, top = false) => `<tr><td style="padding:${top ? '12px' : '6px'} 0 6px;${top ? 'border-top:1px solid #E6E8EC;' : ''}font-size:${bold ? 16 : 14.5}px;font-weight:${bold ? 600 : 400};color:${bold ? '#0E1116' : '#3A414B'}">${e(l)}</td><td style="padding:${top ? '12px' : '6px'} 0 6px;${top ? 'border-top:1px solid #E6E8EC;' : ''}text-align:right;white-space:nowrap;font-size:${bold ? 16 : 14.5}px;font-weight:${bold ? 600 : 400}">${e(v)}</td></tr>`;
+  const rows = [
+    ...(s.sale_items as any[]).map((i) => row(`${i.label}${i.qty > 1 ? ` × ${i.qty}` : ''}`, fmt(i.price_cents * i.qty))),
+    ...(s.discount_cents ? [row(`Discount${s.discount_note ? ` (${s.discount_note})` : ''}`, '-' + fmt(s.discount_cents))] : []),
+    ...(s.tip_cents ? [row('Tip', fmt(s.tip_cents))] : []),
+    ...(!s.tax_inclusive && s.tax_cents ? [row('Tax', fmt(s.tax_cents))] : []),
+    row('Total', fmt(s.total_cents), true, true),
+    ...(s.tax_inclusive && s.tax_cents ? [`<tr><td colspan="2" style="padding:0 0 4px;font-size:12.5px;color:#5E6673">Includes ${e(fmt(s.tax_cents))} tax</td></tr>`] : []),
+  ].join('');
+  const when = s.paid_at ? dateLong(s.paid_at, salon.timezone) : '';
+  const html = `<div style="font-size:15px;line-height:1.5;margin-bottom:4px">Hi ${e(first)}, thanks for visiting. Here is your receipt.</div><div style="font-size:13px;color:#5E6673;margin-bottom:16px">${[when, how ? 'Paid by ' + e(how) : ''].filter(Boolean).join(' · ')}</div><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse">${rows}</table>`;
+  const r = await sendCustomMessage(salon.id, { phone: c.phone, email: c.email }, text, { subject: `Your receipt from ${salon.name}`, html });
   return r.ok ? { notice: `Receipt sent to ${first}` } : { error: r.error };
 }

@@ -139,7 +139,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
             <div style={S('overflow-x:auto')}>
               <div style={S('min-width:760px')}>
                 <div style={S('display:flex;border-bottom:1px solid #E6E8EC')}>
-                  <div style={S('flex:0 0 56px')} />
+                  <div style={S('flex:0 0 76px')} />
                   {cols.map((m) => (
                     <div key={m.id} style={S('flex:1 1 0;min-width:0;box-sizing:border-box;display:flex;align-items:center;gap:10px;padding:14px 16px;border-left:1px solid #EEF0F3')}>
                       <div style={S('flex:0 0 34px;width:34px;height:34px;border-radius:999px;background:#EEF0F3;color:#0E1116;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600')}>{initials(m.name)}</div>
@@ -152,8 +152,8 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
                 </div>
 
                 <div style={S('position:relative;display:flex')}>
-                  <div style={S('flex:0 0 56px')}>
-                    {gHours.map((h) => <div key={h} style={S('height:72px;box-sizing:border-box;padding:6px 12px 0 0;text-align:right;font-size:12px;color:#5E6673')}>{hr(h)}</div>)}
+                  <div style={S('flex:0 0 76px')}>
+                    {gHours.map((h) => <div key={h} style={S('height:72px;box-sizing:border-box;padding:6px 12px 0 12px;text-align:right;font-size:12px;color:#5E6673')}>{hr(h)}</div>)}
                   </div>
                   {cols.map((m) => (
                     <div key={m.id} style={S('flex:1 1 0;min-width:0;position:relative;height:' + colH + 'px;border-left:1px solid #EEF0F3;background-image:linear-gradient(#EEF0F3 1px, transparent 1px);background-size:100% 72px')}>
@@ -181,9 +181,9 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
                     </div>
                   ))}
                   {showNow && (
-                    <div style={S('position:absolute;left:56px;right:0;top:' + nowTop + 'px;height:0;border-top:2px solid #5B3DF5;pointer-events:none;z-index:2')}>
+                    <div style={S('position:absolute;left:76px;right:0;top:' + nowTop + 'px;height:0;border-top:2px solid #5B3DF5;pointer-events:none;z-index:2')}>
                       <span style={S('position:absolute;left:-5px;top:-6px;width:10px;height:10px;border-radius:999px;background:#5B3DF5')} />
-                      <span style={S('position:absolute;left:-52px;top:-11px;padding:2px 7px;border-radius:999px;background:#5B3DF5;color:#FFFFFF;font-size:11.5px;font-weight:500')}>{fmtMin(now)}</span>
+                      <span style={S('position:absolute;left:-70px;top:-11px;padding:2px 7px;border-radius:999px;background:#5B3DF5;color:#FFFFFF;font-size:11.5px;font-weight:500')}>{fmtMin(now)}</span>
                     </div>
                   )}
                 </div>
@@ -195,7 +195,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
             <div style={S('overflow-x:auto')}>
               <div style={S('min-width:760px')}>
                 <div style={S('display:flex;border-bottom:1px solid #E6E8EC')}>
-                  <div style={S('flex:0 0 56px')} />
+                  <div style={S('flex:0 0 76px')} />
                   {weekDays.map((d) => {
                     const closed = !hrsOf(d.ymd)?.open, isToday = d.ymd === today;
                     return (
@@ -207,8 +207,8 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
                   })}
                 </div>
                 <div style={S('position:relative;display:flex')}>
-                  <div style={S('flex:0 0 56px')}>
-                    {gHours.map((h) => <div key={h} style={S('height:72px;box-sizing:border-box;padding:6px 12px 0 0;text-align:right;font-size:12px;color:#5E6673')}>{hr(h)}</div>)}
+                  <div style={S('flex:0 0 76px')}>
+                    {gHours.map((h) => <div key={h} style={S('height:72px;box-sizing:border-box;padding:6px 12px 0 12px;text-align:right;font-size:12px;color:#5E6673')}>{hr(h)}</div>)}
                   </div>
                   {weekDays.map((d) => {
                     const closed = !hrsOf(d.ymd)?.open, isToday = d.ymd === today;

@@ -96,7 +96,7 @@ export async function processOutbox(limit = 50) {
 }
 
 /** Sends a one-off message typed by staff, right away, and keeps a record of it in the outbox. */
-export async function sendCustomMessage(salonId: string, to: { phone?: string | null; email?: string | null }, text: string): Promise<{ ok: true; via: 'sms' | 'email' } | { ok: false; error: string }> {
+export async function sendCustomMessage(salonId: string, to: { phone?: string | null; email?: string | null }, text: string, email?: { subject: string; html: string }): Promise<{ ok: true; via: 'sms' | 'email' } | { ok: false; error: string }> {
   const sb = supabaseAdmin();
   const { data: salon } = await sb.from('salons').select('name,phone').eq('id', salonId).single();
   if (!salon) return { ok: false, error: 'Salon not found.' };
@@ -106,7 +106,12 @@ export async function sendCustomMessage(salonId: string, to: { phone?: string | 
   const row = { salon_id: salonId, channel, to_address: address, template: 'custom_message', payload: { text } };
   try {
     if (channel === 'sms') await sendSms(address, `${salon.name}: ${text}`);
-    else await sendEmail(address, { from: fromFor(salon.name), subject: `Message from ${salon.name}`, text: `${text}\n\n${salon.name}${salon.phone ? ` · ${salon.phone}` : ''}`, html: `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:auto"><h2>${esc(salon.name)}</h2>${text.split(/\n+/).map((l) => `<p>${esc(l)}</p>`).join('')}</div>` });
+    else {
+      const foot = `${esc(salon.name)}${salon.phone ? ` · ${esc(salon.phone)}` : ''}`;
+      const body = email?.html ?? text.split(/\n+/).map((l) => `<p style="margin:0 0 12px;font-size:15px;line-height:1.5">${esc(l)}</p>`).join('');
+      await sendEmail(address, { from: fromFor(salon.name), subject: email?.subject ?? `Message from ${salon.name}`, text: `${text}\n\n${salon.name}${salon.phone ? ` · ${salon.phone}` : ''}`,
+        html: `<div style="background:#F4F5F7;padding:24px 12px;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#0E1116"><div style="max-width:480px;margin:auto;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:20px;padding:28px"><div style="font-size:20px;font-weight:600;letter-spacing:-0.01em;margin-bottom:18px">${esc(salon.name)}</div>${body}</div><div style="max-width:480px;margin:12px auto 0;text-align:center;font-size:12.5px;color:#5E6673">${foot}</div></div>` });
+    }
   } catch (e: any) {
     await sb.from('notifications_outbox').insert({ ...row, status: 'failed', attempts: 1, error: String(e.message).slice(0, 200) });
     return { ok: false, error: 'The message could not be sent. Try again in a moment.' };
