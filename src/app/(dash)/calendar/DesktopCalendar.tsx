@@ -257,6 +257,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
                 </div>
               </div>
               <dl style={S('margin:0;display:flex;flex-direction:column')}>
+                <div style={S(DL)}><dt style={S('color:#5E6673')}>Booking</dt><dd style={S('margin:0;font-weight:500;text-align:right;white-space:nowrap')}>{'B-' + selB.ref}</dd></div>
                 <div style={S(DL)}><dt style={S('color:#5E6673')}>Time</dt><dd style={S('margin:0;font-weight:500;text-align:right;white-space:nowrap')}>{sel.time}</dd></div>
                 <div style={S(DL)}><dt style={S('color:#5E6673')}>With</dt><dd style={S('margin:0;font-weight:500;text-align:right;overflow-wrap:anywhere')}>{staffName(selB.staffId)}</dd></div>
                 <div style={S(DL + ';border-bottom:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>Price</dt><dd style={S('margin:0;font-weight:500')}>{sel.priceText}</dd></div>

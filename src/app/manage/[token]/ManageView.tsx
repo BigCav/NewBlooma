@@ -9,7 +9,7 @@ import { cancelBooking, manageSlots, moveBooking } from './actions';
 
 type Item = { name: string; dur: number; cents: number };
 type Props = {
-  token: string; salonName: string; slug: string; address: string; currency: string; staffName: string; status: string;
+  bookingRef: string; token: string; salonName: string; slug: string; address: string; currency: string; staffName: string; status: string;
   items: Item[]; startYmd: string; startMin: number; canAct: boolean; free: boolean; deadline: string;
   hours: ({ from: string; to: string } | null)[]; today: string; windowDays: number;
 };
@@ -110,7 +110,7 @@ const ASIDE_CARD = 'box-sizing:border-box;background:#FFFFFF;border:1px solid #E
 function Summary({ m, pad }: { m: M; pad: number }) {
   const { p } = m;
   return <div style={S(pad ? CARD(pad) : 'display:contents')}>
-    <div><div style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{m.whenDay.full}</div><div style={S('margin-top:2px;color:#5E6673;font-size:15px')}>{hhmm(m.when.min) + ' to ' + hhmm(m.when.min + m.totalDur)}</div></div>
+    <div><div style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{m.whenDay.full}</div><div style={S('margin-top:2px;color:#5E6673;font-size:15px')}>{hhmm(m.when.min) + ' to ' + hhmm(m.when.min + m.totalDur)}</div><div style={S('margin-top:2px;color:#5E6673;font-size:13.5px')}>{'Booking ' + m.p.bookingRef}</div></div>
     <ul style={S('margin:0;padding:0;list-style:none;display:flex;flex-direction:column')}>
       {p.items.map((it, i) => <li key={i} style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #EEF0F3')}><span style={S('min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{it.name}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{fmtDur(it.dur)}</span></span><span style={S('flex:0 0 auto;font-size:15px;font-weight:600')}>{m.money(it.cents)}</span></li>)}
     </ul>

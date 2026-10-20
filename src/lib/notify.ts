@@ -18,16 +18,16 @@ async function compose(r: Row): Promise<{ subject: string; text: string; html: s
   const sb = supabaseAdmin();
   const { data: salon } = await sb.from('salons').select('name,phone,timezone,slug').eq('id', r.salon_id).single();
   if (!salon) return null;
-  let when = '', who = '', manage = '';
+  let when = '', who = '', manage = '', bref = '';
   let b0: unknown = null;
   if (r.booking_id) {
-    const { data: b } = await sb.from('bookings').select('starts_at,status,staff(name),clients(name,reminders),booking_services(services(name))').eq('id', r.booking_id).single();
+    const { data: b } = await sb.from('bookings').select('ref_no,starts_at,status,staff(name),clients(name,reminders),booking_services(services(name))').eq('id', r.booking_id).single();
     if (!b) return null;
     const cancelledTpl = r.template === 'booking_cancelled' || r.template === 'owner_booking_cancelled';
     if (!cancelledTpl && ['cancelled', 'no_show'].includes(b.status)) return null; // nothing to tell them
     if (cancelledTpl && b.status !== 'cancelled') return null; // it was reinstated
     if (r.template.startsWith('reminder') && (b as any).clients?.reminders === false) return null; // client turned reminders off
-    b0 = b;
+    b0 = b; bref = 'B-' + (b as any).ref_no;
     when = `${dateLong(b.starts_at, salon.timezone)} at ${time12(b.starts_at, salon.timezone)}`;
     who = `${(b as any).booking_services.map((x: any) => x.services.name).join(', ')} with ${(b as any).staff?.name}`;
     const { data: t } = await sb.from('booking_tokens').select('token').eq('booking_id', r.booking_id).eq('purpose', 'manage_booking').maybeSingle();
@@ -47,6 +47,7 @@ async function compose(r: Row): Promise<{ subject: string; text: string; html: s
     case 'review_request': subject = `How was your visit to ${salon.name}?`; link = `${base()}/review/${r.payload.token}`; cta = 'Leave a review'; lines = ['Thanks for visiting. We would love to hear how it went.']; break;
     default: return null;
   }
+  if (bref) lines.push(`Booking reference: ${bref}`);
   const text = `${lines.join('\n')}\n\n${cta}: ${link}\n\n${salon.name}${salon.phone ? ` · ${salon.phone}` : ''}`;
   const html = `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:auto"><h2>${esc(salon.name)}</h2>${lines.map((l) => `<p>${esc(l)}</p>`).join('')}<p><a href="${link}" style="background:#5B3DF5;color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none;display:inline-block">${esc(cta)}</a></p></div>`;
   return { subject, text, html, from: fromFor(salon.name) };
@@ -96,7 +97,7 @@ export async function processOutbox(limit = 50) {
 }
 
 /** Sends a one-off message typed by staff, right away, and keeps a record of it in the outbox. */
-export async function sendCustomMessage(salonId: string, to: { phone?: string | null; email?: string | null }, text: string, email?: { subject: string; html: string }): Promise<{ ok: true; via: 'sms' | 'email' } | { ok: false; error: string }> {
+export async function sendCustomMessage(salonId: string, to: { phone?: string | null; email?: string | null }, text: string, email?: { subject: string; html: string; footer?: string }): Promise<{ ok: true; via: 'sms' | 'email' } | { ok: false; error: string }> {
   const sb = supabaseAdmin();
   const { data: salon } = await sb.from('salons').select('name,phone').eq('id', salonId).single();
   if (!salon) return { ok: false, error: 'Salon not found.' };
@@ -107,9 +108,9 @@ export async function sendCustomMessage(salonId: string, to: { phone?: string | 
   try {
     if (channel === 'sms') await sendSms(address, `${salon.name}: ${text}`);
     else {
-      const foot = `${esc(salon.name)}${salon.phone ? ` · ${esc(salon.phone)}` : ''}`;
+      const foot = email?.footer ? esc(email.footer) : `${esc(salon.name)}${salon.phone ? ` · ${esc(salon.phone)}` : ''}`;
       const body = email?.html ?? text.split(/\n+/).map((l) => `<p style="margin:0 0 12px;font-size:15px;line-height:1.5">${esc(l)}</p>`).join('');
-      await sendEmail(address, { from: fromFor(salon.name), subject: email?.subject ?? `Message from ${salon.name}`, text: `${text}\n\n${salon.name}${salon.phone ? ` · ${salon.phone}` : ''}`,
+      await sendEmail(address, { from: fromFor(salon.name), subject: email?.subject ?? `Message from ${salon.name}`, text: `${text}\n\n${email?.footer ?? salon.name + (salon.phone ? ` · ${salon.phone}` : '')}`,
         html: `<div style="background:#F4F5F7;padding:24px 12px;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#0E1116"><div style="max-width:480px;margin:auto;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:20px;padding:28px"><div style="font-size:20px;font-weight:600;letter-spacing:-0.01em;margin-bottom:18px">${esc(salon.name)}</div>${body}</div><div style="max-width:480px;margin:12px auto 0;text-align:center;font-size:12.5px;color:#5E6673">${foot}</div></div>` });
     }
   } catch (e: any) {

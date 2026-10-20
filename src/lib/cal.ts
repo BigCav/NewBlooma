@@ -37,7 +37,7 @@ export type CalStaff = { id: string; name: string; role: string };
 export type CalBooking = {
   id: string; staffId: string; clientId: string; client: string; services: string; dayYmd: string; start: number; end: number;
   status: 'pending' | 'confirmed' | 'checked_in' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
-  priceCents: number; paid: boolean; paidText: string; saleId: string | null; serviceIds: string[]; tone: number; walkin: boolean; notes: string | null;
+  priceCents: number; paid: boolean; paidText: string; saleId: string | null; ref: number; serviceIds: string[]; tone: number; walkin: boolean; notes: string | null;
 };
 export type CalBlock = { id: string; staffId: string; dayYmd: string; start: number; end: number; kind: string; note: string | null };
 export type CalService = { id: string; name: string; dur: number; priceCents: number; cat: string };

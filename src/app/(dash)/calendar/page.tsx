@@ -18,7 +18,7 @@ export default async function Calendar({ searchParams }: { searchParams: Promise
 
   const [{ data: team }, { data: bk }, { data: bl }, { data: oh }, { data: svc }, { data: ss }, { data: rc }] = await Promise.all([
     sb.from('staff').select('id,name,role_title').eq('active', true).order('name'),
-    sb.from('bookings').select('id,staff_id,client_id,starts_at,ends_at,status,source,notes,clients(name),booking_services(service_id,price_cents,services(name,category_id,service_categories(name)))').gte('starts_at', a.toISOString()).lt('starts_at', b.toISOString()).not('status', 'in', '(cancelled,no_show)'),
+    sb.from('bookings').select('id,ref_no,staff_id,client_id,starts_at,ends_at,status,source,notes,clients(name),booking_services(service_id,price_cents,services(name,category_id,service_categories(name)))').gte('starts_at', a.toISOString()).lt('starts_at', b.toISOString()).not('status', 'in', '(cancelled,no_show)'),
     sb.from('staff_blocks').select('id,staff_id,starts_at,ends_at,kind,note').lt('starts_at', b.toISOString()).gt('ends_at', a.toISOString()),
     sb.from('opening_hours').select('*'),
     sb.from('services').select('id,name,duration_min,price_cents,service_categories(name)').eq('active', true).order('name'),
@@ -35,7 +35,7 @@ export default async function Calendar({ searchParams }: { searchParams: Promise
     if (cid && !catIdx.has(cid)) catIdx.set(cid, catIdx.size);
     const sale = (sales ?? []).find((s: any) => s.booking_id === x.id);
     return {
-      id: x.id, staffId: x.staff_id, clientId: x.client_id, client: x.clients?.name ?? 'Client',
+      id: x.id, ref: x.ref_no, staffId: x.staff_id, clientId: x.client_id, client: x.clients?.name ?? 'Client',
       services: lines.map((l) => l.services?.name).filter(Boolean).join(' + '),
       dayYmd: ymd(x.starts_at, salon.timezone), start: minutesOfDay(x.starts_at, salon.timezone), end: minutesOfDay(x.ends_at, salon.timezone) || 24 * 60,
       status: x.status, priceCents: lines.reduce((s, l) => s + l.price_cents, 0), paid: sale?.status === 'paid', paidText: sale?.status === 'paid' ? `Paid ${money2(sale.total_cents / 100).replace(/\.00$/, '')}${sale.method ? ' by ' + ({ card: 'Card', cash: 'Cash', gift_card: 'Gift card' } as Record<string, string>)[sale.method] : ''}` : '', saleId: sale?.id ?? null, serviceIds: lines.map((l) => l.service_id),

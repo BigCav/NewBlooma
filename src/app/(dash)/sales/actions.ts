@@ -79,7 +79,7 @@ export async function refundSale(saleId: string): Promise<Res> {
 
 export async function sendReceipt(saleId: string): Promise<Res> {
   const { sb, salon } = await requireCtx();
-  const { data: s } = await sb.from('sales').select('status,method,subtotal_cents,discount_cents,discount_note,tip_cents,tax_cents,tax_inclusive,total_cents,paid_at,clients(name,phone,email),sale_items(label,qty,price_cents)').eq('id', saleId).single();
+  const { data: s } = await sb.from('sales').select('bookings(ref_no),status,method,subtotal_cents,discount_cents,discount_note,tip_cents,tax_cents,tax_inclusive,total_cents,paid_at,clients(name,phone,email),sale_items(label,qty,price_cents)').eq('id', saleId).single();
   if (!s) return { error: 'Sale not found.' };
   const c: any = s.clients;
   if (!c) return { error: 'This sale has no client to send a receipt to.' };
@@ -102,6 +102,6 @@ export async function sendReceipt(saleId: string): Promise<Res> {
   ].join('');
   const when = s.paid_at ? dateLong(s.paid_at, salon.timezone) : '';
   const html = `<div style="font-size:15px;line-height:1.5;margin-bottom:4px">Hi ${e(first)}, thanks for visiting. Here is your receipt.</div><div style="font-size:13px;color:#5E6673;margin-bottom:16px">${[when, how ? 'Paid by ' + e(how) : ''].filter(Boolean).join(' · ')}</div><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse">${rows}</table>`;
-  const r = await sendCustomMessage(salon.id, { phone: c.phone, email: c.email }, text, { subject: `Your receipt from ${salon.name}`, html });
+  const r = await sendCustomMessage(salon.id, { phone: c.phone, email: c.email }, text, { subject: `Your receipt from ${salon.name}`, html, footer: (s as any).bookings?.ref_no ? `Booking B-${(s as any).bookings.ref_no}` : undefined });
   return r.ok ? { notice: `Receipt sent to ${first}` } : { error: r.error };
 }
