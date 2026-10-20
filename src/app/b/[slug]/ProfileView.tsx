@@ -82,7 +82,7 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
     <section aria-label="Reviews" style={S(CARD(m ? 20 : 24, 18))}>
       <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Reviews</h2>
       <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:' + (m ? '18px 24px' : '20px 36px') + ';padding:' + (m ? 18 : 22) + 'px;border-radius:20px;background:#F4F5F7')}>
-        <div style={S('flex:0 0 auto')}>
+        <div style={S(m ? 'flex:1 1 100%;text-align:center' : 'flex:0 0 auto')}>
           <div style={S('font-size:' + (m ? 44 : 52) + 'px;line-height:1;font-weight:600;letter-spacing:-0.04em')}>{p.rating.avg.toFixed(1)}</div>
           <div aria-hidden="true" style={S('margin-top:6px;font-size:18px;letter-spacing:2px')}><span style={S('color:#E8A317')}>{STARS.slice(0, rounded)}</span><span style={S('color:#D5D9E0')}>{STARS.slice(rounded)}</span></div>
           <div style={S('margin-top:4px;color:#5E6673;font-size:13.5px')}>{p.rating.count + (p.rating.count === 1 ? ' review' : ' reviews')}</div>

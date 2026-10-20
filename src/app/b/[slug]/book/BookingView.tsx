@@ -404,6 +404,12 @@ const HINTS = ['Choose at least one service to continue.', 'Choose who you would
 const primaryLabel = (m: M) => m.busy ? (m.p.autoConfirm ? 'Booking…' : 'Sending…') : m.step === 4 ? (m.p.autoConfirm ? 'Confirm booking' : 'Request booking') : 'Continue';
 const primaryStyle = (m: M, h: number) => 'width:100%;height:' + h + 'px;border:0;border-radius:999px;font-size:14.5px;font-weight:500;font-family:inherit;background:' + (m.canGo ? '#0E1116' : '#D5D9E0') + ';color:' + (m.canGo ? '#FFFFFF' : '#5E6673') + ';cursor:' + (m.canGo ? 'pointer' : 'default');
 
+function DoneNote({ m }: { m: M }) {
+  const n = m.done?.note;
+  if (!n) return null;
+  return <div role="status" style={S('box-sizing:border-box;padding:18px 20px;border-radius:24px;background:#0E1116;color:#FFFFFF;font-size:15px;font-weight:500;line-height:1.4')}>{n}</div>;
+}
+
 function DoneCard({ m, wide = false }: { m: M; wide?: boolean }) {
   const d = m.done!;
   const row = (k: string, v: string, last = false, bold = false) => <div style={S('display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #EEF0F3' + (last ? ';border-bottom:1px solid #EEF0F3' : ''))}><dt style={S('color:#5E6673')}>{k}</dt><dd style={S('margin:0;font-weight:' + (bold ? 600 : 500) + ';text-align:right' + (k === 'With' ? ';overflow-wrap:anywhere' : ''))}>{v}</dd></div>;
@@ -415,7 +421,6 @@ function DoneCard({ m, wide = false }: { m: M; wide?: boolean }) {
       <div>
         <h1 style={S('margin:0;font-size:30px;line-height:1.15;font-weight:600;letter-spacing:-0.03em;overflow-wrap:anywhere')}>{booked ? `You're booked, ${d.first}` : `Request sent, ${d.first}`}</h1>
         <p style={S('margin:8px 0 0;color:#5E6673;font-size:15px;overflow-wrap:anywhere')}>{booked ? (m.p.emailOn ? `We've sent the details to ${d.email}.` : 'Your booking is confirmed. Keep these details handy.') : (m.p.emailOn ? `We'll email ${d.email} once the salon confirms.` : 'The salon will confirm your request soon.')}</p>
-        {!!d.note && <p style={S('margin:8px 0 0;color:#14624A;font-size:14px;font-weight:500')}>{d.note}</p>}
       </div>
       {wide && <DoneActions m={m} />}
       </div>
@@ -463,7 +468,7 @@ function Desktop({ m }: { m: M }) {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 6 8.5 12l6 6" /></svg>
           </button>
           <div>
-            <div style={S('font-size:17px;font-weight:600;letter-spacing:-0.01em')}>{p.name}</div>
+            <a href={'/b/' + p.slug} style={S('display:block;font-size:17px;font-weight:600;letter-spacing:-0.01em;color:#0E1116;text-decoration:none')}>{p.name}</a>
             <div style={S('font-size:13px;color:#5E6673')}>Online booking</div>
           </div>
         </div>
@@ -526,7 +531,7 @@ function Desktop({ m }: { m: M }) {
         </div>
       </>}
 
-      {m.done && <div style={S('width:100%;margin:0;box-sizing:border-box')}><DoneCard m={m} wide /></div>}
+      {m.done && <div style={S('width:100%;margin:0;box-sizing:border-box;display:flex;flex-direction:column;gap:16px')}><DoneNote m={m} /><DoneCard m={m} wide /></div>}
     </div>
   );
 }
@@ -536,7 +541,8 @@ function Mobile({ m }: { m: M }) {
   const o: O = { rowH: 80, rowPad: '14px 16px', dayW: 60, cols: 'repeat(4,minmax(0,1fr))', btnH: 48, mob: true };
   if (m.done) return (
     <div className="bk-flow" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:28px 20px 20px;display:flex;flex-direction:column;gap:20px')}>
-      <div style={S('display:flex;align-items:center;gap:12px')}><span style={S('font-size:17px;font-weight:600')}>{p.name}</span></div>
+      <div style={S('display:flex;align-items:center;gap:12px')}><a href={'/b/' + p.slug} style={S('font-size:17px;font-weight:600;color:#0E1116;text-decoration:none;display:inline-flex;align-items:center;min-height:44px')}>{p.name}</a></div>
+      <DoneNote m={m} />
       <DoneCard m={m} />
     </div>
   );
