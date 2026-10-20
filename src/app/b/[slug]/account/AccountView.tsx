@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
 import { phoneInput } from '@/lib/phone';
 import { clientSignIn, clientSignOut } from '../book/actions';
+import { AcctChip } from '../AcctChip';
 import { changePassword, saveDetails } from './actions';
 
 export type BookingRow = { id: string; date: string; when: string; what: string; who: string; meta: string; price: string; status: string; manage: string | null; again: string | null };
@@ -23,16 +24,6 @@ const label: React.CSSProperties = { fontSize: 14, fontWeight: 600 };
 const field: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 8 };
 const notice: React.CSSProperties = { padding: '6px 14px', borderRadius: 999, background: '#DDF3EA', color: '#14624A', fontSize: 13, fontWeight: 500 };
 const err: React.CSSProperties = { margin: 0, color: '#B42318', fontSize: 13.5, fontWeight: 500 };
-
-function Chip({ slug, name, onSignOut }: { slug: string; name: string; onSignOut: () => void }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, height: 44, boxSizing: 'border-box', padding: '0 6px', border: '1px solid #E1E4E9', borderRadius: 999, background: '#FFFFFF' }}>
-      <span aria-hidden="true" style={{ flex: '0 0 32px', width: 32, height: 32, borderRadius: 999, background: '#0E1116', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12.5, fontWeight: 600 }}>{initialsOf(name)}</span>
-      <Link href={`/b/${slug}/account`} aria-label="Your account" style={{ fontSize: 14, fontWeight: 500, color: '#0E1116', textDecoration: 'none' }}>{name.split(' ')[0]}</Link>
-      <button onClick={onSignOut} style={{ display: 'flex', alignItems: 'center', height: 32, padding: '0 12px', borderRadius: 999, border: 0, background: 'transparent', color: '#5B3DF5', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Sign out</button>
-    </div>
-  );
-}
 
 function SignIn({ slug, salon }: { slug: string; salon: string }) {
   const router = useRouter();
@@ -100,19 +91,26 @@ export function AccountView({ slug, salon, account, upcoming, past }: Props) {
 
   return (
     <div style={page}>
-      <div style={wrap}>
-        <header style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+      <div className="acct-wrap">
+        <header className="only-d" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           <Link href={`/b/${slug}`} style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: '#0E1116', textDecoration: 'none' }}>{salon}</Link>
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
-            <Chip slug={slug} name={saved.name || saved.email} onSignOut={signOut} />
-            <Link href={`/b/${slug}/book`} style={dark}>Book now</Link>
+            <AcctChip slug={slug} name={saved.name || saved.email} />
+            <Link href={`/b/${slug}/book`} style={{ ...dark, padding: '0 22px' }}>Book now</Link>
           </div>
         </header>
+        <header className="only-m" style={{ flexDirection: 'column', gap: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <Link href={`/b/${slug}`} style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: '#0E1116', textDecoration: 'none' }}>{salon}</Link>
+            <Link href={`/b/${slug}/book`} style={{ ...dark, padding: '0 22px' }}>Book now</Link>
+          </div>
+          <AcctChip slug={slug} name={saved.name || saved.email} wide />
+        </header>
         <div><h1 style={{ margin: 0, fontSize: 34, lineHeight: 1.1, fontWeight: 600, letterSpacing: '-0.03em' }}>Your account</h1><p style={{ margin: '6px 0 0', color: '#5E6673', fontSize: 15, overflowWrap: 'anywhere' }}>{saved.name}, {saved.email}</p></div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 24 }}>
-          <div style={{ flex: '999 1 560px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
             <section aria-label="Upcoming appointments" style={card}>
-              <h2 style={{ margin: 0, fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em' }}>Upcoming appointments</h2>
+              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em' }}>Upcoming appointments</h2>
               {upcoming.length ? (
                 <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {upcoming.map((u) => (
@@ -134,7 +132,7 @@ export function AccountView({ slug, salon, account, upcoming, past }: Props) {
               )}
             </section>
             <section aria-label="Past visits" style={card}>
-              <h2 style={{ margin: 0, fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em' }}>Past visits</h2>
+              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em' }}>Past visits</h2>
               {past.length ? (
                 <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
                   {past.map((p) => (
@@ -151,8 +149,8 @@ export function AccountView({ slug, salon, account, upcoming, past }: Props) {
               ) : <p style={{ margin: 0, color: '#5E6673', fontSize: 15 }}>Your past visits will show here.</p>}
             </section>
           </div>
-          <aside style={{ flex: '1 1 360px', maxWidth: 420, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <section aria-label="Your details" style={card}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 24 }}>
+            <section aria-label="Your details" style={{ ...card, flex: '1 1 360px', minWidth: 0 }}>
               <div><h2 style={{ margin: 0, fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em' }}>Your details</h2><p style={{ margin: '4px 0 0', color: '#5E6673', fontSize: 14 }}>We fill these in when you book.</p></div>
               <div style={field}><label htmlFor="ca-name" style={label}>Full name</label><input id="ca-name" type="text" autoComplete="name" value={f.name} onChange={(e) => setField('name', e.target.value)} placeholder="Your name" style={input} /></div>
               <div style={field}><label htmlFor="ca-email" style={label}>Email</label><input id="ca-email" type="email" autoComplete="email" value={f.email} onChange={(e) => setField('email', e.target.value)} placeholder="you@example.com" style={input} /></div>
@@ -163,7 +161,7 @@ export function AccountView({ slug, salon, account, upcoming, past }: Props) {
                 {!!note && <span role="status" style={notice}>{note}</span>}
               </div>
             </section>
-            <section aria-label="Password" style={card}>
+            <section aria-label="Password" style={{ ...card, flex: '1 1 360px', minWidth: 0 }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 <div><h2 style={{ margin: 0, fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em' }}>Password</h2><p style={{ margin: '4px 0 0', color: '#5E6673', fontSize: 14 }}>Use at least 8 characters.</p></div>
                 {!pwOpen && <button onClick={() => { setPwOpen(true); setPwNote(''); }} style={{ ...light, padding: '0 20px' }}>Change password</button>}
@@ -173,14 +171,13 @@ export function AccountView({ slug, salon, account, upcoming, past }: Props) {
                 {pwInput('ca-pw2', 'Confirm new password', pw2, setPw2, 'Type it again')}
                 {!!pwError && <p role="alert" style={err}>{pwError}</p>}
                 <div style={{ display: 'flex', gap: 10 }}>
-                  <button onClick={savePw} disabled={busy} style={{ ...dark, flex: '1 1 0', height: 48, fontSize: 14.5 }}>Update password</button>
+                  <button onClick={savePw} disabled={busy} style={{ ...dark, flex: '1 1 0', height: 48, fontSize: 14.5 }}>Update</button>
                   <button onClick={() => { setPwOpen(false); setPw(''); setPw2(''); setPwError(''); }} style={{ ...light, flex: '1 1 0', height: 48, fontSize: 14.5 }}>Cancel</button>
                 </div>
               </>)}
               {!!pwNote && <span role="status" style={{ ...notice, alignSelf: 'flex-start' }}>{pwNote}</span>}
             </section>
-            <button onClick={signOut} style={{ ...light, height: 48, fontSize: 14.5 }}>Sign out</button>
-          </aside>
+          </div>
         </div>
       </div>
     </div>

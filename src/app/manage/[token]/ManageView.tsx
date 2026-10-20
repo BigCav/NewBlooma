@@ -202,7 +202,7 @@ function Desktop({ m }: { m: M }) {
               <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Manage your appointment</h2>
               <p style={S('margin:0;color:#5E6673;font-size:14px')}>{m.policyLine}</p>
               <button onClick={m.openResched} style={S(BTN_D)}>Reschedule</button>
-              <button className="ghost" onClick={m.openCancel} style={S(BTN_G)}>Cancel appointment</button>
+              <button className="ghost" onClick={m.openCancel} style={S(BTN_G)}>Cancel</button>
             </div>}
             {m.mode === 'resched' && <div style={S(ASIDE_CARD)}>
               <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Your change</h2>
@@ -243,7 +243,7 @@ function Mobile({ m }: { m: M }) {
             <p style={S('margin:0;color:#5E6673;font-size:13.5px')}>{m.policyLine}</p>
             <div style={S('display:flex;gap:10px')}>
               <button onClick={m.openResched} style={S(half + 'border:0;background:#0E1116;color:#FFFFFF')}>Reschedule</button>
-              <button className="ghost" onClick={m.openCancel} style={S(half + 'border:1px solid #E1E4E9;background:#FFFFFF;color:#0E1116')}>Cancel appointment</button>
+              <button className="ghost" onClick={m.openCancel} style={S(half + 'border:1px solid #E1E4E9;background:#FFFFFF;color:#0E1116')}>Cancel</button>
             </div>
           </>}
         </div>

@@ -58,9 +58,9 @@ function useBooking(p: Props) {
   const [savePw, setSavePw] = useState('');
   const [sel, setSel] = useState<string[]>(p.preselect ? [p.preselect] : []);
   const [cat, setCat] = useState('All');
-  const [nextAt, setNextAt] = useState<string | null>(null);
-  useEffect(() => { let live = true; nextAvailable(p.slug, sel).then((l) => { if (live) setNextAt(l); }).catch(() => { if (live) setNextAt(null); }); return () => { live = false; }; }, [p.slug, sel]);
   const [staff, setStaff] = useState('');
+  const [nextAt, setNextAt] = useState<string | null>(null);
+  useEffect(() => { let live = true; nextAvailable(p.slug, sel, staff && staff !== 'any' ? staff : undefined).then((l) => { if (live) setNextAt(l); }).catch(() => { if (live) setNextAt(null); }); return () => { live = false; }; }, [p.slug, sel, staff]);
   const [day, setDay] = useState(0);
   const [slot, setSlot] = useState('');
   const [slotMin, setSlotMin] = useState<number | null>(null);
@@ -267,6 +267,7 @@ function Steps({ m, o }: { m: M; o: O }) {
       </div>
     )}
 
+    {m.step === 2 && m.sel.length > 0 && !!m.nextAt && <div role="status" style={S('display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;margin-bottom:16px;border-radius:16px;background:#DDF3EA;color:#14624A;padding:12px 16px;font-size:14px;font-weight:500')}><span style={S('flex:0 0 8px;width:8px;height:8px;border-radius:999px;background:#14624A')}></span>{(m.staff && m.staff !== 'any' ? 'Next available with ' + (p.team.find((x) => x.id === m.staff)?.name.split(' ')[0] ?? 'them') : 'Next available') + ': ' + m.nextAt}</div>}
     {m.step === 2 && (
       <ul className="bk-flow bk-list" style={S('margin:0;padding:0;list-style:none;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;overflow:hidden')}>
         {[{ id: 'any', name: 'Any professional', role: 'Best available time', svc: null as string[] | null }, ...p.team].map((t) => {
@@ -360,8 +361,6 @@ function Steps({ m, o }: { m: M; o: O }) {
           <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:14px 16px;border-radius:16px;background:#F4F5F7')}>
             <span aria-hidden="true" style={S('flex:0 0 44px;width:44px;height:44px;border-radius:999px;background:#0E1116;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600')}>{initialsOf(m.acct.name || m.acct.email)}</span>
             <div style={S('flex:1 1 140px;min-width:0')}><div style={S('font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{m.acct.name || m.acct.email}</div><div style={S('font-size:13px;color:#5E6673;overflow-wrap:anywhere')}>{m.acct.email}</div></div>
-            <a href={'/b/' + p.slug + '/account'} style={S('flex:0 0 auto;display:inline-flex;align-items:center;min-height:44px;padding:0 6px;color:#0E1116;font-size:13.5px;font-weight:600;text-decoration:none')}>Your account</a>
-            <button className="ghost" onClick={m.signOutNow} style={S('flex:0 0 auto;min-height:44px;padding:0 14px;border:0;border-radius:999px;background:transparent;color:#5B3DF5;font-size:13.5px;font-weight:600')}>Not you? Sign out</button>
           </div>
         )}
         {m.acct && !m.acct.name && (

@@ -26,7 +26,7 @@ export async function getPublicSalon(slug: string) {
 }
 
 /** Earliest open online time ("Today, 2:30pm") for the given services, or the quickest services on the menu when none are chosen. Past times, booked times and the notice window are already excluded by available_slots. */
-export async function nextAvailableLabel(salonId: string, tz: string, serviceIds: string[] = []): Promise<string | null> {
+export async function nextAvailableLabel(salonId: string, tz: string, serviceIds: string[] = [], staffId?: string): Promise<string | null> {
   const sb = supabaseAdmin();
   let sets: string[][] = serviceIds.length ? [serviceIds] : [];
   if (!sets.length) {
@@ -38,7 +38,7 @@ export async function nextAvailableLabel(salonId: string, tz: string, serviceIds
   const from = ymd(now), to = ymd(new Date(now.getTime() + 56 * 864e5));
   let best: Date | null = null;
   for (const ids of sets) {
-    const { data } = await sb.rpc('available_slots', { p_salon: salonId, p_service_ids: ids, p_staff: null, p_from: from, p_to: to, p_mode: 'public' });
+    const { data } = await sb.rpc('available_slots', { p_salon: salonId, p_service_ids: ids, p_staff: staffId ?? null, p_from: from, p_to: to, p_mode: 'public' });
     const first = (data ?? [])[0]?.starts_at;
     if (first && (!best || new Date(first) < best)) best = new Date(first);
   }

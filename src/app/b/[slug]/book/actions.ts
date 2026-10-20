@@ -23,10 +23,10 @@ export async function publicSlots(slug: string, date: string, serviceIds: string
 }
 
 /** Next open online time for the chosen services (or the quickest on the menu), for the banner on the first step. */
-export async function nextAvailable(slug: string, serviceIds: string[]): Promise<string | null> {
+export async function nextAvailable(slug: string, serviceIds: string[], staffId?: string): Promise<string | null> {
   const { data: salon } = await supabaseAdmin().from('salons').select('id,timezone').eq('slug', slug).maybeSingle();
   if (!salon) return null;
-  return nextAvailableLabel(salon.id, salon.timezone, serviceIds).catch(() => null);
+  return nextAvailableLabel(salon.id, salon.timezone, serviceIds, staffId).catch(() => null);
 }
 
 export type BookInput = { services: string[]; slot: string; name: string; email: string; phone: string; notes: string; website: string; password?: string };
