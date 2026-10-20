@@ -180,7 +180,6 @@ function Desktop({ c }: { c: C }) {
   return (
     <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 8px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <PageHeader title="Team" subtitle="Who works when, and what they offer" query={c.query} onQuery={c.setQuery} placeholder="Search team" actionLabel="New team member" onAction={c.startNew} />
-      <div><Link className="ghost" href="/payroll" style={S('height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;padding:0 20px;display:inline-flex;align-items:center;text-decoration:none;box-sizing:border-box;')}>Timesheets and commission</Link></div>
       <section aria-label="Team at a glance" style={S('display:flex;flex-wrap:wrap;gap:20px 64px')}>
         {stat('Team members', c.items.length)}{stat('Working today', c.items.filter((m) => m.todayOn).length)}{stat('Bookable online', c.items.filter((m) => m.online).length)}
       </section>
@@ -237,7 +236,6 @@ function Mobile({ c }: { c: C }) {
     <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <MobileHeader title="Team" subtitle="Who works when, and what they offer" query={c.query} onQuery={c.setQuery} placeholder="Search team" />
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:20px')}>
-        <div><Link className="ghost" href="/payroll" style={S('height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;padding:0 20px;display:inline-flex;align-items:center;text-decoration:none;box-sizing:border-box;justify-content:center;width:100%;')}>Timesheets and commission</Link></div>
         <section aria-label="Team at a glance" style={S('display:flex;gap:40px')}>{stat('Team members', c.items.length)}{stat('Working today', c.items.filter((m) => m.todayOn).length)}</section>
         <button onClick={c.startNew} style={S('display:flex;align-items:center;justify-content:center;gap:8px;height:48px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500')}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>

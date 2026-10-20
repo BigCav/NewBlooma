@@ -48,7 +48,7 @@ type C = ReturnType<typeof usePayroll>;
 const pct = (n: number) => (Math.round(n * 10) / 10) + '%';
 const CELL = { done: 'background:#EEF0F3;color:#0E1116;font-weight:500', today: 'background:#ECE8FF;color:#3B2BB5;font-weight:600', plan: 'background:#F4F5F7;color:#8A93A0' };
 
-function Body({ c, m }: { c: C; m: boolean }) {
+function Controls({ c, m }: { c: C; m: boolean }) {
   const tabs: [('time' | 'comm'), string][] = c.owner ? [['time', 'Timesheets'], ['comm', 'Commission']] : [['time', 'Timesheets']];
   const pad = m ? 18 : 24;
   const hoursText = (Math.round(c.hoursTotal * 10) / 10) + 'h';
@@ -67,6 +67,12 @@ function Body({ c, m }: { c: C; m: boolean }) {
       <div><div style={S('color:#5E6673;font-size:13px')}>Hours worked</div><div style={S('font-size:26px;font-weight:600;letter-spacing:-0.03em')}>{hoursText}</div></div>
       {c.owner && <div><div style={S('color:#5E6673;font-size:13px')}>Team payout</div><div style={S('font-size:26px;font-weight:600;letter-spacing:-0.03em')}>{dollars0(c.pay)}</div></div>}
     </div>
+  </>);
+}
+
+function Cards({ c, m }: { c: C; m: boolean }) {
+  const pad = m ? 18 : 24;
+  return (<>
     {c.rows.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No team members yet.</p>}
     {c.tab === 'time' && c.rows.map((p) => (
       <article key={p.id} style={S(`box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:${pad}px;display:flex;flex-direction:column;gap:14px`)}>
@@ -101,7 +107,10 @@ function Desktop({ c }: { c: C }) {
   return (
     <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 48px 8px;display:flex;flex-direction:column;gap:24px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <PageHeader title="Payroll" subtitle="Timesheets and commission" showSearch={false} showAction={false} />
-      <div style={S('width:100%;max-width:820px;display:flex;flex-direction:column;gap:16px')}><Body c={c} m={false} /></div>
+      <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
+        <section aria-label="Team" style={S('flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:16px')}><Cards c={c} m={false} /></section>
+        <aside aria-label="Pay period" style={S('flex:1 1 440px;max-width:520px;min-width:0;display:flex;flex-direction:column;gap:16px')}><Controls c={c} m={false} /></aside>
+      </div>
     </div>
   );
 }
@@ -109,7 +118,7 @@ function Mobile({ c }: { c: C }) {
   return (
     <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <MobileHeader title="Payroll" subtitle="Timesheets and commission" showSearch={false} />
-      <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:16px')}><Body c={c} m={true} /></main>
+      <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:16px')}><Controls c={c} m={true} /><Cards c={c} m={true} /></main>
       <MobileTabs active="more" />
     </div>
   );
