@@ -107,38 +107,42 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
 
         <section aria-label="Schedule" style={S('flex:999 1 620px;min-width:0;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;overflow:hidden')}>
 
-          <div style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid #E6E8EC')}>
-            <div style={S('display:flex;align-items:center;gap:8px')}>
+          <div style={S('border-bottom:1px solid #E6E8EC;padding:16px 20px 14px;display:flex;flex-direction:column;gap:12px')}>
+            <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:12px')}>
+            <div style={S('display:flex;align-items:center;gap:8px;flex:1 1 220px;min-width:0')}>
               <button className="ghost" onClick={() => stepDay(-1)} aria-label={view === 'week' ? 'Previous week' : 'Previous day'} style={S('width:40px;height:40px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center')}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 6 8.5 12l6 6" /></svg>
               </button>
               <button className="ghost" onClick={() => stepDay(1)} aria-label={view === 'week' ? 'Next week' : 'Next day'} style={S('width:40px;height:40px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center')}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 6l6 6-6 6" /></svg>
               </button>
-              <span style={S('margin-left:8px;font-size:16px;font-weight:600;letter-spacing:-0.01em')}>{view === 'week' ? wkRange : di.short}</span>
+              <span style={S('margin-left:8px;font-size:16px;font-weight:600;letter-spacing:-0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{view === 'week' ? wkRange : di.short}</span>
               {dayClosed && <span style={S('color:#5E6673;font-size:13.5px')}>Closed</span>}
             </div>
-            <div style={S('display:flex;gap:8px')}>
-              <button onClick={openWalkin} style={S('height:40px;padding:0 16px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:13.5px;font-weight:500')}>Walk-in</button>
-              <button className="ghost" onClick={openBlockForm} style={S('height:40px;padding:0 16px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:13.5px;font-weight:500')}>Block time</button>
-            </div>
-            <div role="group" aria-label="Calendar view" style={S('display:flex;gap:2px;padding:3px;border-radius:999px;background:#F4F5F7')}>
+              <div style={S('display:flex;align-items:center;gap:8px;flex:0 0 auto;margin-left:auto')}>
+              <div role="group" aria-label="Calendar view" style={S('display:flex;gap:2px;padding:3px;border-radius:999px;background:#F4F5F7')}>
               {([['day', 'Day'], ['week', 'Week']] as const).map(([v, l]) => (
                 <button key={v} onClick={() => { if (v === 'week' && staffSel === 'all') setStaffSel(team[0]?.id ?? 'all'); setMode('view'); setError(''); go(day, v); }} aria-pressed={view === v}
                   style={S('height:34px;padding:0 16px;border:0;border-radius:999px;font-size:13.5px;font-weight:500;background:' + (view === v ? '#0E1116' : 'transparent') + ';color:' + (view === v ? '#FFFFFF' : '#0E1116'))}>{l}</button>
               ))}
             </div>
-            <div role="group" aria-label="Filter by team member" style={S('display:flex;flex-wrap:wrap;gap:8px')}>
+            <div style={S('display:flex;gap:8px')}>
+              <button onClick={openWalkin} style={S('height:40px;padding:0 16px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:13.5px;font-weight:500')}>Walk-in</button>
+              <button className="ghost" onClick={openBlockForm} style={S('height:40px;padding:0 16px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:13.5px;font-weight:500')}>Block time</button>
+            </div>
+              </div>
+            </div>
+            <div role="group" aria-label="Filter by team member" className="hscroll" style={S('display:flex;gap:8px;overflow-x:auto;padding-bottom:2px')}>
               {(view === 'week' ? [] : [{ id: 'all', label: 'Whole team' }]).concat(team.map((x) => ({ id: x.id, label: first(x.name) }))).map((ch) => {
                 const on = (view === 'week' ? wkStaff : staffSel) === ch.id;
-                return <button key={ch.id} onClick={() => setStaffSel(ch.id)} aria-pressed={on} style={S('height:40px;padding:0 16px;border-radius:999px;font-size:13.5px;font-weight:500;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116'))}>{ch.label}</button>;
+                return <button key={ch.id} onClick={() => setStaffSel(ch.id)} aria-pressed={on} style={S('flex:0 0 auto;height:40px;padding:0 16px;border-radius:999px;font-size:13.5px;font-weight:500;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116'))}>{ch.label}</button>;
               })}
             </div>
           </div>
 
           {view === 'day' && (
             <div style={S('overflow-x:auto')}>
-              <div style={S('min-width:760px')}>
+              <div style={S('min-width:' + Math.max(760, 68 + cols.length * 170) + 'px')}>
                 <div style={S('display:flex;border-bottom:1px solid #E6E8EC')}>
                   <div style={S('flex:0 0 68px')} />
                   {cols.map((m) => (
