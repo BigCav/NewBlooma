@@ -50,7 +50,11 @@ function SignIn({ slug, salon }: { slug: string; salon: string }) {
   );
 }
 
-export function AccountView({ slug, salon, account, upcoming, past }: Props) {
+export function AccountView(props: Props) {
+  return <AccountInner key={props.account?.email ?? 'signed-out'} {...props} />;
+}
+
+function AccountInner({ slug, salon, account, upcoming, past }: Props) {
   const router = useRouter();
   const [saved, setSaved] = useState<Acct>(account ?? { name: '', email: '', phone: '' });
   const [f, setF] = useState<Acct>(saved);
@@ -112,15 +116,17 @@ export function AccountView({ slug, salon, account, upcoming, past }: Props) {
             <section aria-label="Upcoming appointments" style={card}>
               <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em' }}>Upcoming appointments</h2>
               {upcoming.length ? (
-                <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <ul className="hscroll" style={{ margin: '0 -24px', padding: '0 24px 4px', listStyle: 'none', display: 'flex', gap: 12, overflowX: 'auto', scrollSnapType: 'x proximity' }}>
                   {upcoming.map((u) => (
-                    <li key={u.id} style={{ borderRadius: 20, background: '#F4F5F7', padding: 18, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '12px 16px' }}>
-                      <span style={{ flex: '1 1 220px', minWidth: 0 }}>
+                    <li key={u.id} style={{ flex: '0 0 min(320px, 84%)', minWidth: 0, scrollSnapAlign: 'start', boxSizing: 'border-box', borderRadius: 20, background: '#F4F5F7', padding: 18, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 14 }}>
+                      <span style={{ minWidth: 0 }}>
                         <span style={{ display: 'block', fontSize: 17, fontWeight: 600, letterSpacing: '-0.01em' }}>{u.when}</span>
                         <span style={{ display: 'block', marginTop: 4, fontSize: 14.5, overflowWrap: 'anywhere' }}>{u.what}{u.who ? ` with ${u.who}` : ''}</span>
                         <span style={{ display: 'block', marginTop: 2, color: '#5E6673', fontSize: 13 }}>{u.meta}, pay at the salon{u.status === 'Awaiting confirmation' ? ', awaiting confirmation' : ''}</span>
                       </span>
-                      {u.manage && <Link href={u.manage} aria-label={`Change or cancel ${u.what} on ${u.when}`} style={{ ...dark, flex: '0 0 auto', padding: '0 20px' }}>Change or cancel</Link>}
+                      {u.manage
+                        ? <Link href={u.manage} aria-label={`Change or cancel ${u.what} on ${u.when}`} style={{ ...dark, width: '100%', padding: '0 20px' }}>Change or cancel</Link>
+                        : <span style={{ alignSelf: 'flex-start', padding: '6px 14px', borderRadius: 999, background: '#ECE8FF', color: '#3B2BB5', fontSize: 13, fontWeight: 500 }}>{u.status === 'In progress' ? 'In progress, check in done' : u.status}</span>}
                     </li>
                   ))}
                 </ul>

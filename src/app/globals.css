@@ -70,3 +70,8 @@ table{width:100%;border-collapse:collapse}th{font-size:12px;text-transform:upper
 /* Customer account page: same width, padding and gap as the salon page */
 .acct-wrap{max-width:1180px;margin:0 auto;box-sizing:border-box;padding:24px 32px 56px;display:flex;flex-direction:column;gap:32px}
 @media (max-width:900px){.acct-wrap{padding:24px 20px 24px;gap:20px}}
+
+/* No blue tap flash or accidental text selection when tapping or long-pressing links and buttons */
+*{-webkit-tap-highlight-color:transparent}
+a,a *,button,button *,summary,[role="button"],[role="tab"],[role="switch"],[role="option"]{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+input,textarea,select{-webkit-user-select:text;user-select:text}

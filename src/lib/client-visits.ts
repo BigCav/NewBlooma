@@ -18,6 +18,8 @@ export async function loadClientVisits(salon: { id: string; timezone: string; cu
     : { data: [] as any[] };
   const now = new Date();
   const live = (bks ?? []).filter((b: any) => ['pending', 'confirmed'].includes(b.status) && new Date(b.starts_at) > now);
+  // Once the salon has checked a client in, the visit stays on the list but can no longer be changed or cancelled.
+  const inProgress = (bks ?? []).filter((b: any) => ['checked_in', 'in_progress'].includes(b.status));
   // Each upcoming booking links to the same manage page the emails use; make a link if an older booking has none.
   const tokens = new Map<string, string>();
   if (live.length) {
@@ -41,5 +43,5 @@ export async function loadClientVisits(salon: { id: string; timezone: string; cu
       manage: liveIds.has(b.id) && tokens.get(b.id) ? `/manage/${tokens.get(b.id)}` : null, again: (b.booking_services as any[]).find((x) => x.service_id)?.service_id ?? null,
     };
   };
-  return { upcoming: live.slice().reverse().map(toRow), past: (bks ?? []).filter((b: any) => b.status === 'completed').slice(0, 12).map(toRow) };
+  return { upcoming: [...inProgress.slice().reverse(), ...live.slice().reverse()].map(toRow), past: (bks ?? []).filter((b: any) => b.status === 'completed').slice(0, 12).map(toRow) };
 }
