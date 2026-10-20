@@ -75,3 +75,4 @@ table{width:100%;border-collapse:collapse}th{font-size:12px;text-transform:upper
 *{-webkit-tap-highlight-color:transparent}
 a,a *,button,button *,summary,[role="button"],[role="tab"],[role="switch"],[role="option"]{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 input,textarea,select{-webkit-user-select:text;user-select:text}
+.d-cal .hscroll.tb-chips{padding-bottom:0 !important}

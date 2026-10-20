@@ -132,7 +132,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
             </div>
               </div>
             </div>
-            <div role="group" aria-label="Filter by team member" className="hscroll" style={S('display:flex;gap:8px;overflow-x:auto')}>
+            <div role="group" aria-label="Filter by team member" className="hscroll tb-chips" style={S('display:flex;gap:8px;overflow-x:auto')}>
               {(view === 'week' ? [] : [{ id: 'all', label: 'Whole team' }]).concat(team.map((x) => ({ id: x.id, label: first(x.name) }))).map((ch) => {
                 const on = (view === 'week' ? wkStaff : staffSel) === ch.id;
                 return <button key={ch.id} onClick={() => setStaffSel(ch.id)} aria-pressed={on} style={S('flex:0 0 auto;height:40px;padding:0 16px;border-radius:999px;font-size:13.5px;font-weight:500;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116'))}>{ch.label}</button>;
