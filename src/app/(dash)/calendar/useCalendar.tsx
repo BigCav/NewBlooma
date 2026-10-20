@@ -169,7 +169,13 @@ export function useCalendar(props: Props) {
 
   /* ---------- edit booking ---------- */
   const svcMap = new Map(services.map((s) => [s.id, s]));
-  const offered = (sid: string, staffId: string) => (offers[sid] ?? []).includes(staffId);
+  // An add-on is done by whoever does its main service, so it follows the main services rather than having its own team list.
+  const offered = (sid: string, staffId: string) => { const sv = svcMap.get(sid); return sv?.addon ? (sv.parents ?? []).some((pid) => (offers[pid] ?? []).includes(staffId)) : (offers[sid] ?? []).includes(staffId); };
+  const hasProvider = (sid: string) => { const sv = svcMap.get(sid); return sv?.addon ? (sv.parents ?? []).some((pid) => (offers[pid] ?? []).length > 0) : (offers[sid] ?? []).length > 0; };
+  /** Why a service cannot be picked right now (empty when it can). */
+  const lockFor = (chosen: string[]) => (x: CalService) => x.addon
+    ? ((x.parents ?? []).some((pid) => chosen.includes(pid)) ? '' : 'add-on, choose its main service first')
+    : (hasProvider(x.id) ? '' : 'no one offers this yet');
   const editPlan = () => {
     if (!cur) return null;
     const hrs = hrsOf(cur.dayYmd), close = hrs?.open ? hrs.to : 24 * 60, openAt = hrs?.open ? hrs.from : 0;
@@ -311,7 +317,8 @@ export function useCalendar(props: Props) {
   // A team member is available to pick if they offer any chosen service, so the order the services were chosen in does not matter.
   const nOffers = (sid: string) => !nf.services.length || nf.services.some((id) => offered(id, sid));
   const nPickSvc = (id: string) => {
-    const ids = nf.services.includes(id) ? nf.services.filter((i) => i !== id) : [...nf.services, id];
+    let ids = nf.services.includes(id) ? nf.services.filter((i) => i !== id) : [...nf.services, id];
+    ids = ids.filter((i) => { const sv = svcMap.get(i); return !sv?.addon || (sv.parents ?? []).some((p) => ids.includes(p)); });
     const f0 = svcMap.get(ids[0]);
     let staff = nf.staff;
     if (staff && ids.length && !ids.some((i) => offered(i, staff))) staff = '';
@@ -384,5 +391,6 @@ export function useCalendar(props: Props) {
     return { d, hrs, rows, shown: isOpen ? rows : rows.slice(0, limit), util, isOpen, limit, summary: !hrs?.open ? 'Closed' : bk.length + ' appointments, ' + usd(revenue) };
   }) : [];
 
-  return { HOUR_PX, act, activeCards, addWalkin, amap, av, avail, availKey, backToView, bf, bfDur, blank, blockId, blockRows, blocks, bookings, busy, bvB, cards, cfg, charge, chk, close, co, coMath, createNew, cur, day, dayB, dayHrs, days14, di, doneBk, ed, editPlan, error, firstOpenDay, gEnd, gHours, gStart, go, hasError, hours, hrsOf, later, laterBk, minutesFromIso, mode, moveBooking, nFirstSvc, nKeyStr, nKeys, nOffers, nPickSvc, nPlan, nSlots, nWhy, nf, notice, now, nowTop, offered, offers, open, openBlock, openBooking, openDays, openNew, pageSubtitle, pageTitle, pendingSel, plan, primary, query, reason, refresh, router, row, rs, saveBlock, saveEdit, searchOpen, seg, sel, selId, services, setAmap, setAvail, setBf, setBlockId, setCo, setEd, setError, setMode, setNf, setNotice, setNow, setOpen, setPendingSel, setPlan, setQuery, setRs, setSearchOpen, setSelId, setSres, setStaffSel, setWi, setWkOpen, slotsFor, sq, sres, staffName, staffSel, startCheckout, startResched, startT, statCount, statRevenue, statNext, strip, svcMap, team, today, todayList, tz, upcoming, view, viewEvents, vm, weekDays, wi, wiPlanText, wiPlanCss, wiSvc, wkCards, wkOpen, wkRange, wkStaff, wkTitle, ws };
+  const nLock = lockFor(nf.services), edLock = lockFor(ed.ids);
+  return { nLock, edLock, lockFor, HOUR_PX, act, activeCards, addWalkin, amap, av, avail, availKey, backToView, bf, bfDur, blank, blockId, blockRows, blocks, bookings, busy, bvB, cards, cfg, charge, chk, close, co, coMath, createNew, cur, day, dayB, dayHrs, days14, di, doneBk, ed, editPlan, error, firstOpenDay, gEnd, gHours, gStart, go, hasError, hours, hrsOf, later, laterBk, minutesFromIso, mode, moveBooking, nFirstSvc, nKeyStr, nKeys, nOffers, nPickSvc, nPlan, nSlots, nWhy, nf, notice, now, nowTop, offered, offers, open, openBlock, openBooking, openDays, openNew, pageSubtitle, pageTitle, pendingSel, plan, primary, query, reason, refresh, router, row, rs, saveBlock, saveEdit, searchOpen, seg, sel, selId, services, setAmap, setAvail, setBf, setBlockId, setCo, setEd, setError, setMode, setNf, setNotice, setNow, setOpen, setPendingSel, setPlan, setQuery, setRs, setSearchOpen, setSelId, setSres, setStaffSel, setWi, setWkOpen, slotsFor, sq, sres, staffName, staffSel, startCheckout, startResched, startT, statCount, statRevenue, statNext, strip, svcMap, team, today, todayList, tz, upcoming, view, viewEvents, vm, weekDays, wi, wiPlanText, wiPlanCss, wiSvc, wkCards, wkOpen, wkRange, wkStaff, wkTitle, ws };
 }

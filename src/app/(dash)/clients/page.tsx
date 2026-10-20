@@ -11,16 +11,17 @@ export const dynamic = 'force-dynamic';
 export default async function Clients() {
   const ctx = await requireCtx();
   const { sb, salon } = ctx;
-  const [ov, { data: team }, { data: oh }, { data: svc }, { data: ss }] = await Promise.all([
+  const [ov, { data: team }, { data: oh }, { data: svc }, { data: ss }, { data: sa }] = await Promise.all([
     loadOverview(ctx),
     sb.from('staff').select('id,name,role_title').eq('active', true).order('name'),
     sb.from('opening_hours').select('*'),
-    sb.from('services').select('id,name,duration_min,price_cents,service_categories(name)').eq('active', true).order('name'),
+    sb.from('services').select('id,name,duration_min,price_cents,is_addon,service_categories(name)').eq('active', true).order('name'),
     sb.from('service_staff').select('service_id,staff_id'),
+    sb.from('service_addons').select('addon_id,service_id'),
   ]);
   const mm = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
   const hours: CalHours[] = Array.from({ length: 7 }, (_, wd) => { const r = (oh ?? []).find((h) => h.weekday === wd); return { wd, open: !!r?.is_open, from: r?.is_open ? mm(r.open_time) : 8 * 60, to: r?.is_open ? mm(r.close_time) : 18 * 60 }; });
-  const services: CalService[] = (svc ?? []).map((s: any) => ({ id: s.id, name: s.name, dur: s.duration_min, priceCents: s.price_cents, cat: s.service_categories?.name ?? 'Services' }));
+  const services: CalService[] = (svc ?? []).map((s: any) => ({ id: s.id, name: s.name, dur: s.duration_min, priceCents: s.price_cents, cat: s.service_categories?.name ?? 'Services', addon: !!s.is_addon, parents: (sa ?? []).filter((l: any) => l.addon_id === s.id).map((l: any) => l.service_id) }));
   const offers: Record<string, string[]> = {}; for (const r of ss ?? []) (offers[r.service_id] ??= []).push(r.staff_id);
   return (
     <ClientsView

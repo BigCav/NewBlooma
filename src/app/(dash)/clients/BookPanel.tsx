@@ -17,7 +17,10 @@ export function BookPanel({ data, client, mobile, onBooked, onCancel }: { data: 
   const today = data.today;
   const hrsOf = (d: string) => hours[dayInfo(d).wd];
   const svcMap = useMemo(() => new Map(services.map((s) => [s.id, s])), [services]);
-  const offered = (sid: string, staffId: string) => (offers[sid] ?? []).includes(staffId);
+  const offered = (sid: string, staffId: string) => { const sv = svcMap.get(sid); return sv?.addon ? (sv.parents ?? []).some((pid) => (offers[pid] ?? []).includes(staffId)) : (offers[sid] ?? []).includes(staffId); };
+  const lock = (x: CalService) => x.addon
+    ? ((x.parents ?? []).some((pid) => b.services.includes(pid)) ? '' : 'add-on, choose its main service first')
+    : ((offers[x.id] ?? []).length ? '' : 'no one offers this yet');
   const staffName = (id: string) => team.find((t) => t.id === id)?.name ?? '';
   const firstOpen = () => { for (let i = 0; i < 14; i++) { const d = addDaysYmd(today, i); if (hrsOf(d)?.open) return d; } return today; };
   const [b, setB] = useState({ services: [] as string[], staff: '', day: firstOpen(), time: null as number | null });
@@ -59,7 +62,8 @@ export function BookPanel({ data, client, mobile, onBooked, onCancel }: { data: 
   })();
   const firstSvc = svcMap.get(b.services[0]);
   const pick = (id: string) => {
-    const ids = b.services.includes(id) ? b.services.filter((i) => i !== id) : [...b.services, id];
+    let ids = b.services.includes(id) ? b.services.filter((i) => i !== id) : [...b.services, id];
+    ids = ids.filter((i) => { const sv = svcMap.get(i); return !sv?.addon || (sv.parents ?? []).some((p) => ids.includes(p)); });
     const f0 = svcMap.get(ids[0]);
     let staff = b.staff;
     if (staff && ids.length && !ids.some((i) => offered(i, staff))) staff = '';
@@ -91,7 +95,7 @@ export function BookPanel({ data, client, mobile, onBooked, onCancel }: { data: 
     <div style={S('display:flex;flex-direction:column;gap:18px')}>
       <div><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em;overflow-wrap:anywhere')}>Book {client.first}</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>{summary}</p></div>
       <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="bk-service-label" style={S('font-size:14px;font-weight:600')}>Service</span>
-        <ServicePicker services={services} selected={b.services} initialCat={firstSvc?.cat} chipHeight={h} onPick={pick} note={(x) => (b.staff && !offered(x.id, b.staff) ? ((offers[x.id] ?? [])[0] ? 'separate booking with ' + staffName(offers[x.id][0]).split(' ')[0] : 'no one offers this') : '')} /></div>
+        <ServicePicker lock={lock} services={services} selected={b.services} initialCat={firstSvc?.cat} chipHeight={h} onPick={pick} note={(x) => (b.staff && !offered(x.id, b.staff) ? ((offers[x.id] ?? [])[0] ? 'separate booking with ' + staffName(offers[x.id][0]).split(' ')[0] : 'no one offers this') : '')} /></div>
       <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="bk-team-label" style={S('font-size:14px;font-weight:600')}>Team member</span>
         <TeamPicker team={team} selected={b.staff} offers={(sid) => !b.services.length || b.services.some((id) => offered(id, sid))} onPick={(id) => { setB({ ...b, staff: id, time: null }); setError(''); }} /></div>
       <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="bk-day-label" style={S('font-size:14px;font-weight:600')}>Day</span>
