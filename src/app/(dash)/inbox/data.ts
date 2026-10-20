@@ -38,7 +38,7 @@ export async function loadInbox(ctx: Pick<Ctx, 'sb' | 'salon'>): Promise<InboxIt
     const staffFull = b?.staff?.name ?? '', staffFirst = staffFull.split(' ')[0];
     const when = b ? `${dayLabel(b.starts_at, tz, today)}, ${fmtClock(b.starts_at, tz)}` : '';
     const range = b ? `${when} to ${fmtClock(b.ends_at, tz)}` : '';
-    const price = '$' + (cents / 100).toFixed(cents % 100 ? 2 : 0);
+    const price = '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: cents % 100 ? 2 : 0, maximumFractionDigits: 2 });
     const svcDur = `${svc}, ${dur(mins)}`;
     const status: ItemStatus = i.status === 'new' ? 'new' : i.status === 'declined' ? 'declined' : type === 'request' ? 'accepted' : 'done';
     let summary = '', rows: [string, string][] = [], note = '';

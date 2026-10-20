@@ -89,7 +89,7 @@ export function BookPanel({ data, client, mobile, onBooked, onCancel }: { data: 
   const slotCss = (on: boolean, w: boolean) => 'width:100%;height:44px;padding:0;border-radius:14px;font-size:14px;font-weight:500;font-family:inherit;border:1px solid ' + (on ? '#0E1116' : (w ? '#EEF0F3' : '#E1E4E9')) + ';background:' + (on ? '#0E1116' : (w ? '#F4F5F7' : '#FFFFFF')) + ';color:' + (on ? '#FFFFFF' : (w ? '#8A93A0' : '#0E1116')) + (w ? ';text-decoration:line-through;cursor:default' : '');
   const BTN = 'flex:1 1 0;height:' + bh + 'px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500';
   const BTN2 = 'flex:1 1 0;height:' + bh + 'px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500';
-  const summary = p.sel.length ? p.sel.map((x) => x.name).join(' + ') + ', ' + p.mins + ' min, $' + p.priceC / 100 + (b.time !== null && !why(b.time) ? ', ' + dayInfo(b.day).short + ' ' + fmtMin(b.time) + ' to ' + fmtMin(b.time + p.dur) : '') : 'Choose a service to see its length and price.';
+  const summary = p.sel.length ? p.sel.map((x) => x.name).join(' + ') + ', ' + p.mins + ' min, $' + (p.priceC / 100).toLocaleString('en-US') + (b.time !== null && !why(b.time) ? ', ' + dayInfo(b.day).short + ' ' + fmtMin(b.time) + ' to ' + fmtMin(b.time + p.dur) : '') : 'Choose a service to see its length and price.';
 
   return (
     <div style={S('display:flex;flex-direction:column;gap:18px')}>

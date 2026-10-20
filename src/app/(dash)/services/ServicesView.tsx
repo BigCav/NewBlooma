@@ -6,6 +6,7 @@ import { useEffect, useState, useTransition } from 'react';
 import { toneFor } from '@/lib/cal';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
+import { decimalInput, digitsInput } from '@/lib/numeric';
 import { addCategory, deleteService, saveService } from './actions';
 
 export type SvcRow = { id: string; name: string; desc: string; catId: string; cat: string; catIdx: number; dur: number; priceCents: number; online: boolean; staffIds: string[]; addon: boolean; parentIds: string[] };
@@ -13,7 +14,7 @@ type Props = { services: SvcRow[]; cats: { id: string; name: string }[]; team: {
 type Draft = { name: string; catId: string; dur: number; price: string; desc: string; online: boolean; staff: string[]; addon: boolean; parents: string[] };
 
 const DURS = [15, 30, 45, 60, 75, 90, 120, 150, 180];
-const money = (c: number) => { const n = c / 100; return '$' + (n % 1 === 0 ? String(n) : n.toFixed(2)); };
+const money = (c: number) => '$' + (c / 100).toLocaleString('en-US', { minimumFractionDigits: c % 100 ? 2 : 0, maximumFractionDigits: 2 });
 const draftOf = (s: SvcRow): Draft => ({ name: s.name, catId: s.catId, dur: s.dur, price: String(s.priceCents / 100), desc: s.desc, online: s.online, staff: s.staffIds.slice(), addon: s.addon, parents: s.parentIds.slice() });
 
 function useServices(props: Props) {
@@ -162,7 +163,7 @@ function Editor({ c, m }: { c: C; m: boolean }) {
         </div>
         {isCustom && (
           <div className="fw" style={S('display:flex;align-items:center;gap:8px;box-sizing:border-box;height:' + H + 'px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;background:#FFFFFF')}>
-            <input aria-label="Custom length in minutes" type="text" inputMode="numeric" value={custom ? ctext : String(d.dur || '')} onChange={(e) => { const t = e.target.value.replace(/\D/g, '').slice(0, 3); setCustom(true); setCtext(t); set('dur', parseInt(t, 10) || 0); }} placeholder="For example, 50" style={{ ...S('flex:1 1 auto;min-width:0;border:0;outline:none;background:transparent;font:inherit;color:#0E1116'), padding: 0, minHeight: 0, width: 'auto', borderRadius: 0 }} />
+            <input aria-label="Custom length in minutes" type="text" inputMode="numeric" value={custom ? ctext : String(d.dur || '')} onChange={(e) => { const t = digitsInput(e.target.value).slice(0, 3); setCustom(true); setCtext(t); set('dur', parseInt(t, 10) || 0); }} placeholder="For example, 50" style={{ ...S('flex:1 1 auto;min-width:0;border:0;outline:none;background:transparent;font:inherit;color:#0E1116'), padding: 0, minHeight: 0, width: 'auto', borderRadius: 0 }} />
             <span style={S('color:#5E6673')}>minutes</span>
           </div>
         )}
@@ -172,7 +173,7 @@ function Editor({ c, m }: { c: C; m: boolean }) {
         <label htmlFor="svc-price" style={S('font-size:14px;font-weight:600')}>Price</label>
         <div className="fw" style={S('display:flex;align-items:center;gap:6px;box-sizing:border-box;height:' + H + 'px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;background:#FFFFFF')}>
           <span style={S('color:#5E6673')}>$</span>
-          <input id="svc-price" type="text" inputMode="decimal" value={d.price} onChange={(e) => set('price', e.target.value)} placeholder="0" style={{ ...S('flex:1 1 auto;min-width:0;border:0;outline:none;background:transparent;font:inherit;color:#0E1116'), padding: 0, minHeight: 0, width: 'auto', borderRadius: 0 }} />
+          <input id="svc-price" type="text" inputMode="decimal" value={d.price} onChange={(e) => set('price', decimalInput(e.target.value))} placeholder="0" style={{ ...S('flex:1 1 auto;min-width:0;border:0;outline:none;background:transparent;font:inherit;color:#0E1116'), padding: 0, minHeight: 0, width: 'auto', borderRadius: 0 }} />
         </div>
       </div>
 

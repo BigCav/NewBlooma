@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's Products.dc.html and MobileProducts.dc.html. Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
+import { decimalInput } from '@/lib/numeric';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
@@ -78,7 +79,7 @@ const inputS: React.CSSProperties = { ...S('box-sizing:border-box;width:100%;hei
 const bareInput: React.CSSProperties = { ...S('flex:1 1 auto;min-width:0;border:0;outline:none;background:transparent;font:inherit;color:#0E1116'), padding: 0, minHeight: 0, width: 'auto', borderRadius: 0 };
 const tile = (c: C, cat: string, size: number, r: number, fs: number) => { const t = toneOf(c.cats, cat); return `flex:0 0 ${size}px;width:${size}px;height:${size}px;border-radius:${r}px;display:flex;align-items:center;justify-content:center;font-size:${fs}px;font-weight:600;background:${t.bg};color:${t.fg}`; };
 const Field = ({ id, label, children }: { id: string; label: string; children: React.ReactNode }) => <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor={id} style={S('font-size:14px;font-weight:600')}>{label}</label>{children}</div>;
-const Dollar = ({ id, v, on }: { id: string; v: string; on: (v: string) => void }) => <div style={S('display:flex;align-items:center;gap:6px;box-sizing:border-box;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;background:#FFFFFF')}><span style={S('color:#5E6673')}>$</span><input id={id} type="text" inputMode="decimal" value={v} onChange={(e) => on(e.target.value)} placeholder="0" style={bareInput} /></div>;
+const Dollar = ({ id, v, on }: { id: string; v: string; on: (v: string) => void }) => <div style={S('display:flex;align-items:center;gap:6px;box-sizing:border-box;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;background:#FFFFFF')}><span style={S('color:#5E6673')}>$</span><input id={id} type="text" inputMode="decimal" value={v} onChange={(e) => on(decimalInput(e.target.value))} placeholder="0" style={bareInput} /></div>;
 
 function Body({ c, m }: { c: C; m: boolean }) {
   const s = c.sel, h = m ? 48 : 44;

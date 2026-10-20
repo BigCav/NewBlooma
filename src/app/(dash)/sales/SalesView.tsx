@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's Sales.dc.html and MobileSales.dc.html. Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
+import { decimalInput } from '@/lib/numeric';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
@@ -200,7 +201,7 @@ function Panel({ c, m }: { c: C; m: boolean }) {
       <div><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Edit sale</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px;overflow-wrap:anywhere')}>{s.client}, {s.service}</p></div>
       <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="sale-amount" style={S('font-size:14px;font-weight:600')}>Service price</label>
         <div style={S('display:flex;align-items:center;gap:6px;box-sizing:border-box;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;background:#FFFFFF')}><span style={S('color:#5E6673')}>$</span>
-          <input id="sale-amount" type="text" inputMode="decimal" value={c.editAmount} onChange={(e) => { c.setEditAmount(e.target.value); c.setError(''); }} style={{ ...S('flex:1 1 auto;min-width:0;border:0;outline:none;background:transparent;font:inherit;color:#0E1116'), padding: 0, minHeight: 0, width: 'auto', borderRadius: 0 }} /></div></div>
+          <input id="sale-amount" type="text" inputMode="decimal" value={c.editAmount} onChange={(e) => { c.setEditAmount(decimalInput(e.target.value)); c.setError(''); }} style={{ ...S('flex:1 1 auto;min-width:0;border:0;outline:none;background:transparent;font:inherit;color:#0E1116'), padding: 0, minHeight: 0, width: 'auto', borderRadius: 0 }} /></div></div>
       {err}
       <div style={S('display:flex;gap:10px')}><button onClick={c.saveEdit} disabled={c.busy} style={S(DARK(h))}>Save sale</button><button className="ghost" onClick={c.cancel} style={S(GHOST(h))}>Cancel</button></div>
     </div>

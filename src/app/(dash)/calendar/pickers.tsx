@@ -46,7 +46,7 @@ export function ServicePicker({ services, selected, onPick, onCat, initialCat, c
             <button key={x.id} onClick={() => { if (!why) onPick(x.id); }} aria-pressed={on} aria-disabled={!!why}
               style={S('width:100%;box-sizing:border-box;min-height:56px;padding:10px 16px;border-radius:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;font:inherit;cursor:' + (why ? 'default' : 'pointer') + ';opacity:' + (why ? 0.55 : 1) + ';color:#0E1116;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#F4F5F7' : '#FFFFFF') + (on ? ';box-shadow:inset 0 0 0 1px #0E1116' : ''))}>
               <span style={S('min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600')}>{x.name}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{x.dur + ' min' + (nt ? ', ' + nt : '')}</span></span>
-              <span style={S('flex:0 0 auto;display:flex;align-items:center;gap:10px')}><span style={S('font-size:15px;font-weight:500')}>{'$' + x.priceCents / 100}</span>
+              <span style={S('flex:0 0 auto;display:flex;align-items:center;gap:10px')}><span style={S('font-size:15px;font-weight:500')}>{'$' + (x.priceCents / 100).toLocaleString('en-US')}</span>
                 {on && <span aria-hidden="true" style={S('flex:0 0 22px;width:22px;height:22px;border-radius:999px;background:#0E1116;display:flex;align-items:center;justify-content:center')}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5 10 17.5 19 7.5" /></svg></span>}
               </span>
             </button>

@@ -18,7 +18,7 @@ export function fmtMin(m: number) {
 export function hourLabel(h: number) { return `${((h + 11) % 12) + 1}:00${h < 12 ? 'am' : 'pm'}`; }
 export function initials(name: string) { return name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join(''); }
 export function dollars(cents: number) { return '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: cents % 100 ? 2 : 0, maximumFractionDigits: 2 }); }
-export function money2(v: number) { return '$' + v.toFixed(2); }
+export function money2(v: number) { return '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 
 const WD = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const MO = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
