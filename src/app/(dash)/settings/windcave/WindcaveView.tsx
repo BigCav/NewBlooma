@@ -128,7 +128,7 @@ function Desktop({ c }: { c: C }) {
         </nav>
         <section aria-label="Card payments" style={S('flex:999 1 520px;min-width:0;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:28px;display:flex;flex-direction:column;gap:22px')}>
           <div><Link href="/settings?section=payments" style={S('font-size:13.5px;color:#5B3DF5;font-weight:500;text-decoration:none')}>Back to payments</Link>
-            <h2 style={S('margin:8px 0 0;font-size:22px;font-weight:600;letter-spacing:-0.02em')}>Card payments</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>Windcave setup and tax mode</p></div>
+            <h2 style={S('margin:8px 0 0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Card payments</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>Windcave setup and tax mode</p></div>
           <Body c={c} m={false} />
         </section>
       </div>
