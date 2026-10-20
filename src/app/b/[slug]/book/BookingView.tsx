@@ -495,11 +495,11 @@ function Desktop({ m }: { m: M }) {
         </nav>
 
         <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:24px')}>
-          <div className="bk-flow" style={S('flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:20px')}>
+          <div className="bk-flow" style={S('flex:999 1 400px;min-width:0;display:flex;flex-direction:column;gap:20px')}>
             <h1 style={S('margin:0;font-size:34px;line-height:1.1;font-weight:600;letter-spacing:-0.03em')}>{TITLES[m.step - 1]}</h1>
             <Steps m={m} o={o} />
           </div>
-          <aside aria-label="Your booking" style={S('flex:1 1 340px;max-width:380px;min-width:0;position:sticky;top:24px;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:18px')}>
+          <aside aria-label="Your booking" style={S('flex:1 1 320px;max-width:380px;min-width:0;position:sticky;top:24px;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:18px')}>
             <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Your booking</h2>
             {!m.list.length && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No services yet. Add one from the list.</p>}
             {!!m.list.length && (

@@ -194,7 +194,7 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
       {photos}
       {visits}
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:24px')}>
-        <div className="flow" style={S('flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:24px')}>{services}{team}{reviews}{about}</div>
+        <div className="flow" style={S('flex:999 1 400px;min-width:0;display:flex;flex-direction:column;gap:24px')}>{services}{team}{reviews}{about}</div>
         <aside className="flow" style={S('flex:1 1 320px;max-width:380px;min-width:0;position:sticky;top:24px;display:flex;flex-direction:column;gap:16px')}>
           <div style={S(CARD(24, 12))}>
             <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Book an appointment</h2>

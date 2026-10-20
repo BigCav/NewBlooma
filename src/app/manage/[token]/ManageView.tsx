@@ -177,7 +177,7 @@ function Desktop({ m }: { m: M }) {
         <div style={S('display:flex;align-items:center;gap:12px')}><div><a href={'/b/' + p.slug} style={S('display:block;font-size:17px;font-weight:600;letter-spacing:-0.01em;color:#0E1116;text-decoration:none')}>{p.salonName}</a><div style={S('font-size:13px;color:#5E6673')}>Manage your booking</div></div></div>
       </header>
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:24px')}>
-        <div className="bk-flow" style={S('flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:20px')}>
+        <div className="bk-flow" style={S('flex:999 1 400px;min-width:0;display:flex;flex-direction:column;gap:20px')}>
           {view && <>
             <StatusRow m={m} />
             <h1 style={S('margin:0;font-size:34px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>Your appointment</h1>
@@ -197,7 +197,7 @@ function Desktop({ m }: { m: M }) {
           {m.cancelled && <CancelledCard m={m} pad={28} h1={34} />}
         </div>
         {showAside && (
-          <aside className="bk-flow" style={S('flex:1 1 340px;max-width:380px;min-width:0;position:sticky;top:24px;display:flex;flex-direction:column;gap:16px')}>
+          <aside className="bk-flow" style={S('flex:1 1 320px;max-width:380px;min-width:0;position:sticky;top:24px;display:flex;flex-direction:column;gap:16px')}>
             {view && <div style={S(ASIDE_CARD)}>
               <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Manage your appointment</h2>
               <p style={S('margin:0;color:#5E6673;font-size:14px')}>{m.policyLine}</p>
