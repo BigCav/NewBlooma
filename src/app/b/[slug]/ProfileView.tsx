@@ -138,7 +138,6 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
     <main className="flow" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:24px 20px 24px;display:flex;flex-direction:column;gap:20px')}>
       <header style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{p.name}</span><span style={S(openStyle + ';flex:0 0 auto')}>{openText}</span></header>
       {p.account && <AcctChip slug={p.slug} name={p.account.name || 'Your account'} wide />}
-      {p.bookable && !!p.next && <span style={S('align-self:flex-start;display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:500;background:#F2EFFE;color:#4B34C9')}>Next available: {p.next}</span>}
       {visits}{photos}{services}{team}{about}{info}{manage}
     </main>
     {p.bookable && <div style={S('flex:0 0 auto;box-sizing:border-box;padding:12px 20px 24px;background:#FFFFFF;border-top:1px solid #E6E8EC')}><Link href={book()} style={S('height:48px;box-sizing:border-box;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none')}>Book now</Link></div>}
@@ -160,7 +159,6 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
           <div style={S(CARD(24, 12))}>
             <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Book an appointment</h2>
             <p style={S('margin:0;color:#5E6673;font-size:14px')}>{p.bookable ? `Free cancellation up to ${p.cancel} before. You pay at the salon.` : 'Online booking is not available right now. Please contact the salon.'}</p>
-            {p.bookable && !!p.next && <span style={S('align-self:flex-start;display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:500;background:#F2EFFE;color:#4B34C9')}>Next available: {p.next}</span>}
             {!!p.account && <dl style={S('margin:0;display:flex;flex-direction:column')}>
               <div style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>Booking as</dt><dd style={S('margin:0;text-align:right;font-weight:500;overflow-wrap:anywhere')}>{p.account.name}</dd></div>
               <div style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>Email</dt><dd style={S('margin:0;text-align:right;font-weight:500;overflow-wrap:anywhere')}>{p.account.email}</dd></div>
