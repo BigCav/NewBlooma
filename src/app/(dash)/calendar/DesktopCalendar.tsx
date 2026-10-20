@@ -99,7 +99,6 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
         <div>
           <div style={S('color:#5E6673;font-size:13.5px')}>Next opening</div>
           <div style={S('margin-top:4px;font-size:38px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{nextOpening}</div>
-          <div style={S('margin-top:6px;font-size:13px;color:#5E6673')}>{view === 'day' && staffSel === 'all' ? 'Whole team' : pool[0]?.name ?? ''}</div>
         </div>
       </section>
 
