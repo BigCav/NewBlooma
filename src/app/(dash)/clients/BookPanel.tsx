@@ -62,7 +62,7 @@ export function BookPanel({ data, client, mobile, onBooked, onCancel }: { data: 
     const ids = b.services.includes(id) ? b.services.filter((i) => i !== id) : [...b.services, id];
     const f0 = svcMap.get(ids[0]);
     let staff = b.staff;
-    if (f0 && staff && !offered(f0.id, staff)) staff = '';
+    if (staff && ids.length && !ids.some((i) => offered(i, staff))) staff = '';
     if (f0 && !staff) { const c = offers[f0.id] ?? []; if (c.length === 1) staff = c[0]; }
     setB({ ...b, services: ids, staff, time: null }); setError('');
   };
@@ -93,7 +93,7 @@ export function BookPanel({ data, client, mobile, onBooked, onCancel }: { data: 
       <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="bk-service-label" style={S('font-size:14px;font-weight:600')}>Service</span>
         <ServicePicker services={services} selected={b.services} initialCat={firstSvc?.cat} chipHeight={h} onPick={pick} note={(x) => (b.staff && !offered(x.id, b.staff) ? ((offers[x.id] ?? [])[0] ? 'separate booking with ' + staffName(offers[x.id][0]).split(' ')[0] : 'no one offers this') : '')} /></div>
       <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="bk-team-label" style={S('font-size:14px;font-weight:600')}>Team member</span>
-        <TeamPicker team={team} selected={b.staff} offers={(sid) => !firstSvc || offered(firstSvc.id, sid)} onPick={(id) => { setB({ ...b, staff: id, time: null }); setError(''); }} /></div>
+        <TeamPicker team={team} selected={b.staff} offers={(sid) => !b.services.length || b.services.some((id) => offered(id, sid))} onPick={(id) => { setB({ ...b, staff: id, time: null }); setError(''); }} /></div>
       <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="bk-day-label" style={S('font-size:14px;font-weight:600')}>Day</span>
         <div role="group" className="hscroll" aria-labelledby="bk-day-label" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
           {days14.map((d) => <button key={d.ymd} onClick={() => { if (!d.closed) { setB({ ...b, day: d.ymd, time: null }); setError(''); } }} disabled={d.closed} aria-pressed={b.day === d.ymd} aria-label={d.full + (d.closed ? ', closed' : '')} style={S(dayCss(b.day === d.ymd, d.closed))}><span style={S('font-size:12.5px')}>{d.abbr}</span><span style={S('font-size:17px;font-weight:600')}>{d.num}</span></button>)}

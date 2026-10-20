@@ -216,6 +216,17 @@ export async function rebookBooking(id: string, dayYmd: string, startMin: number
 }
 
 
+export type ClientHit = { id: string; name: string; sub: string };
+/** Existing clients whose name, email or phone contains what was typed. */
+export async function findClients(q: string): Promise<ClientHit[]> {
+  const { sb } = await requireCtx();
+  const needle = q.trim().replace(/[%,()*\\]/g, ' ').trim(); if (!needle) return [];
+  const digits = needle.replace(/\D/g, '');
+  const ors = [`name.ilike.%${needle}%`, `email.ilike.%${needle}%`, ...(digits.length >= 3 ? [`phone.ilike.%${digits}%`] : [])];
+  const { data } = await sb.from('clients').select('id,name,email,phone').or(ors.join(',')).order('name').limit(6);
+  return ((data ?? []) as any[]).map((c) => ({ id: c.id, name: c.name, sub: c.phone || c.email || '' }));
+}
+
 export type SearchHit = { id: string; dayYmd: string; start: number; client: string; services: string; staff: string; cat: string };
 /** Find bookings by client, service or team member (past 30 days to next 90). */
 export async function searchBookings(q: string): Promise<SearchHit[]> {

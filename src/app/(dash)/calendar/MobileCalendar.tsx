@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's Mobile.dc.html (+ MobileHeader, MobileTabs). Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
+import { ClientMatches } from './ClientMatches';
 import Link from 'next/link';
 import { dayInfo, fmtMin, initials, addDaysYmd, BLOCK_KINDS } from '@/lib/cal';
 import { cancelBooking, deleteBlock } from './actions';
@@ -191,7 +192,6 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
                 <button onClick={() => startResched(sel.b, sel.k === 'done')} style={S(SECOND)}>{sel.secondaryLabel}</button>
               </div>
               {sel.canEdit && <button onClick={() => { setEd({ ids: sel.b.serviceIds.slice(), start: null }); setMode('edit'); setError(''); setNotice(''); }} style={S('height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14.5px;font-weight:500;cursor:pointer')}>Edit booking</button>}
-              {sel.canEdit && sel.k !== 'live' && <button onClick={() => act(() => cancelBooking(sel.b.id), first(sel.b.client) + "'s booking cancelled", () => { setOpen(false); setMode('view'); })} style={S('height:48px;border:0;border-radius:999px;background:transparent;color:#B42318;font-size:14.5px;font-weight:500;cursor:pointer')}>Cancel booking</button>}
             </>)}
 
             {mode === 'checkout' && sel && (() => {
@@ -251,12 +251,13 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
                 {!pl.problem && (pl.dur > cur.end - cur.start || pl.start !== cur.start) && <div style={S(note('#DDF3EA', '#14624A'))}>{pl.f + ' is free for the full ' + pl.dur + ' min' + (pl.start !== cur.start ? ' from ' + fmtMin(pl.start) : '') + '.'}</div>}
                 {pl.extras.map((x) => x.at !== undefined
                   ? <div key={x.svc.id} style={S(note('#ECE8FF', '#3B2BB5'))}>{x.svc.name + ' is a ' + x.svc.cat.toLowerCase() + ' service. It will be booked as a separate appointment with ' + x.f + ' at ' + fmtMin(x.at) + ', ' + x.svc.dur + ' min.'}</div>
-                  : <div key={x.svc.id} style={S(note('#FDECEA', '#B42318'))}>{(x.f || 'Nobody') + ' has no free time for ' + x.svc.name + ' on this day.'}</div>)}
+                  : <div key={x.svc.id} style={S(note('#FDECEA', '#B42318'))}>{x.sid ? x.f + ' has no free time for ' + x.svc.name + ' on this day.' : 'No one offers ' + x.svc.name + ' yet, so it cannot be added.'}</div>)}
                 {errP()}
                 <div style={S('display:flex;gap:10px')}>
                   <button onClick={saveEdit} disabled={busy} style={S(PRIMARY)}>Save changes</button>
-                  <button onClick={backToView} style={S(SECOND)}>Cancel</button>
+                  <button onClick={backToView} style={S(SECOND)}>Back</button>
                 </div>
+                {sel && sel.canEdit && sel.k !== 'live' && <button onClick={() => act(() => cancelBooking(cur.id), first(cur.client) + "'s booking cancelled", () => { setOpen(false); setMode('view'); })} style={S('height:48px;border:0;border-radius:999px;background:transparent;color:#B42318;font-size:14.5px;font-weight:500;cursor:pointer')}>Cancel this booking</button>}
               </>);
             })()}
 
@@ -312,9 +313,10 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
               <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><div style={S('min-width:0')}><h2 style={S(H2S)}>New appointment</h2></div><button onClick={close} aria-label="Close" style={S(CLOSE_BTN)}><CloseX /></button></div>
               <div style={S('display:flex;flex-direction:column;gap:8px')}>
                 <label htmlFor="ap-client" style={S('font-size:14px;font-weight:600')}>Client</label>
-                <input id="ap-client" type="text" value={nf.client} onChange={(e) => { setNf({ ...nf, client: e.target.value }); setError(''); }} placeholder="Client name" style={{ ...S('box-sizing:border-box;width:100%;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF'), minHeight: 0 }} />
-                {props.recent.length > 0 && <div role="group" className="hscroll" aria-label="Recent clients" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
-                  {props.recent.map((r) => <button key={r.id} onClick={() => { setNf({ ...nf, client: r.name }); setError(''); }} aria-pressed={nf.client.trim() === r.name} style={S(chip(nf.client.trim() === r.name))}>{r.name}</button>)}</div>}
+                <input id="ap-client" type="text" value={nf.client} onChange={(e) => { setNf({ ...nf, client: e.target.value, clientId: null }); setError(''); }} placeholder="Search or type a client name" style={{ ...S('box-sizing:border-box;width:100%;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF'), minHeight: 0 }} />
+                <ClientMatches mobile query={nf.client} pickedId={nf.clientId} onPick={(h) => { setNf({ ...nf, client: h.name, clientId: h.id }); setError(''); }} />
+                {!nf.client.trim() && props.recent.length > 0 && <div role="group" className="hscroll" aria-label="Recent clients" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
+                  {props.recent.map((r) => <button key={r.id} onClick={() => { setNf({ ...nf, client: r.name, clientId: r.id }); setError(''); }} aria-pressed={nf.client.trim() === r.name} style={S(chip(nf.client.trim() === r.name))}>{r.name}</button>)}</div>}
               </div>
               <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="ap-service-label" style={S('font-size:14px;font-weight:600')}>Service</span>
                 <ServicePicker services={services} selected={nf.services} initialCat={nFirstSvc?.cat} chipHeight={44} onPick={nPickSvc} note={(x) => (nf.staff && !offered(x.id, nf.staff) ? ((offers[x.id] ?? [])[0] ? 'separate booking with ' + first(staffName(offers[x.id][0])) : 'no one offers this') : '')} /></div>

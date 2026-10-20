@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's Main.dc.html (+ PageHeader). Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
+import { ClientMatches } from './ClientMatches';
 import { BLOCK_KINDS, dayInfo, fmtMin, initials, addDaysYmd } from '@/lib/cal';
 import { cancelBooking, deleteBlock } from './actions';
 import { S, ServicePicker, TeamPicker } from './pickers';
@@ -266,7 +267,6 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
                 <button className="ghost" onClick={() => startResched(selB, sel.k === 'done')} style={S(BTN2)}>{sel.secondaryLabel}</button>
               </div>
               {sel.canEdit && <button className="ghost" onClick={() => { setSelId(selB.id); setEd({ ids: selB.serviceIds.slice(), start: null }); setMode('edit'); setError(''); setNotice(''); }} style={S('height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>Edit booking</button>}
-              {sel.canEdit && sel.k !== 'live' && <button onClick={() => act(() => cancelBooking(selB.id), first(selB.client) + "'s booking cancelled", () => { setMode('view'); })} style={S('height:44px;border:0;border-radius:999px;background:transparent;color:#B42318;font-size:14px;font-weight:500')}>Cancel booking</button>}
             </div>
 
             <div style={S('display:flex;flex-direction:column;gap:6px')}>
@@ -332,12 +332,13 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
                 {!pl.problem && (pl.dur > cur.end - cur.start || pl.start !== cur.start) && <div style={S(note('#DDF3EA', '#14624A'))}>{pl.f + ' is free for the full ' + pl.dur + ' min' + (pl.start !== cur.start ? ' from ' + fmtMin(pl.start) : '') + '.'}</div>}
                 {pl.extras.map((x) => x.at !== undefined
                   ? <div key={x.svc.id} style={S(note('#ECE8FF', '#3B2BB5'))}>{x.svc.name + ' is a ' + x.svc.cat.toLowerCase() + ' service. It will be booked as a separate appointment with ' + x.f + ' at ' + fmtMin(x.at) + ', ' + x.svc.dur + ' min.'}</div>
-                  : <div key={x.svc.id} style={S(note('#FDECEA', '#B42318'))}>{(x.f || 'Nobody') + ' has no free time for ' + x.svc.name + ' on this day.'}</div>)}
+                  : <div key={x.svc.id} style={S(note('#FDECEA', '#B42318'))}>{x.sid ? x.f + ' has no free time for ' + x.svc.name + ' on this day.' : 'No one offers ' + x.svc.name + ' yet, so it cannot be added.'}</div>)}
                 {errP()}
                 <div style={S('display:flex;gap:10px')}>
                   <button onClick={saveEdit} disabled={busy} style={S(BTN)}>Save changes</button>
-                  <BackBtn />
+                  <BackBtn label="Back" />
                 </div>
+                {sel && sel.canEdit && sel.k !== 'live' && <button onClick={() => act(() => cancelBooking(cur.id), first(cur.client) + "'s booking cancelled", () => { setMode('view'); })} style={S('height:44px;border:0;border-radius:999px;background:transparent;color:#B42318;font-size:14px;font-weight:500')}>Cancel this booking</button>}
               </div>
             );
           })()}
@@ -479,9 +480,10 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
               <h2 style={S(H2D)}>New appointment</h2>
               <div style={S('display:flex;flex-direction:column;gap:8px')}>
                 <label htmlFor="ap-client" style={S(LBL)}>Client</label>
-                <input id="ap-client" type="text" value={nf.client} onChange={(e) => { setNf({ ...nf, client: e.target.value }); setError(''); }} placeholder="Client name" style={inp(INPUT)} autoComplete="off" />
-                {props.recent.length > 0 && <div role="group" className="hscroll" aria-label="Recent clients" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
-                  {props.recent.map((r) => <button key={r.id} onClick={() => { setNf({ ...nf, client: r.name }); setError(''); }} aria-pressed={nf.client.trim() === r.name} style={S(chipD(nf.client.trim() === r.name))}>{r.name}</button>)}</div>}
+                <input id="ap-client" type="text" value={nf.client} onChange={(e) => { setNf({ ...nf, client: e.target.value, clientId: null }); setError(''); }} placeholder="Search or type a client name" style={inp(INPUT)} autoComplete="off" />
+                <ClientMatches query={nf.client} pickedId={nf.clientId} onPick={(h) => { setNf({ ...nf, client: h.name, clientId: h.id }); setError(''); }} />
+                {!nf.client.trim() && props.recent.length > 0 && <div role="group" className="hscroll" aria-label="Recent clients" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
+                  {props.recent.map((r) => <button key={r.id} onClick={() => { setNf({ ...nf, client: r.name, clientId: r.id }); setError(''); }} aria-pressed={nf.client.trim() === r.name} style={S(chipD(nf.client.trim() === r.name))}>{r.name}</button>)}</div>}
               </div>
               <div style={S('display:flex;flex-direction:column;gap:8px')}>
                 <span id="ap-service-label" style={S(LBL)}>Service</span>

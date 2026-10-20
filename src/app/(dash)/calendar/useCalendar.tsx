@@ -208,7 +208,7 @@ export function useCalendar(props: Props) {
     if (pl.empty) { setError('Keep at least one service on the booking.'); return; }
     if (pl.problem) { setError('The extra time does not fit yet. Pick one of the start times above, or remove a service.'); return; }
     const bad = pl.extras.find((x) => x.at === undefined);
-    if (bad) { setError((bad.f || 'Nobody') + ' has no free time for ' + bad.svc.name + ' that day. Remove it or pick another day first.'); return; }
+    if (bad) { setError(bad.sid ? bad.f + ' has no free time for ' + bad.svc.name + ' that day. Remove it or pick another day first.' : 'No one offers ' + bad.svc.name + ' yet, so it cannot be added. Remove it first.'); return; }
     const msg = pl.extras.length ? 'Updated, ' + pl.extras.map((x) => x.svc.name + ' with ' + x.f + ' at ' + fmtMin(x.at!)).join(', ') : first(cur.client) + "'s booking updated";
     act(() => editBooking(cur.id, cur.dayYmd, pl.start, pl.removed, pl.added, pl.extras.map((x) => ({ serviceId: x.svc.id, staffId: x.sid!, startMin: x.at! }))), msg, () => { setOpen(false); setMode('view'); });
   };
@@ -306,12 +306,13 @@ export function useCalendar(props: Props) {
     const h = hrsOf(nf.day); return h?.open ? slotsBetween(h.from, h.to) : [];
   })();
   const nFirstSvc = svcMap.get(nf.services[0]);
-  const nOffers = (sid: string) => !nFirstSvc || offered(nFirstSvc.id, sid);
+  // A team member is available to pick if they offer any chosen service, so the order the services were chosen in does not matter.
+  const nOffers = (sid: string) => !nf.services.length || nf.services.some((id) => offered(id, sid));
   const nPickSvc = (id: string) => {
     const ids = nf.services.includes(id) ? nf.services.filter((i) => i !== id) : [...nf.services, id];
     const f0 = svcMap.get(ids[0]);
     let staff = nf.staff;
-    if (f0 && staff && !offered(f0.id, staff)) staff = '';
+    if (staff && ids.length && !ids.some((i) => offered(i, staff))) staff = '';
     if (f0 && !staff) { const c = offers[f0.id] ?? []; if (c.length === 1) staff = c[0]; }
     setNf({ ...nf, services: ids, staff, time: null }); setError('');
   };
@@ -325,9 +326,10 @@ export function useCalendar(props: Props) {
     if (!p.sel.length) { setError('Choose a service.'); return; }
     if (!nf.staff) { setError('Choose a team member.'); return; }
     if (!hrsOf(nf.day)?.open) { setError('The salon is closed on that day.'); return; }
+    const orphan = p.others.find((o) => !o.sid); if (orphan) { setError('No one offers ' + orphan.svc.name + ' yet. Remove it, or assign it to a team member in Services.'); return; }
     if (nf.time === null) { setError('Choose a time from the list.'); return; }
     if (nWhy(nf.time)) { setError('That time is no longer free. Pick another from the list.'); return; }
-    const known = props.recent.find((c) => c.name.toLowerCase() === name.toLowerCase());
+    const known = nf.clientId ? { id: nf.clientId } : props.recent.find((c) => c.name.toLowerCase() === name.toLowerCase());
     startT(async () => {
       setError('');
       const r = await createNewAppointment(name, known?.id ?? null, nf.staff, nf.day, nf.time!, p.same.map((x) => x.id), p.others.map((o) => ({ serviceId: o.svc.id, staffId: o.sid! })));
