@@ -151,7 +151,7 @@ export function useCalendar(props: Props) {
   /* ---------- checkout math ---------- */
   const coMath = (grossC: number) => {
     const disc = cfg.canDiscount ? discountCents(grossC, co.disc) : 0, priceC = grossC - disc;
-    const tip = cfg.askTip ? Math.round(priceC * co.tip / 100) : 0;
+    const tip = cfg.askTip ? Math.round(grossC * co.tip / 100) : 0;
     const taxAmt = cfg.taxInclusive ? Math.round(priceC * cfg.taxRate / (100 + cfg.taxRate)) : Math.round(priceC * cfg.taxRate / 100);
     return { disc, net: priceC, tip, taxAmt, total: priceC + tip + (cfg.taxInclusive ? 0 : taxAmt), taxLabel: (cfg.taxInclusive ? 'Includes ' : 'Tax ') + cfg.taxRate + '%' };
   };

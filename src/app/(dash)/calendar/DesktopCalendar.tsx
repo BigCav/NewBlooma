@@ -53,7 +53,8 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
     }
   }
   const revenue = usd(events.reduce((a, b) => a + b.priceCents, 0));
-  const upNext = events.filter((b) => b.dayYmd !== today || b.start > now).slice(0, 4);
+  // Up next lists what comes after the selected appointment, never the appointment itself.
+  const upNext = events.filter((b) => b.id !== selB?.id && (b.dayYmd !== today ? (!selB || b.dayYmd > selB.dayYmd || (b.dayYmd === selB.dayYmd && b.start >= selB.start)) : b.start > now && (!selB || selB.dayYmd !== today || b.start >= selB.start))).slice(0, 4);
 
   const topOf = (start: number, px = 2) => (start / 60 - gStart) * HOUR_PX + px;
   const evStyle = (b: (typeof bookings)[number], weekCol: boolean) => {
