@@ -51,7 +51,8 @@ function useServices(props: Props) {
     const name = draft.name.trim(); const price = parseFloat(draft.price);
     if (!name) { setError('Give the service a name.'); return; }
     if (isNaN(price) || price < 0) { setError('Enter a price, like 45 or 45.50.'); return; }
-    if (!draft.catId) { setError('Choose a category.'); return; }
+    if (!draft.addon && !draft.catId) { setError('Choose a category.'); return; }
+    if (!(draft.dur > 0)) { setError('Enter how many minutes it takes.'); return; }
     if (draft.addon && !draft.parents.length) { setError('Choose at least one service this add-on goes with.'); return; }
     startT(async () => {
       const r = await saveService({ id: mode === 'edit' ? selectedId ?? undefined : undefined, name, categoryId: draft.catId, dur: draft.dur, price: draft.price, desc: draft.desc, online: draft.online, staffIds: draft.staff, addon: draft.addon, parentIds: draft.parents });
@@ -88,7 +89,7 @@ function useServices(props: Props) {
 
   const sq = query.trim().toLowerCase();
   const rows = services.filter((s) => (filter === 'all' || s.catId === filter) && (!sq || (s.name + ' ' + s.cat + ' ' + s.desc).toLowerCase().includes(sq)));
-  const durs = Array.from(new Set([...DURS, draft.dur])).sort((a, b) => a - b);
+  const durs = DURS;
   const mains = services.filter((s) => !s.addon);
   return { busy, cats, services, mains, team, narrow, canEdit: props.canEdit, selectedId, mode, draft, set, filter, setFilter, query, setQuery, confirm, setConfirm, error, notice, open, setOpen, nc, setNc,
     select, startNew, cancelNew, save, remove, createCat, rows, durs, catName, setError };
@@ -104,6 +105,10 @@ const rowLabel = (s: SvcRow) => s.name + (s.addon ? ' (add-on)' : '') + ', ' + s
 
 function Editor({ c, m }: { c: C; m: boolean }) {
   const { draft: d, set, cats, team, mode, confirm, error, nc, setNc, canEdit, busy } = c;
+  const [custom, setCustom] = useState(false);
+  const [ctext, setCtext] = useState('');
+  useEffect(() => { setCustom(false); }, [c.selectedId, c.mode]);
+  const isCustom = custom || !DURS.includes(d.dur);
   const H = m ? 48 : 44;
   const priceNum = parseFloat(d.price);
   const isNew = mode === 'new';
@@ -133,6 +138,7 @@ function Editor({ c, m }: { c: C; m: boolean }) {
         <input id="svc-name" type="text" value={d.name} onChange={(e) => set('name', e.target.value)} placeholder="For example, Cut & finish" style={{ ...S(inputCss), minHeight: 0 }} />
       </div>
 
+      {!d.addon && (
       <div style={S('display:flex;flex-direction:column;gap:8px')}>
         <span id="svc-cat-label" style={S('font-size:14px;font-weight:600')}>Category</span>
         <div role="group" className="hscroll" aria-labelledby="svc-cat-label" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
@@ -146,12 +152,20 @@ function Editor({ c, m }: { c: C; m: boolean }) {
           </div>
         )}
       </div>
+      )}
 
       <div style={S('display:flex;flex-direction:column;gap:8px')}>
         <span id="svc-dur-label" style={S('font-size:14px;font-weight:600')}>{d.addon ? 'Extra time' : 'Duration'}</span>
         <div role="group" className="hscroll" aria-labelledby="svc-dur-label" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
-          {c.durs.map((x) => <button key={x} type="button" onClick={() => set('dur', x)} aria-pressed={d.dur === x} style={S(formChip(d.dur === x, m))}>{x + ' min'}</button>)}
+          <button type="button" onClick={() => { setCustom(true); setCtext(String(d.dur || '')); }} aria-pressed={isCustom} style={S(formChip(isCustom, m))}>Custom</button>
+          {c.durs.map((x) => <button key={x} type="button" onClick={() => { setCustom(false); set('dur', x); }} aria-pressed={!isCustom && d.dur === x} style={S(formChip(!isCustom && d.dur === x, m))}>{x + ' min'}</button>)}
         </div>
+        {isCustom && (
+          <div className="fw" style={S('display:flex;align-items:center;gap:8px;box-sizing:border-box;height:' + H + 'px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;background:#FFFFFF')}>
+            <input aria-label="Custom length in minutes" type="text" inputMode="numeric" value={custom ? ctext : String(d.dur || '')} onChange={(e) => { const t = e.target.value.replace(/\D/g, '').slice(0, 3); setCustom(true); setCtext(t); set('dur', parseInt(t, 10) || 0); }} placeholder="For example, 50" style={{ ...S('flex:1 1 auto;min-width:0;border:0;outline:none;background:transparent;font:inherit;color:#0E1116'), padding: 0, minHeight: 0, width: 'auto', borderRadius: 0 }} />
+            <span style={S('color:#5E6673')}>minutes</span>
+          </div>
+        )}
       </div>
 
       <div style={S('display:flex;flex-direction:column;gap:8px')}>

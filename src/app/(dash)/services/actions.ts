@@ -19,10 +19,16 @@ export async function saveService(i: SvcInput): Promise<{ error?: string; id?: s
   const price = parseFloat(i.price);
   if (!name) return { error: 'Give the service a name.' };
   if (isNaN(price) || price < 0) return { error: 'Enter a price, like 45 or 45.50.' };
-  if (!i.categoryId) return { error: 'Choose a category.' };
+  // An add-on has no category of its own: it sits with the first service it is offered with.
+  let categoryId = i.categoryId;
+  if (i.addon) {
+    const { data: par } = await sb.from('services').select('category_id').eq('id', i.parentIds[0] ?? '').maybeSingle();
+    if (par?.category_id) categoryId = par.category_id;
+  }
+  if (!categoryId) return { error: 'Choose a category.' };
   if (!(i.dur > 0)) return { error: 'Choose how long it takes.' };
   if (i.addon && !i.parentIds.length) return { error: 'Choose at least one service this add-on goes with.' };
-  const row = { salon_id: salon.id, category_id: i.categoryId, name, description: i.desc.trim() || null, duration_min: i.dur, price_cents: Math.round(price * 100), online_bookable: i.online, is_addon: i.addon };
+  const row = { salon_id: salon.id, category_id: categoryId, name, description: i.desc.trim() || null, duration_min: i.dur, price_cents: Math.round(price * 100), online_bookable: i.online, is_addon: i.addon };
   let id = i.id;
   if (id) {
     const { error } = await sb.from('services').update(row).eq('id', id); if (error) return { error: friendly(error.message) };
