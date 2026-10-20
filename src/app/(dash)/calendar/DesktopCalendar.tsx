@@ -2,6 +2,7 @@
 // 1:1 conversion of the prototype's Main.dc.html (+ PageHeader). Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
 import { ClientMatches } from './ClientMatches';
+import { DiscountPick } from './DiscountPick';
 import { BLOCK_KINDS, dayInfo, fmtMin, initials, addDaysYmd } from '@/lib/cal';
 import { cancelBooking, deleteBlock } from './actions';
 import { S, ServicePicker, TeamPicker } from './pickers';
@@ -438,10 +439,12 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
                 <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="co-method-label" style={S(LBL)}>Payment method</span><div role="group" className="hscroll" aria-labelledby="co-method-label" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
                   {METHODS.filter(([m]) => (m === 'card' ? cfg.acceptCard : m === 'cash' ? cfg.acceptCash : cfg.acceptGift)).map(([m, l]) => <button key={m} onClick={() => setCo({ ...co, method: m })} aria-pressed={co.method === m} style={S(chipD(co.method === m))}>{l}</button>)}</div></div>
                 {co.method === 'gift_card' && <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="co-code" style={S(LBL)}>Gift card code</label><input id="co-code" type="text" value={co.code} onChange={(e) => setCo({ ...co, code: e.target.value })} placeholder="Code" style={inp(INPUT)} /></div>}
+                {cfg.canDiscount && <DiscountPick value={co.disc} onChange={(d) => setCo({ ...co, disc: d })} />}
                 {cfg.askTip && <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="co-tip-label" style={S(LBL)}>Tip</span><div role="group" className="hscroll" aria-labelledby="co-tip-label" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
                   {TIP_OPTS.map(([p, l]) => <button key={p} onClick={() => setCo({ ...co, tip: p })} aria-pressed={co.tip === p} style={S(chipD(co.tip === p))}>{l}</button>)}</div></div>}
                 <dl style={S('margin:0;display:flex;flex-direction:column')}>
                   <div style={S(DL)}><dt style={S('color:#5E6673')}>Service</dt><dd style={S('margin:0;text-align:right;font-weight:500;white-space:nowrap')}>{m2(cur.priceCents)}</dd></div>
+                  {cm.disc > 0 && <div style={S(DL)}><dt style={S('color:#5E6673')}>Discount</dt><dd style={S('margin:0;text-align:right;font-weight:500;white-space:nowrap')}>{'-' + m2(cm.disc)}</dd></div>}
                   <div style={S(DL)}><dt style={S('color:#5E6673')}>Tip</dt><dd style={S('margin:0;text-align:right;font-weight:500;white-space:nowrap')}>{cm.tip ? m2(cm.tip) : 'None'}</dd></div>
                   <div style={S(DL)}><dt style={S('color:#5E6673')}>{cm.taxLabel}</dt><dd style={S('margin:0;text-align:right;font-weight:500;white-space:nowrap')}>{m2(cm.taxAmt)}</dd></div>
                   <div style={S(DL + ';border-bottom:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>Total</dt><dd style={S('margin:0;text-align:right;font-weight:600;white-space:nowrap')}>{m2(cm.total)}</dd></div>

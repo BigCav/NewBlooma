@@ -1,6 +1,7 @@
 'use client';
 
 // Shared calendar state and handlers. Desktop and mobile layouts both render from this one hook.
+import { NO_DISC, discountCents, type DiscPick } from '../sales/shared';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { TONE_LIST, addDaysYmd, dayInfo, fmtMin, initials, weekStartOf, type CalBlock, type CalBooking, type CalHours, type CalService, type CalSettings, type CalStaff, BLOCK_KINDS, slotsBetween } from '@/lib/cal';
@@ -27,7 +28,7 @@ export function useCalendar(props: Props) {
   const [bf, setBf] = useState<{ s: string; kind: string; day: string; dur: number; start: number | null }>({ s: '', kind: 'lunch', day: today, dur: 60, start: null });
   const [rs, setRs] = useState<{ day: string; time: number | null; rebook: boolean }>({ day: today, time: null, rebook: false });
   const [wi, setWi] = useState<{ name: string; svc: string | null; pro: string; cat: string }>({ name: '', svc: null, pro: 'any', cat: '' });
-  const [co, setCo] = useState<{ method: string; tip: number; code: string }>({ method: 'card', tip: 0, code: '' });
+  const [co, setCo] = useState<{ method: string; tip: number; code: string; disc: DiscPick }>({ method: 'card', tip: 0, code: '', disc: NO_DISC });
   const [ed, setEd] = useState<{ ids: string[]; start: number | null }>({ ids: [], start: null });
   const [avail, setAvail] = useState<Avail>(null);
   const [plan, setPlan] = useState<Awaited<ReturnType<typeof walkinPlan>> | null>(null);
@@ -98,7 +99,7 @@ export function useCalendar(props: Props) {
   });
   const openBooking = (id: string) => { setSelId(id); setOpen(true); setMode('view'); setError(''); setNotice(''); };
   const openBlock = (id: string) => { setBlockId(id); setOpen(true); setMode('blockview'); setError(''); setNotice(''); };
-  const startCheckout = (id: string) => { setSelId(id); setOpen(true); setMode('checkout'); setCo({ method: 'card', tip: cfg.askTip ? cfg.tipDefault : 0, code: '' }); setError(''); setNotice(''); };
+  const startCheckout = (id: string) => { setSelId(id); setOpen(true); setMode('checkout'); setCo({ method: 'card', tip: cfg.askTip ? cfg.tipDefault : 0, code: '', disc: NO_DISC }); setError(''); setNotice(''); };
   const primary = (b: CalBooking) => {
     const k = kindOf(b.status);
     if (k === 'confirmed') act(() => checkInBooking(b.id), first(b.client) + ' checked in');
@@ -148,17 +149,18 @@ export function useCalendar(props: Props) {
   const strip = weekDays;
 
   /* ---------- checkout math ---------- */
-  const coMath = (priceC: number) => {
+  const coMath = (grossC: number) => {
+    const disc = cfg.canDiscount ? discountCents(grossC, co.disc) : 0, priceC = grossC - disc;
     const tip = cfg.askTip ? Math.round(priceC * co.tip / 100) : 0;
     const taxAmt = cfg.taxInclusive ? Math.round(priceC * cfg.taxRate / (100 + cfg.taxRate)) : Math.round(priceC * cfg.taxRate / 100);
-    return { tip, taxAmt, total: priceC + tip + (cfg.taxInclusive ? 0 : taxAmt), taxLabel: (cfg.taxInclusive ? 'Includes ' : 'Tax ') + cfg.taxRate + '%' };
+    return { disc, net: priceC, tip, taxAmt, total: priceC + tip + (cfg.taxInclusive ? 0 : taxAmt), taxLabel: (cfg.taxInclusive ? 'Includes ' : 'Tax ') + cfg.taxRate + '%' };
   };
   const charge = () => {
     if (!cur) return;
     const method = co.method as 'card' | 'cash' | 'gift_card';
     startT(async () => {
       setError('');
-      const r = await checkoutBooking(cur.id, method, cfg.askTip ? co.tip : 0, co.code);
+      const r = await checkoutBooking(cur.id, method, cfg.askTip ? co.tip : 0, co.code, cfg.canDiscount ? co.disc : undefined);
       if (r.error) { setError(r.error); return; }
       if (method === 'card' && r.saleId) { router.push(`/sales?sale=${r.saleId}&pay=1`); return; }
       setMode('view'); setNotice(''); refresh();

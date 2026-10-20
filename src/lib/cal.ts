@@ -41,7 +41,7 @@ export type CalBooking = {
 };
 export type CalBlock = { id: string; staffId: string; dayYmd: string; start: number; end: number; kind: string; note: string | null };
 export type CalService = { id: string; name: string; dur: number; priceCents: number; cat: string };
-export type CalSettings = { taxRate: number; taxInclusive: boolean; askTip: boolean; tipDefault: number; acceptCard: boolean; acceptCash: boolean; acceptGift: boolean };
+export type CalSettings = { taxRate: number; taxInclusive: boolean; askTip: boolean; tipDefault: number; acceptCard: boolean; acceptCash: boolean; acceptGift: boolean; canDiscount: boolean };
 export type CalHours = { wd: number; open: boolean; from: number; to: number };
 export const BLOCK_KINDS: [string, string][] = [['lunch', 'Lunch'], ['break', 'Break'], ['time_off', 'Time off'], ['other', 'Other']];
 export const BLOCK_DURS: [number, string][] = [[30, '30 min'], [60, '1 hour'], [120, '2 hours'], [180, '3 hours']];

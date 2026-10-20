@@ -163,13 +163,20 @@ export async function addWalkIn(name: string, serviceId: string, staffId: string
 
 
 /** Create (or recreate with a new tip) the sale for a booking and take payment. Card returns the sale id for the payment screen. */
-export async function checkoutBooking(bookingId: string, method: 'card' | 'cash' | 'gift_card', tipPct: number, giftCode?: string): Promise<R & { saleId?: string; total?: number }> {
+export async function checkoutBooking(bookingId: string, method: 'card' | 'cash' | 'gift_card', tipPct: number, giftCode?: string, disc?: { kind: string; value: string; note: string }): Promise<R & { saleId?: string; total?: number }> {
   const { sb } = await requireCtx();
   const { data: ex } = await sb.from('sales').select('id,status').eq('booking_id', bookingId).neq('status', 'refunded').maybeSingle();
   if (ex?.status === 'paid') return { error: 'This appointment is already paid.' };
   if (ex) { const v = await sb.rpc('void_pending_sale', { p_sale: ex.id }); if (v.error) return { error: friendly(v.error.message) }; }
   const { data: id, error } = await sb.rpc('create_sale', { p_booking: bookingId, p_client: null, p_items: [], p_tip_pct: tipPct, p_description: null });
   if (error) return { error: friendly(error.message) };
+  if (disc && disc.kind !== 'none') {
+    const v = Number(String(disc.value).replace(/[^0-9.]/g, ''));
+    const d = await sb.rpc('set_sale_discount', { p_sale: id, p_kind: disc.kind, p_value: disc.kind === 'amount' ? Math.round(v * 100) : v || 0, p_note: disc.note });
+    if (d.error) { await sb.rpc('void_pending_sale', { p_sale: id }); return { error: friendly(d.error.message) }; }
+    const t = await sb.rpc('set_sale_tip', { p_sale: id, p_pct: tipPct });
+    if (t.error) { await sb.rpc('void_pending_sale', { p_sale: id }); return { error: friendly(t.error.message) }; }
+  }
   if (method === 'card') return { ok: true, saleId: id as string };
   if (method === 'gift_card' && !String(giftCode ?? '').trim()) { await sb.rpc('void_pending_sale', { p_sale: id }); return { error: 'Enter the gift card code.' }; }
   const done = await sb.rpc('complete_sale', { p_sale: id, p_method: method, p_gift_code: method === 'gift_card' ? String(giftCode).trim() : null });

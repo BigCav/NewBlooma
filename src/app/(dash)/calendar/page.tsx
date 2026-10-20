@@ -7,7 +7,7 @@ export const metadata = { title: 'Calendar' };
 export const dynamic = 'force-dynamic';
 
 export default async function Calendar({ searchParams }: { searchParams: Promise<{ d?: string; v?: string; s?: string; new?: string; c?: string }> }) {
-  const { sb, salon, settings } = await requireCtx();
+  const { sb, salon, settings, staff } = await requireCtx();
   const sp = await searchParams;
   const today = ymd(new Date(), salon.timezone);
   const day = /^\d{4}-\d{2}-\d{2}$/.test(sp.d ?? '') ? sp.d! : today;
@@ -47,7 +47,7 @@ export default async function Calendar({ searchParams }: { searchParams: Promise
   const hours: CalHours[] = Array.from({ length: 7 }, (_, wd) => { const r = (oh ?? []).find((h) => h.weekday === wd); return { wd, open: !!r?.is_open, from: r?.is_open ? mm(r.open_time) : 8 * 60, to: r?.is_open ? mm(r.close_time) : 18 * 60 }; });
   const services: CalService[] = (svc ?? []).map((s: any) => ({ id: s.id, name: s.name, dur: s.duration_min, priceCents: s.price_cents, cat: s.service_categories?.name ?? 'Services' }));
   const offers: Record<string, string[]> = {}; for (const r of ss ?? []) (offers[r.service_id] ??= []).push(r.staff_id);
-  const cfg: CalSettings = { taxRate: Number(settings.tax_rate ?? 15), taxInclusive: settings.tax_inclusive !== false, askTip: settings.ask_for_tip !== false, tipDefault: Number(settings.suggested_tip_pct ?? 0), acceptCard: settings.accept_card !== false, acceptCash: settings.accept_cash !== false, acceptGift: settings.accept_gift_cards !== false };
+  const cfg: CalSettings = { taxRate: Number(settings.tax_rate ?? 15), taxInclusive: settings.tax_inclusive !== false, askTip: settings.ask_for_tip !== false, tipDefault: Number(settings.suggested_tip_pct ?? 0), acceptCard: settings.accept_card !== false, acceptCash: settings.accept_cash !== false, acceptGift: settings.accept_gift_cards !== false, canDiscount: staff.app_role !== 'stylist' };
   const seen = new Set<string>(); const recent: { id: string; name: string }[] = [];
   for (const r of (rc ?? []) as any[]) { if (!r.client_id || seen.has(r.client_id) || !r.clients?.name) continue; seen.add(r.client_id); recent.push({ id: r.client_id, name: r.clients.name }); if (recent.length >= 8) break; }
   const nowMin = minutesOfDay(new Date(), salon.timezone);
