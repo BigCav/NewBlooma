@@ -383,7 +383,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
               <div><h2 style={S(H2D)}>Walk-in</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>We will find the first free time today.</p></div>
               <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="wi-name" style={S(LBL)}>Client name</label><input id="wi-name" type="text" value={wi.name} onChange={(e) => { setWi({ ...wi, name: e.target.value }); setError(''); }} placeholder="Full name" style={inp(INPUT)} /></div>
               <div style={S('display:flex;flex-direction:column;gap:10px')}><span id="wi-svc" style={S(LBL)}>Service</span>
-                <ServicePicker lock={(x) => (x.addon ? 'add-on, add it to a booking' : lockFor([])(x))} services={services} selected={wi.svc ? [wi.svc] : []} initialCat={wiSvc?.cat || wi.cat || undefined} chipHeight={40} onCat={(ct) => setWi({ ...wi, cat: ct })}
+                <ServicePicker extras={false} lock={lockFor([])} services={services} selected={wi.svc ? [wi.svc] : []} initialCat={wiSvc?.cat || wi.cat || undefined} chipHeight={40} onCat={(ct) => setWi({ ...wi, cat: ct })}
                   onPick={(id) => { const sv = svcMap.get(id)!; const pro = wi.pro !== 'any' && !offered(id, wi.pro) ? 'any' : wi.pro; setWi(wi.svc === id ? { ...wi, svc: null } : { ...wi, svc: id, cat: sv.cat, pro }); setError(''); }} /></div>
               <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="wi-pro" style={S(LBL)}>Team member</span>
                 <TeamPicker team={team} selected={wi.pro} anyLabel="First available" offers={wi.svc ? (sid) => offered(wi.svc!, sid) : undefined} onPick={(id) => { setWi({ ...wi, pro: id || 'any' }); setError(''); }} /></div>

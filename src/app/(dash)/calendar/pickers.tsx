@@ -21,11 +21,14 @@ export function S(css: string): CSSProperties {
 }
 
 /* ---- ServicePicker (ServicePicker.dc.html) ---- */
-export function ServicePicker({ services, selected, onPick, onCat, initialCat, chipHeight = 44, note, lock }: {
-  services: CalService[]; selected: string[]; onPick: (id: string) => void; onCat?: (c: string) => void; initialCat?: string; chipHeight?: number; note?: (s: CalService) => string; lock?: (s: CalService) => string;
+export function ServicePicker({ services, selected, onPick, onCat, initialCat, chipHeight = 44, note, lock, extras = true }: {
+  services: CalService[]; selected: string[]; onPick: (id: string) => void; onCat?: (c: string) => void; initialCat?: string; chipHeight?: number; note?: (s: CalService) => string; lock?: (s: CalService) => string; extras?: boolean;
 }) {
-  const cats = Array.from(new Set(services.map((x) => x.cat)));
-  const first = services.find((x) => x.id === selected[0]);
+  // Add-ons are not listed with the main services. They appear under the list once a service they go with is chosen.
+  const mains = services.filter((x) => !x.addon);
+  const cats = Array.from(new Set(mains.map((x) => x.cat)));
+  const extraList = extras ? services.filter((x) => x.addon && (x.parents ?? []).some((pid) => selected.includes(pid))) : [];
+  const first = mains.find((x) => x.id === selected[0]);
   const [cat, setCat] = useState(initialCat || first?.cat || cats[0] || '');
   const h = chipHeight;
   const chip = (on: boolean) => 'flex:0 0 auto;height:' + h + 'px;padding:0 ' + (h < 44 ? 16 : 18) + 'px;border-radius:999px;font-size:' + (h < 44 ? 13.5 : 14) + 'px;font-weight:500;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
@@ -33,12 +36,12 @@ export function ServicePicker({ services, selected, onPick, onCat, initialCat, c
     <div style={S("display:flex;flex-direction:column;gap:10px;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4;color:#0E1116")}>
       <div role="group" aria-label="Service type" className="hscroll" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto')}>
         {cats.map((c) => {
-          const n = services.filter((x) => x.cat === c && selected.includes(x.id)).length;
+          const n = mains.filter((x) => x.cat === c && selected.includes(x.id)).length;
           return <button key={c} onClick={() => { setCat(c); onCat?.(c); }} aria-pressed={cat === c} style={S(chip(cat === c))}>{c + (n ? ' · ' + n : '')}</button>;
         })}
       </div>
       <div role="group" aria-label="Services" style={S('display:flex;flex-direction:column;gap:8px')}>
-        {services.filter((x) => x.cat === cat).map((x) => {
+        {mains.filter((x) => x.cat === cat).map((x) => {
           const on = selected.includes(x.id);
           const why = !on ? (lock?.(x) ?? '') : '';
           const nt = why || (note?.(x) ?? '');
@@ -53,6 +56,23 @@ export function ServicePicker({ services, selected, onPick, onCat, initialCat, c
           );
         })}
       </div>
+      {extraList.length > 0 && (
+        <div role="group" aria-label="Extras" style={S('display:flex;flex-direction:column;gap:8px;margin-top:6px')}>
+          <span style={S('font-size:14px;font-weight:600')}>Add an extra</span>
+          {extraList.map((x) => {
+            const on = selected.includes(x.id);
+            return (
+              <button key={x.id} onClick={() => onPick(x.id)} aria-pressed={on}
+                style={S('width:100%;box-sizing:border-box;min-height:56px;padding:10px 16px;border-radius:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;font:inherit;cursor:pointer;color:#0E1116;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#F4F5F7' : '#FFFFFF') + (on ? ';box-shadow:inset 0 0 0 1px #0E1116' : ''))}>
+                <span style={S('min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600')}>{x.name}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{'+' + x.dur + ' min'}</span></span>
+                <span style={S('flex:0 0 auto;display:flex;align-items:center;gap:10px')}><span style={S('font-size:15px;font-weight:500')}>{'+$' + (x.priceCents / 100).toLocaleString('en-US')}</span>
+                  <span aria-hidden="true" style={S('flex:0 0 22px;width:22px;height:22px;border-radius:999px;display:flex;align-items:center;justify-content:center;' + (on ? 'background:#0E1116' : 'border:1px solid #D5D9E0'))}>{on ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5 10 17.5 19 7.5" /></svg> : <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
