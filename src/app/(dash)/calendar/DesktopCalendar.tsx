@@ -270,18 +270,23 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
               {sel.canEdit && <button className="ghost" onClick={() => { setSelId(selB.id); setEd({ ids: selB.serviceIds.slice(), start: null }); setMode('edit'); setError(''); setNotice(''); }} style={S('height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>Edit booking</button>}
             </div>
 
-            <div style={S('display:flex;flex-direction:column;gap:6px')}>
-              <h2 style={S('margin:0 0 6px;font-size:16px;font-weight:600')}>Up next</h2>
+            <div style={S('display:flex;flex-direction:column;gap:12px;padding-top:20px;border-top:1px solid #EEF0F3')}>
+              <div style={S('display:flex;align-items:baseline;justify-content:space-between;gap:12px')}><h2 style={S('margin:0;font-size:16px;font-weight:600')}>Up next</h2>{upNext.length > 0 && <span style={S('font-size:13px;color:#5E6673')}>{upNext.length === 1 ? '1 more' : upNext.length + ' more'}</span>}</div>
+              {upNext.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>Nothing else booked after this.</p>}
               {upNext.map((b) => {
                 const v = vm(b);
+                const when = b.dayYmd === today ? 'Today' : dayInfo(b.dayYmd).short;
                 return (
-                  <button key={b.id} className="ghost" onClick={() => { if (b.dayYmd !== day) { setSelId(b.id); go(b.dayYmd, view); } else openBooking(b.id); }} style={S('display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:52px;padding:8px 10px;border:0;border-radius:14px;background:transparent;text-align:left;color:#0E1116')}>
-                    <span style={S('flex:0 0 10px;width:10px;height:10px;border-radius:999px;background:' + v.tone.dot)} />
-                    <span style={S('flex:1 1 auto;min-width:0')}>
-                      <span style={S('display:block;font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{b.client}</span>
-                      <span style={S('display:block;font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{b.services + ' with ' + v.f}</span>
+                  <button key={b.id} className="ghost" onClick={() => { if (b.dayYmd !== day) { setSelId(b.id); go(b.dayYmd, view); } else openBooking(b.id); }} style={S('display:flex;align-items:stretch;gap:14px;width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #E6E8EC;border-radius:16px;background:#FFFFFF;text-align:left;color:#0E1116;font:inherit')}>
+                    <span style={S('flex:0 0 76px;display:flex;flex-direction:column;justify-content:center;gap:2px')}>
+                      <span style={S('font-size:14.5px;font-weight:600;letter-spacing:-0.01em;white-space:nowrap')}>{fmtMin(b.start)}</span>
+                      <span style={S('font-size:12.5px;color:#5E6673;white-space:nowrap')}>{when}</span>
                     </span>
-                    <span style={S('flex:0 0 auto;font-size:13px;color:#5E6673')}>{(view === 'week' ? dayInfo(b.dayYmd).short + ', ' : '') + fmtMin(b.start)}</span>
+                    <span aria-hidden="true" style={S('flex:0 0 3px;border-radius:999px;background:' + v.tone.dot)} />
+                    <span style={S('flex:1 1 auto;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:2px')}>
+                      <span style={S('font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{b.client}</span>
+                      <span style={S('font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{b.services + ' with ' + v.f}</span>
+                    </span>
                   </button>
                 );
               })}
