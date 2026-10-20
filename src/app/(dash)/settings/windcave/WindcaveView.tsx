@@ -102,16 +102,33 @@ function Body({ c, m }: { c: C; m: boolean }) {
   </>);
 }
 
-const BACK = <Link href="/settings" style={S('display:inline-flex;align-items:center;height:40px;padding:0 16px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:13.5px;font-weight:500;text-decoration:none')}>Back to settings</Link>;
+const BACK = <Link href="/settings?section=payments" style={S('display:inline-flex;align-items:center;height:40px;padding:0 16px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:13.5px;font-weight:500;text-decoration:none')}>Back to settings</Link>;
+
+const SECTIONS = [
+  ['business', 'Business details', 'Name, contact and address'], ['hours', 'Opening hours', 'When the salon is open'], ['booking', 'Online booking', 'Booking rules for clients'],
+  ['payments', 'Payments', 'Methods, tips and tax'], ['notifications', 'Notifications', 'Emails and reminders'],
+] as const;
+const Chevron = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')}><path d="M9.5 6l6 6-6 6" /></svg>;
 
 function Desktop({ c }: { c: C }) {
   return (
     <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 8px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
-      <PageHeader title="Card payments" subtitle="Windcave setup and tax mode" showSearch={false} showAction={false} />
-      <div style={S('display:flex;flex-direction:column;align-items:flex-start;gap:16px')}>
-        {BACK}
-        <section aria-label="Card payments" style={S('align-self:stretch;max-width:860px;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:28px;display:flex;flex-direction:column;gap:22px')}>
-          <h2 style={S('margin:0;font-size:22px;font-weight:600;letter-spacing:-0.02em')}>Windcave</h2>
+      <PageHeader title="Settings" subtitle="Business details and booking rules" showSearch={false} showAction={false} />
+      <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
+        <nav aria-label="Settings sections" style={S('box-sizing:content-box;flex:1 1 300px;max-width:360px;min-width:0;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;overflow:hidden')}>
+          <ul style={S('margin:0;padding:0;list-style:none')}>
+            {SECTIONS.map(([id, label, desc], i) => (
+              <li key={id}>
+                <Link href={'/settings?section=' + id} aria-label={label + ', ' + desc} style={S('display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:68px;padding:10px 20px;border-bottom:' + (i === SECTIONS.length - 1 ? '0' : '1px solid #EEF0F3') + ';text-align:left;color:#0E1116;text-decoration:none;background:' + (id === 'payments' ? '#F4F5F7' : 'transparent'))}>
+                  <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600')}>{label}</span><span style={S('display:block;margin-top:2px;font-size:13px;color:#5E6673')}>{desc}</span></span><Chevron />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        <section aria-label="Card payments" style={S('flex:999 1 520px;min-width:0;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:28px;display:flex;flex-direction:column;gap:22px')}>
+          <div><Link href="/settings?section=payments" style={S('font-size:13.5px;color:#5B3DF5;font-weight:500;text-decoration:none')}>Back to payments</Link>
+            <h2 style={S('margin:8px 0 0;font-size:22px;font-weight:600;letter-spacing:-0.02em')}>Card payments</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>Windcave setup and tax mode</p></div>
           <Body c={c} m={false} />
         </section>
       </div>

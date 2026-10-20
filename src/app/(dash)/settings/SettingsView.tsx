@@ -30,7 +30,7 @@ const swStyle = (on: boolean) => 'position:relative;flex:0 0 52px;width:52px;hei
 const swKnob = (on: boolean) => 'position:absolute;top:3px;left:' + (on ? 23 : 3) + 'px;width:26px;height:26px;border-radius:999px;background:#FFFFFF';
 const noMin = { minHeight: 0 } as const;
 
-function useSettings(initial: Values) {
+function useSettings(initial: Values, start?: string) {
   const router = useRouter();
   const [busy, startT] = useTransition();
   const [narrow, setNarrow] = useState<boolean | null>(null);
@@ -42,7 +42,7 @@ function useSettings(initial: Values) {
   }, []);
   const [v, setV] = useState<Values>(initial);
   const [saved, setSaved] = useState<Values>(initial);
-  const [section, setSection] = useState('business');
+  const [section, setSection] = useState(start ?? 'business');
   const [open, setOpen] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -233,8 +233,8 @@ function Mobile({ c }: { c: C }) {
   );
 }
 
-export function SettingsView({ initial }: { initial: Values }) {
-  const c = useSettings(initial);
+export function SettingsView({ initial, section }: { initial: Values; section?: string }) {
+  const c = useSettings(initial, SECTIONS.some((x) => x.id === section) ? section : undefined);
   return (<>
     {c.narrow !== false && <Mobile c={c} />}
     {c.narrow !== true && <Desktop c={c} />}

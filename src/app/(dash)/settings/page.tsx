@@ -5,7 +5,8 @@ import type { Values } from './shared';
 export const metadata = { title: 'Settings' };
 export const dynamic = 'force-dynamic';
 
-export default async function Settings() {
+export default async function Settings({ searchParams }: { searchParams: Promise<{ section?: string }> }) {
+  const { section } = await searchParams;
   const { sb, salon } = await requireOwner();
   const [{ data: s }, { data: st }, { data: hrs }] = await Promise.all([
     sb.from('salons').select('name,phone,email,address').eq('id', salon.id).single(),
@@ -23,5 +24,5 @@ export default async function Settings() {
     card: !!x.accept_card, cash: !!x.accept_cash, gift: !!x.accept_gift_cards, tips: !!x.ask_for_tip, tipDefault: String(x.suggested_tip_pct ?? 0), tax: String(Number(x.tax_rate ?? 0)),
     confirmEmail: !!x.email_confirmations, remind24: !!x.remind_24h, remind2: !!x.remind_2h, newBooking: !!x.notify_new_booking, cancelled: !!x.notify_cancellation,
   };
-  return <SettingsView initial={initial} />;
+  return <SettingsView initial={initial} section={section} />;
 }
