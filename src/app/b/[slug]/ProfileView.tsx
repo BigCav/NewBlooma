@@ -46,7 +46,7 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
   );
   const services = (
     <section aria-label="Services" style={S(CARD(m ? 20 : 24, 16))}>
-      <h2 style={S('margin:0;font-size:22px;font-weight:600;letter-spacing:-0.02em')}>Services</h2>
+      <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Services</h2>
       <div role="group" className="hscroll" aria-label="Filter services" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
         {chips.map((x) => <button key={x.c} onClick={() => setCat(x.c)} aria-pressed={x.on} style={S('flex:0 0 auto;height:44px;padding:0 18px;border-radius:999px;font-size:14px;font-weight:500;border:1px solid ' + (x.on ? '#0E1116' : '#E1E4E9') + ';background:' + (x.on ? '#0E1116' : '#FFFFFF') + ';color:' + (x.on ? '#FFFFFF' : '#0E1116'))}>{x.label}</button>)}
       </div>
@@ -67,7 +67,7 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
   );
   const team = !!p.team.length && (
     <section aria-label="Team" style={S(CARD(m ? 20 : 24, 16))}>
-      <h2 style={S('margin:0;font-size:22px;font-weight:600;letter-spacing:-0.02em')}>Team</h2>
+      <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Team</h2>
       <ul style={S('margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px')}>
         {p.team.map((x) => (
           <li key={x.name} style={S('display:flex;align-items:center;gap:12px;padding:14px;border:1px solid #E6E8EC;border-radius:18px')}><span style={S('flex:0 0 48px;width:48px;height:48px;border-radius:999px;background:#EEF0F3;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600' + (x.photo ? ';background-image:url(' + x.photo + ');background-size:cover;background-position:center' : ''))}>{x.photo ? '' : initialsOf(x.name)}</span><span style={S('min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{x.name}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{x.role}</span></span></li>
@@ -77,13 +77,13 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
   );
   const about = !!(p.about || p.intro) && (
     <section aria-label="About" style={S(CARD(m ? 20 : 24, 12))}>
-      <h2 style={S('margin:0;font-size:22px;font-weight:600;letter-spacing:-0.02em')}>About us</h2>
+      <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>About us</h2>
       <p style={S('margin:0;color:#5E6673;font-size:15px;line-height:1.55;white-space:pre-line')}>{[p.intro, p.about].filter(Boolean).join('\n\n')}</p>
     </section>
   );
   const info = (
     <section aria-label="Opening hours and contact" style={S(CARD(m ? 20 : 24, 16))}>
-      <h2 style={S('margin:0;font-size:18px;font-weight:600;letter-spacing:-0.01em')}>Opening hours</h2>
+      <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Opening hours</h2>
       <div style={S('display:flex;flex-direction:column;margin-top:-8px')}>
         {DAYS.map((d, i) => <div key={d} style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid #EEF0F3;font-weight:' + (i === today ? 600 : 400) + ';color:' + (i === today ? '#0E1116' : '#5E6673'))}><span>{d}</span><span>{p.hours[i] ? clockStr(p.hours[i]!.from) + ' to ' + clockStr(p.hours[i]!.to) : 'Closed'}</span></div>)}
       </div>
@@ -103,7 +103,7 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
   const againBtn = (v: BookingRow) => <Link className="ghost" href={book(v.again ?? undefined)} aria-label={'Book ' + v.what + ' again'} style={S('flex:0 0 auto;display:flex;align-items:center;height:44px;padding:0 ' + (m ? 16 : 18) + 'px;box-sizing:border-box;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;text-decoration:none')}>Book again</Link>;
   const pastCard = (
     <div style={S(m ? 'box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:20px 20px 8px;display:flex;flex-direction:column;gap:6px' : 'flex:2 1 360px;min-width:0;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:28px 28px 12px;display:flex;flex-direction:column;gap:8px')}>
-      <h2 style={S('margin:0;font-size:' + (m ? 18 : 20) + 'px;font-weight:600;letter-spacing:-0.02em')}>Past visits</h2>
+      <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Past visits</h2>
       {pastList.length ? <ul style={S('margin:0;padding:0;list-style:none')}>{pastList.map((v) => (
         <li key={v.id} style={S('display:flex;align-items:center;gap:12px;padding:' + (m ? 12 : 14) + 'px 0;border-top:1px solid #EEF0F3')}><span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{v.what}</span><span style={S('display:block;margin-top:2px;font-size:13px;color:#5E6673;overflow-wrap:anywhere')}>{v.date}{v.who ? ' with ' + v.who : ''}</span></span>{p.bookable && againBtn(v)}</li>
       ))}</ul> : <p style={S('margin:0 0 16px;color:#5E6673;font-size:14px')}>Your past visits will show here.</p>}

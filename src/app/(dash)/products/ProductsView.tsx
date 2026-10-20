@@ -155,7 +155,7 @@ function Body({ c, m }: { c: C; m: boolean }) {
     </div>
     {!m && (
       <div style={S('display:flex;flex-direction:column;gap:6px')}>
-        <h2 style={S('margin:0 0 6px;font-size:15px;font-weight:600')}>Needs restocking</h2>
+        <h2 style={S('margin:0 0 6px;font-size:16px;font-weight:600')}>Needs restocking</h2>
         {c.rows.filter((p) => p.status !== 'In stock').slice(0, 4).map((n) => (
           <button key={n.id} className="ghost" onClick={() => c.pick(n.id)} aria-label={`${n.name}, ${n.stock} left`} style={S('display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:52px;padding:8px 10px;border:0;border-radius:14px;background:transparent;text-align:left;color:#0E1116')}>
             <span style={S(tile(c, n.cat, 40, 12, 13))}>{initialsOf(n.name)}</span>

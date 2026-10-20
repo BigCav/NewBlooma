@@ -117,7 +117,7 @@ function AddForm({ c, m }: { c: C; m: boolean }) {
   const svc = c.services.find((x) => x.id === a.svc);
   const chipH = (on: boolean) => chip(on).replace('height:40px', 'height:' + 40 + 'px');
   return (
-    <section style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:' + (m ? 20 : 28) + 'px;display:flex;flex-direction:column;gap:18px')}>
+    <section style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:' + (m ? 20 : 24) + 'px;display:flex;flex-direction:column;gap:18px')}>
       <div><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Add to waitlist</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>We will suggest times as they open up.</p></div>
       <div style={S('display:flex;flex-direction:column;gap:6px')}><label htmlFor="wl-name" style={S('font-size:14px;font-weight:600')}>Client name</label>
         <input id="wl-name" type="text" value={a.name} onChange={(e) => { c.setAdd({ ...a, name: e.target.value }); c.setError(''); }} placeholder="Full name" style={{ ...S('box-sizing:border-box;width:100%;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF'), minHeight: 0 }} /></div>
@@ -142,7 +142,7 @@ function AddForm({ c, m }: { c: C; m: boolean }) {
 
 function Desktop({ c }: { c: C }) {
   return (
-    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 48px 8px;display:flex;flex-direction:column;gap:24px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
+    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 8px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <PageHeader title="Waitlist" subtitle={c.waiting + (c.waiting === 1 ? ' client is waiting' : ' clients are waiting')} query={c.query} onQuery={c.setQuery} placeholder="Search waitlist" actionLabel="Add to waitlist" onAction={() => { c.setMode('add'); c.setError(''); c.setNotice(''); }} />
       <div style={S('width:100%;max-width:760px;display:flex;flex-direction:column;gap:16px')}>
         {c.mode === 'list' ? <Cards c={c} m={false} /> : <AddForm c={c} m={false} />}
@@ -155,7 +155,7 @@ function Mobile({ c }: { c: C }) {
   return (
     <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <MobileHeader title="Waitlist" subtitle={c.waiting + (c.waiting === 1 ? ' client is waiting' : ' clients are waiting')} query={c.query} onQuery={c.setQuery} placeholder="Search waitlist" />
-      <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:16px')}>
+      <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:20px')}>
         {c.mode === 'list' && <button onClick={() => { c.setMode('add'); c.setError(''); c.setNotice(''); }} style={S(DARK + 'height:48px;font-size:14.5px')}>Add to waitlist</button>}
         {c.mode === 'list' ? <Cards c={c} m={true} /> : <AddForm c={c} m={true} />}
       </main>

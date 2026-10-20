@@ -271,7 +271,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
             </div>
 
             <div style={S('display:flex;flex-direction:column;gap:6px')}>
-              <h2 style={S('margin:0 0 6px;font-size:15px;font-weight:600')}>Up next</h2>
+              <h2 style={S('margin:0 0 6px;font-size:16px;font-weight:600')}>Up next</h2>
               {upNext.map((b) => {
                 const v = vm(b);
                 return (

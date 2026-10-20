@@ -130,7 +130,7 @@ function Panel({ c, m }: { c: C; m: boolean }) {
         <div role="alertdialog" aria-label="Void this gift card" style={S('border-radius:16px;background:#FDECEA;padding:14px 16px;display:flex;flex-direction:column;gap:10px')}>
           <span style={S('font-size:14px;color:#B42318;font-weight:500')}>Void this card? Its {money(sel.balance)} balance will be set to zero and cannot be used again.</span>
           <div style={S('display:flex;gap:10px')}>
-            <button onClick={c.doVoid} disabled={c.busy} style={S('flex:1 1 0;height:44px;border:0;border-radius:999px;background:#B42318;color:#FFFFFF;font-size:14px;font-weight:500')}>Void card</button>
+            <button onClick={c.doVoid} disabled={c.busy} style={S('flex:1 1 0;height:44px;border:0;border-radius:999px;background:#C0261B;color:#FFFFFF;font-size:14px;font-weight:500')}>Void card</button>
             <button className="ghost" onClick={() => c.setConfirmVoid(false)} style={S('flex:1 1 0;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>Keep it</button>
           </div>
         </div>
@@ -210,7 +210,7 @@ function Mobile({ c }: { c: C }) {
   return (
     <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <MobileHeader title="Gift cards" subtitle="Issue and track balances" query={c.query} onQuery={c.setQuery} placeholder="Search code or name" />
-      <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:16px')}>
+      <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:20px')}>
         <section aria-label="Gift cards at a glance" style={S('display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px')}>
           {stat('Owed to clients', money(c.owed))}{stat('Active cards', String(c.active))}{stat('Issued this month', money(c.issuedM))}{stat('Redeemed this month', money(c.redeemedM))}
         </section>

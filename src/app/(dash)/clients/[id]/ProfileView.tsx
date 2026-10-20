@@ -220,7 +220,7 @@ function Stats({ c, cols, big }: { c: C; cols: number; big: boolean }) {
 function Desktop({ c }: { c: C }) {
   const s = Sections({ c, pad: 24 });
   return (
-    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 48px 8px;display:flex;flex-direction:column;gap:24px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
+    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 8px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <Link href="/clients" style={S('align-self:flex-start;display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 16px 0 10px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;text-decoration:none;font-size:14px;font-weight:500')}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 6 8.5 12l6 6" /></svg>Clients</Link>
       <Switcher c={c} />
       <Header c={c} m={false} />

@@ -64,8 +64,8 @@ function Controls({ c, m }: { c: C; m: boolean }) {
     {!!c.notice && <span role="status" style={S('align-self:flex-start;padding:6px 14px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:13px;font-weight:500')}>{c.notice}</span>}
     {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
     <div style={S(`box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:${pad}px;display:flex;flex-wrap:wrap;gap:${m ? 16 : 40}px`)}>
-      <div><div style={S('color:#5E6673;font-size:13px')}>Hours worked</div><div style={S('font-size:26px;font-weight:600;letter-spacing:-0.03em')}>{hoursText}</div></div>
-      {c.owner && <div><div style={S('color:#5E6673;font-size:13px')}>Team payout</div><div style={S('font-size:26px;font-weight:600;letter-spacing:-0.03em')}>{dollars0(c.pay)}</div></div>}
+      <div><div style={S('color:#5E6673;font-size:13px')}>Hours worked</div><div style={S('font-size:26px;font-weight:500;letter-spacing:-0.03em')}>{hoursText}</div></div>
+      {c.owner && <div><div style={S('color:#5E6673;font-size:13px')}>Team payout</div><div style={S('font-size:26px;font-weight:500;letter-spacing:-0.03em')}>{dollars0(c.pay)}</div></div>}
     </div>
   </>);
 }
@@ -95,7 +95,7 @@ function Cards({ c, m }: { c: C; m: boolean }) {
             {([['Services', p.svc], ['Products', p.prod], ['Tips', p.tips]] as [string, number][]).map(([l, v]) => <div key={l}><div style={S('font-size:12.5px;color:#5E6673')}>{l}</div><div style={S('font-size:16px;font-weight:600')}>{dollars0(v)}</div></div>)}
           </div>
           <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:12px 14px;border-radius:16px;background:#F4F5F7')}><span style={S('flex:1 1 120px;font-size:14px;font-weight:500')}>Service commission</span><div style={S('display:flex;align-items:center;gap:8px')}><button onClick={() => c.bump(p, -5)} aria-label="Lower commission rate" style={S('width:40px;height:40px;border-radius:999px;border:1px solid #E1E4E9;background:#FFFFFF;font-size:18px;color:#0E1116')}>−</button><span style={S('min-width:48px;text-align:center;font-weight:600')}>{pct(p.rate)}</span><button onClick={() => c.bump(p, 5)} aria-label="Raise commission rate" style={S('width:40px;height:40px;border-radius:999px;border:1px solid #E1E4E9;background:#FFFFFF;font-size:18px;color:#0E1116')}>+</button></div></div>
-          <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:10px')}><div style={S('flex:1 1 150px')}><div style={S('font-size:12.5px;color:#5E6673')}>Commission + tips</div><div style={S('font-size:24px;font-weight:600;letter-spacing:-0.03em')}>{dollars0(p.commission + p.tips)}</div></div>{c.over && !p.paid && <button onClick={() => c.pay1(p)} disabled={c.busy} style={S('height:44px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500;padding:0 20px')}>Mark as paid</button>}</div>
+          <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:10px')}><div style={S('flex:1 1 150px')}><div style={S('font-size:12.5px;color:#5E6673')}>Commission + tips</div><div style={S('font-size:22px;font-weight:600;letter-spacing:-0.03em')}>{dollars0(p.commission + p.tips)}</div></div>{c.over && !p.paid && <button onClick={() => c.pay1(p)} disabled={c.busy} style={S('height:44px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500;padding:0 20px')}>Mark as paid</button>}</div>
           <div style={S('font-size:12.5px;color:#8A93A0')}>Includes {pct(p.prodPct)} on product sales ({dollars0(p.commission)} commission before tips)</div>
         </article>
       );
@@ -105,7 +105,7 @@ function Cards({ c, m }: { c: C; m: boolean }) {
 
 function Desktop({ c }: { c: C }) {
   return (
-    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 48px 8px;display:flex;flex-direction:column;gap:24px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
+    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 8px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <PageHeader title="Payroll" subtitle="Timesheets and commission" showSearch={false} showAction={false} />
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
         <section aria-label="Team" style={S('flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:16px')}><Cards c={c} m={false} /></section>
@@ -118,7 +118,7 @@ function Mobile({ c }: { c: C }) {
   return (
     <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <MobileHeader title="Payroll" subtitle="Timesheets and commission" showSearch={false} />
-      <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:16px')}><Controls c={c} m={true} /><Cards c={c} m={true} /></main>
+      <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:20px')}><Controls c={c} m={true} /><Cards c={c} m={true} /></main>
       <MobileTabs active="more" />
     </div>
   );

@@ -126,7 +126,7 @@ function Desktop({ c }: { c: C }) {
             ))}
           </ul>
         </nav>
-        <section aria-label="Card payments" style={S('flex:999 1 520px;min-width:0;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:28px;display:flex;flex-direction:column;gap:22px')}>
+        <section aria-label="Card payments" style={S('flex:999 1 520px;min-width:0;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:22px')}>
           <div><Link href="/settings?section=payments" style={S('font-size:13.5px;color:#5B3DF5;font-weight:500;text-decoration:none')}>Back to payments</Link>
             <h2 style={S('margin:8px 0 0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Card payments</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>Windcave setup and tax mode</p></div>
           <Body c={c} m={false} />
@@ -140,7 +140,7 @@ function Mobile({ c }: { c: C }) {
   return (
     <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <MobileHeader title="Card payments" subtitle="Windcave setup and tax mode" showSearch={false} />
-      <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:16px;align-items:flex-start')}>
+      <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:20px;align-items:flex-start')}>
         {BACK}
         <section aria-label="Card payments" style={S('align-self:stretch;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:20px;display:flex;flex-direction:column;gap:20px')}>
           <Body c={c} m={true} />

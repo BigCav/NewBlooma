@@ -41,7 +41,7 @@ type C = ReturnType<typeof useReviews>;
 function Summary({ c, m }: { c: C; m: boolean }) {
   const rounded = Math.round(c.avg);
   return (<>
-    <section aria-label="Rating summary" style={S(`box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:${m ? 20 : 28}px;display:flex;flex-wrap:wrap;align-items:center;gap:${m ? 20 : 32}px`)}>
+    <section aria-label="Rating summary" style={S(`box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:${m ? 20 : 24}px;display:flex;flex-wrap:wrap;align-items:center;gap:${m ? 20 : 32}px`)}>
       <div style={S('flex:0 0 auto')}><div style={S(`font-size:${m ? 44 : 56}px;line-height:1;font-weight:600;letter-spacing:-0.04em`)}>{c.avg.toFixed(1)}</div><div aria-hidden="true" style={S('margin-top:6px;font-size:20px;letter-spacing:2px')}><span style={S('color:#E8A317')}>{STARS.slice(0, rounded)}</span><span style={S('color:#D5D9E0')}>{STARS.slice(rounded)}</span></div><div style={S('margin-top:4px;color:#5E6673;font-size:13.5px')}>{c.n + (c.n === 1 ? ' review' : ' reviews')}</div></div>
       <div style={S('flex:1 1 220px;min-width:0;display:flex;flex-direction:column;gap:8px')}>
         {[5, 4, 3, 2, 1].map((k) => { const cnt = c.rows.filter((r) => r.stars === k).length; return (
@@ -92,7 +92,7 @@ function List({ c, m }: { c: C; m: boolean }) {
 
 function Desktop({ c }: { c: C }) {
   return (
-    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 48px 8px;display:flex;flex-direction:column;gap:24px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
+    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 8px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <PageHeader title="Reviews" subtitle={`What clients say about ${c.salonName}`} showSearch={false} showAction={false} />
       <Filters c={c} />
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
@@ -106,7 +106,7 @@ function Mobile({ c }: { c: C }) {
   return (
     <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <MobileHeader title="Reviews" subtitle="What clients say" showSearch={false} />
-      <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:16px')}><Summary c={c} m={true} /><Filters c={c} /><List c={c} m={true} /></main>
+      <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:20px')}><Summary c={c} m={true} /><Filters c={c} /><List c={c} m={true} /></main>
       <MobileTabs active="more" />
     </div>
   );
