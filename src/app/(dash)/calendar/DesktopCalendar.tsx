@@ -107,7 +107,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
 
         <section aria-label="Schedule" style={S('flex:999 1 620px;min-width:0;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;overflow:hidden')}>
 
-          <div style={S('border-bottom:1px solid #E6E8EC;padding:16px 20px 14px;display:flex;flex-direction:column;gap:12px')}>
+          <div style={S('border-bottom:1px solid #E6E8EC;padding:16px 20px;display:flex;flex-direction:column;gap:12px')}>
             <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:12px')}>
             <div style={S('display:flex;align-items:center;gap:8px;flex:1 1 220px;min-width:0')}>
               <button className="ghost" onClick={() => stepDay(-1)} aria-label={view === 'week' ? 'Previous week' : 'Previous day'} style={S('width:40px;height:40px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center')}>
@@ -132,7 +132,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
             </div>
               </div>
             </div>
-            <div role="group" aria-label="Filter by team member" className="hscroll" style={S('display:flex;gap:8px;overflow-x:auto;padding-bottom:2px')}>
+            <div role="group" aria-label="Filter by team member" className="hscroll" style={S('display:flex;gap:8px;overflow-x:auto')}>
               {(view === 'week' ? [] : [{ id: 'all', label: 'Whole team' }]).concat(team.map((x) => ({ id: x.id, label: first(x.name) }))).map((ch) => {
                 const on = (view === 'week' ? wkStaff : staffSel) === ch.id;
                 return <button key={ch.id} onClick={() => setStaffSel(ch.id)} aria-pressed={on} style={S('flex:0 0 auto;height:40px;padding:0 16px;border-radius:999px;font-size:13.5px;font-weight:500;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116'))}>{ch.label}</button>;
@@ -146,7 +146,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
                 <div style={S('display:flex;border-bottom:1px solid #E6E8EC')}>
                   <div style={S('flex:0 0 68px')} />
                   {cols.map((m) => (
-                    <div key={m.id} style={S('flex:1 1 0;min-width:0;box-sizing:border-box;display:flex;align-items:center;gap:10px;padding:14px 16px;border-left:1px solid #EEF0F3')}>
+                    <div key={m.id} style={S('flex:1 1 0;min-width:0;box-sizing:border-box;min-height:72px;display:flex;align-items:center;gap:10px;padding:14px 16px;border-left:1px solid #EEF0F3')}>
                       <div style={S('flex:0 0 34px;width:34px;height:34px;border-radius:999px;background:#EEF0F3;color:#0E1116;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600')}>{initials(m.name)}</div>
                       <div style={S('min-width:0')}>
                         <div style={S('font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{m.name}</div>
@@ -204,7 +204,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
                   {weekDays.map((d) => {
                     const closed = !hrsOf(d.ymd)?.open, isToday = d.ymd === today;
                     return (
-                      <button key={d.ymd} onClick={() => go(d.ymd, 'day')} aria-label={d.full + (closed ? ', closed' : '') + '. Open this day'} style={S('flex:1 1 0;min-width:0;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px;border:0;border-left:1px solid #EEF0F3;background:transparent;font:inherit;color:#0E1116;cursor:pointer')}>
+                      <button key={d.ymd} onClick={() => go(d.ymd, 'day')} aria-label={d.full + (closed ? ', closed' : '') + '. Open this day'} style={S('flex:1 1 0;min-width:0;box-sizing:border-box;min-height:72px;justify-content:center;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px;border:0;border-left:1px solid #EEF0F3;background:transparent;font:inherit;color:#0E1116;cursor:pointer')}>
                         <span style={S('font-size:12.5px;color:#5E6673')}>{d.abbr}</span>
                         <span style={S('display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:999px;font-size:16px;font-weight:600;' + (isToday ? 'background:#0E1116;color:#FFFFFF' : 'color:#0E1116'))}>{d.num}</span>
                       </button>
@@ -234,10 +234,15 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
                           const k = kindName(b.kind);
                           return <button key={b.id} onClick={() => openBlock(b.id)} aria-label={k + ', ' + first(staffName(b.staffId)) + ', ' + fmtMin(b.start) + ' to ' + fmtMin(b.end)} style={S(blStyle(b))}><span style={S('font-size:12.5px;font-weight:600')}>{k}</span></button>;
                         })}
-                        {isToday && now >= gStart * 60 && <div style={S('position:absolute;left:0;right:0;top:' + nowTop + 'px;height:0;border-top:2px solid #5B3DF5;pointer-events:none;z-index:2')}><span style={S('position:absolute;left:-4px;top:-5px;width:8px;height:8px;border-radius:999px;background:#5B3DF5')} /></div>}
                       </div>
                     );
                   })}
+                  {weekDays.some((d) => d.ymd === today) && now >= gStart * 60 && now <= (gStart + gHours.length) * 60 && (
+                    <div style={S('position:absolute;left:68px;right:0;top:' + nowTop + 'px;height:0;border-top:2px solid #5B3DF5;pointer-events:none;z-index:2')}>
+                      <span style={S('position:absolute;left:-5px;top:-6px;width:10px;height:10px;border-radius:999px;background:#5B3DF5')} />
+                      <span style={S('position:absolute;left:-62px;top:-11px;padding:2px 7px;border-radius:999px;background:#5B3DF5;color:#FFFFFF;font-size:11.5px;font-weight:500')}>{fmtMin(now)}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
