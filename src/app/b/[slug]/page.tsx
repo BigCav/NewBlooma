@@ -43,7 +43,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
     const d = new Date(r.created_at);
     return { name: parts[0] + (parts[1] ? ' ' + parts[1][0].toUpperCase() + '.' : ''), stars: r.stars as number, text: String(r.body ?? ''), reply: String(r.reply ?? ''), date: d.getDate() + ' ' + MON[d.getMonth()] };
   });
-  const rating = { avg: allRv.length ? allRv.reduce((a, r) => a + r.stars, 0) / allRv.length : 0, count: allRv.length };
+  const rating = { avg: allRv.length ? allRv.reduce((a, r) => a + r.stars, 0) / allRv.length : 0, count: allRv.length, dist: [5, 4, 3, 2, 1].map((k) => allRv.filter((r) => r.stars === k).length) };
   return <ProfileView reviews={reviews} rating={rating} slug={slug} name={salon.name} headline={salon.headline || salon.name} intro={salon.intro || 'Book your next visit online in under a minute, with the team member you like and a time that suits you.'}
     about={salon.about || ''} address={salon.address || ''} phone={salon.phone || ''} email={salon.email || ''}
     services={services} cats={cats} team={d.team.map((t) => ({ name: t.name, role: t.role_title, photo: t.photo_url ?? null }))} hours={hours} today={today} nowMin={nowMin} cancel={cancel} bookable={settings.online_booking} next={next} account={me ? { name: me.name, email: me.email, phone: me.phone } : null} visits={visits} />;

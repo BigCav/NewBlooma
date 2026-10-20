@@ -207,7 +207,7 @@ type O = { rowH: number; rowPad: string; dayW: number; cols: string; btnH: numbe
 
 function Steps({ m, o }: { m: M; o: O }) {
   const { p } = m;
-  const rowStyle = (on: boolean) => 'display:flex;align-items:center;gap:16px;width:100%;box-sizing:border-box;min-height:' + o.rowH + 'px;padding:' + o.rowPad + ';border:0;border-bottom:1px solid #EEF0F3;text-align:left;font:inherit;color:#0E1116;cursor:pointer;background:' + (on ? '#F4F5F7' : 'transparent');
+  const rowStyle = (on: boolean) => 'display:flex;align-items:center;gap:16px;width:100%;box-sizing:border-box;min-height:' + o.rowH + 'px;padding:' + o.rowPad + ';border:0;border-bottom:1px solid #EEF0F3;text-align:left;font:inherit;color:#0E1116;cursor:pointer;background:' + (on ? '#F8F9FB' : 'transparent');
   const chip = (on: boolean) => 'flex:0 0 auto;height:44px;padding:0 18px;border-radius:999px;font-size:14px;font-weight:500;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
   const closed = !m.hoursToday;
   const anyOk = m.slots.length > 0;
@@ -217,7 +217,7 @@ function Steps({ m, o }: { m: M; o: O }) {
   return <>
     {m.step === 1 && (
       <div className="bk-flow" style={S('display:flex;flex-direction:column;gap:16px')}>
-        {!!m.nextAt && <div role="status" style={S('align-self:flex-start;display:inline-flex;align-items:center;gap:8px;border-radius:999px;background:#DDF3EA;color:#14624A;padding:8px 14px;font-size:13.5px;font-weight:500')}><span style={S('width:8px;height:8px;border-radius:999px;background:#14624A')}></span>Next available: {m.nextAt}</div>}
+        {m.sel.length > 0 && !!m.nextAt && <div role="status" style={S('display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;border-radius:16px;background:#DDF3EA;color:#14624A;padding:12px 16px;font-size:14px;font-weight:500')}><span style={S('width:8px;height:8px;border-radius:999px;background:#14624A')}></span>Next available: {m.nextAt}</div>}
         <div role="group" className="hscroll" aria-label="Filter services" style={S('display:flex;gap:8px;overflow-x:auto')}>
           {['All', ...p.cats].map((c) => <button key={c} onClick={() => m.setCat(c)} aria-pressed={m.cat === c} style={S(chip(m.cat === c))}>{c === 'All' ? 'All services' : c}</button>)}
         </div>

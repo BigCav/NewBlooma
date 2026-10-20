@@ -11,7 +11,7 @@ import type { BookingRow } from './account/AccountView';
 
 type Svc = { id: string; name: string; desc: string; cat: string; dur: number; price: string };
 type Props = {
-  reviews: { name: string; stars: number; text: string; reply: string; date: string }[]; rating: { avg: number; count: number };
+  reviews: { name: string; stars: number; text: string; reply: string; date: string }[]; rating: { avg: number; count: number; dist: number[] };
   slug: string; name: string; headline: string; intro: string; about: string; address: string; phone: string; email: string;
   services: Svc[]; cats: string[]; team: { name: string; role: string; photo: string | null }[]; hours: ({ from: string; to: string } | null)[];
   today: number; nowMin: number; cancel: string; bookable: boolean; next: string | null; account: { name: string; email: string; phone: string } | null; visits: { upcoming: BookingRow[]; past: BookingRow[] };
@@ -79,15 +79,28 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
   const STARS = '★★★★★';
   const rounded = Math.round(p.rating.avg);
   const reviews = p.rating.count > 0 && (
-    <section aria-label="Reviews" style={S(CARD(m ? 20 : 24, 16))}>
-      <div style={S('display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 16px')}>
-        <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Reviews</h2>
-        <span style={S('display:inline-flex;align-items:center;gap:8px;font-size:14px;color:#5E6673')}><span aria-hidden="true" style={S('font-size:16px;letter-spacing:1px')}><span style={S('color:#E8A317')}>{STARS.slice(0, rounded)}</span><span style={S('color:#D5D9E0')}>{STARS.slice(rounded)}</span></span><span><strong style={S('color:#0E1116;font-weight:600')}>{p.rating.avg.toFixed(1)}</strong>{' from ' + p.rating.count + (p.rating.count === 1 ? ' review' : ' reviews')}</span></span>
+    <section aria-label="Reviews" style={S(CARD(m ? 20 : 24, 18))}>
+      <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Reviews</h2>
+      <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:' + (m ? '18px 24px' : '20px 36px') + ';padding:' + (m ? 18 : 22) + 'px;border-radius:20px;background:#F4F5F7')}>
+        <div style={S('flex:0 0 auto')}>
+          <div style={S('font-size:' + (m ? 44 : 52) + 'px;line-height:1;font-weight:600;letter-spacing:-0.04em')}>{p.rating.avg.toFixed(1)}</div>
+          <div aria-hidden="true" style={S('margin-top:6px;font-size:18px;letter-spacing:2px')}><span style={S('color:#E8A317')}>{STARS.slice(0, rounded)}</span><span style={S('color:#D5D9E0')}>{STARS.slice(rounded)}</span></div>
+          <div style={S('margin-top:4px;color:#5E6673;font-size:13.5px')}>{p.rating.count + (p.rating.count === 1 ? ' review' : ' reviews')}</div>
+        </div>
+        <div style={S('flex:1 1 200px;min-width:0;display:flex;flex-direction:column;gap:7px')}>
+          {[5, 4, 3, 2, 1].map((k, i) => (
+            <div key={k} style={S('display:flex;align-items:center;gap:10px;font-size:13px;color:#5E6673')}><span style={S('flex:0 0 46px')}>{k + ' star'}</span><div style={S('flex:1 1 auto;background:#FFFFFF;border-radius:999px')}><div style={S('height:8px;border-radius:999px;background:#0E1116;width:' + Math.round((p.rating.dist[i] ?? 0) / p.rating.count * 100) + '%')} /></div><span style={S('flex:0 0 24px;text-align:right')}>{p.rating.dist[i] ?? 0}</span></div>
+          ))}
+        </div>
       </div>
-      <ul style={S('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px')}>
+      <ul style={S('margin:0;padding:0;list-style:none;display:grid;grid-template-columns:' + (m ? '1fr' : 'repeat(auto-fill,minmax(300px,1fr))') + ';gap:12px')}>
         {p.reviews.map((r, i) => (
-          <li key={i} style={S('display:flex;flex-direction:column;gap:8px;padding:16px;border:1px solid #E6E8EC;border-radius:18px')}>
-            <div style={S('display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px')}><span style={S('display:inline-flex;align-items:baseline;gap:10px')}><span style={S('font-size:15px;font-weight:600')}>{r.name}</span><span role="img" aria-label={r.stars + ' out of 5 stars'} style={S('font-size:14px;letter-spacing:1px')}><span style={S('color:#E8A317')}>{STARS.slice(0, r.stars)}</span><span style={S('color:#D5D9E0')}>{STARS.slice(r.stars)}</span></span></span><span style={S('font-size:13px;color:#5E6673')}>{r.date}</span></div>
+          <li key={i} style={S('display:flex;flex-direction:column;gap:10px;padding:16px;border:1px solid #E6E8EC;border-radius:18px;min-width:0')}>
+            <div style={S('display:flex;align-items:center;gap:12px')}>
+              <span aria-hidden="true" style={S('flex:0 0 40px;width:40px;height:40px;border-radius:999px;background:#EEF0F3;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600')}>{initialsOf(r.name.replace('.', ''))}</span>
+              <div style={S('flex:1 1 auto;min-width:0')}><div style={S('font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{r.name}</div><div style={S('font-size:12.5px;color:#5E6673')}>{r.date}</div></div>
+              <span role="img" aria-label={r.stars + ' out of 5 stars'} style={S('flex:0 0 auto;font-size:15px;letter-spacing:1px')}><span style={S('color:#E8A317')}>{STARS.slice(0, r.stars)}</span><span style={S('color:#D5D9E0')}>{STARS.slice(r.stars)}</span></span>
+            </div>
             {!!r.text && <p style={S('margin:0;font-size:15px;line-height:1.5;overflow-wrap:anywhere')}>{r.text}</p>}
             {!!r.reply && <div style={S('border-radius:14px;background:#F4F5F7;padding:10px 12px;font-size:14px;overflow-wrap:anywhere')}><div style={S('font-size:12.5px;font-weight:600;color:#5E6673;margin-bottom:2px')}>{'Reply from ' + p.name}</div>{r.reply}</div>}
           </li>
@@ -152,13 +165,20 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
       {pastCard}
     </section>
   );
+  const upNextM = !!p.account && !!nextUp && (
+    <section aria-label="Your next appointment" style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:20px;display:flex;flex-direction:column;gap:12px;flex:0 0 auto')}>
+      <span style={S('color:#5E6673;font-size:13px;font-weight:500')}>Your next appointment</span>
+      <div><div style={S('font-size:18px;font-weight:600;letter-spacing:-0.02em')}>{nextUp.when}</div><div style={S('margin-top:4px;font-size:14.5px;overflow-wrap:anywhere')}>{nextUp.what}{nextUp.who ? ' with ' + nextUp.who : ''}</div></div>
+      {nextUp.manage && <Link href={nextUp.manage} style={S('height:48px;padding:0 20px;box-sizing:border-box;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none')}>Change or cancel</Link>}
+    </section>
+  );
   const BOOKBTN = (h: number, fs: number, pad: string, extra = '') => 'height:' + h + 'px;padding:' + pad + ';box-sizing:border-box;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:' + fs + 'px;font-weight:500;display:flex;align-items:center;text-decoration:none;' + extra;
 
   if (m) return (<>
     <main className="flow" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:24px 20px 24px;display:flex;flex-direction:column;gap:20px')}>
       <header style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{p.name}</span><span style={S(openStyle + ';flex:0 0 auto')}>{openText}</span></header>
       {p.account && <AcctChip slug={p.slug} name={p.account.name || 'Your account'} wide />}
-      {visits}{photos}{services}{team}{reviews}{about}{info}{manage}
+      {upNextM}{photos}{services}{team}{reviews}{about}{info}{manage}
     </main>
     {p.bookable && <div style={S('flex:0 0 auto;box-sizing:border-box;padding:12px 20px 24px;background:#FFFFFF;border-top:1px solid #E6E8EC')}><Link href={book()} style={S('height:48px;box-sizing:border-box;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none')}>Book now</Link></div>}
   </>);
