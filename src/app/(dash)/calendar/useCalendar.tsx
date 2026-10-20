@@ -102,7 +102,7 @@ export function useCalendar(props: Props) {
   const startCheckout = (id: string) => { setSelId(id); setOpen(true); setMode('checkout'); setCo({ method: 'card', tip: cfg.askTip ? cfg.tipDefault : 0, code: '', disc: NO_DISC }); setError(''); setNotice(''); };
   const primary = (b: CalBooking) => {
     const k = kindOf(b.status);
-    if (k === 'confirmed') act(() => checkInBooking(b.id), first(b.client) + ' checked in');
+    if (k === 'confirmed') { if (b.dayYmd > today) { setError('You can check someone in on the day of their appointment.'); return; } act(() => checkInBooking(b.id), first(b.client) + ' checked in'); }
     else if (k === 'pending') act(() => approveBooking(b.id), first(b.client) + ' approved');
     else if (k === 'live') startCheckout(b.id);
     else if (b.saleId) router.push(`/sales?sale=${b.saleId}`);
