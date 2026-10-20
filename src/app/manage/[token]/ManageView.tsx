@@ -176,24 +176,20 @@ function Desktop({ m }: { m: M }) {
       <header style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px')}>
         <div style={S('display:flex;align-items:center;gap:12px')}><div><a href={'/b/' + p.slug} style={S('display:block;font-size:17px;font-weight:600;letter-spacing:-0.01em;color:#0E1116;text-decoration:none')}>{p.salonName}</a><div style={S('font-size:13px;color:#5E6673')}>Manage your booking</div></div></div>
       </header>
+      {view && <div style={S('display:flex;flex-direction:column;gap:20px')}>
+        <StatusRow m={m} />
+        <h1 style={S('margin:0;font-size:34px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>Your appointment</h1>
+      </div>}
+      {m.mode === 'resched' && !m.cancelled && <div><h1 style={S('margin:0;font-size:34px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>Pick a new time</h1><p style={S('margin:6px 0 0;color:#5E6673;font-size:15px')}>Your appointment takes {fmtDur(m.totalDur)}.</p></div>}
+      {m.mode === 'cancel' && !m.cancelled && <div><h1 style={S('margin:0;font-size:34px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>Cancel this appointment?</h1><p style={S('margin:6px 0 0;color:#5E6673;font-size:15px')}>{short} with {p.staffName}, {fmtDur(m.totalDur)}, {m.money(m.totalCents)}.</p></div>}
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:24px')}>
         <div className="bk-flow" style={S('flex:999 1 400px;min-width:0;display:flex;flex-direction:column;gap:20px')}>
-          {view && <>
-            <StatusRow m={m} />
-            <h1 style={S('margin:0;font-size:34px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>Your appointment</h1>
-            <Summary m={m} pad={28} />
-          </>}
-          {m.mode === 'resched' && !m.cancelled && <>
-            <div><h1 style={S('margin:0;font-size:34px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>Pick a new time</h1><p style={S('margin:6px 0 0;color:#5E6673;font-size:15px')}>Your appointment takes {fmtDur(m.totalDur)}.</p></div>
-            <Picker m={m} cols="repeat(auto-fill,minmax(92px,1fr))" dayW={84} pad={28} />
-          </>}
-          {m.mode === 'cancel' && !m.cancelled && <>
-            <div><h1 style={S('margin:0;font-size:34px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>Cancel this appointment?</h1><p style={S('margin:6px 0 0;color:#5E6673;font-size:15px')}>{short} with {p.staffName}, {fmtDur(m.totalDur)}, {m.money(m.totalCents)}.</p></div>
-            <div style={S(CARD(28))}>
-              <p style={S('margin:0;padding:14px 16px;border-radius:16px;background:#F4F5F7;font-size:14px')}>{m.cancelNote}</p>
-              <Reasons m={m} />
-            </div>
-          </>}
+          {view && <Summary m={m} pad={28} />}
+          {m.mode === 'resched' && !m.cancelled && <Picker m={m} cols="repeat(auto-fill,minmax(92px,1fr))" dayW={84} pad={28} />}
+          {m.mode === 'cancel' && !m.cancelled && <div style={S(CARD(28))}>
+            <p style={S('margin:0;padding:14px 16px;border-radius:16px;background:#F4F5F7;font-size:14px')}>{m.cancelNote}</p>
+            <Reasons m={m} />
+          </div>}
           {m.cancelled && <CancelledCard m={m} pad={28} h1={34} />}
         </div>
         {showAside && (
