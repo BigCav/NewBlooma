@@ -193,7 +193,7 @@ function Desktop({ c }: { c: C }) {
           {rows.length === 0 && <p style={S('margin:0;padding:24px 20px;color:#5E6673;font-size:14px;border-top:1px solid #EEF0F3')}>{c.items.length === 0 ? 'No clients yet.' : `Nothing matches "${c.query.trim()}".`}</p>}
           {c.filtered.length > SHOW_MAX && <p style={S('margin:0;padding:16px 20px;color:#5E6673;font-size:13px;border-top:1px solid #EEF0F3')}>Showing the first {SHOW_MAX}. Search to narrow the list.</p>}
         </section>
-        <aside className="side-sticky" aria-label="Client details" style={S('flex:1 1 440px;max-width:520px;min-width:0;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:16px')}>
+        <aside aria-label="Client details" style={S('flex:1 1 440px;max-width:520px;min-width:0;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:16px')}>
           <Panel c={c} m={false} />
         </aside>
       </div>

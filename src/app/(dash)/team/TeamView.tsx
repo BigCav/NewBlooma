@@ -216,7 +216,7 @@ function Desktop({ c }: { c: C }) {
           </div>
           {c.list.length === 0 && <p style={S('margin:0;padding:24px 20px;color:#5E6673;font-size:14px;border-top:1px solid #EEF0F3')}>{EMPTY(c)}</p>}
         </section>
-        <aside className="side-sticky" aria-label="Team member editor" style={S('flex:1 1 440px;max-width:520px;min-width:0;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:20px')}>
+        <aside aria-label="Team member editor" style={S('flex:1 1 440px;max-width:520px;min-width:0;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:20px')}>
           <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
             <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{c.mode === 'new' ? 'New team member' : 'Edit team member'}</h2>
             {!!c.notice && <span role="status" style={S('flex:0 0 auto;padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.notice}</span>}

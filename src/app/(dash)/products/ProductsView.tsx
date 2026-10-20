@@ -201,7 +201,7 @@ function Desktop({ c }: { c: C }) {
           </div></div>
           {c.list.length === 0 && <p style={S('margin:0;padding:24px 20px;color:#5E6673;font-size:14px;border-top:1px solid #EEF0F3')}>{c.query.trim() ? `Nothing matches "${c.query.trim()}".` : 'No products yet.'}</p>}
         </section>
-        <aside className="side-sticky" aria-label="Product details" style={S('flex:1 1 440px;max-width:520px;min-width:0;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:20px')}><Body c={c} m={false} /></aside>
+        <aside aria-label="Product details" style={S('flex:1 1 440px;max-width:520px;min-width:0;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:20px')}><Body c={c} m={false} /></aside>
       </div>
     </div>
   );
