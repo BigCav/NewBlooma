@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { currentClient } from '@/lib/client-auth';
 import { loadClientVisits } from '@/lib/client-visits';
 import { getPublicSalon, nextAvailableLabel } from '@/lib/public';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 import { ProfileView } from './ProfileView';
 
 export const dynamic = 'force-dynamic';
@@ -34,7 +35,16 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
   const next = settings.online_booking ? await nextAvailableLabel(salon.id, salon.timezone).catch(() => null) : null;
   const me = await currentClient(salon.id).catch(() => null);
   const visits = me ? await loadClientVisits(salon, me.email).catch(() => ({ upcoming: [], past: [] })) : { upcoming: [], past: [] };
-  return <ProfileView slug={slug} name={salon.name} headline={salon.headline || salon.name} intro={salon.intro || 'Book your next visit online in under a minute, with the team member you like and a time that suits you.'}
+  const { data: rv } = await supabaseAdmin().from('reviews').select('stars,body,reply,created_at,reviewer_name,clients(name)').eq('salon_id', salon.id).order('created_at', { ascending: false }).limit(200);
+  const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const allRv = (rv ?? []) as any[];
+  const reviews = allRv.slice(0, 6).map((r) => {
+    const parts = String(r.reviewer_name || r.clients?.name || 'Client').trim().split(/\s+/);
+    const d = new Date(r.created_at);
+    return { name: parts[0] + (parts[1] ? ' ' + parts[1][0].toUpperCase() + '.' : ''), stars: r.stars as number, text: String(r.body ?? ''), reply: String(r.reply ?? ''), date: d.getDate() + ' ' + MON[d.getMonth()] };
+  });
+  const rating = { avg: allRv.length ? allRv.reduce((a, r) => a + r.stars, 0) / allRv.length : 0, count: allRv.length };
+  return <ProfileView reviews={reviews} rating={rating} slug={slug} name={salon.name} headline={salon.headline || salon.name} intro={salon.intro || 'Book your next visit online in under a minute, with the team member you like and a time that suits you.'}
     about={salon.about || ''} address={salon.address || ''} phone={salon.phone || ''} email={salon.email || ''}
     services={services} cats={cats} team={d.team.map((t) => ({ name: t.name, role: t.role_title, photo: t.photo_url ?? null }))} hours={hours} today={today} nowMin={nowMin} cancel={cancel} bookable={settings.online_booking} next={next} account={me ? { name: me.name, email: me.email, phone: me.phone } : null} visits={visits} />;
 }

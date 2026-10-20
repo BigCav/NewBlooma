@@ -11,6 +11,7 @@ import type { BookingRow } from './account/AccountView';
 
 type Svc = { id: string; name: string; desc: string; cat: string; dur: number; price: string };
 type Props = {
+  reviews: { name: string; stars: number; text: string; reply: string; date: string }[]; rating: { avg: number; count: number };
   slug: string; name: string; headline: string; intro: string; about: string; address: string; phone: string; email: string;
   services: Svc[]; cats: string[]; team: { name: string; role: string; photo: string | null }[]; hours: ({ from: string; to: string } | null)[];
   today: number; nowMin: number; cancel: string; bookable: boolean; next: string | null; account: { name: string; email: string; phone: string } | null; visits: { upcoming: BookingRow[]; past: BookingRow[] };
@@ -71,6 +72,25 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
       <ul style={S('margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px')}>
         {p.team.map((x) => (
           <li key={x.name} style={S('display:flex;align-items:center;gap:12px;padding:14px;border:1px solid #E6E8EC;border-radius:18px')}><span style={S('flex:0 0 48px;width:48px;height:48px;border-radius:999px;background:#EEF0F3;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600' + (x.photo ? ';background-image:url(' + x.photo + ');background-size:cover;background-position:center' : ''))}>{x.photo ? '' : initialsOf(x.name)}</span><span style={S('min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{x.name}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{x.role}</span></span></li>
+        ))}
+      </ul>
+    </section>
+  );
+  const STARS = '★★★★★';
+  const rounded = Math.round(p.rating.avg);
+  const reviews = p.rating.count > 0 && (
+    <section aria-label="Reviews" style={S(CARD(m ? 20 : 24, 16))}>
+      <div style={S('display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 16px')}>
+        <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Reviews</h2>
+        <span style={S('display:inline-flex;align-items:center;gap:8px;font-size:14px;color:#5E6673')}><span aria-hidden="true" style={S('font-size:16px;letter-spacing:1px')}><span style={S('color:#E8A317')}>{STARS.slice(0, rounded)}</span><span style={S('color:#D5D9E0')}>{STARS.slice(rounded)}</span></span><span><strong style={S('color:#0E1116;font-weight:600')}>{p.rating.avg.toFixed(1)}</strong>{' from ' + p.rating.count + (p.rating.count === 1 ? ' review' : ' reviews')}</span></span>
+      </div>
+      <ul style={S('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px')}>
+        {p.reviews.map((r, i) => (
+          <li key={i} style={S('display:flex;flex-direction:column;gap:8px;padding:16px;border:1px solid #E6E8EC;border-radius:18px')}>
+            <div style={S('display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px')}><span style={S('display:inline-flex;align-items:baseline;gap:10px')}><span style={S('font-size:15px;font-weight:600')}>{r.name}</span><span role="img" aria-label={r.stars + ' out of 5 stars'} style={S('font-size:14px;letter-spacing:1px')}><span style={S('color:#E8A317')}>{STARS.slice(0, r.stars)}</span><span style={S('color:#D5D9E0')}>{STARS.slice(r.stars)}</span></span></span><span style={S('font-size:13px;color:#5E6673')}>{r.date}</span></div>
+            {!!r.text && <p style={S('margin:0;font-size:15px;line-height:1.5;overflow-wrap:anywhere')}>{r.text}</p>}
+            {!!r.reply && <div style={S('border-radius:14px;background:#F4F5F7;padding:10px 12px;font-size:14px;overflow-wrap:anywhere')}><div style={S('font-size:12.5px;font-weight:600;color:#5E6673;margin-bottom:2px')}>{'Reply from ' + p.name}</div>{r.reply}</div>}
+          </li>
         ))}
       </ul>
     </section>
@@ -138,7 +158,7 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
     <main className="flow" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:24px 20px 24px;display:flex;flex-direction:column;gap:20px')}>
       <header style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{p.name}</span><span style={S(openStyle + ';flex:0 0 auto')}>{openText}</span></header>
       {p.account && <AcctChip slug={p.slug} name={p.account.name || 'Your account'} wide />}
-      {visits}{photos}{services}{team}{about}{info}{manage}
+      {visits}{photos}{services}{team}{reviews}{about}{info}{manage}
     </main>
     {p.bookable && <div style={S('flex:0 0 auto;box-sizing:border-box;padding:12px 20px 24px;background:#FFFFFF;border-top:1px solid #E6E8EC')}><Link href={book()} style={S('height:48px;box-sizing:border-box;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none')}>Book now</Link></div>}
   </>);
@@ -154,7 +174,7 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
       {photos}
       {visits}
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:24px')}>
-        <div className="flow" style={S('flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:24px')}>{services}{team}{about}</div>
+        <div className="flow" style={S('flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:24px')}>{services}{team}{reviews}{about}</div>
         <aside className="flow" style={S('flex:1 1 320px;max-width:380px;min-width:0;position:sticky;top:24px;display:flex;flex-direction:column;gap:16px')}>
           <div style={S(CARD(24, 12))}>
             <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Book an appointment</h2>
