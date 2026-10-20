@@ -57,11 +57,16 @@ function Summary({ c, m }: { c: C; m: boolean }) {
   </>);
 }
 
-function List({ c, m }: { c: C; m: boolean }) {
+function Filters({ c }: { c: C }) {
   return (<>
     <div role="group" aria-label="Filter reviews" className="hscroll" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto')}>
       {FILTERS.map(([id, label]) => <button key={id} onClick={() => c.pickFilter(id)} aria-pressed={c.filter === id} style={S(chip(c.filter === id))}>{label}</button>)}
     </div>
+  </>);
+}
+
+function List({ c, m }: { c: C; m: boolean }) {
+  return (<>
     {c.shown.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>{c.n === 0 ? 'No reviews yet. Ask recent clients to leave one.' : 'No reviews match this filter.'}</p>}
     {c.shown.map((r) => {
       const open = c.replyId === r.id;
@@ -89,9 +94,10 @@ function Desktop({ c }: { c: C }) {
   return (
     <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 48px 8px;display:flex;flex-direction:column;gap:24px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <PageHeader title="Reviews" subtitle={`What clients say about ${c.salonName}`} showSearch={false} showAction={false} />
+      <Filters c={c} />
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
         <section aria-label="Reviews" style={S('flex:999 1 520px;min-width:0;display:flex;flex-direction:column;gap:16px')}><List c={c} m={false} /></section>
-        <aside aria-label="Summary" style={S('flex:1 1 440px;max-width:520px;min-width:0;margin-top:56px;display:flex;flex-direction:column;gap:16px')}><Summary c={c} m={false} /></aside>
+        <aside aria-label="Summary" style={S('flex:1 1 440px;max-width:520px;min-width:0;display:flex;flex-direction:column;gap:16px')}><Summary c={c} m={false} /></aside>
       </div>
     </div>
   );
@@ -100,7 +106,7 @@ function Mobile({ c }: { c: C }) {
   return (
     <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <MobileHeader title="Reviews" subtitle="What clients say" showSearch={false} />
-      <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:16px')}><Summary c={c} m={true} /><List c={c} m={true} /></main>
+      <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:16px')}><Summary c={c} m={true} /><Filters c={c} /><List c={c} m={true} /></main>
       <MobileTabs active="more" />
     </div>
   );
