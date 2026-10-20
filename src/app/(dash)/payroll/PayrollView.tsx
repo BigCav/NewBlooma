@@ -109,7 +109,7 @@ function Desktop({ c }: { c: C }) {
       <PageHeader title="Payroll" subtitle="Timesheets and commission" showSearch={false} showAction={false} />
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
         <section aria-label="Team" style={S('flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:16px')}><Cards c={c} m={false} /></section>
-        <aside aria-label="Pay period" style={S('flex:1 1 440px;max-width:520px;min-width:0;display:flex;flex-direction:column;gap:16px')}><Controls c={c} m={false} /></aside>
+        <aside className="side-sticky" aria-label="Pay period" style={S('flex:1 1 440px;max-width:520px;min-width:0;display:flex;flex-direction:column;gap:16px')}><Controls c={c} m={false} /></aside>
       </div>
     </div>
   );

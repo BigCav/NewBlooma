@@ -249,7 +249,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
           )}
         </section>
 
-        <aside aria-label="Appointment details" style={S('flex:1 1 440px;max-width:520px;min-width:0;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:22px')}>
+        <aside className="side-sticky" aria-label="Appointment details" style={S('flex:1 1 440px;max-width:520px;min-width:0;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:22px')}>
 
           {mode === 'view' && !sq && sel && selB && (<>
             <div style={S('display:flex;flex-direction:column;gap:16px')}>

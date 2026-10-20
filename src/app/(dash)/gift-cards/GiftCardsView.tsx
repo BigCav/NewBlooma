@@ -197,7 +197,7 @@ function Desktop({ c }: { c: C }) {
           </div>
           {c.shown.length === 0 && <p style={S('margin:0;padding:28px 20px;color:#5E6673;font-size:14px')}>{noneText(c)}</p>}
         </section>
-        <aside aria-label="Gift card details" style={S('flex:1 1 440px;max-width:520px;min-width:0;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:20px')}>
+        <aside className="side-sticky" aria-label="Gift card details" style={S('flex:1 1 440px;max-width:520px;min-width:0;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:20px')}>
           <Panel c={c} m={false} />
         </aside>
       </div>

@@ -76,3 +76,6 @@ table{width:100%;border-collapse:collapse}th{font-size:12px;text-transform:upper
 a,a *,button,button *,summary,[role="button"],[role="tab"],[role="switch"],[role="option"]{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 input,textarea,select{-webkit-user-select:text;user-select:text}
 .d-cal .hscroll.tb-chips{padding-bottom:0 !important}
+
+/* PC: the right-hand panel stays in view and scrolls on its own while the main content scrolls separately */
+.side-sticky{position:sticky;top:20px;align-self:flex-start;max-height:calc(100dvh - 40px);overflow-y:auto;overscroll-behavior:contain}

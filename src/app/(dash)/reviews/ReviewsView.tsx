@@ -97,7 +97,7 @@ function Desktop({ c }: { c: C }) {
       <Filters c={c} />
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
         <section aria-label="Reviews" style={S('flex:999 1 520px;min-width:0;display:flex;flex-direction:column;gap:16px')}><List c={c} m={false} /></section>
-        <aside aria-label="Summary" style={S('flex:1 1 440px;max-width:520px;min-width:0;display:flex;flex-direction:column;gap:16px')}><Summary c={c} m={false} /></aside>
+        <aside className="side-sticky" aria-label="Summary" style={S('flex:1 1 440px;max-width:520px;min-width:0;display:flex;flex-direction:column;gap:16px')}><Summary c={c} m={false} /></aside>
       </div>
     </div>
   );
