@@ -6,15 +6,16 @@ import { findClients, type ClientHit } from './actions';
 /** Live list of existing clients matching what is typed in the client box. Tapping one picks that client. */
 export function ClientMatches({ query, pickedId, onPick, mobile }: { query: string; pickedId: string | null; onPick: (c: ClientHit) => void; mobile?: boolean }) {
   const [hits, setHits] = useState<ClientHit[]>([]);
+  const [doneFor, setDoneFor] = useState('');
   const q = query.trim();
   useEffect(() => {
     if (!q || pickedId) { setHits([]); return; }
     let live = true;
-    const t = setTimeout(() => { findClients(q).then((r) => { if (live) setHits(r); }).catch(() => { if (live) setHits([]); }); }, 150);
+    const t = setTimeout(() => { findClients(q).then((r) => { if (live) { setHits(r); setDoneFor(q); } }).catch(() => { if (live) { setHits([]); setDoneFor(q); } }); }, 150);
     return () => { live = false; clearTimeout(t); };
   }, [q, pickedId]);
   if (!q || pickedId) return null;
-  if (!hits.length) return <div style={S('font-size:13px;color:#5E6673;padding:2px 2px 0')}>No existing client with that name. A new client will be added.</div>;
+  if (!hits.length) return doneFor !== q ? null : <div style={S('font-size:13px;color:#5E6673;padding:2px 2px 0')}>No existing client with that name. A new client will be added.</div>;
   return (
     <ul role="listbox" aria-label="Matching clients" style={S('margin:0;padding:4px;list-style:none;border:1px solid #E6E8EC;border-radius:16px;background:#FFFFFF;display:flex;flex-direction:column')}>
       {hits.map((h) => (
