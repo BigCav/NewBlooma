@@ -19,7 +19,7 @@ export async function loadClientVisits(salon: { id: string; timezone: string; cu
   const now = new Date();
   const live = (bks ?? []).filter((b: any) => ['pending', 'confirmed'].includes(b.status) && new Date(b.starts_at) > now);
   // Once the salon has checked a client in, the visit stays on the list but can no longer be changed or cancelled.
-  const inProgress = (bks ?? []).filter((b: any) => ['checked_in', 'in_progress'].includes(b.status));
+  const inProgress = (bks ?? []).filter((b: any) => ['checked_in', 'in_progress'].includes(b.status) && Math.abs(now.getTime() - new Date(b.starts_at).getTime()) < 18 * 3600e3);
   // Each upcoming booking links to the same manage page the emails use; make a link if an older booking has none.
   const tokens = new Map<string, string>();
   if (live.length) {

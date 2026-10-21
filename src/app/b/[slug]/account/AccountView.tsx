@@ -126,7 +126,7 @@ function AccountInner({ slug, salon, account, upcoming, past }: Props) {
                       </span>
                       {u.manage
                         ? <Link href={u.manage} aria-label={`Change or cancel ${u.what} on ${u.when}`} style={{ ...dark, width: '100%', padding: '0 20px' }}>Change or cancel</Link>
-                        : <span style={{ alignSelf: 'flex-start', padding: '6px 14px', borderRadius: 999, background: '#ECE8FF', color: '#3B2BB5', fontSize: 13, fontWeight: 500 }}>{u.status === 'In progress' ? 'In progress, check in done' : u.status}</span>}
+                        : <span style={{ alignSelf: 'flex-start', padding: '6px 14px', borderRadius: 999, background: '#ECE8FF', color: '#3B2BB5', fontSize: 13, fontWeight: 500 }}>{u.status === 'In progress' ? 'Checked in' : u.status}</span>}
                     </li>
                   ))}
                 </ul>
