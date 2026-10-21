@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 const S = (children: ReactNode, size = 20, sw = 1.7) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{children}</svg>
@@ -31,21 +31,25 @@ const RAIL: [string, string, string][] = [
 
 export function SideNav({ slug, unread }: { slug: string; unread: number }) {
   const p = usePathname();
+  const [wide, setWide] = useState(false);
+  useEffect(() => { try { setWide(localStorage.getItem('aster_rail') === '1'); } catch { /* storage blocked */ } }, []);
+  const toggle = () => setWide((w) => { try { localStorage.setItem('aster_rail', w ? '0' : '1'); } catch { /* storage blocked */ } return !w; });
   const item = (id: string, href: string, label: string, extra?: React.CSSProperties, ext = false) => {
     const on = !ext && p.startsWith(href);
     return (
       <Link key={id} href={href} className="rail-link" aria-label={id === 'inbox' && unread > 0 ? `Inbox, ${unread} need attention` : label} title={label} aria-current={on ? 'page' : undefined} target={ext ? '_blank' : undefined}
         style={{ width: 44, height: 44, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', background: on ? '#0E1116' : 'transparent', color: on ? '#fff' : '#4A525E', ...extra }}>
         {ICON[id]()}
+        <span className="rail-label">{id === 'store' ? 'Your salon page' : label}</span>
         {id === 'inbox' && unread > 0 && <span aria-hidden="true" style={{ position: 'absolute', top: 0, right: 0, minWidth: 20, height: 20, padding: '0 5px', boxSizing: 'border-box', borderRadius: 999, background: '#5B3DF5', color: '#fff', fontSize: 11, fontWeight: 600, lineHeight: '16px', textAlign: 'center', border: '2px solid #F4F5F7' }}>{unread > 9 ? '9+' : unread}</span>}
       </Link>
     );
   };
   return (
-    <nav className="rail" aria-label="Main">
-      <div style={{ width: 40, height: 40, borderRadius: 14, background: '#0E1116', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20, color: '#fff' }}>
+    <nav className={'rail' + (wide ? ' wide' : '')} aria-label="Main">
+      <button type="button" onClick={toggle} aria-expanded={wide} aria-label={wide ? 'Collapse menu' : 'Expand menu'} title={wide ? 'Collapse menu' : 'Expand menu'} className="rail-logo" style={{ width: 40, height: 40, flex: '0 0 auto', border: 0, padding: 0, cursor: 'pointer', borderRadius: 14, background: '#0E1116', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20, color: '#fff' }}>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="7.5" /><path d="M8.5 13.5c1 1.6 2.2 2.3 3.5 2.3s2.5-.7 3.5-2.3" /></svg>
-      </div>
+      </button>
       {RAIL.map(([id, href, label]) => item(id, href, label))}
       {item('store', `/b/${slug}`, 'View your public salon page', { marginTop: 'auto' }, true)}
       {item('settings', '/settings', 'Settings')}
