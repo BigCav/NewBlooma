@@ -5,13 +5,14 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import type { CalService, CalStaff } from '@/lib/cal';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
+import { ClientMatches } from '../calendar/ClientMatches';
 import { S, ServicePicker, TeamPicker } from '../calendar/pickers';
 import { addToWaitlist, bookEntry, findTimes, offerTime, removeEntry } from './actions';
 import { DAY_PREFS, STATUS, WINDOWS, type WlRow, type WlSlot } from './shared';
 
 type Props = { rows: WlRow[]; services: CalService[]; offers: Record<string, string[]>; team: CalStaff[] };
 const chip = (on: boolean) => 'flex:0 0 auto;height:40px;padding:0 14px;border-radius:999px;font-size:13.5px;font-weight:500;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
-const blank = () => ({ name: '', svc: null as string | null, pro: 'any', dayPref: 'any', win: 'any' });
+const blank = () => ({ name: '', clientId: null as string | null, svc: null as string | null, pro: 'any', dayPref: 'any', win: 'any' });
 
 function useWaitlist(props: Props) {
   const router = useRouter();
@@ -54,7 +55,7 @@ function useWaitlist(props: Props) {
   const submitAdd = () => {
     if (!add.name.trim()) { setError("Add the client's name."); return; }
     if (!add.svc) { setError('Choose a service.'); return; }
-    run(() => addToWaitlist(add.name, add.svc, add.pro === 'any' ? null : add.pro, add.dayPref, add.win), (n) => { setMode('list'); setAdd(blank()); setNotice(n ?? ''); });
+    run(() => addToWaitlist(add.name, add.clientId, add.svc, add.pro === 'any' ? null : add.pro, add.dayPref, add.win), (n) => { setMode('list'); setAdd(blank()); setNotice(n ?? ''); });
   };
   const pickSvc = (id: string) => {
     const sv = props.services.find((x) => x.id === id);
@@ -120,7 +121,8 @@ function AddForm({ c, m }: { c: C; m: boolean }) {
     <section style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:' + (m ? 20 : 24) + 'px;display:flex;flex-direction:column;gap:18px')}>
       <div><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Add to waitlist</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>We will suggest times as they open up.</p></div>
       <div style={S('display:flex;flex-direction:column;gap:6px')}><label htmlFor="wl-name" style={S('font-size:14px;font-weight:600')}>Client name</label>
-        <input id="wl-name" type="text" value={a.name} onChange={(e) => { c.setAdd({ ...a, name: e.target.value }); c.setError(''); }} placeholder="Full name" style={{ ...S('box-sizing:border-box;width:100%;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF'), minHeight: 0 }} /></div>
+        <input id="wl-name" type="text" value={a.name} onChange={(e) => { c.setAdd({ ...a, name: e.target.value, clientId: null }); c.setError(''); }} placeholder="Search or type a client name" autoComplete="off" style={{ ...S('box-sizing:border-box;width:100%;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF'), minHeight: 0 }} />
+          <ClientMatches query={a.name} pickedId={a.clientId} onPick={(h) => { c.setAdd({ ...a, name: h.name, clientId: h.id }); c.setError(''); }} /></div>
       <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="wl-svc" style={S('font-size:14px;font-weight:600')}>Service</span>
         <ServicePicker services={c.services} selected={a.svc ? [a.svc] : []} chipHeight={h} onPick={c.pickSvc} /></div>
       <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="wl-pro" style={S('font-size:14px;font-weight:600')}>Team member</span>

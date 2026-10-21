@@ -338,7 +338,7 @@ export function useCalendar(props: Props) {
     const orphan = p.others.find((o) => !o.sid); if (orphan) { setError('No one offers ' + orphan.svc.name + ' yet. Remove it, or assign it to a team member in Services.'); return; }
     if (nf.time === null) { setError('Choose a time from the list.'); return; }
     if (nWhy(nf.time)) { setError('That time is no longer free. Pick another from the list.'); return; }
-    const known = nf.clientId ? { id: nf.clientId } : props.recent.find((c) => c.name.toLowerCase() === name.toLowerCase());
+    const known = nf.clientId ? { id: nf.clientId } : null;
     startT(async () => {
       setError('');
       const r = await createNewAppointment(name, known?.id ?? null, nf.staff, nf.day, nf.time!, p.same.map((x) => x.id), p.others.map((o) => ({ serviceId: o.svc.id, staffId: o.sid! })));

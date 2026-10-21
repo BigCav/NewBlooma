@@ -22,16 +22,14 @@ export async function findTimes(entryId: string): Promise<{ error?: string; slot
   return { slots };
 }
 
-export async function addToWaitlist(name: string, serviceId: string | null, staffId: string | null, dayPref: string, win: string): Promise<R & { id?: string }> {
+export async function addToWaitlist(name: string, clientId: string | null, serviceId: string | null, staffId: string | null, dayPref: string, win: string): Promise<R & { id?: string }> {
   const { sb, salon, staff } = await requireCtx();
   name = name.trim();
   if (!name) return { error: "Add the client's name." };
   if (!serviceId) return { error: 'Choose a service.' };
   const weekdays = dayPref === 'weekdays' ? [0, 1, 2, 3, 4] : dayPref === 'sat' ? [5] : [0, 1, 2, 3, 4, 5, 6];
-  let cid: string;
-  const { data: ex } = await sb.from('clients').select('id').ilike('name', name.replace(/[%_]/g, '\\$&')).limit(1).maybeSingle();
-  if (ex) cid = ex.id;
-  else { const { data, error } = await sb.from('clients').insert({ salon_id: salon.id, name }).select('id').single(); if (error) return { error: friendly(error.message) }; cid = data.id; }
+  let cid = clientId;
+  if (!cid) { const { data, error } = await sb.from('clients').insert({ salon_id: salon.id, name }).select('id').single(); if (error) return { error: friendly(error.message) }; cid = data.id; }
   const { data, error } = await sb.from('waitlist_entries').insert({
     salon_id: salon.id, client_id: cid, service_id: serviceId, staff_id: staffId || null, weekdays,
     earliest_time: win === 'pm' ? '12:00' : null, latest_time: win === 'am' ? '12:00' : null, added_by: staff.id,

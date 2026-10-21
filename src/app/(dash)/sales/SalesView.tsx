@@ -5,6 +5,7 @@ import { decimalInput } from '@/lib/numeric';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
+import { ClientMatches } from '../calendar/ClientMatches';
 import { S } from '../calendar/pickers';
 import { createWalkin, payFlow, refundSale, sendReceipt, setPrice, terminalCancel, terminalPoll } from './actions';
 import { DISC_PCTS, FILTERS, NO_DISC, STATUS, TIP_OPTS, discOf, discountCents, fmt, type DiscPick, type PayMethod, type SaleRow, type SvcOpt } from './shared';
@@ -30,7 +31,7 @@ function useSales(props: Props) {
   const blankPay = (tip = '0', disc: DiscPick = NO_DISC) => ({ method: first as PayMethod['id'], tip, code: '', disc });
   // A sale started at the calendar already has a tip; keep it when payment opens instead of resetting to none.
   const tipPctOf = (r?: { amount: number; tip: number }) => (r && r.amount > 0 && r.tip > 0 ? String(Math.round((r.tip * 100) / r.amount)) : '0');
-  const blankNew = () => ({ client: '', service: null as string | null, method: first as PayMethod['id'], tip: '0', code: '', disc: NO_DISC as DiscPick });
+  const blankNew = () => ({ client: '', clientId: null as string | null, service: null as string | null, method: first as PayMethod['id'], tip: '0', code: '', disc: NO_DISC as DiscPick });
   const rows = props.rows;
   const startSel = props.initial.sale && rows.some((r) => r.id === props.initial.sale) ? props.initial.sale : rows[0]?.id ?? null;
   const startPay = !!props.initial.pay && rows.find((r) => r.id === startSel)?.status === 'Pending';
@@ -96,7 +97,7 @@ function useSales(props: Props) {
     if (!nw.service) { setError('Choose a service.'); return; }
     if (!props.methods.length) { setError('No payment methods are switched on. Turn some on in Settings.'); return; }
     startT(async () => {
-      const c = await createWalkin(nw.client, nw.service!, parseInt(nw.tip, 10) || 0);
+      const c = await createWalkin(nw.client, nw.clientId, nw.service!, parseInt(nw.tip, 10) || 0);
       if (c.error || !c.saleId) { setError(c.error ?? 'Could not record the sale.'); return; }
       setSelectedId(c.saleId); setFilter('all'); setOpen(true);
       const r = await payFlow(c.saleId, nw.method, parseInt(nw.tip, 10) || 0, nw.code, props.canDiscount ? nw.disc : undefined);
@@ -160,7 +161,8 @@ function Panel({ c, m }: { c: C; m: boolean }) {
       <div style={S('display:flex;flex-direction:column;gap:18px')}>
         <div><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>New sale</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>{svc ? svc.name + ', ' + fmt(svc.priceCents) + (nwDisc ? ' less ' + fmt(nwDisc) + ' discount' : '') + (tipAmt ? ' plus ' + fmt(tipAmt) + ' tip' : '') + ', total ' + fmt(svc.priceCents - nwDisc + tipAmt) : 'Choose a service to see the total.'}</p></div>
         <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="nw-client" style={S('font-size:14px;font-weight:600')}>Client</label>
-          <input id="nw-client" type="text" value={c.nw.client} onChange={(e) => { c.setNw({ ...c.nw, client: e.target.value }); c.setError(''); }} placeholder="Client name" style={inputS(48)} /></div>
+          <input id="nw-client" type="text" value={c.nw.client} onChange={(e) => { c.setNw({ ...c.nw, client: e.target.value, clientId: null }); c.setError(''); }} placeholder="Search or type a client name" autoComplete="off" style={inputS(48)} />
+          <ClientMatches mobile={m} query={c.nw.client} pickedId={c.nw.clientId} onPick={(h) => { c.setNw({ ...c.nw, client: h.name, clientId: h.id }); c.setError(''); }} /></div>
         <Chips id="nw-service-label" label="Service">{c.services.map((x) => <button key={x.id} onClick={() => { c.setNw({ ...c.nw, service: x.id }); c.setError(''); }} aria-pressed={c.nw.service === x.id} style={S(pill(c.nw.service === x.id, m))}>{x.name}</button>)}</Chips>
         {methodChips(c.nw.method, (v) => c.setNw({ ...c.nw, method: v }), 'nw-method-label')}
         {c.nw.method === 'gift_card' && codeField(c.nw.code, (v) => c.setNw({ ...c.nw, code: v }), 'nw-code')}

@@ -265,9 +265,8 @@ export async function createNewAppointment(name: string, clientId: string | null
   }
   let cid = clientId;
   if (!cid) {
-    const { data: ex } = await sb.from('clients').select('id').ilike('name', name.replace(/[%_]/g, '\\$&')).limit(1).maybeSingle();
-    if (ex) cid = ex.id;
-    else { const { data, error } = await sb.from('clients').insert({ salon_id: salon.id, name }).select('id').single(); if (error) return { error: friendly(error.message) }; cid = data.id; }
+    // Never merge on name alone: two people can share one. An existing client is only used when picked from the list.
+    const { data, error } = await sb.from('clients').insert({ salon_id: salon.id, name }).select('id').single(); if (error) return { error: friendly(error.message) }; cid = data.id;
   }
   const hh = String(Math.floor(startMin / 60)).padStart(2, '0'), mi = String(startMin % 60).padStart(2, '0');
   const at = zonedToUtc(dayYmd, `${hh}:${mi}`, salon.timezone).toISOString();

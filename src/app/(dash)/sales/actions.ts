@@ -21,9 +21,9 @@ export async function createRetailSale(_: unknown, fd: FormData) {
 }
 
 /** Create a walk-in service sale. Payment is taken next with payFlow. */
-export async function createWalkin(client: string, serviceId: string, tipPct: number): Promise<Res & { saleId?: string }> {
+export async function createWalkin(client: string, clientId: string | null, serviceId: string, tipPct: number): Promise<Res & { saleId?: string }> {
   const { sb } = await requireCtx();
-  const { data, error } = await sb.rpc('create_walkin_sale', { p_client_name: client, p_service: serviceId, p_tip_pct: tipPct });
+  const { data, error } = await sb.rpc('create_walkin_sale', { p_client_name: client, p_service: serviceId, p_tip_pct: tipPct, p_client: clientId });
   if (error) return { error: friendly(error.message) };
   revalidatePath('/sales');
   return { saleId: data as string };
