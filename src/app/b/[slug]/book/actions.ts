@@ -2,6 +2,7 @@
 import { flushOutbox } from '@/lib/notify';
 import { checkPhone } from '@/lib/phone';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { allow, clientIp } from '@/lib/rate-limit';
 import { currentClient, salonIdFor, clearClientCookie, clientToken, setClientCookie, type ClientAccount } from '@/lib/client-auth';
 import { friendly } from '@/lib/session';
 import { minutesOfDay } from '@/lib/format';
@@ -72,6 +73,8 @@ export async function clientSignOut(): Promise<void> {
 
 export async function publicBook(slug: string, i: BookInput): Promise<{ error?: string; staffName?: string; account?: 'created' | 'exists' | 'saved' }> {
   if (i.website) return { error: 'Could not complete your booking.' }; // honeypot
+  // Nobody books a salon solid or fills a stranger's inbox: cap bookings per address and per email.
+  if (!(await allow('book:' + (await clientIp()), 8, 3600)) || !(await allow('book-to:' + i.email.trim().toLowerCase(), 6, 3600))) return { error: 'Too many bookings from here for now. Please call the salon, or try again later.' };
   const sb = supabaseAdmin();
   const { data: salon } = await sb.from('salons').select('id').eq('slug', slug).maybeSingle();
   if (!salon) return { error: 'This booking page is not available.' };
@@ -118,6 +121,7 @@ export async function publicBook(slug: string, i: BookInput): Promise<{ error?: 
 export async function publicWaitlist(slug: string, i: { name: string; phone: string; serviceId: string; staffId: string }): Promise<{ error?: string }> {
   const name = i.name.trim(); let phone = i.phone.trim();
   if (!name) return { error: 'Add your name.' };
+  if (!(await allow('wait:' + (await clientIp()), 8, 3600))) return { error: 'Too many requests from here for now. Please try again later.' };
   if (phone.replace(/\D/g, '').length < 7) return { error: 'Add a mobile number so we can reach you.' };
   const ph = checkPhone(phone, true); if (ph.error) return { error: ph.error };
   phone = ph.value;

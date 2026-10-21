@@ -5,5 +5,5 @@ export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code');
   if (code) { const sb = await supabaseServer(); await sb.auth.exchangeCodeForSession(code); }
   const next = req.nextUrl.searchParams.get('next') ?? '';
-  return NextResponse.redirect(new URL(/^\/(?!\/)/.test(next) ? next : '/setup', req.url));
+  return NextResponse.redirect(new URL(/^\/(?![/\\])/.test(next) ? next : '/setup', req.url));
 }

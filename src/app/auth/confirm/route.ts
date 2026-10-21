@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   const tokenHash = req.nextUrl.searchParams.get('token_hash');
   const type = req.nextUrl.searchParams.get('type') as EmailOtpType | null;
   const next = req.nextUrl.searchParams.get('next') ?? '';
-  const dest = /^\/(?!\/)/.test(next) ? next : '/calendar';
+  const dest = /^\/(?![/\\])/.test(next) ? next : '/calendar';
   if (tokenHash && type) {
     const sb = await supabaseServer();
     const { error } = await sb.auth.verifyOtp({ token_hash: tokenHash, type });

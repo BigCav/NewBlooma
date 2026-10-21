@@ -9,7 +9,7 @@ import { dateLong } from '@/lib/format';
 import { fmt } from './shared';
 
 type Res = { error?: string; notice?: string };
-async function origin() { const h = await headers(); return process.env.NEXT_PUBLIC_APP_URL || h.get('origin') || `https://${h.get('host')}`; }
+async function origin() { const h = await headers(); return process.env.NEXT_PUBLIC_APP_URL || `https://${h.get('x-forwarded-host') ?? h.get('host')}`; }
 
 export async function createRetailSale(_: unknown, fd: FormData) {
   const { sb } = await requireCtx();

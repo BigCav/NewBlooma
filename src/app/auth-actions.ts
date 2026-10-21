@@ -4,10 +4,11 @@ import { sendPasswordResetEmail, sendWelcomeEmail } from '@/lib/notify';
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { supabaseServer } from '@/lib/supabase/server';
+import { allow, clientIp } from '@/lib/rate-limit';
 
 type R = { error?: string; status?: 'created' | 'confirm' | 'sent' };
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-const origin = async () => { const h = await headers(); return h.get('origin') ?? process.env.NEXT_PUBLIC_APP_URL ?? `https://${h.get('x-forwarded-host') ?? h.get('host')}`; };
+const origin = async () => { const h = await headers(); return process.env.NEXT_PUBLIC_APP_URL ?? `https://${h.get('x-forwarded-host') ?? h.get('host')}`; };
 
 export async function signIn(input: { email: string; password: string }): Promise<R> {
   if (!EMAIL.test(input.email.trim()) || !input.password) return { error: 'Email or password is incorrect.' };
@@ -22,6 +23,7 @@ export async function signUp(input: { name: string; email: string; password: str
   if (!name) return { error: 'Add your name.' };
   if (!EMAIL.test(email)) return { error: 'Enter a valid email address.' };
   if (input.password.length < 8) return { error: 'Use at least 8 characters for your password.' };
+  if (!(await allow('signup:' + (await clientIp()), 5, 3600))) return { error: 'Too many attempts. Please try again later.' };
   // No confirmation email: the account is created already verified and signed in, and a welcome email follows.
   const { error } = await supabaseAdmin().auth.admin.createUser({ email, password: input.password, email_confirm: true, user_metadata: { full_name: name } });
   if (error) return { error: /already|registered|exists/i.test(error.message) ? 'An account with that email already exists. Try signing in.' : /password/i.test(error.message) ? 'Choose a stronger password.' : 'Could not create your account. Please try again.' };
@@ -35,6 +37,7 @@ export async function signUp(input: { name: string; email: string; password: str
 export async function requestReset(input: { email: string }): Promise<R> {
   const email = input.email.trim();
   if (!EMAIL.test(email)) return { error: 'Enter a valid email address.' };
+  if (!(await allow('reset:' + (await clientIp()), 5, 3600)) || !(await allow('reset-to:' + email.toLowerCase(), 3, 3600))) return { status: 'sent' };
   // The reset link is made here and emailed through Resend. Supabase's own mailer is only the fallback.
   const { data } = await supabaseAdmin().auth.admin.generateLink({ type: 'recovery', email });
   const hash = data?.properties?.hashed_token;
