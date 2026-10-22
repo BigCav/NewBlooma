@@ -5,14 +5,17 @@ a{color:inherit;text-decoration:none}h1{font-size:26px;letter-spacing:-.02em;mar
 .shell{display:flex;min-height:100dvh}
 .rail{position:sticky;top:0;height:100dvh;width:72px;flex:0 0 72px;box-sizing:border-box;padding:24px 0;display:flex;flex-direction:column;align-items:center;gap:8px;background:#F4F5F7}
 .rail-link:hover{background:#E8EAEE !important}
-.rail{transition:width .18s ease,flex-basis .18s ease}
-.rail-label{display:none;font-size:14.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rail.wide{width:224px;flex-basis:224px;align-items:stretch;padding-left:16px;padding-right:16px}
-.rail.wide .rail-logo{align-self:flex-start}
-.rail.wide .rail-link{width:auto !important;justify-content:flex-start !important;gap:12px;padding:0 12px}
-.rail.wide .rail-link svg{flex:0 0 auto}
-.rail.wide .rail-label{display:block;flex:1;min-width:0}
-.rail.wide .rail-link>span[aria-hidden]{position:static !important;flex:0 0 auto;margin-left:auto}
+.rail{transition:width .2s ease,flex-basis .2s ease;align-items:flex-start;padding-left:14px;padding-right:14px;overflow:hidden}
+.rail-head{display:flex;align-items:center;gap:12px;margin:0 0 20px 2px;flex:0 0 auto}
+.rail-name{font-size:19px;font-weight:600;letter-spacing:-0.02em;color:#0E1116;white-space:nowrap;opacity:0;transition:opacity .15s ease}
+.rail-link{width:44px !important;box-sizing:border-box;overflow:hidden;justify-content:flex-start !important;gap:12px;padding:0 12px;flex:0 0 auto;transition:width .2s ease,background .12s ease}
+.rail-link>svg{flex:0 0 auto}
+.rail-label{font-size:14.5px;font-weight:500;white-space:nowrap;opacity:0;transition:opacity .15s ease}
+.rail-badge{position:absolute;top:0;right:0;transition:top .2s ease,right .2s ease}
+.rail.wide{width:224px;flex-basis:224px}
+.rail.wide .rail-link{width:196px !important}
+.rail.wide .rail-label,.rail.wide .rail-name{opacity:1;transition-delay:.06s}
+.rail.wide .rail-badge{top:12px;right:10px}
 .rail-link:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid #5B3DF5;outline-offset:2px}
 .only-m{display:none}
 .cal-root button{font-family:inherit;cursor:pointer}
