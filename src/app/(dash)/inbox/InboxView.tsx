@@ -7,13 +7,15 @@ import { useEffect, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
 import { acceptRequest, declineRequest, markDone, markRead, replyToItem } from './actions';
-import { FILTERS, QUICK, REASONS, STATUS, TYPES, initialsOf, isAction, type InboxItem } from './shared';
+import { FILTERS, QUICK, REASONS, STATUS, TYPES, initialsOf, isAction, isInfo, type InboxItem } from './shared';
+
+const PER_PAGE = 15;
 
 type Mode = 'view' | 'decline' | 'compose';
 const typeStyle = (t: InboxItem['type']) => 'flex:0 0 auto;display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;white-space:nowrap;background:' + TYPES[t].bg + ';color:' + TYPES[t].fg;
 const statusStyle = (k: Exclude<InboxItem['status'], 'new'>) => 'flex:0 0 auto;display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;white-space:nowrap;background:' + STATUS[k].bg + ';color:' + STATUS[k].fg;
 const statusText = (i: InboxItem) => (i.cancelled ? 'Booking cancelled' : i.status === 'new' ? '' : STATUS[i.status].t);
-const hasChip = (i: InboxItem) => i.cancelled || i.status !== 'new';
+const hasChip = (i: InboxItem) => i.cancelled || (!isInfo(i.type) && i.status !== 'new');
 const chipStyle = (i: InboxItem) => statusStyle(i.cancelled || i.status === 'new' ? 'declined' : i.status);
 
 function useInbox(props: { items: InboxItem[] }) {
@@ -37,7 +39,7 @@ function useInbox(props: { items: InboxItem[] }) {
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [open, setOpen] = useState(false);
-  const sel = items.find((i) => i.id === selectedId) ?? (narrow === false ? items[0] ?? null : null);
+  const [page, setPage] = useState(0);
   const patch = (id: string, p: Partial<InboxItem>) => setOver((o) => ({ ...o, [id]: { ...(o[id] ?? {}), ...p } }));
 
   const select = (id: string) => {
@@ -67,10 +69,17 @@ function useInbox(props: { items: InboxItem[] }) {
   const rows = items.filter((i) =>
     (filter === 'all' || (filter === 'action' && isAction(i.type) && i.status === 'new' && !i.cancelled) || (filter === 'message' && i.type === 'message') || (filter === 'cancellation' && i.type === 'cancellation'))
     && (!q || (i.client + ' ' + i.summary + ' ' + TYPES[i.type].label).toLowerCase().includes(q)));
+  const pages = Math.max(1, Math.ceil(rows.length / PER_PAGE)), pageNo = Math.min(page, pages - 1);
+  const pageRows = rows.slice(pageNo * PER_PAGE, (pageNo + 1) * PER_PAGE);
+  const sel = items.find((i) => i.id === selectedId) ?? (narrow === false ? pageRows[0] ?? null : null);
+  const goPage = (n: number) => { setPage(Math.max(0, Math.min(pages - 1, n))); window.scrollTo({ top: 0, behavior: 'smooth' }); document.querySelector('.m-cal .page')?.scrollTo({ top: 0 }); };
+  const setFilterP = (f: string) => { setFilter(f); setPage(0); };
+  const setQueryP = (v: string) => { setQuery(v); setPage(0); };
+  const compose = () => { setMode('compose'); setDraft(''); setError(''); setNotice(''); };
   const needs = items.filter((i) => isAction(i.type) && i.status === 'new' && !i.cancelled).length;
   const unread = items.filter((i) => i.unread).length;
   const handled = items.filter((i) => hasChip(i)).length;
-  return { items, narrow, selectedId, filter, setFilter, query, setQuery, mode, setMode, reason, setReason, draft, setDraft, notice, setNotice, error, setError, open, setOpen, sel, rows, needs, unread, handled, select, accept, sendDecline, sendReply, finish, cancel, busy };
+  return { items, narrow, selectedId, filter, setFilter: setFilterP, query, setQuery: setQueryP, pageRows, pageNo, pages, goPage, compose, mode, setMode, reason, setReason, draft, setDraft, notice, setNotice, error, setError, open, setOpen, sel, rows, needs, unread, handled, select, accept, sendDecline, sendReply, finish, cancel, busy };
 }
 type C = ReturnType<typeof useInbox>;
 
@@ -81,15 +90,16 @@ function Panel({ c, m }: { c: C; m: boolean }) {
   const bh = m ? 48 : 44;
   const BTN = 'flex:1 1 0;height:' + bh + 'px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500';
   const BTN2 = 'flex:1 1 0;height:' + bh + 'px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500';
+  const LNK = 'flex:1 1 0;height:' + bh + 'px;box-sizing:border-box;border-radius:999px;font-size:14px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none;white-space:nowrap;border:1px solid #E1E4E9;background:#FFFFFF;color:#0E1116';
   const pill = (on: boolean) => 'flex:0 0 auto;height:' + (m ? 44 : 40) + 'px;padding:0 16px;border-radius:999px;font-size:13.5px;font-weight:500;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
   const err = c.error ? <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p> : null;
   const isMsg = sel.type === 'message', isCancel = sel.type === 'cancellation', isResched = sel.type === 'reschedule';
   const actionable = sel.type === 'request' && sel.status === 'new' && !sel.cancelled;
-  const followUp = (isCancel || isResched) && sel.status === 'new';
-  const calHref = sel.calendarDay ? `/calendar?d=${sel.calendarDay}` : '/calendar';
-  const LINK1 = 'height:' + bh + 'px;box-sizing:border-box;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none';
-  const LINK2 = 'height:44px;box-sizing:border-box;border-radius:999px;border:1px solid #E1E4E9;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none';
-  const composer = (c.mode === 'compose' && (isCancel || isResched)) || isMsg;
+  const calHref = sel.bookingId && sel.calendarDay ? `/calendar?d=${sel.calendarDay}&b=${sel.bookingId}` : null;
+  const clientHref = sel.clientId ? `/clients/${sel.clientId}` : null;
+  const rebookHref = sel.clientId ? `/calendar/new?client=${sel.clientId}` : '/calendar?new=1';
+  const composer = c.mode === 'compose' || isMsg;
+  const showRow = c.mode === 'view' && !isMsg;
   return (<>
     <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:8px')}>
       <span style={S(typeStyle(sel.type))}>{TYPES[sel.type].label}</span>
@@ -121,15 +131,16 @@ function Panel({ c, m }: { c: C; m: boolean }) {
         <button className="ghost" onClick={() => { c.setMode('decline'); c.setReason(null); c.setError(''); c.setNotice(''); }} style={S(BTN2)}>Decline</button>
       </div>
     )}
-    {followUp && c.mode === 'view' && (
+    {showRow && (
       <div style={S('display:flex;gap:10px')}>
-        <button onClick={() => { c.setMode('compose'); c.setDraft(''); c.setError(''); c.setNotice(''); }} style={S(BTN)}>Message client</button>
-        <button className="ghost" onClick={c.finish} disabled={c.busy} style={S(BTN2)}>Mark as done</button>
+        <button className={actionable ? 'ghost' : undefined} onClick={c.compose} style={S(actionable ? BTN2 : BTN)}>Message {first}</button>
+        {isCancel
+          ? <Link href={rebookHref} className="ghost" style={S(LNK)}>Book again</Link>
+          : calHref ? <Link href={calHref} className="ghost" style={S(LNK)}>View in calendar</Link>
+          : clientHref ? <Link href={clientHref} className="ghost" style={S(LNK)}>View client</Link> : null}
       </div>
     )}
-    {(isMsg || isResched) && sel.calendarDay && <Link href={calHref} style={S(LINK2)}>Edit booking in calendar</Link>}
-    {isMsg && !sel.calendarDay && <Link href="/calendar" style={S(LINK2)}>Edit booking in calendar</Link>}
-    {sel.type === 'booking' && c.mode === 'view' && <Link href={calHref} style={S(LINK1)}>View in calendar</Link>}
+    {showRow && isResched && sel.status === 'new' && <button className="ghost" onClick={c.finish} disabled={c.busy} style={S(BTN2 + ';flex:0 0 auto')}>Mark as done</button>}
     {c.mode === 'decline' && actionable && (
       <div style={S('display:flex;flex-direction:column;gap:14px;box-sizing:border-box;padding:16px;border:1px solid #F3C6C3;border-radius:18px;background:#FEF3F2')}>
         <div style={S('font-size:14.5px;font-weight:600')}>Why are you declining?</div>
@@ -147,19 +158,34 @@ function Panel({ c, m }: { c: C; m: boolean }) {
     {composer && (
       <div style={S('display:flex;flex-direction:column;gap:14px')}>
         <div style={S('font-size:15px;font-weight:600')}>{isMsg ? 'Reply to ' + first : 'Message ' + first}</div>
-        <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="quick-label" style={S('font-size:14px;font-weight:600')}>Quick replies</span>
+        {(QUICK[sel.type] ?? []).length > 0 && <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="quick-label" style={S('font-size:14px;font-weight:600')}>Quick replies</span>
           <div role="group" className="hscroll" aria-labelledby="quick-label" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
             {(QUICK[sel.type] ?? []).map((t) => <button key={t} onClick={() => { c.setDraft(t); c.setError(''); }} style={S(pill(false))}>{t}</button>)}
-          </div></div>
+          </div></div>}
         <textarea aria-label="Your message" value={c.draft} onChange={(e) => { c.setDraft(e.target.value); c.setError(''); }} placeholder="Write a message" style={S('box-sizing:border-box;width:100%;min-height:96px;resize:vertical;padding:12px 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;color:#0E1116;background:#FFFFFF')} />
         {err}
         <div style={S('display:flex;gap:10px')}>
           <button onClick={c.sendReply} disabled={c.busy} style={S(BTN)}>Send</button>
-          <button className="ghost" onClick={c.cancel} style={S(BTN2)}>Cancel</button>
+          {!isMsg && <button className="ghost" onClick={c.cancel} style={S(BTN2)}>Cancel</button>}
         </div>
       </div>
     )}
+    {isMsg && clientHref && <Link href={clientHref} className="ghost" style={S(LNK + ';flex:0 0 auto;padding:0 20px')}>View client</Link>}
+    {showRow && clientHref && (calHref || isCancel) && <Link href={clientHref} style={S('align-self:center;color:#5E6673;font-size:13.5px;text-decoration:underline')}>View {first}&apos;s profile</Link>}
   </>);
+}
+
+function Pager({ c, m }: { c: C; m: boolean }) {
+  if (c.pages <= 1) return null;
+  const from = c.pageNo * PER_PAGE + 1, to = Math.min(c.rows.length, (c.pageNo + 1) * PER_PAGE);
+  const B = (label: string, target: number, off: boolean) => <button className="ghost" onClick={() => c.goPage(target)} disabled={off} aria-label={label + ' page'} style={S('flex:0 0 auto;height:' + (m ? 44 : 40) + 'px;padding:0 18px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:13.5px;font-weight:500')}>{label}</button>;
+  return (
+    <nav aria-label="Inbox pages" style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;padding:' + (m ? '12px 8px 0' : '14px 20px') + ';' + (m ? '' : 'border-top:1px solid #E6E8EC'))}>
+      {B('Previous', c.pageNo - 1, c.pageNo === 0)}
+      <span style={S('color:#5E6673;font-size:13.5px;text-align:center')}>{`${from}–${to} of ${c.rows.length}`}<br />{`Page ${c.pageNo + 1} of ${c.pages}`}</span>
+      {B('Next', c.pageNo + 1, c.pageNo >= c.pages - 1)}
+    </nav>
+  );
 }
 
 function Row({ c, i, m }: { c: C; i: InboxItem; m: boolean }) {
@@ -193,12 +219,13 @@ function Desktop({ c }: { c: C }) {
             <div role="group" aria-label="Filter inbox" style={S('display:flex;flex-wrap:wrap;gap:8px')}>
               {FILTERS.map((f) => <button key={f.id} onClick={() => c.setFilter(f.id)} aria-pressed={c.filter === f.id} style={S(chipS(c.filter === f.id))}>{f.label}</button>)}
             </div>
-            <span style={S('color:#5E6673;font-size:13.5px')}>{`Showing ${c.rows.length} of ${c.items.length}`}</span>
+            <span style={S('color:#5E6673;font-size:13.5px')}>{c.rows.length === c.items.length ? `${c.items.length} in total` : `${c.rows.length} of ${c.items.length}`}</span>
           </div>
-          {c.rows.map((i) => <Row key={i.id} c={c} i={i} m={false} />)}
+          {c.pageRows.map((i) => <Row key={i.id} c={c} i={i} m={false} />)}
           {c.rows.length === 0 && <p style={S('margin:0;padding:24px 20px;color:#5E6673;font-size:14px')}>{c.query.trim() ? `Nothing matches "${c.query.trim()}".` : 'Nothing here right now.'}</p>}
+          <Pager c={c} m={false} />
         </section>
-        <aside aria-label="Details" style={S('flex:1 1 440px;max-width:520px;min-width:0;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:18px')}>
+        <aside aria-label="Details" style={S('flex:1 1 440px;max-width:520px;min-width:0;box-sizing:border-box;position:sticky;top:20px;max-height:calc(100dvh - 40px);overflow-y:auto;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:18px')}>
           <Panel c={c} m={false} />
         </aside>
       </div>
@@ -219,9 +246,10 @@ function Mobile({ c }: { c: C }) {
           {FILTERS.map((f) => <button key={f.id} onClick={() => c.setFilter(f.id)} aria-pressed={c.filter === f.id} style={S(chipS(c.filter === f.id))}>{f.label}</button>)}
         </div>
         <ul style={S('margin:0;padding:4px 0;list-style:none;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px')}>
-          {c.rows.map((i) => <li key={i.id}><Row c={c} i={i} m={true} /></li>)}
+          {c.pageRows.map((i) => <li key={i.id}><Row c={c} i={i} m={true} /></li>)}
         </ul>
         {c.rows.length === 0 && <p style={S('margin:0;text-align:center;color:#5E6673;font-size:14px')}>{c.query.trim() ? `Nothing matches "${c.query.trim()}".` : 'Nothing here right now.'}</p>}
+        <Pager c={c} m={true} />
       </main>
       <MobileTabs active="more" />
       {c.open && (

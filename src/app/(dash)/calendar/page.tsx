@@ -1,12 +1,13 @@
 import { requireCtx } from '@/lib/session';
 import { minutesOfDay, ymd, zonedToUtc } from '@/lib/format';
-import { weekStartOf, addDaysYmd, money2, toneFor, TONE_LIST, type CalBooking, type CalBlock, type CalHours, type CalService, type CalSettings } from '@/lib/cal';
+import { weekStartOf, addDaysYmd, money2, toneFor, TONE_LIST, type CalBooking, type CalBlock } from '@/lib/cal';
 import { CalendarView } from './CalendarView';
+import { buildCfg, buildHours, buildOffers, buildRecent, buildServices } from './base';
 
 export const metadata = { title: 'Calendar' };
 export const dynamic = 'force-dynamic';
 
-export default async function Calendar({ searchParams }: { searchParams: Promise<{ d?: string; v?: string; s?: string; new?: string; c?: string }> }) {
+export default async function Calendar({ searchParams }: { searchParams: Promise<{ d?: string; v?: string; s?: string; new?: string; c?: string; b?: string }> }) {
   const { sb, salon, settings, staff } = await requireCtx();
   const sp = await searchParams;
   const today = ymd(new Date(), salon.timezone);
@@ -44,20 +45,15 @@ export default async function Calendar({ searchParams }: { searchParams: Promise
     };
   });
   const blocks: CalBlock[] = (bl ?? []).map((x) => ({ id: x.id, staffId: x.staff_id, dayYmd: ymd(x.starts_at, salon.timezone), start: minutesOfDay(x.starts_at, salon.timezone), end: minutesOfDay(x.ends_at, salon.timezone) || 24 * 60, kind: x.kind, note: x.note }));
-  const mm = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
-  const hours: CalHours[] = Array.from({ length: 7 }, (_, wd) => { const r = (oh ?? []).find((h) => h.weekday === wd); return { wd, open: !!r?.is_open, from: r?.is_open ? mm(r.open_time) : 8 * 60, to: r?.is_open ? mm(r.close_time) : 18 * 60 }; });
-  const services: CalService[] = (svc ?? []).map((s: any) => ({ id: s.id, name: s.name, dur: s.duration_min, priceCents: s.price_cents, cat: s.service_categories?.name ?? 'Services', addon: !!s.is_addon, parents: (sa ?? []).filter((l: any) => l.addon_id === s.id).map((l: any) => l.service_id) }));
-  const offers: Record<string, string[]> = {}; for (const r of ss ?? []) (offers[r.service_id] ??= []).push(r.staff_id);
-  const cfg: CalSettings = { taxRate: Number(settings.tax_rate ?? 15), taxInclusive: settings.tax_inclusive !== false, askTip: settings.ask_for_tip !== false, tipDefault: Number(settings.suggested_tip_pct ?? 0), acceptCard: settings.accept_card !== false, acceptCash: settings.accept_cash !== false, acceptGift: settings.accept_gift_cards !== false, canDiscount: staff.app_role !== 'stylist' };
-  const seen = new Set<string>(); const recent: { id: string; name: string }[] = [];
-  for (const r of (rc ?? []) as any[]) { if (!r.client_id || seen.has(r.client_id) || !r.clients?.name) continue; seen.add(r.client_id); recent.push({ id: r.client_id, name: r.clients.name }); if (recent.length >= 8) break; }
+  const hours = buildHours(oh), services = buildServices(svc, sa), offers = buildOffers(ss);
+  const cfg = buildCfg(settings, staff.app_role), recent = buildRecent(rc);
   const nowMin = minutesOfDay(new Date(), salon.timezone);
   return (
     <CalendarView
       day={day} today={today} view={view} nowMin={nowMin} tz={salon.timezone}
       team={(team ?? []).map((t) => ({ id: t.id, name: t.name, role: t.role_title ?? '' }))}
       bookings={bookings} blocks={blocks} hours={hours} services={services}
-      staffFilter={sp.s ?? 'all'} slug={salon.slug} offers={offers} cfg={cfg} recent={recent} initialNew={sp.new === '1'} initialClient={sp.c ?? ''}
+      staffFilter={sp.s ?? 'all'} slug={salon.slug} offers={offers} cfg={cfg} recent={recent} initialNew={sp.new === '1'} initialClient={sp.c ?? ''} initialSel={/^[0-9a-f-]{36}$/i.test(sp.b ?? '') ? sp.b : undefined}
     />
   );
 }

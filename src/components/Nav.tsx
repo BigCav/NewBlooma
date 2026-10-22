@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
+import { openNewAppt } from '@/components/NewApptHost';
 
 const S = (children: ReactNode, size = 20, sw = 1.7) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{children}</svg>
@@ -72,9 +73,9 @@ export function TabBar() {
     <nav className="tabs-bar" aria-label="Main">
       {tab('calendar', '/calendar', 'Calendar', p.startsWith('/calendar'))}
       {tab('services', '/services', 'Services', p.startsWith('/services'))}
-      <Link href="/calendar/new" aria-label="New appointment" style={{ width: 48, height: 48, borderRadius: 999, background: '#0E1116', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <button type="button" onClick={openNewAppt} aria-label="New appointment" style={{ width: 48, height: 48, padding: 0, border: 0, cursor: 'pointer', borderRadius: 999, background: '#0E1116', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
-      </Link>
+      </button>
       {tab('clients', '/clients', 'Clients', p.startsWith('/clients'))}
       {tab('more', '/more', 'More', !main)}
     </nav>

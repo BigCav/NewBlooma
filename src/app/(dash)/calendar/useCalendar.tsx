@@ -5,7 +5,7 @@ import { NO_DISC, discountCents, type DiscPick } from '../sales/shared';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { TONE_LIST, addDaysYmd, dayInfo, fmtMin, initials, weekStartOf, type CalBlock, type CalBooking, type CalHours, type CalService, type CalSettings, type CalStaff, BLOCK_KINDS, slotsBetween } from '@/lib/cal';
-import { addWalkIn, approveBooking, cancelBooking, checkInBooking, checkoutBooking, createBlock, dayAvailability, deleteBlock, editBooking, rebookBooking, rescheduleBooking, walkinPlan, createNewAppointment, searchBookings, type SearchHit } from './actions';
+import { messageBookingClient, addWalkIn, approveBooking, cancelBooking, checkInBooking, checkoutBooking, createBlock, dayAvailability, deleteBlock, editBooking, rebookBooking, rescheduleBooking, walkinPlan, createNewAppointment, searchBookings, type SearchHit } from './actions';
 
 import { first, usd, m2, BLOCK_DURS_M, METHODS, TIP_OPTS, STEP, chipTone, kindOf, note, HATCH, type Avail, type Props } from './calUi';
 export function useCalendar(props: Props) {
@@ -19,7 +19,7 @@ export function useCalendar(props: Props) {
   const [query, setQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<'view' | 'new' | 'checkout' | 'edit' | 'blockview' | 'block' | 'walkin' | 'resched'>('view');
+  const [mode, setMode] = useState<'view' | 'new' | 'checkout' | 'edit' | 'blockview' | 'block' | 'walkin' | 'resched' | 'message'>('view');
   const [selId, setSelId] = useState<string | null>(null);
   const [blockId, setBlockId] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
@@ -97,6 +97,9 @@ export function useCalendar(props: Props) {
     if (r && r.error) { setError(r.error); return; }
     setNotice((r && r.note) || ok); done?.(); refresh();
   });
+  const [msg, setMsg] = useState('');
+  const startMessage = () => { setMsg(''); setMode('message'); setError(''); setNotice(''); };
+  const sendMessage = () => { if (!cur) return; if (!msg.trim()) { setError('Write a message first.'); return; } act(() => messageBookingClient(cur.id, msg), 'Message sent', () => { setMode('view'); setMsg(''); }); };
   const openBooking = (id: string) => { setSelId(id); setOpen(true); setMode('view'); setError(''); setNotice(''); };
   const openBlock = (id: string) => { setBlockId(id); setOpen(true); setMode('blockview'); setError(''); setNotice(''); };
   const startCheckout = (id: string) => { setSelId(id); setOpen(true); setMode('checkout'); setCo({ method: 'card', tip: cfg.askTip ? cfg.tipDefault : 0, code: '', disc: NO_DISC }); setError(''); setNotice(''); };
@@ -329,6 +332,9 @@ export function useCalendar(props: Props) {
   const [pendingSel, setPendingSel] = useState<string | null>(null);
   useEffect(() => { if (props.initialNew) { openNew(); if (props.initialClient) setNf((n) => ({ ...n, client: props.initialClient! })); } // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  // Opened from a link (for example the inbox): show that booking.
+  useEffect(() => { if (props.initialSel) { setSelId(props.initialSel); setOpen(true); setMode('view'); setError(''); setNotice(''); } // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.initialSel]);
   const createNew = () => {
     const p = nPlan(); const name = nf.client.trim();
     if (!name) { setError("Add the client's name."); return; }
@@ -344,6 +350,7 @@ export function useCalendar(props: Props) {
       const r = await createNewAppointment(name, known?.id ?? null, nf.staff, nf.day, nf.time!, p.same.map((x) => x.id), p.others.map((o) => ({ serviceId: o.svc.id, staffId: o.sid! })));
       if (r.error) { setError(r.error); if (r.id) refresh(); return; }
       const d = nf.day;
+      if (props.onCreated) { props.onCreated({ id: r.id, day: d }); return; }
       setSelId(r.id ?? null); setPendingSel(r.id ?? null); setNf(blank(d)); setAmap({}); setMode('view'); setOpen(false); setError('');
       if (d !== day) router.push(`/calendar?d=${d}&v=${view === 'week' ? 'week' : 'day'}`); else refresh();
       setNotice('Appointment added');
@@ -392,5 +399,5 @@ export function useCalendar(props: Props) {
   }) : [];
 
   const nLock = lockFor(nf.services), edLock = lockFor(ed.ids);
-  return { nLock, edLock, lockFor, HOUR_PX, act, activeCards, addWalkin, amap, av, avail, availKey, backToView, bf, bfDur, blank, blockId, blockRows, blocks, bookings, busy, bvB, cards, cfg, charge, chk, close, co, coMath, createNew, cur, day, dayB, dayHrs, days14, di, doneBk, ed, editPlan, error, firstOpenDay, gEnd, gHours, gStart, go, hasError, hours, hrsOf, later, laterBk, minutesFromIso, mode, moveBooking, nFirstSvc, nKeyStr, nKeys, nOffers, nPickSvc, nPlan, nSlots, nWhy, nf, notice, now, nowTop, offered, offers, open, openBlock, openBooking, openDays, openNew, pageSubtitle, pageTitle, pendingSel, plan, primary, query, reason, refresh, router, row, rs, saveBlock, saveEdit, searchOpen, seg, sel, selId, services, setAmap, setAvail, setBf, setBlockId, setCo, setEd, setError, setMode, setNf, setNotice, setNow, setOpen, setPendingSel, setPlan, setQuery, setRs, setSearchOpen, setSelId, setSres, setStaffSel, setWi, setWkOpen, slotsFor, sq, sres, staffName, staffSel, startCheckout, startResched, startT, statCount, statRevenue, statNext, strip, svcMap, team, today, todayList, tz, upcoming, view, viewEvents, vm, weekDays, wi, wiPlanText, wiPlanCss, wiSvc, wkCards, wkOpen, wkRange, wkStaff, wkTitle, ws };
+  return { nLock, edLock, lockFor, HOUR_PX, act, activeCards, addWalkin, amap, av, avail, availKey, backToView, bf, bfDur, blank, blockId, blockRows, blocks, bookings, busy, bvB, cards, cfg, charge, chk, close, co, coMath, createNew, cur, day, dayB, dayHrs, days14, di, doneBk, ed, editPlan, error, firstOpenDay, gEnd, gHours, gStart, go, hasError, hours, hrsOf, later, laterBk, minutesFromIso, mode, moveBooking, nFirstSvc, nKeyStr, nKeys, nOffers, nPickSvc, nPlan, nSlots, nWhy, nf, notice, now, nowTop, offered, offers, open, openBlock, openBooking, openDays, openNew, pageSubtitle, pageTitle, pendingSel, plan, primary, query, reason, refresh, router, row, rs, saveBlock, saveEdit, searchOpen, seg, sel, selId, services, setAmap, setAvail, setBf, setBlockId, setCo, setEd, setError, setMode, setNf, setNotice, setNow, setOpen, setPendingSel, setPlan, setQuery, setRs, setSearchOpen, setSelId, setSres, setStaffSel, setWi, setWkOpen, slotsFor, sq, sres, staffName, staffSel, startCheckout, startResched, startT, statCount, statRevenue, statNext, strip, svcMap, team, today, todayList, tz, upcoming, view, viewEvents, vm, weekDays, wi, wiPlanText, wiPlanCss, wiSvc, wkCards, wkOpen, wkRange, wkStaff, wkTitle, ws, msg, setMsg, startMessage, sendMessage };
 }

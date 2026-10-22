@@ -2,6 +2,7 @@
 // 1:1 conversion of the prototype's Main.dc.html (+ PageHeader). Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
 import { ClientMatches } from './ClientMatches';
+import { MessageBox } from './MessageBox';
 import { DiscountPick } from './DiscountPick';
 import { BLOCK_KINDS, dayInfo, fmtMin, initials, addDaysYmd } from '@/lib/cal';
 import { cancelBooking, deleteBlock } from './actions';
@@ -278,6 +279,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
                 <button className="ghost" onClick={() => startResched(selB, sel.k === 'done')} style={S(BTN2)}>{sel.secondaryLabel}</button>
               </div>
               {sel.canEdit && <button className="ghost" onClick={() => { setSelId(selB.id); setEd({ ids: selB.serviceIds.slice(), start: null }); setMode('edit'); setError(''); setNotice(''); }} style={S('height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>Edit booking</button>}
+              <button className="ghost" onClick={c.startMessage} style={S('height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>{'Message ' + first(selB.client)}</button>
             </div>
 
             <div style={S('display:flex;flex-direction:column;gap:12px;padding-top:20px;border-top:1px solid #EEF0F3')}>
@@ -358,6 +360,12 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
               </div>
             );
           })()}
+
+          {mode === 'message' && cur && (
+            <div style={S('display:flex;flex-direction:column;gap:16px')}>
+              <MessageBox name={first(cur.client)} context={cur.services + ', ' + dayInfo(cur.dayYmd).short + ' at ' + fmtMin(cur.start)} value={c.msg} onChange={(v) => { c.setMsg(v); setError(''); }} onSend={c.sendMessage} onBack={backToView} busy={busy} error={hasError ? error : ''} />
+            </div>
+          )}
 
           {mode === 'blockview' && bvB && (
             <div style={S('display:flex;flex-direction:column;gap:16px')}>

@@ -26,12 +26,14 @@ const dayLabel = (iso: string, tz: string, today: string) => {
 export async function loadInbox(ctx: Pick<Ctx, 'sb' | 'salon'>): Promise<InboxItem[]> {
   const { sb, salon } = ctx, tz = salon.timezone, today = ymd(new Date(), tz);
   const { data } = await sb.from('inbox_items')
-    .select('id,type,body,unread,status,created_at,clients(name,email),bookings(status,starts_at,ends_at,notes,staff(name),booking_services(price_cents,duration_min,services(name)))')
-    .order('created_at', { ascending: false }).limit(200);
+    .select('id,type,body,unread,status,created_at,client_id,booking_id,clients(name,email),bookings(status,starts_at,ends_at,notes,staff(name),booking_services(price_cents,duration_min,services(name)))')
+    .order('created_at', { ascending: false }).limit(500);
   const ids = (data ?? []).filter((i: any) => i.type === 'message').map((i: any) => i.id);
   const { data: msgs } = ids.length ? await sb.from('inbox_messages').select('item_id,mine,body,created_at').in('item_id', ids).order('created_at') : { data: [] as any[] };
   return ((data ?? []) as any[]).map((i): InboxItem => {
-    const type = i.type as ItemType, b = i.bookings, client = i.clients?.name ?? 'Client';
+    // A client who moves their own booking has already changed it: that is news to read, not a request to action.
+    const moved = i.type === 'reschedule' && i.status === 'handled' && String(i.body ?? '').startsWith('Moved by the client');
+    const type = (moved ? 'rescheduled' : i.type) as ItemType, b = i.bookings, client = i.clients?.name ?? 'Client';
     const lines = (b?.booking_services ?? []) as any[];
     const svc = lines.map((l) => l.services?.name).filter(Boolean).join(' + ') || 'Appointment';
     const mins = lines.reduce((a, l) => a + l.duration_min, 0), cents = lines.reduce((a, l) => a + l.price_cents, 0);
@@ -45,14 +47,15 @@ export async function loadInbox(ctx: Pick<Ctx, 'sb' | 'salon'>): Promise<InboxIt
     if (type === 'request') { summary = `${svc} with ${staffFirst}, ${when}`; rows = [['Service', svcDur], ['When', range], ['With', staffFull], ['Price', price]]; note = b?.notes ?? ''; }
     else if (type === 'booking') { summary = `Booked ${svc} online`; rows = [['Service', svcDur], ['When', range], ['With', staffFull], ['Price', price]]; note = b?.notes ?? ''; }
     else if (type === 'reschedule') { summary = `Wants to move ${svc} with ${staffFirst}`; rows = [['Service', svcDur], ['Now', when], ['With', staffFull]]; note = i.body ?? ''; }
+    else if (type === 'rescheduled') { summary = `Moved ${svc} with ${staffFirst}`; rows = [['Service', svcDur], ['Now', range], ['With', staffFull]]; note = i.body ?? ''; }
     else if (type === 'cancellation') { summary = `Cancelled ${svc} with ${staffFirst}`; rows = [['Service', svcDur], ['Was', when], ['With', staffFull]]; if (b && new Date(b.starts_at) > new Date()) rows.push(['Slot', 'Free again']); }
     const thread = type === 'message' ? [
       ...(i.body ? [{ mine: false, text: i.body as string, at: stamp(i.created_at, tz, today) }] : []),
       ...((msgs ?? []) as any[]).filter((m) => m.item_id === i.id).map((m) => ({ mine: m.mine as boolean, text: m.body as string, at: stamp(m.created_at, tz, today) })),
     ] : [];
     if (type === 'message') summary = (thread.filter((m) => !m.mine).pop()?.text ?? thread[0]?.text ?? 'Message').slice(0, 120);
-    const cancelled = ['booking', 'request', 'reschedule'].includes(type) && ['cancelled', 'no_show'].includes(b?.status) && i.status !== 'declined';
-    return { id: i.id, type, client, email: i.clients?.email ?? '', time: stamp(i.created_at, tz, today), unread: i.unread, status, cancelled, summary, rows, note, thread, calendarDay: b ? ymd(b.starts_at, tz) : null };
+    const cancelled = ['booking', 'request', 'reschedule', 'rescheduled'].includes(type) && ['cancelled', 'no_show'].includes(b?.status) && i.status !== 'declined';
+    return { id: i.id, type, client, email: i.clients?.email ?? '', time: stamp(i.created_at, tz, today), unread: i.unread, status, cancelled, summary, rows, note, thread, calendarDay: b ? ymd(b.starts_at, tz) : null, clientId: i.client_id ?? null, bookingId: b && i.booking_id && !['cancelled', 'no_show'].includes(b.status) ? i.booking_id : null };
   });
 }
 export { fmtDay };

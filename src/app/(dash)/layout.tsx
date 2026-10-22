@@ -1,5 +1,6 @@
 import { requireCtx } from '@/lib/session';
 import { SideNav, TabBar } from '@/components/Nav';
+import { NewApptHost } from '@/components/NewApptHost';
 
 export default async function DashLayout({ children }: { children: React.ReactNode }) {
   const { sb, salon } = await requireCtx();
@@ -9,6 +10,7 @@ export default async function DashLayout({ children }: { children: React.ReactNo
       <SideNav slug={salon.slug} unread={count ?? 0} />
       <main className="main">{children}</main>
       <TabBar />
+      <NewApptHost />
     </div>
   );
 }

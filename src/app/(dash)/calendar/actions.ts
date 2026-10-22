@@ -1,9 +1,10 @@
 'use server';
-import { flushOutbox } from '@/lib/notify';
+import { flushOutbox, sendCustomMessage } from '@/lib/notify';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireCtx, friendly } from '@/lib/session';
 import { zonedToUtc, minutesOfDay, ymd as ymdOf, time12 } from '@/lib/format';
+import { buildCfg, buildHours, buildOffers, buildRecent, buildServices } from './base';
 
 const s = (fd: FormData, k: string) => String(fd.get(k) ?? '').trim();
 
@@ -77,6 +78,38 @@ export async function noShowBooking(id: string): Promise<R> {
 }
 
 /** Busy intervals (minutes) and opening hours for one staff member on one day. */
+/** Everything the new-appointment sheet needs, for opening it from pages other than the calendar. */
+export async function loadNewAppt() {
+  const { sb, salon, settings, staff } = await requireCtx();
+  const [{ data: team }, { data: oh }, { data: svc }, { data: ss }, { data: sa }, { data: rc }] = await Promise.all([
+    sb.from('staff').select('id,name,role_title').eq('active', true).order('name'),
+    sb.from('opening_hours').select('*'),
+    sb.from('services').select('id,name,duration_min,price_cents,is_addon,service_categories(name)').eq('active', true).order('name'),
+    sb.from('service_staff').select('service_id,staff_id'),
+    sb.from('service_addons').select('addon_id,service_id'),
+    sb.from('bookings').select('client_id,clients(name)').not('client_id', 'is', null).order('starts_at', { ascending: false }).limit(80),
+  ]);
+  return {
+    today: ymdOf(new Date(), salon.timezone), nowMin: minutesOfDay(new Date(), salon.timezone), tz: salon.timezone, slug: salon.slug,
+    team: (team ?? []).map((t) => ({ id: t.id, name: t.name, role: t.role_title ?? '' })),
+    hours: buildHours(oh), services: buildServices(svc, sa), offers: buildOffers(ss), cfg: buildCfg(settings, staff.app_role), recent: buildRecent(rc),
+  };
+}
+
+/** Text or email the client of a booking from the calendar. */
+export async function messageBookingClient(bookingId: string, text: string): Promise<R> {
+  const { sb, salon } = await requireCtx();
+  text = text.trim();
+  if (!text) return { error: 'Write a message first.' };
+  if (text.length > 600) return { error: 'Keep the message under 600 characters.' };
+  const { data: b } = await sb.from('bookings').select('clients(name,email,phone)').eq('id', bookingId).maybeSingle();
+  const c = (b as any)?.clients;
+  if (!c) return { error: 'That booking no longer exists.' };
+  const r = await sendCustomMessage(salon.id, c, text);
+  if (!r.ok) return { error: r.error };
+  return { ok: true, note: `Message sent to ${String(c.name ?? 'the client').split(' ')[0]}` };
+}
+
 export async function dayAvailability(dayYmd: string, staffId: string, ignoreBooking?: string) {
   const { sb, salon } = await requireCtx();
   const a = zonedToUtc(dayYmd, '00:00', salon.timezone), b = zonedToUtc(dayYmd, '23:59:59', salon.timezone);
