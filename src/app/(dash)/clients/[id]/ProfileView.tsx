@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { MobileTabs } from '@/components/Chrome';
 import { S } from '../../calendar/pickers';
-import { addNote, recordPatchTest, removeNote, saveFormula, sendClientMessage, setAllergies, setPreference } from '../actions';
+import { addNote, deleteClient, recordPatchTest, removeNote, saveFormula, sendClientMessage, setAllergies, setPreference, updateClient } from '../actions';
+import { phoneInput } from '@/lib/phone';
 import { MSG_TEMPLATES, initialsOf, money, patchInfo, type Channels, type ClientRow } from '../shared';
 
 export type ProfileData = {
@@ -38,7 +39,9 @@ function useProfile(d: ProfileData) {
   const [marketing, setMarketing] = useState(d.marketing);
   const [noteDraft, setNoteDraft] = useState('');
   const [allergyDraft, setAllergyDraft] = useState('');
-  const [mode, setMode] = useState<'view' | 'message'>('view');
+  const [mode, setMode] = useState<'view' | 'message' | 'edit'>('view');
+  const [ed, setEd] = useState({ name: '', email: '', phone: '' });
+  const [confirmDel, setConfirmDel] = useState(false);
   const [msg, setMsg] = useState('');
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
@@ -55,6 +58,10 @@ function useProfile(d: ProfileData) {
     recordPatch: () => startT(async () => { const r = await recordPatchTest(row.id); if (r.error) { fail(r.error); return; } setPatchOn(r.on!); setNotice('Patch test recorded for today'); }),
     saveFormula: () => run(() => saveFormula(row.id, formula), () => { setSaved(formula); setNotice('Formula saved'); }),
     toggle: (k: 'reminders' | 'marketing') => { const v = k === 'reminders' ? !reminders : !marketing; run(() => setPreference(row.id, k, v), () => (k === 'reminders' ? setReminders(v) : setMarketing(v))); },
+    ed, setEd, confirmDel, setConfirmDel,
+    startEdit: () => { setEd({ name: row.name, email: row.email, phone: row.phone }); setConfirmDel(false); setMode('edit'); setError(''); setNotice(''); },
+    saveEdit: () => { if (!ed.name.trim()) { setError("Add the client's name."); return; } run(() => updateClient(row.id, ed.name, ed.email, ed.phone), () => { setMode('view'); setNotice('Details saved'); router.refresh(); }); },
+    removeClient: () => run(() => deleteClient(row.id), () => { router.push('/clients'); router.refresh(); }),
     sendMsg: () => { if (!msg.trim()) { setError('Write a message first.'); return; } run(() => sendClientMessage(row.id, msg), () => { setMsg(''); setMode('view'); setNotice('Message sent to ' + first); }); },
   };
 }
@@ -187,10 +194,30 @@ function Header({ c, m }: { c: C; m: boolean }) {
           <div style={S('display:flex;gap:10px')}><button onClick={c.sendMsg} disabled={c.busy} style={S(pri + 'flex:1 1 0')}>Send</button><button className="ghost" onClick={() => { c.setMode('view'); c.setError(''); }} style={S(msgS + 'flex:1 1 0')}>Cancel</button></div>
         </div>
       )}
-      {c.mode !== 'message' && (
+      {c.mode === 'edit' && (
+        <div style={S('display:flex;flex-direction:column;gap:12px')}>
+          <label htmlFor="pf-name" style={S('font-size:14px;font-weight:600')}>Full name</label>
+          <input id="pf-name" type="text" value={c.ed.name} onChange={(e) => { c.setEd({ ...c.ed, name: e.target.value }); c.setError(''); }} style={TXTIN(48)} />
+          <label htmlFor="pf-email" style={S('font-size:14px;font-weight:600')}>Email</label>
+          <input id="pf-email" type="email" inputMode="email" value={c.ed.email} onChange={(e) => { c.setEd({ ...c.ed, email: e.target.value }); c.setError(''); }} placeholder="name@example.com" style={TXTIN(48)} />
+          <label htmlFor="pf-phone" style={S('font-size:14px;font-weight:600')}>Phone</label>
+          <input id="pf-phone" type="tel" inputMode="tel" value={c.ed.phone} onChange={(e) => { c.setEd({ ...c.ed, phone: phoneInput(e.target.value) }); c.setError(''); }} placeholder="Optional" style={TXTIN(48)} />
+          {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
+          <div style={S('display:flex;gap:10px')}><button onClick={c.saveEdit} disabled={c.busy} style={S(pri + 'flex:1 1 0')}>Save details</button><button className="ghost" onClick={() => { c.setMode('view'); c.setError(''); }} style={S(msgS + 'flex:1 1 0')}>Cancel</button></div>
+          {!c.confirmDel
+            ? <button className="ghost" onClick={() => c.setConfirmDel(true)} style={S('height:44px;border:0;border-radius:999px;background:transparent;color:#B42318;font-size:14px;font-weight:500')}>Delete client</button>
+            : <div style={S('display:flex;flex-direction:column;gap:10px;padding:14px;border:1px solid #F3C6C3;border-radius:16px;background:#FEF3F2')}>
+                <span style={S('font-size:14px;font-weight:600')}>Delete {c.first} for good?</span>
+                <span style={S('font-size:13.5px;color:#5E6673')}>Only possible when they have no bookings or sales. Their notes go too.</span>
+                <div style={S('display:flex;gap:10px')}><button onClick={c.removeClient} disabled={c.busy} style={S('flex:1 1 0;height:44px;border:0;border-radius:999px;background:#C0261B;color:#FFFFFF;font-size:14px;font-weight:500')}>Delete client</button><button className="ghost" onClick={() => c.setConfirmDel(false)} style={S(msgS + 'flex:1 1 0')}>Keep</button></div>
+              </div>}
+        </div>
+      )}
+      {c.mode === 'view' && (
         <div style={S('display:flex;gap:10px;flex-wrap:wrap')}>
           <Link href={book} style={S(pri + 'display:flex;align-items:center;justify-content:center;text-decoration:none;box-sizing:border-box;' + (m ? 'flex:1 1 0' : 'flex:0 0 auto'))}>{m ? 'Book' : 'Book appointment'}</Link>
           <button className="ghost" onClick={() => { c.setMode('message'); c.setError(''); c.setNotice(''); }} style={S(msgS + (m ? 'flex:1 1 0' : 'flex:0 0 auto'))}>Message</button>
+          <button className="ghost" onClick={c.startEdit} style={S(msgS + (m ? 'flex:1 1 0' : 'flex:0 0 auto'))}>Edit</button>
         </div>
       )}
     </section>

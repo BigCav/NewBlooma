@@ -21,6 +21,35 @@ export async function createClient(name: string, email: string, phone: string): 
   return { ok: true, row: { id: data.id, name, email, phone, tag: 'New', last: 'None yet', lastService: 'No visits', next: 'Not booked', staff: 'Not set', visits: 0, spentCents: 0 } };
 }
 
+/** Change a client's name, email and phone. Email is optional, but must be valid and not used by another client. */
+export async function updateClient(id: string, name: string, email: string, phone: string): Promise<R> {
+  const { sb } = await requireCtx();
+  name = name.trim(); email = email.trim(); phone = phone.trim();
+  if (!name) return { error: "Add the client's name." };
+  if (email && !/^\S+@\S+\.\S+$/.test(email)) return { error: 'Add a valid email address.' };
+  const ph = checkPhone(phone); if (ph.error) return { error: ph.error };
+  const { error } = await sb.from('clients').update({ name, email: email || null, phone: ph.value || null }).eq('id', id);
+  if (error) return { error: error.code === '23505' ? 'Another client already has that email.' : friendly(error.message) };
+  revalidatePath('/clients'); revalidatePath(`/clients/${id}`);
+  return { ok: true };
+}
+
+/** Owner only, and only for a client with no bookings or sales (so no history is lost). Their notes and waitlist entries go with them. */
+export async function deleteClient(id: string): Promise<R> {
+  const { sb, staff } = await requireCtx();
+  if (staff.app_role !== 'owner') return { error: 'Only the owner can delete a client.' };
+  const [{ count: b }, { count: s }] = await Promise.all([
+    sb.from('bookings').select('id', { count: 'exact', head: true }).eq('client_id', id),
+    sb.from('sales').select('id', { count: 'exact', head: true }).eq('client_id', id),
+  ]);
+  if ((b ?? 0) > 0 || (s ?? 0) > 0) return { error: 'This client has bookings or sales on record, so they cannot be deleted.' };
+  await Promise.all([sb.from('client_notes').delete().eq('client_id', id), sb.from('waitlist_entries').delete().eq('client_id', id), sb.from('inbox_items').delete().eq('client_id', id)]);
+  const { error } = await sb.from('clients').delete().eq('id', id);
+  if (error) return { error: friendly(error.message) };
+  revalidatePath('/clients');
+  return { ok: true };
+}
+
 export async function sendClientMessage(clientId: string, text: string): Promise<R> {
   const { sb, salon } = await requireCtx();
   text = text.trim(); if (!text) return { error: 'Write a message first.' };

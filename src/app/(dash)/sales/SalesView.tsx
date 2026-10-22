@@ -109,7 +109,7 @@ function useSales(props: Props) {
   };
 
   const sq = query.trim().toLowerCase();
-  const list = rows.filter((t) => (filter === 'all' || t.status === filter) && (!sq || (t.client + ' ' + t.service + ' ' + t.staffName + ' ' + t.status).toLowerCase().includes(sq)));
+  const list = rows.filter((t) => (filter === 'all' || t.status === filter) && (!sq || (t.client + ' ' + t.service + ' ' + t.staffName + ' ' + t.status + ' ' + t.method + ' ' + t.total / 100).toLowerCase().includes(sq.replace(/[$,]/g, ''))));
   return { ...props, busy, narrow, rows, list, sel, selectedId, filter, setFilter, query, setQuery, mode, setMode, open, notice, error, setError, confirmRefund, setConfirmRefund,
     canDiscount: props.canDiscount, pay, setPay, tipPctOf, editAmount, setEditAmount, nw, setNw, txn, wait, pick, openNew, cancel, close, takePayment, saveEdit, doRefund, receipt, createSale,
     paidTotal: props.todayTotal, pendingCount: rows.filter((r) => r.status === 'Pending').length };
@@ -149,7 +149,7 @@ function Panel({ c, m }: { c: C; m: boolean }) {
         {DISC_PCTS.map((v) => <button key={v} onClick={() => on({ ...cur, kind: 'percent', value: v })} aria-pressed={cur.kind === 'percent' && cur.value === v} style={S(pill(cur.kind === 'percent' && cur.value === v, m))}>{v}%</button>)}
         <button onClick={() => on({ ...cur, kind: 'amount', value: cur.kind === 'amount' ? cur.value : '' })} aria-pressed={cur.kind === 'amount'} style={S(pill(cur.kind === 'amount', m))}>$ off</button>
       </Chips>
-      {cur.kind === 'amount' && <input aria-label="Discount amount in dollars" inputMode="decimal" value={cur.value} onChange={(e) => on({ ...cur, value: e.target.value.replace(/[^0-9.]/g, '') })} placeholder="Amount off, like 10 or 7.50" style={inputS(h)} />}
+      {cur.kind === 'amount' && <input aria-label="Discount amount in dollars" inputMode="decimal" value={cur.value} onChange={(e) => on({ ...cur, value: decimalInput(e.target.value) })} placeholder="Amount off, like 10 or 7.50" style={inputS(h)} />}
       {cur.kind !== 'none' && <input aria-label="Discount reason" maxLength={60} value={cur.note} onChange={(e) => on({ ...cur, note: e.target.value })} placeholder="Reason (optional), e.g. Staff discount" style={inputS(h)} />}
     </>
   );

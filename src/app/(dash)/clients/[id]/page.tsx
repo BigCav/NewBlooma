@@ -12,6 +12,8 @@ export const dynamic = 'force-dynamic';
 const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const METHOD: Record<string, string> = { card: 'Card', cash: 'Cash', gift_card: 'Gift card' };
 const SHOWN = 6;
+/** First name and last initial, so two people called Sarah can be told apart. */
+const shortName = (n: string) => { const p = n.trim().split(/\s+/); return p.length > 1 ? `${p[0]} ${p[p.length - 1][0]}.` : p[0]; };
 
 export default async function ClientProfile({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -39,8 +41,8 @@ export default async function ClientProfile({ params }: { params: Promise<{ id: 
       when: `${wd} ${D} ${MON[M - 1]}, ${fmtClock(b.starts_at, tz)}`, paid: sale ? `${METHOD[sale.method] ?? 'Paid'}, $${(sale.total_cents / 100).toFixed(sale.total_cents % 100 ? 2 : 0)}` : 'Not recorded',
     };
   });
-  const switcher = ov.rows.slice(0, 12).map((r) => ({ id: r.id, label: r.name.split(' ')[0] }));
-  if (!switcher.some((s) => s.id === id)) switcher.push({ id, label: c.name.split(' ')[0] });
+  const switcher = ov.rows.slice(0, 12).map((r) => ({ id: r.id, label: shortName(r.name) }));
+  if (!switcher.some((s) => s.id === id)) switcher.push({ id, label: shortName(c.name) });
   const data: ProfileData = {
     row, since: sinceText(c.created_at), allergies: c.allergies ?? [], patchOn: c.patch_test_on, formula: c.colour_formula ?? '', reminders: c.reminders, marketing: c.marketing,
     notes: (notes ?? []).map((n) => ({ id: n.id, text: n.body })), history, historyTotal: row.visits, switcher, today, channels: { sms: smsConfigured(), email: emailConfigured() },

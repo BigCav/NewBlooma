@@ -1,4 +1,5 @@
 'use client';
+import { decimalInput } from '@/lib/numeric';
 // Converted from the prototype's GiftCards.dc.html and MobileGiftCards.dc.html. Markup and style strings follow the prototype;
 // data comes from the server and the actions are real server actions.
 import { useRouter } from 'next/navigation';
@@ -90,7 +91,7 @@ function Panel({ c, m }: { c: C; m: boolean }) {
       <div role="group" aria-label="Amount" style={S('display:flex;flex-direction:column;gap:10px')}>
         <span style={S('font-size:14px;font-weight:600')}>Amount</span>
         <div style={S('display:flex;flex-wrap:wrap;gap:8px')}>{[2500, 5000, 10000, 15000].map((p) => <button key={p} onClick={() => { setNf({ ...nf, amount: String(p / 100) }); c.setError(''); }} aria-pressed={cur === p} style={S(chip(cur === p, m))}>{money(p)}</button>)}</div>
-        <input className="field" type="text" inputMode="decimal" value={nf.amount} onChange={(e) => { setNf({ ...nf, amount: e.target.value.replace(/[^0-9.]/g, '') }); c.setError(''); }} placeholder="Or enter an amount" aria-label="Custom amount" style={S(field)} />
+        <input className="field" type="text" inputMode="decimal" value={nf.amount} onChange={(e) => { setNf({ ...nf, amount: decimalInput(e.target.value) }); c.setError(''); }} placeholder="Or enter an amount" aria-label="Custom amount" style={S(field)} />
       </div>
       <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="gc-for" style={S('font-size:14px;font-weight:600')}>For</label><input id="gc-for" className="field" type="text" value={nf.name} onChange={(e) => setNf({ ...nf, name: e.target.value })} placeholder="Optional" style={S(field)} /></div>
       <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="gc-code" style={S('font-size:14px;font-weight:600')}>Code</label>
