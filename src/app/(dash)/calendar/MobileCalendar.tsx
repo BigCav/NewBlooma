@@ -280,7 +280,7 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
               {errP()}
               <div style={S('display:flex;gap:10px')}>
                 <button onClick={() => act(() => deleteBlock(bvB.id), 'Block removed', () => { setBlockId(null); setOpen(false); setMode('view'); })} style={S(PRIMARY)}>Remove block</button>
-                <button onClick={backToView} style={S(SECOND)}>Close</button>
+                <button onClick={close} style={S(SECOND)}>Close</button>
               </div>
             </>)}
 
@@ -298,7 +298,7 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
               {errP()}
               <div style={S('display:flex;gap:10px')}>
                 <button onClick={saveBlock} disabled={busy} style={S(PRIMARY)}>Block time</button>
-                <button onClick={backToView} style={S(SECOND)}>Cancel</button>
+                <button onClick={close} style={S(SECOND)}>Cancel</button>
               </div>
             </>)}
 
@@ -318,7 +318,7 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
               </div>
             </>)}
 
-            {mode === 'new' && <NewApptForm c={c} props={props} />}
+            {mode === 'new' && <NewApptForm c={c} props={props} onCancel={close} />}
 
             {mode === 'resched' && cur && (<>
               <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
