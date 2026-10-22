@@ -18,7 +18,7 @@ export async function saveService(i: SvcInput): Promise<{ error?: string; id?: s
   const name = i.name.trim();
   const price = parseFloat(i.price);
   if (!name) return { error: 'Give the service a name.' };
-  if (isNaN(price) || price < 0) return { error: 'Enter a price, like 45 or 45.50.' };
+  if (isNaN(price) || price <= 0) return { error: 'Enter a price above zero, like 45 or 45.50.' };
   // An add-on has no category of its own: it sits with the first service it is offered with.
   let categoryId = i.categoryId;
   if (i.addon) {
@@ -28,6 +28,7 @@ export async function saveService(i: SvcInput): Promise<{ error?: string; id?: s
   if (!categoryId) return { error: 'Choose a category.' };
   if (!(i.dur > 0)) return { error: 'Choose how long it takes.' };
   if (i.addon && !i.parentIds.length) return { error: 'Choose at least one service this add-on goes with.' };
+  if (!i.addon && !i.staffIds.length) return { error: 'Choose who does this service, so clients can book it.' };
   const row = { salon_id: salon.id, category_id: categoryId, name, description: i.desc.trim() || null, duration_min: i.dur, price_cents: Math.round(price * 100), online_bookable: i.online, is_addon: i.addon };
   let id = i.id;
   if (id) {

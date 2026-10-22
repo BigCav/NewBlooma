@@ -11,7 +11,7 @@ export default async function Team() {
   const { sb, salon, staff } = await requireCtx();
   const todayWd = dayInfo(ymd(new Date(), salon.timezone)).wd;
   const [{ data: team }, { data: shifts }, { data: cats }, { data: svcs }, { data: links }] = await Promise.all([
-    sb.from('staff').select('id,name,role_title,online_bookable,photo_url').eq('active', true).order('created_at'),
+    sb.from('staff').select('id,name,role_title,online_bookable,photo_url,app_role,user_id').eq('active', true).order('created_at'),
     sb.from('staff_shifts').select('staff_id,weekday,start_time,end_time'),
     sb.from('service_categories').select('id,name').order('sort').order('name'),
     sb.from('services').select('id,category_id').eq('active', true).eq('is_addon', false),
@@ -27,7 +27,7 @@ export default async function Team() {
     const offered = new Set((links ?? []).filter((l) => l.staff_id === m.id).map((l) => l.service_id));
     const t = at(todayWd);
     return {
-      id: m.id, name: m.name, role: m.role_title, online: m.online_bookable, photo: m.photo_url ?? null, days, shift: preset?.id ?? null,
+      id: m.id, name: m.name, role: m.role_title, online: m.online_bookable, photo: m.photo_url ?? null, isOwner: m.app_role === 'owner', linked: !!m.user_id, days, shift: preset?.id ?? null,
       cats: (cats ?? []).filter((c) => (svcs ?? []).some((s) => s.category_id === c.id && offered.has(s.id))).map((c) => c.name),
       cells: Array.from({ length: 7 }, (_, d) => { const s = at(d); return s ? shortRange(f(s.start_time), f(s.end_time)) : 'Off'; }),
       todayOn: !!t, todayLabel: t ? `${clock24(f(t.start_time))} to ${clock24(f(t.end_time))}` : '',

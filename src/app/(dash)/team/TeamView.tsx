@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
-import { removeMember, removePhoto, saveMember, uploadPhoto } from './actions';
+import { inviteMember, removeMember, removePhoto, saveMember, uploadPhoto } from './actions';
 import { DAYS, DAY_FULL, FILTERS, SHIFTS, initialsOf, photoCss, squarePhoto, type TeamRow } from './shared';
 
 type Props = { rows: TeamRow[]; cats: string[]; todayWd: number; owner: boolean };
@@ -43,7 +43,9 @@ function useTeam(props: Props) {
 
   const setDraft = <K extends keyof Draft>(k: K, v: Draft[K]) => { setDraftState((d) => ({ ...d, [k]: v })); setError(''); setNotice(''); };
   const flip = (k: 'cats' | 'days', v: any) => { const cur = draft[k] as any[]; setDraft(k, (cur.includes(v) ? cur.filter((x) => x !== v) : cur.concat([v])) as any); };
-  const select = (id: string) => { const m = items.find((i) => i.id === id)!; setSelectedId(id); setMode('edit'); setDraftState(draftOf(m)); setConfirm(false); setError(''); setNotice(''); setOpen(true); };
+  const [invite, setInvite] = useState('');
+  const makeInvite = () => startT(async () => { const r = await inviteMember(selectedId!); if (r.error) { setError(r.error); return; } setError(''); setInvite(r.link ?? ''); });
+  const select = (id: string) => { setInvite(''); const m = items.find((i) => i.id === id)!; setSelectedId(id); setMode('edit'); setDraftState(draftOf(m)); setConfirm(false); setError(''); setNotice(''); setOpen(true); };
   const startNew = () => { setSelectedId(null); setMode('new'); setDraftState(blank()); setConfirm(false); setError(''); setNotice(''); setOpen(true); };
   const cancelNew = () => { const first = items[0]; if (mobile || !first) { setOpen(false); setError(''); return; } select(first.id); };
   const save = () => {
@@ -90,7 +92,7 @@ function useTeam(props: Props) {
 
   const sq = query.trim().toLowerCase();
   const list = items.filter((m) => (filter === 'all' || (filter === 'today' && m.todayOn) || (filter === 'online' && m.online)) && (!sq || (m.name + ' ' + m.role).toLowerCase().includes(sq)));
-  return { ...props, items, photoBusy, pickPhoto, dropPhoto, busy, narrow, selectedId, mode, draft, setDraft, flip, filter, setFilter, query, setQuery, confirm, setConfirm, error, notice, open, setOpen, select, startNew, cancelNew, save, remove, list,
+  return { ...props, invite, makeInvite, items, photoBusy, pickPhoto, dropPhoto, busy, narrow, selectedId, mode, draft, setDraft, flip, filter, setFilter, query, setQuery, confirm, setConfirm, error, notice, open, setOpen, select, startNew, cancelNew, save, remove, list,
     close: () => { setOpen(false); setConfirm(false); setError(''); } };
 }
 type C = ReturnType<typeof useTeam>;
@@ -105,6 +107,7 @@ const inp = (h: number): React.CSSProperties => ({ ...S(`box-sizing:border-box;w
 
 function Form({ c, m }: { c: C; m: boolean }) {
   const d = c.draft, h = m ? 48 : 44, isNew = c.mode === 'new';
+  const curRow = c.items.find((x) => x.id === c.selectedId) ?? null;
   const Chips = ({ id, label, children }: { id: string; label: string; children: React.ReactNode }) => (
     <div style={S('display:flex;flex-direction:column;gap:8px')}>
       <span id={id} style={S('font-size:14px;font-weight:600')}>{label}</span>
@@ -148,11 +151,30 @@ function Form({ c, m }: { c: C; m: boolean }) {
         </div>
         <button role="switch" aria-checked={d.online} aria-labelledby="tm-online-label" onClick={() => c.setDraft('online', !d.online)} style={S('position:relative;flex:0 0 52px;width:52px;height:32px;padding:0;border:0;border-radius:999px;background:' + (d.online ? '#0E1116' : '#D5D9E0'))}><span style={S('position:absolute;top:3px;left:' + (d.online ? 23 : 3) + 'px;width:26px;height:26px;border-radius:999px;background:#FFFFFF')} /></button>
       </div>
+      {!isNew && curRow && (
+        <div style={S('display:flex;flex-direction:column;gap:8px')}>
+          <span style={S('font-size:14px;font-weight:600')}>Sign-in</span>
+          {curRow.linked
+            ? <span style={S('font-size:13.5px;color:#14624A')}>They have their own login.</span>
+            : c.invite
+              ? (<>
+                  <input readOnly aria-label="Invite link" value={c.invite} onFocus={(e) => e.currentTarget.select()} style={inp(h)} />
+                  <div style={S('display:flex;gap:8px')}>
+                    <button type="button" className="ghost" onClick={() => { navigator.clipboard?.writeText(c.invite).catch(() => {}); }} style={S(`flex:1 1 0;height:${h}px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500`)}>Copy link</button>
+                  </div>
+                  <span style={S('font-size:13px;color:#5E6673')}>Send this to {curRow.name.split(' ')[0]}. They create an account, then open the link again to join. It works once.</span>
+                </>)
+              : (<>
+                  <button type="button" className="ghost" onClick={c.makeInvite} disabled={c.busy} style={S(`height:${h}px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500`)}>Create invite link</button>
+                  <span style={S('font-size:13px;color:#5E6673')}>Lets {curRow.name.split(' ')[0]} sign in and see the calendar.</span>
+                </>)}
+        </div>
+      )}
       {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
       {!c.confirm && (
         <div style={S('display:flex;gap:10px')}>
           <button onClick={c.save} disabled={c.busy} style={S(`flex:1 1 0;height:${h}px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500`)}>{isNew ? 'Add team member' : 'Save changes'}</button>
-          <button className="ghost" onClick={() => (isNew ? c.cancelNew() : c.setConfirm(true))} style={S(`flex:1 1 0;height:${h}px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500`)}>{isNew ? 'Cancel' : 'Remove'}</button>
+          {(isNew || !curRow?.isOwner) && <button className="ghost" onClick={() => (isNew ? c.cancelNew() : c.setConfirm(true))} style={S(`flex:1 1 0;height:${h}px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500`)}>{isNew ? 'Cancel' : 'Remove'}</button>}
         </div>
       )}
       {c.confirm && (

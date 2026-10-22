@@ -1,6 +1,10 @@
 export type TeamRow = {
   id: string; name: string; role: string; cats: string[]; days: number[]; shift: string | null; online: boolean;
   cells: string[]; todayOn: boolean; todayLabel: string; photo: string | null;
+  /** The salon owner (cannot be removed). */
+  isOwner: boolean;
+  /** Already has their own login. */
+  linked: boolean;
 };
 export type ShiftPreset = { id: string; label: string; short: string; from: string; to: string };
 export const SHIFTS: ShiftPreset[] = [

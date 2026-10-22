@@ -2,6 +2,7 @@
 import { revalidatePath } from 'next/cache';
 import { requireOwner, friendly } from '@/lib/session';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { headers } from 'next/headers';
 import { SHIFTS } from './shared';
 
 type Input = { id: string | null; name: string; role: string; cats: string[]; days: number[]; shift: string | null; online: boolean };
@@ -83,8 +84,25 @@ export async function saveMember(i: Input): Promise<Res> {
   return { id: sid!, notice: i.id ? 'Changes saved' : 'Team member added' };
 }
 
+/** A one-time link that lets this team member create their own login and join the salon. */
+export async function inviteMember(staffId: string): Promise<Res & { link?: string }> {
+  const { sb, salon } = await requireOwner();
+  const { data: m } = await sb.from('staff').select('id,user_id,active').eq('id', staffId).eq('salon_id', salon.id).maybeSingle();
+  if (!m || !m.active) return { error: 'Team member not found.' };
+  if (m.user_id) return { error: 'They already have a login.' };
+  const { data, error } = await sb.rpc('create_staff_invite', { p_staff: staffId });
+  if (error || !data) return { error: friendly(error?.message) };
+  const h = await headers();
+  const base = process.env.NEXT_PUBLIC_APP_URL || `https://${h.get('x-forwarded-host') ?? h.get('host')}`;
+  return { link: `${base}/join/${data}` };
+}
+
 export async function removeMember(id: string): Promise<Res> {
-  const { sb } = await requireOwner();
+  const { sb, staff } = await requireOwner();
+  // Removing the owner would lock everyone out of the salon.
+  if (id === staff.id) return { error: 'You cannot remove yourself.' };
+  const { data: target } = await sb.from('staff').select('app_role').eq('id', id).maybeSingle();
+  if (target?.app_role === 'owner') return { error: 'The owner cannot be removed.' };
   const { count } = await sb.from('bookings').select('id', { count: 'exact', head: true }).eq('staff_id', id).gte('starts_at', new Date().toISOString()).not('status', 'in', '(cancelled,no_show,completed)');
   if (count) return { error: `They have ${count} upcoming ${count === 1 ? 'appointment' : 'appointments'}. Move or cancel those first.` };
   const { error } = await sb.from('staff').update({ active: false, online_bookable: false }).eq('id', id);

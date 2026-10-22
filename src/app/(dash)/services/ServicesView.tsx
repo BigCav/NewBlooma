@@ -51,10 +51,11 @@ function useServices(props: Props) {
   const save = () => {
     const name = draft.name.trim(); const price = parseFloat(draft.price);
     if (!name) { setError('Give the service a name.'); return; }
-    if (isNaN(price) || price < 0) { setError('Enter a price, like 45 or 45.50.'); return; }
+    if (isNaN(price) || price <= 0) { setError('Enter a price above zero, like 45 or 45.50.'); return; }
     if (!draft.addon && !draft.catId) { setError('Choose a category.'); return; }
     if (!(draft.dur > 0)) { setError('Enter how many minutes it takes.'); return; }
     if (draft.addon && !draft.parents.length) { setError('Choose at least one service this add-on goes with.'); return; }
+    if (!draft.addon && !draft.staff.length) { setError('Choose who does this service, so clients can book it.'); return; }
     startT(async () => {
       const r = await saveService({ id: mode === 'edit' ? selectedId ?? undefined : undefined, name, categoryId: draft.catId, dur: draft.dur, price: draft.price, desc: draft.desc, online: draft.online, staffIds: draft.staff, addon: draft.addon, parentIds: draft.parents });
       if (r.error) { setError(r.error); return; }

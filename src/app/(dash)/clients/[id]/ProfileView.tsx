@@ -51,7 +51,7 @@ function useProfile(d: ProfileData) {
 
   return {
     d, row, first, narrow, busy, openHist, setOpenHist, notes, allergies, patchOn, formula, setFormula, saved, reminders, marketing, noteDraft, setNoteDraft, allergyDraft, setAllergyDraft, mode, setMode, msg, setMsg, notice, setNotice, error, setError,
-    addNote: () => { const t = noteDraft.trim(); if (!t) return; run(() => addNote(row.id, t), () => { setNoteDraft(''); setNotice('Note added'); router.refresh(); }); },
+    addNote: () => { const t = noteDraft.trim(); if (!t) return; startT(async () => { const r = await addNote(row.id, t); if (r.error) { fail(r.error); return; } setError(''); setNotes((n) => [...n, { id: r.id!, text: t }]); setNoteDraft(''); setNotice('Note added'); }); },
     removeNote: (id: string) => run(() => removeNote(id), () => { setNotes((n) => n.filter((x) => x.id !== id)); }),
     addAllergy: () => { const t = allergyDraft.trim(); if (!t) return; const next = allergies.includes(t) ? allergies : [...allergies, t]; run(() => setAllergies(row.id, next), () => { setAl(next); setAllergyDraft(''); setNotice('Alert added'); }); },
     removeAllergy: (i: number) => { const next = allergies.filter((_, j) => j !== i); run(() => setAllergies(row.id, next), () => setAl(next)); },
@@ -183,6 +183,7 @@ function Header({ c, m }: { c: C; m: boolean }) {
       </div>
       <div style={S('display:flex;flex-wrap:wrap;gap:6px 24px;font-size:14px;color:#0E1116')}><span style={S('overflow-wrap:anywhere')}>{row.phone || 'No phone'}</span><span style={S('overflow-wrap:anywhere')}>{row.email || 'No email'}</span></div>
       {!!c.notice && <span role="status" style={S('align-self:flex-start;padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.notice}</span>}
+      {!!c.error && c.mode === 'view' && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
       {c.mode === 'message' && (
         <div style={S('display:flex;flex-direction:column;gap:10px')}>
           <label htmlFor="pf-msg" style={S('font-size:14px;font-weight:600')}>Message {c.first}</label>
