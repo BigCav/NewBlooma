@@ -47,6 +47,9 @@ table{width:100%;border-collapse:collapse}th{font-size:12px;text-transform:upper
 
 .m-cal button:disabled{opacity:1}
 .m-cal .sheet{animation:sheetUp .22s ease-out}
+/* Every phone sheet is a full page, so they all look and behave the same whatever they hold. */
+.sheet{top:0 !important;max-height:none !important;border-radius:0 !important;padding:20px 20px 40px !important}
+.sheet>div:first-child:empty{display:none}
 @keyframes sheetUp{from{transform:translateY(32px);opacity:0}to{transform:none;opacity:1}}
 @media (prefers-reduced-motion:reduce){.m-cal .sheet{animation:none}}
 .m-cal .page>*,.m-cal .sheet>*{flex:0 0 auto}
