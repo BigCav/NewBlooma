@@ -58,7 +58,8 @@ function useGifts(props: Props) {
   const active = all.filter((c) => !c.voided && c.balance > 0).length;
   const inMonth = (s: string) => s.slice(0, 7) === props.month;
   const issuedM = all.filter((c) => inMonth(c.issued)).reduce((a, c) => a + c.original, 0);
-  const redeemedM = all.reduce((a, c) => a + c.hist.filter((h) => inMonth(h.d) && h.a < 0 && !h.label.startsWith('Voided')).reduce((b, h) => b - h.a, 0), 0);
+  // Redeemed at checkout, less anything refunded back onto a card.
+  const redeemedM = Math.max(0, all.reduce((a, c) => a + c.hist.filter((h) => inMonth(h.d) && !h.label.startsWith('Voided')).reduce((b, h) => b - h.a, 0), 0));
 
   const pick = (id: string) => { setSelId(id); setMode('view'); setConfirmVoid(false); setError(''); setOpen(true); };
   const openNew = () => { setMode('new'); setNf({ amount: '', name: '', code: genCode() }); setError(''); setConfirmVoid(false); setOpen(true); };
@@ -141,7 +142,7 @@ function Panel({ c, m }: { c: C; m: boolean }) {
         <div style={S(rowCss)}><dt style={S('color:#5E6673')}>For</dt><dd style={S('margin:0;font-weight:500;text-align:right;overflow-wrap:anywhere')}>{sel.name || 'No name'}</dd></div>
         <div style={S(rowCss)}><dt style={S('color:#5E6673')}>Issued</dt><dd style={S('margin:0;font-weight:500;text-align:right')}>{dLong(sel.issued)}</dd></div>
         <div style={S(rowCss)}><dt style={S('color:#5E6673')}>Original amount</dt><dd style={S('margin:0;font-weight:500;text-align:right')}>{money(sel.original)}</dd></div>
-        <div style={S(rowCss + ';border-bottom:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>Used so far</dt><dd style={S('margin:0;font-weight:500;text-align:right')}>{money(sel.original - sel.balance)}</dd></div>
+        <div style={S(rowCss + ';border-bottom:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>Used so far</dt><dd style={S('margin:0;font-weight:500;text-align:right')}>{money(sel.original - sel.balance - sel.hist.filter((h) => h.label.startsWith('Voided')).reduce((t, h) => t - h.a, 0))}</dd></div>
       </dl>
       <section aria-label="History" style={S('display:flex;flex-direction:column;gap:4px')}>
         <h3 style={S('margin:0 0 4px;font-size:15px;font-weight:600')}>History</h3>

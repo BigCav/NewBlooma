@@ -1,11 +1,11 @@
-import { minutesOfDay, ymd } from '@/lib/format';
+import { time12, ymd } from '@/lib/format';
 import type { Ctx } from '@/lib/session';
 import { fmtClock, fmtDay } from '../clients/data';
 import type { InboxItem, ItemStatus, ItemType } from './shared';
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const pad = (n: number) => String(n).padStart(2, '0');
-const hhmm = (iso: string, tz: string) => { const m = minutesOfDay(iso, tz); return `${pad(Math.floor(m / 60))}:${pad(m % 60)}`; };
+const hhmm = (iso: string, tz: string) => time12(iso, tz);
 const addDay = (d: string, n: number) => new Date(new Date(`${d}T00:00:00Z`).getTime() + n * 86400e3).toISOString().slice(0, 10);
 /** Today: the time. Yesterday: "Yesterday". Older: the date. */
 export function stamp(iso: string, tz: string, today: string) {

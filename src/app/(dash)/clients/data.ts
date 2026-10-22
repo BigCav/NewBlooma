@@ -1,4 +1,4 @@
-import { minutesOfDay, ymd } from '@/lib/format';
+import { minutesOfDay, time12, ymd } from '@/lib/format';
 import type { Ctx } from '@/lib/session';
 import { initialsOf, type ClientRow, type Tag } from './shared';
 
@@ -9,7 +9,7 @@ export function fmtDay(iso: string, tz: string, today: string) {
   const [Y, M, D] = y.split('-').map(Number);
   return `${D} ${MON[M - 1]}` + (String(Y) !== today.slice(0, 4) ? ' ' + Y : '');
 }
-export function fmtClock(iso: string, tz: string) { const m = minutesOfDay(iso, tz); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; }
+export function fmtClock(iso: string, tz: string) { return time12(iso, tz); }
 
 export type Overview = { rows: ClientRow[]; count: number; newThisMonth: number; rebookRate: string; recentIds: string[] };
 
