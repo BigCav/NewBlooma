@@ -18,7 +18,7 @@ export async function saveProduct(id: string, f: { name: string; brand: string; 
   if (staff.app_role !== 'owner') return { error: 'Only the owner can edit products.' };
   const cents = price(f.price), reorder = whole(f.reorder);
   if (!f.name.trim()) return { error: 'Add a product name.' };
-  if (isNaN(cents) || cents < 0) return { error: 'Enter a price, like 24 or 24.50.' };
+  if (isNaN(cents) || cents <= 0) return { error: 'Enter a price above zero, like 24 or 24.50.' };
   if (isNaN(reorder) || reorder < 0) return { error: 'Enter the reorder level as a whole number, 0 or more.' };
   const { error } = await sb.from('products').update({ name: f.name.trim(), brand: f.brand.trim() || null, price_cents: cents, reorder_level: reorder }).eq('id', id);
   if (error) return { error: friendly(error.message) };
@@ -30,7 +30,7 @@ export async function createProduct(f: { name: string; brand: string; cat: strin
   if (staff.app_role !== 'owner') return { error: 'Only the owner can add products.' };
   const cents = price(f.price), stock = whole(f.stock), reorder = whole(f.reorder);
   if (!f.name.trim()) return { error: 'Add a product name.' };
-  if (isNaN(cents) || cents < 0) return { error: 'Enter a price, like 24 or 24.50.' };
+  if (isNaN(cents) || cents <= 0) return { error: 'Enter a price above zero, like 24 or 24.50.' };
   if (isNaN(stock) || stock < 0) return { error: 'Enter the starting stock as a whole number, 0 or more.' };
   if (isNaN(reorder) || reorder < 0) return { error: 'Enter the reorder level as a whole number, 0 or more.' };
   const { data: skus } = await sb.from('products').select('sku').like('sku', 'NP-%');

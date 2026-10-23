@@ -11,6 +11,7 @@ export function validate(v: Values): { section: string; error: string } | null {
   if (!v.bizName.trim()) return { section: 'business', error: 'Add your business name.' };
   if (!/\S+@\S+\.\S+/.test(v.bizEmail)) return { section: 'business', error: 'Add a valid business email.' };
   const ph = checkPhone(v.bizPhone); if (ph.error) return { section: 'business', error: ph.error };
+  if (!v.card && !v.cash && !v.gift) return { section: 'payments', error: 'Keep at least one payment method on so you can take payment at checkout.' };
   const tax = parseFloat(v.tax);
   if (isNaN(tax) || tax < 0 || tax > 30) return { section: 'payments', error: 'Enter a sales tax rate between 0 and 30.' };
   for (let i = 0; i < 7; i++) if (!v.hours[i].from || !v.hours[i].to || v.hours[i].to <= v.hours[i].from) return { section: 'hours', error: `${DAY_FULL[i]}: closing time must be after opening time.` };

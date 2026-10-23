@@ -218,7 +218,7 @@ export async function checkoutBooking(bookingId: string, method: 'card' | 'cash'
   }
   if (method === 'card') return { ok: true, saleId: id as string };
   if (method === 'gift_card' && !String(giftCode ?? '').trim()) { await sb.rpc('void_pending_sale', { p_sale: id }); return { error: 'Enter the gift card code.' }; }
-  const done = await sb.rpc('complete_sale', { p_sale: id, p_method: method, p_gift_code: method === 'gift_card' ? String(giftCode).trim() : null });
+  const done = await sb.rpc('complete_sale', { p_sale: id, p_method: method, p_gift_code: method === 'gift_card' ? String(giftCode).trim().toUpperCase() : null });
   if (done.error) { await sb.rpc('void_pending_sale', { p_sale: id }); return { error: friendly(done.error.message) }; }
   revalidatePath('/calendar'); revalidatePath('/sales');
   return { ok: true, saleId: id as string };

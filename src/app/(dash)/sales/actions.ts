@@ -46,7 +46,7 @@ export async function payFlow(saleId: string, method: 'terminal' | 'online' | 'c
   if (t.error) return { error: friendly(t.error.message) };
   if (method === 'cash' || method === 'gift_card') {
     if (method === 'gift_card' && !code.trim()) return { error: 'Enter the gift card code.' };
-    const { error } = await sb.rpc('complete_sale', { p_sale: saleId, p_method: method, p_gift_code: method === 'gift_card' ? code.trim() : null });
+    const { error } = await sb.rpc('complete_sale', { p_sale: saleId, p_method: method, p_gift_code: method === 'gift_card' ? code.trim().toUpperCase() : null });
     if (error) return { error: friendly(error.message) };
     revalidatePath('/sales'); revalidatePath('/calendar');
     return { notice: 'Payment taken' };
