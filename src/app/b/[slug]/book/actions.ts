@@ -12,7 +12,7 @@ export type Slot = { key: string; min: number };
 
 /** Open start times for one day. With "any professional" each start time appears once. */
 export async function publicSlots(slug: string, date: string, serviceIds: string[], staffId: string): Promise<{ slots: Slot[]; error?: string }> {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !serviceIds.length) return { slots: [] };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !serviceIds.length || serviceIds.length > 12) return { slots: [] };
   const sb = supabaseAdmin();
   const { data: salon } = await sb.from('salons').select('id,timezone').eq('slug', slug).maybeSingle();
   if (!salon) return { slots: [] };
@@ -25,6 +25,7 @@ export async function publicSlots(slug: string, date: string, serviceIds: string
 
 /** Next open online time for the chosen services (or the quickest on the menu), for the banner on the first step. */
 export async function nextAvailable(slug: string, serviceIds: string[], staffId?: string): Promise<string | null> {
+  if (serviceIds.length > 12) return null;
   const { data: salon } = await supabaseAdmin().from('salons').select('id,timezone').eq('slug', slug).maybeSingle();
   if (!salon) return null;
   return nextAvailableLabel(salon.id, salon.timezone, serviceIds, staffId).catch(() => null);
@@ -44,8 +45,8 @@ export async function clientMe(slug: string): Promise<Account | null> {
 
 export async function clientSignIn(input: { slug: string; email: string; password: string }): Promise<{ error?: string; account?: Account }> {
   const email = input.email.trim().toLowerCase();
-  if (!EMAIL.test(email)) return { error: 'Enter a valid email address.' };
-  if (!input.password) return { error: 'Enter your password.' };
+  if (!EMAIL.test(email) || email.length > 254) return { error: 'Enter a valid email address.' };
+  if (!input.password || input.password.length > 200) return { error: 'Enter your password.' };
   try {
     const id = await salonIdFor(input.slug); if (!id) return { error: 'This booking page is not available.' };
     const { data, error } = await supabaseAdmin().rpc('client_login', { p_salon: id, p_email: email, p_password: input.password });
@@ -73,6 +74,7 @@ export async function clientSignOut(): Promise<void> {
 
 export async function publicBook(slug: string, i: BookInput): Promise<{ error?: string; staffName?: string; account?: 'created' | 'exists' | 'saved' }> {
   if (i.website) return { error: 'Could not complete your booking.' }; // honeypot
+  if (i.name.length > 80 || i.email.length > 254 || i.phone.length > 30 || i.notes.length > 500 || i.services.length > 12 || i.slot.length > 100 || (i.password ?? '').length > 72) return { error: 'One of the details is too long. Please shorten it and try again.' };
   // Nobody books a salon solid or fills a stranger's inbox: cap bookings per address and per email.
   if (!(await allow('book:' + (await clientIp()), 8, 3600)) || !(await allow('book-to:' + i.email.trim().toLowerCase(), 6, 3600))) return { error: 'Too many bookings from here for now. Please call the salon, or try again later.' };
   const sb = supabaseAdmin();
@@ -121,6 +123,7 @@ export async function publicBook(slug: string, i: BookInput): Promise<{ error?: 
 export async function publicWaitlist(slug: string, i: { name: string; phone: string; serviceId: string; staffId: string }): Promise<{ error?: string }> {
   const name = i.name.trim(); let phone = i.phone.trim();
   if (!name) return { error: 'Add your name.' };
+  if (name.length > 80 || phone.length > 30) return { error: 'One of the details is too long. Please shorten it and try again.' };
   if (!(await allow('wait:' + (await clientIp()), 8, 3600))) return { error: 'Too many requests from here for now. Please try again later.' };
   if (phone.replace(/\D/g, '').length < 7) return { error: 'Add a mobile number so we can reach you.' };
   const ph = checkPhone(phone, true); if (ph.error) return { error: ph.error };

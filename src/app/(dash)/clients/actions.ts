@@ -12,6 +12,7 @@ export async function createClient(name: string, email: string, phone: string): 
   const { sb, salon } = await requireCtx();
   name = name.trim(); email = email.trim(); phone = phone.trim();
   if (!name) return { error: "Add the client's name." };
+  if (name.length > 80 || email.length > 254) return { error: 'That name or email is too long.' };
   if (email && !/^\S+@\S+\.\S+$/.test(email)) return { error: 'Add a valid email address, or leave it blank.' };
   const ph = checkPhone(phone); if (ph.error) return { error: ph.error };
   phone = ph.value;
@@ -26,6 +27,7 @@ export async function updateClient(id: string, name: string, email: string, phon
   const { sb } = await requireCtx();
   name = name.trim(); email = email.trim(); phone = phone.trim();
   if (!name) return { error: "Add the client's name." };
+  if (name.length > 80 || email.length > 254) return { error: 'That name or email is too long.' };
   if (email && !/^\S+@\S+\.\S+$/.test(email)) return { error: 'Add a valid email address.' };
   const ph = checkPhone(phone); if (ph.error) return { error: ph.error };
   const { error } = await sb.from('clients').update({ name, email: email || null, phone: ph.value || null }).eq('id', id);

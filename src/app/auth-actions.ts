@@ -21,8 +21,10 @@ export async function signIn(input: { email: string; password: string }): Promis
 export async function signUp(input: { name: string; email: string; password: string }): Promise<R> {
   const name = input.name.trim(), email = input.email.trim();
   if (!name) return { error: 'Add your name.' };
-  if (!EMAIL.test(email)) return { error: 'Enter a valid email address.' };
+  if (name.length > 80) return { error: 'Keep your name under 80 characters.' };
+  if (!EMAIL.test(email) || email.length > 254) return { error: 'Enter a valid email address.' };
   if (input.password.length < 8) return { error: 'Use at least 8 characters for your password.' };
+  if (input.password.length > 72) return { error: 'Use 72 characters or fewer for your password.' };
   if (!(await allow('signup:' + (await clientIp()), 5, 3600))) return { error: 'Too many attempts. Please try again later.' };
   // No confirmation email: the account is created already verified and signed in, and a welcome email follows.
   const { error } = await supabaseAdmin().auth.admin.createUser({ email, password: input.password, email_confirm: true, user_metadata: { full_name: name } });
