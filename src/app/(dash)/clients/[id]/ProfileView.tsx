@@ -208,7 +208,7 @@ function Header({ c, m }: { c: C; m: boolean }) {
           {!c.confirmDel
             ? <button className="ghost" onClick={() => c.setConfirmDel(true)} style={S('height:44px;border:0;border-radius:999px;background:transparent;color:#B42318;font-size:14px;font-weight:500')}>Delete client</button>
             : <div style={S('display:flex;flex-direction:column;gap:10px;padding:14px;border:1px solid #F3C6C3;border-radius:16px;background:#FEF3F2')}>
-                <span style={S('font-size:14px;font-weight:600')}>Delete {c.first} for good?</span>
+                <span style={S('font-size:14px;font-weight:600')}>Delete {c.row.name} for good?</span>
                 <span style={S('font-size:13.5px;color:#5E6673')}>Only possible when they have no bookings or sales. Their notes go too.</span>
                 <div style={S('display:flex;gap:10px')}><button onClick={c.removeClient} disabled={c.busy} style={S('flex:1 1 0;height:44px;border:0;border-radius:999px;background:#C0261B;color:#FFFFFF;font-size:14px;font-weight:500')}>Delete client</button><button className="ghost" onClick={() => c.setConfirmDel(false)} style={S(msgS + 'flex:1 1 0')}>Keep</button></div>
               </div>}

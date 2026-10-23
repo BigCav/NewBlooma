@@ -25,7 +25,8 @@ export default async function Waitlist() {
   ]);
   const ago = (iso: string) => {
     const ms = Date.now() - new Date(iso).getTime(), h = Math.floor(ms / 3600e3), d = ymd(iso, tz);
-    if (ms < 3600e3) return 'Just now';
+    if (ms < 60e3) return 'Just now';
+    if (ms < 3600e3) return `${Math.floor(ms / 60e3)} min ago`;
     if (d === today) return h === 1 ? '1 hour ago' : `${h} hours ago`;
     const yd = new Date(new Date(`${today}T00:00:00Z`).getTime() - 86400e3).toISOString().slice(0, 10);
     if (d === yd) return 'Yesterday';
