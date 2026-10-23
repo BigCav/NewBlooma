@@ -129,7 +129,7 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
         </dl></>}
     </section>
   );
-  const manage = <p style={S('margin:0;text-align:center;color:#5E6673;font-size:14px')}>Already booked? <Link href="/manage" style={S('color:#0E1116;font-weight:500')}>Manage your booking</Link>{!p.account && <> · <Link href={`/b/${p.slug}/account`} style={S('color:#0E1116;font-weight:500')}>Sign in</Link></>}</p>;
+  const manage = <p style={S('margin:0;text-align:center;color:#5E6673;font-size:14px')}>Already booked? <Link href={p.account ? `/b/${p.slug}/account` : '/manage'} style={S('color:#0E1116;font-weight:500')}>Manage your booking</Link>{!p.account && <> · <Link href={`/b/${p.slug}/account`} style={S('color:#0E1116;font-weight:500')}>Sign in</Link></>}</p>;
   const nextUp = p.visits.upcoming[0] ?? null;
   const first = (p.account?.name ?? '').split(' ')[0] || 'there';
   const pastList = p.visits.past.slice(0, 3);
