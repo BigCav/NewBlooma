@@ -72,6 +72,10 @@ export async function cancelBooking(id: string): Promise<R> {
 }
 export async function noShowBooking(id: string): Promise<R> {
   const { sb } = await requireCtx();
+  const { data: b } = await sb.from('bookings').select('status,starts_at').eq('id', id).maybeSingle();
+  if (!b) return { error: 'That booking no longer exists.' };
+  if (!['pending', 'confirmed'].includes(b.status)) return { error: 'Only a booking that has not been checked in can be marked as a no-show.' };
+  if (new Date(b.starts_at) > new Date()) return { error: 'You can mark a no-show once the appointment time has passed.' };
   const { error } = await sb.from('bookings').update({ status: 'no_show' }).eq('id', id);
   if (error) return { error: friendly(error.message) };
   revalidatePath('/calendar'); return { ok: true };
@@ -179,16 +183,18 @@ export async function walkinPlan(serviceId: string, staffId: string) {
   const { data: st } = await sb.from('staff').select('id,name').eq('id', rows[0].staff_id).single();
   return { staffId: rows[0].staff_id as string, staff: st?.name ?? '', startsAt: rows[0].starts_at as string, label: time12(rows[0].starts_at, salon.timezone), nowish: new Date(rows[0].starts_at).getTime() - now <= 15 * 60000 };
 }
-export async function addWalkIn(name: string, serviceId: string, staffId: string): Promise<R> {
+export async function addWalkIn(name: string, clientId: string | null, serviceId: string, staffId: string): Promise<R> {
   const { sb, salon } = await requireCtx();
   name = name.trim(); if (!name) return { error: "Add the client's name." };
   if (!serviceId) return { error: 'Choose a service.' };
   const plan = await walkinPlan(serviceId, staffId);
   if ('error' in plan && plan.error) return { error: plan.error };
   if (!('startsAt' in plan)) return { error: 'No free time today for that service. Try another team member or book it for another day.' };
-  const { data: c, error: ce } = await sb.from('clients').insert({ salon_id: salon.id, name }).select('id').single();
-  if (ce) return { error: friendly(ce.message) };
-  const { data, error } = await sb.rpc('create_booking', { p_salon: salon.id, p_client: c.id, p_staff: plan.staffId, p_starts_at: plan.startsAt, p_service_ids: [serviceId], p_source: 'staff', p_notes: 'Walk-in', p_mode: 'staff' });
+  // An existing client is only used when picked from the list; a typed name always makes a new one.
+  let cid = clientId;
+  if (cid) { const { data: ex } = await sb.from('clients').select('id').eq('id', cid).eq('salon_id', salon.id).maybeSingle(); if (!ex) return { error: 'That client no longer exists.' }; }
+  else { const { data: c, error: ce } = await sb.from('clients').insert({ salon_id: salon.id, name }).select('id').single(); if (ce) return { error: friendly(ce.message) }; cid = c.id; }
+  const { data, error } = await sb.rpc('create_booking', { p_salon: salon.id, p_client: cid, p_staff: plan.staffId, p_starts_at: plan.startsAt, p_service_ids: [serviceId], p_source: 'staff', p_notes: 'Walk-in', p_mode: 'staff' });
   if (error) return { error: friendly(error.message) };
   revalidatePath('/calendar');
   return { ok: true, id: data as string, note: `${name.split(' ')[0]} added with ${plan.staff.split(' ')[0]} at ${plan.label}` };

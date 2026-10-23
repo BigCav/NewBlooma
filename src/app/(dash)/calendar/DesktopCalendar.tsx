@@ -71,7 +71,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
   const errP = () => hasError ? <p role="alert" style={S(ERRD)}>{error}</p> : null;
   const BackBtn = ({ label = 'Cancel' }: { label?: string }) => <button className="ghost" onClick={backToView} style={S(BTN2)}>{label}</button>;
   const stepDay = (dir: number) => go(addDaysYmd(day, dir * (view === 'week' ? 7 : 1)));
-  const openWalkin = () => { setMode('walkin'); setOpen(true); setWi({ name: '', svc: null, pro: 'any', cat: '' }); setError(''); setNotice(''); };
+  const openWalkin = () => { setMode('walkin'); setOpen(true); setWi({ name: '', clientId: null, svc: null, pro: 'any', cat: '' }); setError(''); setNotice(''); };
   const openBlockForm = () => { setMode('block'); setOpen(true); setBf({ s: team[0]?.id ?? '', kind: 'lunch', day: day < today ? today : day, dur: 60, start: null }); setError(''); setNotice(''); };
   const hits = sres;
 
@@ -280,6 +280,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
               </div>
               {sel.canEdit && <button className="ghost" onClick={() => { setSelId(selB.id); setEd({ ids: selB.serviceIds.slice(), start: null }); setMode('edit'); setError(''); setNotice(''); }} style={S('height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>Edit booking</button>}
               <button className="ghost" onClick={c.startMessage} style={S('height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>{'Message ' + first(selB.client)}</button>
+              {(sel.k === 'confirmed' || sel.k === 'pending') && c.started(selB) && <button className="ghost" onClick={() => c.markNoShow(selB)} style={S('height:44px;border:0;border-radius:999px;background:transparent;color:#B42318;font-size:14px;font-weight:500')}>Mark as no-show</button>}
             </div>
 
             <div style={S('display:flex;flex-direction:column;gap:12px;padding-top:20px;border-top:1px solid #EEF0F3')}>
@@ -390,7 +391,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
           {mode === 'walkin' && (
             <div style={S('display:flex;flex-direction:column;gap:18px')}>
               <div><h2 style={S(H2D)}>Walk-in</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>We will find the first free time today.</p></div>
-              <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="wi-name" style={S(LBL)}>Client name</label><input id="wi-name" type="text" value={wi.name} onChange={(e) => { setWi({ ...wi, name: e.target.value }); setError(''); }} placeholder="Full name" style={inp(INPUT)} /></div>
+              <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="wi-name" style={S(LBL)}>Client name</label><input id="wi-name" type="text" value={wi.name} onChange={(e) => { setWi({ ...wi, name: e.target.value, clientId: null }); setError(''); }} placeholder="Search or type a client name" autoComplete="off" style={inp(INPUT)} /><ClientMatches query={wi.name} pickedId={wi.clientId} onPick={(h) => { setWi({ ...wi, name: h.name, clientId: h.id }); setError(''); }} /></div>
               <div style={S('display:flex;flex-direction:column;gap:10px')}><span id="wi-svc" style={S(LBL)}>Service</span>
                 <ServicePicker extras={false} lock={lockFor([])} services={services} selected={wi.svc ? [wi.svc] : []} initialCat={wiSvc?.cat || wi.cat || undefined} chipHeight={40} onCat={(ct) => setWi({ ...wi, cat: ct })}
                   onPick={(id) => { const sv = svcMap.get(id)!; const pro = wi.pro !== 'any' && !offered(id, wi.pro) ? 'any' : wi.pro; setWi(wi.svc === id ? { ...wi, svc: null } : { ...wi, svc: id, cat: sv.cat, pro }); setError(''); }} /></div>

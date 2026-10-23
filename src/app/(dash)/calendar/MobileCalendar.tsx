@@ -115,7 +115,7 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
             <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
               <h2 style={S('margin:0;font-size:16px;font-weight:600')}>{day === today ? 'Later today' : 'Later'}</h2>
               <span style={S('display:flex;gap:8px')}>
-                <button onClick={() => { setOpen(true); setMode('walkin'); setWi({ name: '', svc: null, pro: 'any', cat: '' }); setError(''); setNotice(''); }} style={S('height:36px;padding:0 14px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:13px;font-weight:500;cursor:pointer')}>Walk-in</button>
+                <button onClick={() => { setOpen(true); setMode('walkin'); setWi({ name: '', clientId: null, svc: null, pro: 'any', cat: '' }); setError(''); setNotice(''); }} style={S('height:36px;padding:0 14px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:13px;font-weight:500;cursor:pointer')}>Walk-in</button>
                 <button onClick={() => { setOpen(true); setMode('block'); setBf({ s: team[0]?.id ?? '', kind: 'lunch', day: day < today ? today : day, dur: 60, start: null }); setError(''); setNotice(''); }} style={S('height:36px;padding:0 14px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:13px;font-weight:500;cursor:pointer')}>Block time</button>
               </span>
             </div>
@@ -197,6 +197,7 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
               </div>
               {sel.canEdit && <button onClick={() => { setEd({ ids: sel.b.serviceIds.slice(), start: null }); setMode('edit'); setError(''); setNotice(''); }} style={S('height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14.5px;font-weight:500;cursor:pointer')}>Edit booking</button>}
               <button onClick={c.startMessage} style={S('height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14.5px;font-weight:500;cursor:pointer')}>{'Message ' + first(sel.b.client)}</button>
+              {(sel.k === 'confirmed' || sel.k === 'pending') && c.started(sel.b) && <button onClick={() => c.markNoShow(sel.b)} style={S('height:48px;border:0;border-radius:999px;background:transparent;color:#B42318;font-size:14.5px;font-weight:500;cursor:pointer')}>Mark as no-show</button>}
             </>)}
 
             {mode === 'checkout' && sel && (() => {
@@ -304,7 +305,7 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
 
             {mode === 'walkin' && (<>
               <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><div style={S('min-width:0')}><h2 style={S(H2S)}>Walk-in</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>We will find the first free time today.</p></div><button onClick={close} aria-label="Close" style={S(CLOSE_BTN)}><CloseX /></button></div>
-              <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="wi-name" style={S('font-size:14px;font-weight:600')}>Client name</label><input id="wi-name" type="text" value={wi.name} onChange={(e) => { setWi({ ...wi, name: e.target.value }); setError(''); }} placeholder="Full name" style={{ ...S('box-sizing:border-box;width:100%;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF'), minHeight: 0 }} /></div>
+              <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="wi-name" style={S('font-size:14px;font-weight:600')}>Client name</label><input id="wi-name" type="text" value={wi.name} onChange={(e) => { setWi({ ...wi, name: e.target.value, clientId: null }); setError(''); }} placeholder="Search or type a client name" autoComplete="off" style={{ ...S('box-sizing:border-box;width:100%;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF'), minHeight: 0 }} /><ClientMatches mobile query={wi.name} pickedId={wi.clientId} onPick={(h) => { setWi({ ...wi, name: h.name, clientId: h.id }); setError(''); }} /></div>
               <div style={S('display:flex;flex-direction:column;gap:10px')}><span id="wi-svc" style={S('font-size:14px;font-weight:600')}>Service</span>
                 <ServicePicker extras={false} lock={lockFor([])} services={services} selected={wi.svc ? [wi.svc] : []} initialCat={wiSvc?.cat || wi.cat || undefined} chipHeight={44} onCat={(c) => setWi({ ...wi, cat: c })}
                   onPick={(id) => { const sv = svcMap.get(id)!; const pro = wi.pro !== 'any' && !offered(id, wi.pro) ? 'any' : wi.pro; setWi(wi.svc === id ? { ...wi, svc: null } : { ...wi, svc: id, cat: sv.cat, pro }); setError(''); }} /></div>
