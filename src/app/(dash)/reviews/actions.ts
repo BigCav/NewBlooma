@@ -14,6 +14,13 @@ export async function saveReply(id: string, text: string): Promise<Res> {
   revalidatePath('/reviews'); return { notice: 'Reply posted' };
 }
 
+export async function deleteReply(id: string): Promise<Res> {
+  const { sb } = await requireCtx();
+  const { error } = await sb.from('reviews').update({ reply: null, replied_at: null }).eq('id', id);
+  if (error) return { error: friendly(error.message) };
+  revalidatePath('/reviews'); return { notice: 'Reply deleted' };
+}
+
 export async function requestReviews(): Promise<Res> {
   const { sb } = await requireCtx();
   const { data, error } = await sb.rpc('request_reviews');

@@ -15,6 +15,16 @@ import type { Props } from './calUi';
 
 export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>; props: Props }) {
   const { HOUR_PX, act, activeCards, addWalkin, amap, av, avail, availKey, backToView, bf, bfDur, blank, blockId, blockRows, blocks, bookings, busy, bvB, cards, cfg, charge, chk, close, co, coMath, createNew, cur, day, dayB, dayHrs, days14, di, doneBk, ed, editPlan, error, firstOpenDay, gEnd, gHours, gStart, go, hasError, hours, hrsOf, later, laterBk, minutesFromIso, mode, moveBooking, nFirstSvc, nKeyStr, nKeys, nOffers, nPickSvc, nPlan, nSlots, nWhy, nf, notice, now, nowTop, offered, offers, open, openBlock, openBooking, openDays, openNew, pageSubtitle, pageTitle, pendingSel, plan, primary, query, reason, refresh, router, row, rs, saveBlock, saveEdit, searchOpen, seg, sel, selId, services, setAmap, setAvail, setBf, setBlockId, setCo, setEd, setError, setMode, setNf, setNotice, setNow, setOpen, setPendingSel, setPlan, setQuery, setRs, setSearchOpen, setSelId, setSres, setStaffSel, setWi, setWkOpen, slotsFor, sq, sres, staffName, staffSel, startCheckout, startResched, startT, statCount, statRevenue, statNext, strip, svcMap, team, today, todayList, tz, upcoming, view, viewEvents, vm, weekDays, wi, wiPlanText, wiPlanCss, wiSvc, wkCards, wkOpen, wkRange, wkStaff, wkTitle, ws, nLock, edLock, lockFor } = c;
+  const renderLater = (b: (typeof later)[number]) => (
+              <div key={b.id} style={S('display:flex;align-items:center;gap:12px')}>
+                <span style={S('flex:0 0 40px;font-size:13px;color:#5E6673')}>{b.startText}</span>
+                <button onClick={() => (b.isBlock ? openBlock(b.id) : openBooking(b.id))} aria-label={b.label}
+                  style={S(b.isBlock ? 'flex:1 1 0;min-width:0;min-height:64px;box-sizing:border-box;padding:10px 16px;border:1px solid #DDE0E6;border-radius:18px;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;font:inherit;color:#4A525E;background:' + HATCH : (b as any).style)}>
+                  <span style={S('min-width:0')}><span style={S('display:block;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{b.client}</span><span style={S('display:block;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{b.sub}</span></span>
+                  <span style={S('flex:0 0 auto;font-size:13.5px;font-weight:500')}>{b.priceText}</span>
+                </button>
+              </div>
+  );
   const errP = () => hasError ? <p role="alert" style={S(ERR)}>{error}</p> : null;
   const tabsA = (id: string, href: string, label: string, on: boolean, svg: React.ReactNode) => (
     <Link key={id} href={href} aria-current={on ? 'page' : 'false'} style={S('width:100%;min-height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;text-decoration:none;font-size:12px;font-weight:' + (on ? 600 : 500) + ';color:' + (on ? '#0E1116' : '#5E6673'))}>
@@ -41,7 +51,7 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
         {searchOpen && (
           <label style={S('display:flex;align-items:center;gap:10px;height:48px;box-sizing:border-box;padding:0 16px;border-radius:999px;background:#FFFFFF;border:1px solid #E6E8EC')}>
             <Mag size={18} color="#5E6673" />
-            <input autoFocus type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search appointments" aria-label="Search appointments"
+            <input autoFocus type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search client, phone or service" aria-label="Search appointments"
               style={{ ...S('flex:1 1 auto;min-width:0;border:0;outline:none;background:transparent;font:inherit;color:#0E1116'), padding: '1px 2px', minHeight: 0, width: 'auto', borderRadius: 0, margin: 0 }} />
           </label>
         )}
@@ -89,9 +99,20 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
             <div><div style={S('color:#5E6673;font-size:13px')}>Next opening</div><div style={S('margin-top:2px;font-size:30px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{statNext}</div></div>
           </section>
 
-          {!!sq && todayList.length === 0 && <p style={S('margin:0;text-align:center;color:#5E6673;font-size:14px')}>{'No appointments today match "' + query.trim() + '".'}</p>}
+          {!!sq && (
+            <section aria-label="Search results" style={S('display:flex;flex-direction:column;gap:10px')}>
+              <h2 style={S('margin:0;font-size:16px;font-weight:600')}>Search results</h2>
+              <p style={S('margin:0;color:#5E6673;font-size:13.5px')}>{(c.sres ? c.sres.length + (c.sres.length === 1 ? ' appointment' : ' appointments') : 'Searching') + ' for "' + query.trim() + '"'}</p>
+              {c.sres && c.sres.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>Nothing matches that yet. Try a client name, phone number, service or booking number.</p>}
+              {(c.sres ?? []).map((h) => { const when = dayInfo(h.dayYmd).short + ', ' + fmtMin(h.start); return (
+                <button key={h.id} onClick={() => { c.setSelId(h.id); c.setQuery(''); c.setSearchOpen(false); c.setOpen(true); c.setMode('view'); if (h.dayYmd !== day) go(h.dayYmd, 'day'); }} aria-label={h.client + ', ' + h.services + ', ' + when} style={S('display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:60px;padding:10px 14px;border:1px solid #E6E8EC;border-radius:18px;background:#FFFFFF;text-align:left;font:inherit;color:#0E1116;cursor:pointer')}>
+                  <span style={S('min-width:0;flex:1 1 auto')}><span style={S('display:block;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{h.client}</span><span style={S('display:block;font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{h.services + ' with ' + first(h.staff)}</span></span>
+                  <span style={S('flex:0 0 auto;font-size:12.5px;color:#5E6673')}>{when}</span>
+                </button>); })}
+            </section>
+          )}
 
-          {cards.length > 0 && (
+          {!sq && cards.length > 0 && (
             <section aria-label="Current and next appointments" style={S('display:flex;flex-direction:column;gap:10px')}>
               {activeCards.length > 0 && <h2 style={S('margin:0 0 2px;font-size:16px;font-weight:600')}>{'In progress, ' + activeCards.length}</h2>}
               <div className="hscroll" style={S('display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding:0 20px;margin:0 -20px;padding:0 20px')}>
@@ -111,25 +132,22 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
             </section>
           )}
 
-          <section aria-label="Later today" style={S('display:flex;flex-direction:column;gap:10px')}>
+          <section aria-label="Later today" style={S('flex-direction:column;gap:10px;display:' + (sq ? 'none' : 'flex'))}>
             <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
-              <h2 style={S('margin:0;font-size:16px;font-weight:600')}>{day === today ? 'Later today' : 'Later'}</h2>
+              <h2 style={S('margin:0;font-size:16px;font-weight:600')}>{day === today ? 'Later today' : 'Appointments'}</h2>
               <span style={S('display:flex;gap:8px')}>
                 <button onClick={() => { setOpen(true); setMode('walkin'); setWi({ name: '', clientId: null, svc: null, pro: 'any', cat: '' }); setError(''); setNotice(''); }} style={S('height:36px;padding:0 14px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:13px;font-weight:500;cursor:pointer')}>Walk-in</button>
                 <button onClick={() => { setOpen(true); setMode('block'); setBf({ s: team[0]?.id ?? '', kind: 'lunch', day: day < today ? today : day, dur: 60, start: null }); setError(''); setNotice(''); }} style={S('height:36px;padding:0 14px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:13px;font-weight:500;cursor:pointer')}>Block time</button>
               </span>
             </div>
-            {later.map((b) => (
-              <div key={b.id} style={S('display:flex;align-items:center;gap:12px')}>
-                <span style={S('flex:0 0 40px;font-size:13px;color:#5E6673')}>{b.startText}</span>
-                <button onClick={() => (b.isBlock ? openBlock(b.id) : openBooking(b.id))} aria-label={b.label}
-                  style={S(b.isBlock ? 'flex:1 1 0;min-width:0;min-height:64px;box-sizing:border-box;padding:10px 16px;border:1px solid #DDE0E6;border-radius:18px;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;font:inherit;color:#4A525E;background:' + HATCH : (b as any).style)}>
-                  <span style={S('min-width:0')}><span style={S('display:block;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{b.client}</span><span style={S('display:block;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{b.sub}</span></span>
-                  <span style={S('flex:0 0 auto;font-size:13.5px;font-weight:500')}>{b.priceText}</span>
-                </button>
-              </div>
-            ))}
+            {c.laterUp.map(renderLater)}
           </section>
+          {c.laterDone.length > 0 && !sq && (
+            <section aria-label="Done" style={S('display:flex;flex-direction:column;gap:10px')}>
+              <h2 style={S('margin:0;font-size:16px;font-weight:600')}>{day === today ? 'Done today' : 'Done'}</h2>
+              {c.laterDone.map(renderLater)}
+            </section>
+          )}
         </>)}
 
         {view === 'week' && wkCards.map(({ d, hrs, rows, shown, util, isOpen, limit, summary }) => (

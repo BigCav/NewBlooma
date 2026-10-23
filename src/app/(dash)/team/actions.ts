@@ -3,9 +3,9 @@ import { revalidatePath } from 'next/cache';
 import { requireOwner, friendly } from '@/lib/session';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { headers } from 'next/headers';
-import { SHIFTS } from './shared';
+import { DAY_FULL } from './shared';
 
-type Input = { id: string | null; name: string; role: string; cats: string[]; days: number[]; shift: string | null; online: boolean };
+type Input = { id: string | null; name: string; role: string; cats: string[]; days: number[]; times: [string, string][]; online: boolean };
 type Res = { error?: string; id?: string; notice?: string };
 
 const BUCKET = 'staff-photos';
@@ -48,7 +48,11 @@ export async function saveMember(i: Input): Promise<Res> {
   const name = i.name.trim();
   if (!name) return { error: "Add the team member's name." };
   if (!i.cats.length) return { error: 'Choose at least one service category.' };
-  const preset = SHIFTS.find((s) => s.id === i.shift) ?? null;
+  for (const d of i.days) {
+    const t = i.times?.[d];
+    if (!t || !/^([01]\d|2[0-3]):[0-5]\d$/.test(t[0]) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(t[1])) return { error: 'Choose a start and finish time for each working day.' };
+    if (t[1] <= t[0]) return { error: `${DAY_FULL[d]}: finish time must be after start time.` };
+  }
   const row = { name, role_title: i.role.trim() || 'Team member', online_bookable: !!i.online };
   let sid = i.id;
   if (sid) { const { error } = await sb.from('staff').update(row).eq('id', sid); if (error) return { error: friendly(error.message) }; }
@@ -56,13 +60,11 @@ export async function saveMember(i: Input): Promise<Res> {
     const { data, error } = await sb.from('staff').insert({ ...row, salon_id: salon.id, app_role: 'stylist', commission_pct: 0 }).select('id').single();
     if (error) return { error: friendly(error.message) }; sid = data.id;
   }
-  // Working days: preset shift applies to every chosen day; with no preset an existing day keeps its own times.
-  const { data: cur } = await sb.from('staff_shifts').select('weekday,start_time,end_time').eq('staff_id', sid);
+  // Each chosen day gets its own start and finish time.
   const days = new Set(i.days);
   for (let d = 0; d < 7; d++) {
     if (!days.has(d)) { await sb.from('staff_shifts').delete().eq('staff_id', sid).eq('weekday', d); continue; }
-    const ex = (cur ?? []).find((x) => x.weekday === d);
-    const from = preset?.from ?? ex?.start_time?.slice(0, 5) ?? '09:00', to = preset?.to ?? ex?.end_time?.slice(0, 5) ?? '17:00';
+    const [from, to] = i.times[d];
     const { error } = await sb.from('staff_shifts').upsert({ staff_id: sid, weekday: d, start_time: from, end_time: to });
     if (error) return { error: friendly(error.message) };
   }

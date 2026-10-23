@@ -278,15 +278,17 @@ export type SearchHit = { id: string; dayYmd: string; start: number; client: str
 export async function searchBookings(q: string): Promise<SearchHit[]> {
   const { sb, salon } = await requireCtx();
   const needle = q.trim().toLowerCase(); if (!needle) return [];
-  const a = new Date(Date.now() - 30 * 86400000), b = new Date(Date.now() + 90 * 86400000);
-  const { data } = await sb.from('bookings').select('id,starts_at,staff(name),clients(name),booking_services(services(name,service_categories(name)))')
+  const a = new Date(Date.now() - 180 * 86400000), b = new Date(Date.now() + 180 * 86400000);
+  const digits = needle.replace(/\D/g, '');
+  const { data } = await sb.from('bookings').select('id,ref_no,starts_at,staff(name),clients(name,phone),booking_services(services(name,service_categories(name)))')
     .gte('starts_at', a.toISOString()).lt('starts_at', b.toISOString()).not('status', 'in', '(cancelled,no_show)').order('starts_at').limit(1000);
   const hits: SearchHit[] = [];
   for (const x of (data ?? []) as any[]) {
     const lines = (x.booking_services ?? []) as any[];
     const services = lines.map((l) => l.services?.name).filter(Boolean).join(' + ');
     const staff = x.staff?.name ?? '', client = x.clients?.name ?? 'Client';
-    if (!(client + ' ' + services + ' ' + staff).toLowerCase().includes(needle)) continue;
+    const phone = String(x.clients?.phone ?? '').replace(/\D/g, '');
+    if (!(client + ' ' + services + ' ' + (x.ref_no ?? '')).toLowerCase().includes(needle) && !(digits.length >= 3 && phone.includes(digits))) continue;
     hits.push({ id: x.id, dayYmd: ymdOf(x.starts_at, salon.timezone), start: minutesOfDay(x.starts_at, salon.timezone), client, services, staff, cat: lines[0]?.services?.service_categories?.name ?? '' });
     if (hits.length >= 12) break;
   }

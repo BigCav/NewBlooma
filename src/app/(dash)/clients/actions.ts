@@ -12,10 +12,10 @@ export async function createClient(name: string, email: string, phone: string): 
   const { sb, salon } = await requireCtx();
   name = name.trim(); email = email.trim(); phone = phone.trim();
   if (!name) return { error: "Add the client's name." };
-  if (!/\S+@\S+\.\S+/.test(email)) return { error: 'Add a valid email address.' };
+  if (email && !/^\S+@\S+\.\S+$/.test(email)) return { error: 'Add a valid email address, or leave it blank.' };
   const ph = checkPhone(phone); if (ph.error) return { error: ph.error };
   phone = ph.value;
-  const { data, error } = await sb.from('clients').insert({ salon_id: salon.id, name, email, phone: phone || null }).select('id').single();
+  const { data, error } = await sb.from('clients').insert({ salon_id: salon.id, name, email: email || null, phone: phone || null }).select('id').single();
   if (error) return { error: error.code === '23505' ? 'A client with that email already exists.' : friendly(error.message) };
   revalidatePath('/clients');
   return { ok: true, row: { id: data.id, name, email, phone, tag: 'New', last: 'None yet', lastService: 'No visits', next: 'Not booked', staff: 'Not set', visits: 0, spentCents: 0 } };

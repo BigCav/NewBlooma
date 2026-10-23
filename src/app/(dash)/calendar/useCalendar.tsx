@@ -120,7 +120,7 @@ export function useCalendar(props: Props) {
   };
 
   /* ---------- derived lists (as Mobile.dc.html renderVals) ---------- */
-  const todayList = dayB.filter((b) => !sq || (b.client + ' ' + b.services + ' ' + staffName(b.staffId)).toLowerCase().includes(sq)).sort((a, b) => a.start - b.start).map(vm);
+  const todayList = dayB.filter((b) => !sq || (b.client + ' ' + b.services + ' ' + (b.ref ?? '')).toLowerCase().includes(sq)).sort((a, b) => a.start - b.start).map(vm);
   const activeCards = todayList.filter((x) => x.k === 'live');
   const upcoming = todayList.filter((x) => x.k !== 'done' && x.k !== 'live');
   const cards = activeCards.length ? activeCards : upcoming.slice(0, 1);
@@ -133,7 +133,8 @@ export function useCalendar(props: Props) {
     id: b.id, isBlock: true as const,
   }));
   const row = (x: (typeof todayList)[number]) => ({ start: x.b.start, startText: fmtMin(x.b.start), client: x.b.client, sub: x.sub, priceText: x.priceText, label: x.label, id: x.b.id, style: x.style, isBlock: false as const });
-  const later = [...[...laterBk.map(row), ...blockRows].sort((a, b) => a.start - b.start), ...doneBk.map(row)];
+  const laterUp = [...laterBk.map(row), ...blockRows].sort((a, b) => a.start - b.start), laterDone = doneBk.map(row);
+  const later = [...laterUp, ...laterDone];
 
   const dayHrs = hrsOf(day);
   const statCount = dayB.length, statRevenue = usd(dayB.reduce((a, b) => a + b.priceCents, 0));
@@ -401,5 +402,5 @@ export function useCalendar(props: Props) {
   }) : [];
 
   const nLock = lockFor(nf.services), edLock = lockFor(ed.ids);
-  return { nLock, edLock, lockFor, HOUR_PX, act, activeCards, addWalkin, amap, av, avail, availKey, backToView, bf, bfDur, blank, blockId, blockRows, blocks, bookings, busy, bvB, cards, cfg, charge, chk, close, co, coMath, createNew, cur, day, dayB, dayHrs, days14, di, doneBk, ed, editPlan, error, firstOpenDay, gEnd, gHours, gStart, go, hasError, hours, hrsOf, later, laterBk, minutesFromIso, mode, moveBooking, nFirstSvc, nKeyStr, nKeys, nOffers, nPickSvc, nPlan, nSlots, nWhy, nf, notice, now, nowTop, offered, offers, open, openBlock, openBooking, openDays, openNew, pageSubtitle, pageTitle, pendingSel, plan, primary, query, reason, refresh, router, row, rs, saveBlock, saveEdit, searchOpen, seg, sel, selId, services, setAmap, setAvail, setBf, setBlockId, setCo, setEd, setError, setMode, setNf, setNotice, setNow, setOpen, setPendingSel, setPlan, setQuery, setRs, setSearchOpen, setSelId, setSres, setStaffSel, setWi, setWkOpen, slotsFor, sq, sres, staffName, staffSel, startCheckout, startResched, startT, statCount, statRevenue, statNext, strip, svcMap, team, today, todayList, tz, upcoming, view, viewEvents, vm, weekDays, wi, wiPlanText, wiPlanCss, wiSvc, wkCards, wkOpen, wkRange, wkStaff, wkTitle, ws, msg, setMsg, startMessage, sendMessage, started, markNoShow };
+  return { laterUp, laterDone, nLock, edLock, lockFor, HOUR_PX, act, activeCards, addWalkin, amap, av, avail, availKey, backToView, bf, bfDur, blank, blockId, blockRows, blocks, bookings, busy, bvB, cards, cfg, charge, chk, close, co, coMath, createNew, cur, day, dayB, dayHrs, days14, di, doneBk, ed, editPlan, error, firstOpenDay, gEnd, gHours, gStart, go, hasError, hours, hrsOf, later, laterBk, minutesFromIso, mode, moveBooking, nFirstSvc, nKeyStr, nKeys, nOffers, nPickSvc, nPlan, nSlots, nWhy, nf, notice, now, nowTop, offered, offers, open, openBlock, openBooking, openDays, openNew, pageSubtitle, pageTitle, pendingSel, plan, primary, query, reason, refresh, router, row, rs, saveBlock, saveEdit, searchOpen, seg, sel, selId, services, setAmap, setAvail, setBf, setBlockId, setCo, setEd, setError, setMode, setNf, setNotice, setNow, setOpen, setPendingSel, setPlan, setQuery, setRs, setSearchOpen, setSelId, setSres, setStaffSel, setWi, setWkOpen, slotsFor, sq, sres, staffName, staffSel, startCheckout, startResched, startT, statCount, statRevenue, statNext, strip, svcMap, team, today, todayList, tz, upcoming, view, viewEvents, vm, weekDays, wi, wiPlanText, wiPlanCss, wiSvc, wkCards, wkOpen, wkRange, wkStaff, wkTitle, ws, msg, setMsg, startMessage, sendMessage, started, markNoShow };
 }

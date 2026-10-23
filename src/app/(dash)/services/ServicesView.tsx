@@ -7,7 +7,7 @@ import { toneFor } from '@/lib/cal';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
 import { decimalInput, digitsInput } from '@/lib/numeric';
-import { addCategory, deleteService, saveService } from './actions';
+import { addCategory, deleteCategory, deleteService, renameCategory, saveService } from './actions';
 
 export type SvcRow = { id: string; name: string; desc: string; catId: string; cat: string; catIdx: number; dur: number; priceCents: number; online: boolean; staffIds: string[]; addon: boolean; parentIds: string[] };
 type Props = { services: SvcRow[]; cats: { id: string; name: string }[]; team: { id: string; name: string }[]; canEdit: boolean };
@@ -34,6 +34,7 @@ function useServices(props: Props) {
   const [notice, setNotice] = useState('');
   const [open, setOpen] = useState(false);
   const [nc, setNc] = useState<{ open: boolean; name: string }>({ open: false, name: '' });
+  const [ce, setCe] = useState<{ mode: '' | 'rename' | 'delete'; name: string }>({ mode: '', name: '' });
   const [narrow, setNarrow] = useState<boolean | null>(null);
   useEffect(() => {
     const mq = window.matchMedia('(max-width:900px)');
@@ -89,11 +90,30 @@ function useServices(props: Props) {
     });
   };
 
+  const renameCat = () => {
+    if (!draft.catId) return;
+    startT(async () => {
+      const r = await renameCategory(draft.catId, ce.name);
+      if (r.error) { setError(r.error); return; }
+      setError(''); setCe({ mode: '', name: '' }); setNotice('Category renamed'); router.refresh();
+    });
+  };
+  const removeCat = () => {
+    if (!draft.catId) return;
+    const id = draft.catId;
+    startT(async () => {
+      const r = await deleteCategory(id);
+      if (r.error) { setError(r.error); setCe({ mode: '', name: '' }); return; }
+      setExtraCats((e) => e.filter((x) => x.id !== id)); setError(''); setCe({ mode: '', name: '' });
+      setDraft((d) => ({ ...d, catId: props.cats.find((x) => x.id !== id)?.id ?? '' })); setNotice('Category deleted'); router.refresh();
+    });
+  };
+
   const sq = query.trim().toLowerCase();
   const rows = services.filter((s) => (filter === 'all' || s.catId === filter) && (!sq || (s.name + ' ' + s.cat + ' ' + s.desc).toLowerCase().includes(sq)));
   const durs = DURS;
   const mains = services.filter((s) => !s.addon);
-  return { busy, cats, services, mains, team, narrow, canEdit: props.canEdit, selectedId, mode, draft, set, filter, setFilter, query, setQuery, confirm, setConfirm, error, notice, open, setOpen, nc, setNc,
+  return { busy, cats, services, mains, team, narrow, canEdit: props.canEdit, selectedId, mode, draft, set, filter, setFilter, query, setQuery, confirm, setConfirm, error, notice, open, setOpen, nc, setNc, ce, setCe, renameCat, removeCat,
     select, startNew, cancelNew, save, remove, createCat, rows, durs, catName, setError };
 }
 type C = ReturnType<typeof useServices>;
@@ -106,7 +126,7 @@ const ini = (n: string) => n.split(' ').filter((w) => /[A-Za-z0-9]/.test(w[0] ??
 const rowLabel = (s: SvcRow) => s.name + (s.addon ? ' (add-on)' : '') + ', ' + s.dur + ' minutes, ' + money(s.priceCents) + ', ' + (s.online ? 'bookable online' : 'hidden online');
 
 function Editor({ c, m }: { c: C; m: boolean }) {
-  const { draft: d, set, cats, team, mode, confirm, error, nc, setNc, canEdit, busy } = c;
+  const { draft: d, set, cats, team, mode, confirm, error, nc, setNc, ce, canEdit, busy } = c;
   const [custom, setCustom] = useState(false);
   const [ctext, setCtext] = useState('');
   useEffect(() => { setCustom(false); }, [c.selectedId, c.mode]);
@@ -147,6 +167,27 @@ function Editor({ c, m }: { c: C; m: boolean }) {
           {cats.map((x) => <button key={x.id} type="button" onClick={() => set('catId', x.id)} aria-pressed={d.catId === x.id} style={S(formChip(d.catId === x.id, m))}>{x.name}</button>)}
           <button type="button" onClick={() => setNc({ ...nc, open: !nc.open })} aria-expanded={nc.open} style={S(formChip(nc.open, m))}>+ New category</button>
         </div>
+        {c.canEdit && !nc.open && !!d.catId && cats.some((x) => x.id === d.catId) && (ce.mode === '' ? (
+          <div style={S('display:flex;gap:16px')}>
+            <button type="button" className="ghost" onClick={() => c.setCe({ mode: 'rename', name: c.catName(d.catId) })} style={S('border:0;background:transparent;padding:0;color:#4A525E;font-size:13.5px;font-weight:500;text-decoration:underline;cursor:pointer')}>Rename category</button>
+            <button type="button" className="ghost" onClick={() => c.setCe({ mode: 'delete', name: '' })} style={S('border:0;background:transparent;padding:0;color:#B42318;font-size:13.5px;font-weight:500;text-decoration:underline;cursor:pointer')}>Delete category</button>
+          </div>
+        ) : ce.mode === 'rename' ? (
+          <div style={S('display:flex;gap:8px')}>
+            <input type="text" aria-label="Category name" value={ce.name} onChange={(e) => c.setCe({ mode: 'rename', name: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); c.renameCat(); } }} autoFocus style={{ ...S(inputCss), minHeight: 0 }} />
+            <button type="button" onClick={c.renameCat} disabled={busy} style={S('flex:0 0 auto;height:' + H + 'px;padding:0 18px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500')}>Save</button>
+            <button type="button" className="ghost" onClick={() => c.setCe({ mode: '', name: '' })} style={S('flex:0 0 auto;height:' + H + 'px;padding:0 16px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>Cancel</button>
+          </div>
+        ) : (
+          <div style={S('display:flex;flex-direction:column;gap:8px;padding:12px 14px;border:1px solid #F3C6C3;border-radius:14px;background:#FEF3F2')}>
+            <span style={S('font-size:14px;font-weight:600')}>Delete {c.catName(d.catId)}?</span>
+            <span style={S('font-size:13px;color:#5E6673')}>Only works when it has no services in it.</span>
+            <div style={S('display:flex;gap:8px')}>
+              <button type="button" onClick={c.removeCat} disabled={busy} style={S('flex:1 1 0;height:' + H + 'px;border:0;border-radius:999px;background:#C0261B;color:#FFFFFF;font-size:14px;font-weight:500')}>Delete category</button>
+              <button type="button" className="ghost" onClick={() => c.setCe({ mode: '', name: '' })} style={S('flex:1 1 0;height:' + H + 'px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>Keep</button>
+            </div>
+          </div>
+        ))}
         {nc.open && (
           <div style={S('display:flex;gap:8px')}>
             <input type="text" aria-label="New category name" value={nc.name} onChange={(e) => setNc({ ...nc, name: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); c.createCat(); } }} placeholder="Category name" autoFocus style={{ ...S(inputCss), minHeight: 0 }} />

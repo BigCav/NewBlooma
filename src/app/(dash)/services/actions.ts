@@ -13,6 +13,26 @@ export async function addCategory(name: string): Promise<{ error?: string; id?: 
   revalidatePath('/services'); return { id: data.id, name: data.name };
 }
 
+export async function renameCategory(id: string, name: string): Promise<{ error?: string }> {
+  const { sb, salon } = await requireOwner();
+  const n = name.trim(); if (!n) return { error: 'Enter a category name.' };
+  if (n.length > 60) return { error: 'Keep the category name under 60 characters.' };
+  const { data, error } = await sb.from('service_categories').update({ name: n }).eq('id', id).eq('salon_id', salon.id).select('id');
+  if (error) return { error: error.code === '23505' ? 'That category already exists.' : friendly(error.message) };
+  if (!data?.length) return { error: 'That category no longer exists.' };
+  revalidatePath('/services'); return {};
+}
+
+/** Only a category with no services can be removed, so nothing is ever orphaned. */
+export async function deleteCategory(id: string): Promise<{ error?: string }> {
+  const { sb, salon } = await requireOwner();
+  const { count } = await sb.from('services').select('id', { count: 'exact', head: true }).eq('category_id', id).eq('salon_id', salon.id).eq('active', true);
+  if ((count ?? 0) > 0) return { error: `Move or delete its ${count} service${count === 1 ? '' : 's'} first.` };
+  const { error } = await sb.from('service_categories').delete().eq('id', id).eq('salon_id', salon.id);
+  if (error) return { error: error.code === '23503' ? 'Past bookings still use this category, so it cannot be deleted. Rename it instead.' : friendly(error.message) };
+  revalidatePath('/services'); return {};
+}
+
 export async function saveService(i: SvcInput): Promise<{ error?: string; id?: string; created?: boolean }> {
   const { sb, salon } = await requireOwner();
   const name = i.name.trim();

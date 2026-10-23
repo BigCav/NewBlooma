@@ -87,7 +87,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
         <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:10px')}>
           <label className="search" style={S('display:flex;align-items:center;gap:10px;height:44px;box-sizing:border-box;padding:0 16px;border-radius:999px;background:#FFFFFF;border:1px solid #E6E8EC;color:#5E6673')}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></svg>
-            <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search clients" aria-label="Search clients" style={{ ...S('border:0;outline:none;background:transparent;font:inherit;color:#0E1116;width:150px'), padding: '1px 2px', minHeight: 0, borderRadius: 0 }} />
+            <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search client, phone or service" aria-label="Search appointments" style={{ ...S('border:0;outline:none;background:transparent;font:inherit;color:#0E1116;width:150px'), padding: '1px 2px', minHeight: 0, borderRadius: 0 }} />
           </label>
           <button onClick={openNew} style={S('display:flex;align-items:center;gap:8px;height:44px;padding:0 20px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500')}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
@@ -485,7 +485,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
           {mode === 'view' && !!sq && (
             <div style={S('display:flex;flex-direction:column;gap:14px')}>
               <div><h2 style={S(H2D)}>Search results</h2><p style={S(SUBD)}>{(hits ? hits.length + (hits.length === 1 ? ' appointment' : ' appointments') : 'Searching') + ' for "' + sq + '"'}</p></div>
-              {hits && hits.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>Nothing matches that yet. Try a client name, a service or a team member.</p>}
+              {hits && hits.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>Nothing matches that yet. Try a client name, phone number, service or booking number.</p>}
               <ul style={S('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px')}>
                 {(hits ?? []).map((h) => {
                   const tone = vmTone(h.cat);

@@ -29,6 +29,7 @@ export default async function Team() {
     return {
       id: m.id, name: m.name, role: m.role_title, online: m.online_bookable, photo: m.photo_url ?? null, isOwner: m.app_role === 'owner', linked: !!m.user_id, days, shift: preset?.id ?? null,
       cats: (cats ?? []).filter((c) => (svcs ?? []).some((s) => s.category_id === c.id && offered.has(s.id))).map((c) => c.name),
+      times: Array.from({ length: 7 }, (_, d) => { const s = at(d); return (s ? [f(s.start_time), f(s.end_time)] : ['09:00', '17:00']) as [string, string]; }),
       cells: Array.from({ length: 7 }, (_, d) => { const s = at(d); return s ? shortRange(f(s.start_time), f(s.end_time)) : 'Off'; }),
       todayOn: !!t, todayLabel: t ? `${clock24(f(t.start_time))} to ${clock24(f(t.end_time))}` : '',
     };

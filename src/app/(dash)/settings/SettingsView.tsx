@@ -86,10 +86,10 @@ function Group({ c, m, id, title, k }: { c: C; m: boolean; id: string; title: st
       </div></div>
   );
 }
-function Field({ id, label, k, c, type, mode, ph }: { id: string; label: string; k: 'bizName' | 'bizPhone' | 'bizEmail' | 'bizAddress' | 'tax'; c: C; type: string; mode?: string; ph: string }) {
+function Field({ id, label, k, c, type, mode, ph }: { id: string; label: string; k: 'bizName' | 'bizPhone' | 'bizEmail' | 'bizAddress' | 'slug' | 'tax'; c: C; type: string; mode?: string; ph: string }) {
   return (
     <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor={id} style={S('font-size:14px;font-weight:600')}>{label}</label>
-      <input id={id} type={type} inputMode={mode as any} value={c.v[k]} onChange={(e) => c.set(k, k === 'bizPhone' ? phoneInput(e.target.value) : k === 'tax' ? decimalInput(e.target.value) : e.target.value)} placeholder={ph} style={{ ...S(INPUT), ...noMin }} /></div>
+      <input id={id} type={type} inputMode={mode as any} value={c.v[k]} onChange={(e) => c.set(k, k === 'bizPhone' ? phoneInput(e.target.value) : k === 'slug' ? e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') : k === 'tax' ? decimalInput(e.target.value) : e.target.value)} placeholder={ph} style={{ ...S(INPUT), ...noMin }} /></div>
   );
 }
 
@@ -102,6 +102,10 @@ function Content({ c, m }: { c: C; m: boolean }) {
         <Field id="st-phone" label="Phone" k="bizPhone" c={c} type="tel" mode="tel" ph="+64 21 000 0000" />
         <Field id="st-email" label="Email" k="bizEmail" c={c} type="email" ph="hello@example.com" />
         <Field id="st-address" label="Address" k="bizAddress" c={c} type="text" ph="Street, city" />
+        <div style={S('display:flex;flex-direction:column;gap:6px')}>
+          <Field id="st-slug" label="Booking page address" k="slug" c={c} type="text" ph="your-salon" />
+          <span style={S('font-size:13px;color:#5E6673;overflow-wrap:anywhere')}>Clients book at /b/{v.slug || 'your-salon'}. If you change it, links you already shared stop working.</span>
+        </div>
       </div>
     )}
     {s === 'hours' && (

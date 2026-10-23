@@ -14,7 +14,7 @@ export function CalendarView(props: Omit<Props, 'recent' | 'remoteSearch'> & { r
     f(); mq.addEventListener('change', f);
     return () => mq.removeEventListener('change', f);
   }, []);
-  const p: Props = { ...props, remoteSearch: narrow === false };
+  const p: Props = { ...props, remoteSearch: narrow !== null };
   const c = useCalendar(p);
   // Before the first client render both are present and CSS (.only-m / .only-d) shows the right one.
   return (<>

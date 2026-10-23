@@ -1,6 +1,6 @@
 export type TeamRow = {
   id: string; name: string; role: string; cats: string[]; days: number[]; shift: string | null; online: boolean;
-  cells: string[]; todayOn: boolean; todayLabel: string; photo: string | null;
+  times: [string, string][]; cells: string[]; todayOn: boolean; todayLabel: string; photo: string | null;
   /** The salon owner (cannot be removed). */
   isOwner: boolean;
   /** Already has their own login. */

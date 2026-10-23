@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
-import { requestReviews, saveReply } from './actions';
+import { deleteReply, requestReviews, saveReply } from './actions';
 
 export type ReviewRow = { id: string; name: string; stars: number; text: string; svc: string; pro: string; date: string; reply: string };
 type Props = { rows: ReviewRow[]; salonName: string };
@@ -32,8 +32,9 @@ function useReviews(props: Props) {
   const avg = n ? props.rows.reduce((a, r) => a + r.stars, 0) / n : 0;
   const shown = props.rows.filter((r) => filter === 'all' || (filter === 'reply' && !r.reply) || (filter === '5' && r.stars === 5) || (filter === '4' && r.stars === 4) || (filter === 'low' && r.stars <= 3));
   const save = (id: string) => startT(async () => { const r = await saveReply(id, text); if (r.error) { setError(r.error); return; } setError(''); setNotice(r.notice ?? ''); setReplyId(null); setText(''); router.refresh(); });
+  const removeReply = (id: string) => startT(async () => { const r = await deleteReply(id); if (r.error) { setError(r.error); return; } setError(''); setNotice(r.notice ?? ''); setReplyId(null); setText(''); router.refresh(); });
   const request = () => startT(async () => { const r = await requestReviews(); if (r.error) { setError(r.error); setNotice(''); return; } setError(''); setNotice(r.notice ?? ''); router.refresh(); });
-  return { ...props, busy, narrow, filter, pickFilter: (f: string) => { setFilter(f); setReplyId(null); setError(''); }, replyId, text, setText, notice, error, n, avg, shown, save, request,
+  return { ...props, busy, narrow, filter, pickFilter: (f: string) => { setFilter(f); setReplyId(null); setError(''); }, replyId, text, setText, notice, error, n, avg, shown, save, removeReply, request,
     openReply: (r: ReviewRow) => { setReplyId(r.id); setText(r.reply); setError(''); }, closeReply: () => { setReplyId(null); setText(''); setError(''); } };
 }
 type C = ReturnType<typeof useReviews>;
@@ -80,7 +81,7 @@ function List({ c, m }: { c: C; m: boolean }) {
             <div style={S('display:flex;flex-direction:column;gap:10px')}><label htmlFor={'rp-' + r.id} style={S('font-size:14px;font-weight:600')}>Your reply</label>
               <textarea id={'rp-' + r.id} rows={3} value={c.text} onChange={(e) => c.setText(e.target.value)} placeholder="Thank them or make it right" style={{ ...S('box-sizing:border-box;width:100%;padding:12px 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF;resize:vertical'), minHeight: 0 }} />
               {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
-              <div style={S('display:flex;gap:10px')}><button onClick={() => c.save(r.id)} disabled={c.busy} style={S('height:44px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500;padding:0 20px;flex:1 1 0')}>Post reply</button><button className="ghost" onClick={c.closeReply} style={S('height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;padding:0 20px;flex:1 1 0')}>Cancel</button></div></div>
+              <div style={S('display:flex;gap:10px')}><button onClick={() => c.save(r.id)} disabled={c.busy} style={S('height:44px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500;padding:0 20px;flex:1 1 0')}>Post reply</button>{!!r.reply && <button className="ghost" onClick={() => c.removeReply(r.id)} disabled={c.busy} style={S('height:44px;border:0;border-radius:999px;background:transparent;color:#B42318;font-size:14px;font-weight:500;padding:0 12px')}>Delete reply</button>}<button className="ghost" onClick={c.closeReply} style={S('height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;padding:0 20px;flex:1 1 0')}>Cancel</button></div></div>
           )}
           <div><button className="ghost" onClick={() => c.openReply(r)} style={S('height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;padding:0 20px')}>{r.reply ? 'Edit reply' : 'Reply'}</button></div>
         </article>

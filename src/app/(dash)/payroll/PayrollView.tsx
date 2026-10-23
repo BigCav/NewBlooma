@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
-import { clockToggle, markPaid, setRate } from './actions';
+import { clockToggle, deleteTimesheet, loadTimesheets, markPaid, saveTimesheet, setRate, type SheetRow } from './actions';
 import { dollars0, type PayRow } from './shared';
 
 type Props = { rows: PayRow[]; w: number; from: string; to: string; over: boolean; days: number; owner: boolean; title: string; range: string };
@@ -38,9 +38,11 @@ function usePayroll(props: Props) {
     setRates((x) => ({ ...x, [r.id]: next })); setNotice(''); setError('');
     startT(async () => { const res = await setRate(r.id, next, props.from, props.to); if (res.error) { setError(res.error); setRates((x) => { const y = { ...x }; delete y[r.id]; return y; }); } else router.refresh(); });
   };
+  const [editing, setEditing] = useState<string | null>(null);
+  useEffect(() => { setEditing(null); }, [props.w]);
   const hoursTotal = props.rows.reduce((a, r) => a + parseFloat(r.total), 0);
   const pay = rows.reduce((a, r) => a + r.commission + r.tips, 0);
-  return { ...props, busy, narrow, tab, setTab: (t: 'time' | 'comm') => { setTab(t); setNotice(''); setError(''); }, notice, error, rows, go, bump, hoursTotal, pay,
+  return { ...props, editing, setEditing, busy, narrow, tab, setTab: (t: 'time' | 'comm') => { setTab(t); setNotice(''); setError(''); }, notice, error, rows, go, bump, hoursTotal, pay,
     clock: (r: PayRow) => run(() => clockToggle(r.id)), pay1: (r: PayRow) => run(() => markPaid(r.id, props.from, props.to)) };
 }
 type C = ReturnType<typeof usePayroll>;
@@ -70,6 +72,46 @@ function Controls({ c, m }: { c: C; m: boolean }) {
   </>);
 }
 
+const TIN = 'box-sizing:border-box;flex:1 1 170px;min-width:0;height:44px;padding:0 10px;border:1px solid #E1E4E9;border-radius:12px;font:inherit;font-size:14px;color:#0E1116;background:#FFFFFF';
+function TimesheetEditor({ staffId, from, to, onDone }: { staffId: string; from: string; to: string; onDone: () => void }) {
+  const router = useRouter();
+  const [busy, startT] = useTransition();
+  const [rows, setRows] = useState<(SheetRow & { fresh?: boolean })[] | null>(null);
+  const [error, setError] = useState('');
+  const [note, setNote] = useState('');
+  const reload = () => loadTimesheets(staffId, from, to).then((r) => { if (r.error) setError(r.error); else setRows(r.rows ?? []); });
+  useEffect(() => { reload(); }, [staffId, from, to]); // eslint-disable-line react-hooks/exhaustive-deps
+  const patch = (id: string, k: 'inAt' | 'outAt', v: string) => { setRows((rs) => (rs ?? []).map((r) => (r.id === id ? { ...r, [k]: v } : r))); setError(''); setNote(''); };
+  const save = (r: SheetRow & { fresh?: boolean }) => startT(async () => { const res = await saveTimesheet(r.fresh ? null : r.id, staffId, r.inAt, r.outAt); if (res.error) { setError(res.error); setNote(''); return; } setError(''); setNote(res.notice ?? ''); await reload(); router.refresh(); });
+  const del = (r: SheetRow & { fresh?: boolean }) => { if (r.fresh) { setRows((rs) => (rs ?? []).filter((x) => x.id !== r.id)); return; } startT(async () => { const res = await deleteTimesheet(r.id); if (res.error) { setError(res.error); setNote(''); return; } setError(''); setNote(res.notice ?? ''); await reload(); router.refresh(); }); };
+  const add = () => setRows((rs) => [...(rs ?? []), { id: 'new-' + Date.now(), inAt: from + 'T09:00', outAt: from + 'T17:00', fresh: true }]);
+  return (
+    <div style={S('display:flex;flex-direction:column;gap:12px;padding:14px;border-radius:16px;background:#F4F5F7')}>
+      <div style={S('font-size:14px;font-weight:600')}>Edit clock-in and clock-out times</div>
+      {rows === null && !error && <span style={S('font-size:13.5px;color:#5E6673')}>Loading</span>}
+      {rows !== null && rows.length === 0 && <span style={S('font-size:13.5px;color:#5E6673')}>No clocked times this week.</span>}
+      {(rows ?? []).map((r) => (
+        <div key={r.id} style={S('display:flex;flex-direction:column;gap:8px;padding-bottom:12px;border-bottom:1px solid #E6E8EC')}>
+          <div style={S('display:flex;flex-wrap:wrap;gap:8px')}>
+            <label style={S('flex:1 1 170px;display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:#5E6673')}>In<input type="datetime-local" value={r.inAt} onChange={(e) => patch(r.id, 'inAt', e.target.value)} style={{ ...S(TIN), minHeight: 0, width: '100%' }} /></label>
+            <label style={S('flex:1 1 170px;display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:#5E6673')}>Out (blank if still working)<input type="datetime-local" value={r.outAt} onChange={(e) => patch(r.id, 'outAt', e.target.value)} style={{ ...S(TIN), minHeight: 0, width: '100%' }} /></label>
+          </div>
+          <div style={S('display:flex;gap:8px')}>
+            <button onClick={() => save(r)} disabled={busy} style={S('height:40px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:13.5px;font-weight:500;padding:0 18px')}>{r.fresh ? 'Add entry' : 'Save'}</button>
+            <button className="ghost" onClick={() => del(r)} disabled={busy} style={S('height:40px;border:0;border-radius:999px;background:transparent;color:#B42318;font-size:13.5px;font-weight:500;padding:0 12px')}>{r.fresh ? 'Discard' : 'Delete'}</button>
+          </div>
+        </div>
+      ))}
+      {!!error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{error}</p>}
+      {!!note && <span role="status" style={S('font-size:13px;color:#14624A;font-weight:500')}>{note}</span>}
+      <div style={S('display:flex;gap:8px')}>
+        <button className="ghost" onClick={add} style={S('height:40px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:13.5px;font-weight:500;padding:0 16px')}>Add a shift</button>
+        <button className="ghost" onClick={onDone} style={S('height:40px;border:0;border-radius:999px;background:transparent;color:#4A525E;font-size:13.5px;font-weight:500;padding:0 12px')}>Done</button>
+      </div>
+    </div>
+  );
+}
+
 function Cards({ c, m }: { c: C; m: boolean }) {
   const pad = m ? 18 : 24;
   return (<>
@@ -78,6 +120,9 @@ function Cards({ c, m }: { c: C; m: boolean }) {
       <article key={p.id} style={S(`box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:${pad}px;display:flex;flex-direction:column;gap:14px`)}>
         <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px')}><div style={S('flex:1 1 160px;min-width:0')}><div style={S('font-size:16px;font-weight:600')}>{p.name}</div><div style={S('font-size:13px;color:#5E6673')}>{p.role}</div></div><div style={S('text-align:right')}><div style={S('font-size:22px;font-weight:600;letter-spacing:-0.02em')}>{p.total}</div><div style={S('font-size:12.5px;color:#5E6673')}>{p.planned}</div></div></div>
         <div style={S(`display:grid;grid-template-columns:repeat(${c.days},1fr);gap:${m ? 5 : 8}px`)}>{p.cells.map((x) => <div key={x.day} style={S('min-width:0;text-align:center')}><div style={S('font-size:11.5px;color:#8A93A0;margin-bottom:4px')}>{x.day}</div><div style={S(`padding:10px 0;border-radius:12px;font-size:${m ? 12.5 : 14}px;` + CELL[x.kind])}>{x.txt}</div></div>)}</div>
+        {c.owner && (c.editing === p.id
+          ? <TimesheetEditor staffId={p.id} from={c.from} to={c.to} onDone={() => c.setEditing(null)} />
+          : <div><button className="ghost" onClick={() => c.setEditing(p.id)} style={S('height:40px;border:0;border-radius:999px;background:transparent;color:#4A525E;font-size:13.5px;font-weight:500;padding:0;text-decoration:underline')}>Edit times</button></div>)}
         {c.w === 0 && p.canClock && (
           <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:10px')}>
             <span style={S('flex:1 1 150px;display:flex;align-items:center;gap:8px;font-size:13.5px;color:#5E6673')}><span style={S('width:8px;height:8px;border-radius:999px;background:' + (p.inSince ? '#14A06A' : '#C3C8D0'))} />{p.inSince ? 'In since ' + p.inSince : 'Not clocked in'}</span>

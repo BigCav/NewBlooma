@@ -10,9 +10,9 @@ import { inviteMember, removeMember, removePhoto, saveMember, uploadPhoto } from
 import { DAYS, DAY_FULL, FILTERS, SHIFTS, initialsOf, photoCss, squarePhoto, type TeamRow } from './shared';
 
 type Props = { rows: TeamRow[]; cats: string[]; todayWd: number; owner: boolean };
-type Draft = { name: string; role: string; cats: string[]; days: number[]; shift: string | null; online: boolean };
-const blank = (): Draft => ({ name: '', role: '', cats: [], days: [0, 1, 2, 3, 4], shift: '9-17', online: true });
-const draftOf = (m: TeamRow): Draft => ({ name: m.name, role: m.role, cats: m.cats.slice(), days: m.days.slice(), shift: m.shift, online: m.online });
+type Draft = { name: string; role: string; cats: string[]; days: number[]; times: [string, string][]; shift: string | null; online: boolean };
+const blank = (): Draft => ({ name: '', role: '', cats: [], days: [0, 1, 2, 3, 4], times: Array.from({ length: 7 }, () => ['09:00', '17:00'] as [string, string]), shift: '9-17', online: true });
+const draftOf = (m: TeamRow): Draft => ({ name: m.name, role: m.role, cats: m.cats.slice(), days: m.days.slice(), times: m.times.map((t) => [t[0], t[1]] as [string, string]), shift: m.shift, online: m.online });
 
 function useTeam(props: Props) {
   const router = useRouter();
@@ -43,6 +43,8 @@ function useTeam(props: Props) {
 
   const setDraft = <K extends keyof Draft>(k: K, v: Draft[K]) => { setDraftState((d) => ({ ...d, [k]: v })); setError(''); setNotice(''); };
   const flip = (k: 'cats' | 'days', v: any) => { const cur = draft[k] as any[]; setDraft(k, (cur.includes(v) ? cur.filter((x) => x !== v) : cur.concat([v])) as any); };
+  const pickShift = (id: string) => { const p = SHIFTS.find((s) => s.id === id)!; setDraftState((d) => ({ ...d, shift: id, times: d.times.map(() => [p.from, p.to] as [string, string]) })); setError(''); setNotice(''); };
+  const setTime = (day: number, k: 0 | 1, v: string) => { setDraftState((d) => ({ ...d, shift: null, times: d.times.map((t, i) => (i === day ? (k === 0 ? [v, t[1]] : [t[0], v]) as [string, string] : t)) })); setError(''); setNotice(''); };
   const [invite, setInvite] = useState('');
   const makeInvite = () => startT(async () => { const r = await inviteMember(selectedId!); if (r.error) { setError(r.error); return; } setError(''); setInvite(r.link ?? ''); });
   const select = (id: string) => { setInvite(''); const m = items.find((i) => i.id === id)!; setSelectedId(id); setMode('edit'); setDraftState(draftOf(m)); setConfirm(false); setError(''); setNotice(''); setOpen(true); };
@@ -52,7 +54,7 @@ function useTeam(props: Props) {
     if (!draft.name.trim()) { setError("Add the team member's name."); return; }
     if (!draft.cats.length) { setError('Choose at least one service category.'); return; }
     startT(async () => {
-      const r = await saveMember({ id: mode === 'edit' ? selectedId : null, ...draft, days: draft.days.slice().sort((a, b) => a - b) });
+      const r = await saveMember({ id: mode === 'edit' ? selectedId : null, name: draft.name, role: draft.role, cats: draft.cats, online: draft.online, times: draft.times, days: draft.days.slice().sort((a, b) => a - b) });
       if (r.error) { setError(r.error); return; }
       setError(''); setNotice(r.notice ?? ''); setFilter('all'); setOpen(!mobile);
       if (mode === 'new' && r.id) { setSelectedId(r.id); setMode('edit'); }
@@ -92,7 +94,7 @@ function useTeam(props: Props) {
 
   const sq = query.trim().toLowerCase();
   const list = items.filter((m) => (filter === 'all' || (filter === 'today' && m.todayOn) || (filter === 'online' && m.online)) && (!sq || (m.name + ' ' + m.role).toLowerCase().includes(sq)));
-  return { ...props, invite, makeInvite, items, photoBusy, pickPhoto, dropPhoto, busy, narrow, selectedId, mode, draft, setDraft, flip, filter, setFilter, query, setQuery, confirm, setConfirm, error, notice, open, setOpen, select, startNew, cancelNew, save, remove, list,
+  return { ...props, pickShift, setTime, invite, makeInvite, items, photoBusy, pickPhoto, dropPhoto, busy, narrow, selectedId, mode, draft, setDraft, flip, filter, setFilter, query, setQuery, confirm, setConfirm, error, notice, open, setOpen, select, startNew, cancelNew, save, remove, list,
     close: () => { setOpen(false); setConfirm(false); setError(''); } };
 }
 type C = ReturnType<typeof useTeam>;
@@ -143,7 +145,20 @@ function Form({ c, m }: { c: C; m: boolean }) {
       </div>
       <Chips id="tm-cat-label" label="Services they offer">{c.cats.map((x) => <button key={x} onClick={() => c.flip('cats', x)} aria-pressed={d.cats.includes(x)} style={S(formChip(d.cats.includes(x), m))}>{x}</button>)}</Chips>
       <Chips id="tm-day-label" label="Working days">{DAYS.map((n, i) => <button key={n} onClick={() => c.flip('days', i)} aria-pressed={d.days.includes(i)} aria-label={DAY_FULL[i]} style={S(formChip(d.days.includes(i), m))}>{n}</button>)}</Chips>
-      <Chips id="tm-shift-label" label="Shift">{SHIFTS.map((s) => <button key={s.id} onClick={() => c.setDraft('shift', s.id)} aria-pressed={d.shift === s.id} style={S(formChip(d.shift === s.id, m))}>{s.label}</button>)}</Chips>
+      <Chips id="tm-shift-label" label="Quick shift for every day">{SHIFTS.map((s) => <button key={s.id} onClick={() => c.pickShift(s.id)} aria-pressed={d.shift === s.id} style={S(formChip(d.shift === s.id, m))}>{s.label}</button>)}</Chips>
+      {d.days.length > 0 && (
+        <div style={S('display:flex;flex-direction:column;gap:8px')}>
+          <span style={S('font-size:14px;font-weight:600')}>Hours each day</span>
+          {d.days.slice().sort((a, b) => a - b).map((day) => (
+            <div key={day} style={S('display:flex;align-items:center;gap:8px')}>
+              <span style={S('flex:0 0 44px;font-size:13.5px;color:#4A525E')}>{DAYS[day]}</span>
+              <input type="time" aria-label={DAY_FULL[day] + ' starts'} value={d.times[day][0]} onChange={(e) => c.setTime(day, 0, e.target.value)} style={{ ...inp(h), minHeight: 0, flex: '1 1 0', minWidth: 0, maxWidth: 150 }} />
+              <span style={S('color:#5E6673')}>to</span>
+              <input type="time" aria-label={DAY_FULL[day] + ' finishes'} value={d.times[day][1]} onChange={(e) => c.setTime(day, 1, e.target.value)} style={{ ...inp(h), minHeight: 0, flex: '1 1 0', minWidth: 0, maxWidth: 150 }} />
+            </div>
+          ))}
+        </div>
+      )}
       <div style={S('display:flex;align-items:center;justify-content:space-between;gap:16px')}>
         <div style={S('min-width:0')}>
           <div id="tm-online-label" style={S('font-size:14px;font-weight:600')}>Bookable online</div>

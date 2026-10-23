@@ -1,6 +1,6 @@
 import { checkPhone } from '@/lib/phone';
 export type Values = {
-  bizName: string; bizPhone: string; bizEmail: string; bizAddress: string;
+  bizName: string; bizPhone: string; bizEmail: string; bizAddress: string; slug: string;
   hours: { open: boolean; from: string; to: string }[];
   online: boolean; window: string; notice: string; confirm: string; cancel: string;
   card: boolean; cash: boolean; gift: boolean; tips: boolean; tipDefault: string; tax: string;
@@ -10,6 +10,8 @@ export const DAY_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
 export function validate(v: Values): { section: string; error: string } | null {
   if (!v.bizName.trim()) return { section: 'business', error: 'Add your business name.' };
   if (!/\S+@\S+\.\S+/.test(v.bizEmail)) return { section: 'business', error: 'Add a valid business email.' };
+  if (!/^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(v.slug)) return { section: 'business', error: 'Your booking page address needs 3 to 40 letters, numbers or dashes, and cannot start or end with a dash.' };
+  if (v.slug.includes('--')) return { section: 'business', error: 'Use single dashes in your booking page address.' };
   const ph = checkPhone(v.bizPhone); if (ph.error) return { section: 'business', error: ph.error };
   if (!v.card && !v.cash && !v.gift) return { section: 'payments', error: 'Keep at least one payment method on so you can take payment at checkout.' };
   const tax = parseFloat(v.tax);
