@@ -56,7 +56,5 @@ export async function submitStaffForms(bookingId: string, inputs: { templateId: 
   if (!b) return { error: 'That appointment no longer exists.' };
   const rows = await rowsForBooking(sb, b, salon.timezone);
   const allowed = rows.filter((r) => r.needed && !r.tpl.isPatch && (r.state === 'missing' || r.state === 'expired')).map((r) => r.tpl);
-  const r = await saveForms(sb, { salonId: salon.id, clientId: b.clientId, bookingId: b.id, recordedBy: staff.id, allowed, inputs });
-  if (!r.error) touch();
-  return r;
+  return saveForms(sb, { salonId: salon.id, clientId: b.clientId, bookingId: b.id, recordedBy: staff.id, allowed, inputs });
 }

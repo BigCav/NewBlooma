@@ -1,5 +1,4 @@
 'use server';
-import { revalidatePath } from 'next/cache';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { allow, clientIp } from '@/lib/rate-limit';
 import { clientPending, loadBooking, rowsForBooking, saveForms } from '@/lib/forms';
@@ -20,6 +19,6 @@ export async function submitPublicForms(token: string, inputs: { templateId: str
   if (!pend.length) return { error: 'Your forms are already complete.' };
   if (inputs.length !== pend.length || pend.some((r) => !inputs.some((i) => i.templateId === r.tpl.id))) return { error: 'The forms have changed. Please refresh the page.' };
   const r = await saveForms(sb, { salonId: b.salonId, clientId: b.clientId, bookingId: b.id, recordedBy: null, allowed: pend.map((x) => x.tpl), inputs });
-  if (!r.error) { revalidatePath('/calendar'); revalidatePath('/clients/forms'); }
+  // No revalidation here: the pages that show forms are always rendered fresh, and re-rendering this page would replace the thank-you screen.
   return r;
 }
