@@ -13,6 +13,8 @@ export type FillProps = {
   apptLine: string; svcLine: string;
   forms: FillForm[]; submit: Submit;
   links: { manage?: string; home?: string; back?: string; backLabel?: string };
+  /** Shown when there is nothing to fill in (so this component stays mounted when the last form is saved and the page re-renders). */
+  empty?: { title: string; text: string; link?: { href: string; label: string } };
 };
 
 const blank = (): FormInput => ({ answers: {}, details: {}, agree: false, photos: false, sign: '' });
@@ -32,24 +34,26 @@ function Tick({ on }: { on: boolean }) {
 }
 
 export function FormFillView(p: FillProps) {
-  const [vals, setVals] = useState<Record<string, FormInput>>(() => Object.fromEntries(p.forms.map((f) => [f.id, blank()])));
+  // The forms are fixed when the page opens, so the thank-you screen still has them after the server says nothing is left.
+  const [forms] = useState(p.forms);
+  const [vals, setVals] = useState<Record<string, FormInput>>(() => Object.fromEntries(forms.map((f) => [f.id, blank()])));
   const [tried, setTried] = useState(false);
   const [done, setDone] = useState(false);
   const [serverErr, setServerErr] = useState<Record<string, Record<string, string>>>({});
   const [error, setError] = useState('');
   const [busy, startT] = useTransition();
-  const multi = p.forms.length > 1;
+  const multi = forms.length > 1;
   const patch = (fid: string, fn: (v: FormInput) => FormInput) => { setVals((s) => ({ ...s, [fid]: fn(s[fid]) })); setError(''); setServerErr((e) => { if (!e[fid]) return e; const n = { ...e }; delete n[fid]; return n; }); };
   const errs = (f: FillForm): Record<string, string> => (tried ? { ...checkForm(f, vals[f.id]).errors, ...(serverErr[f.id] ?? {}) } : {});
-  const total = p.forms.reduce((n, f) => n + Object.keys(errs(f)).length, 0);
+  const total = forms.reduce((n, f) => n + Object.keys(errs(f)).length, 0);
 
   const submit = () => {
     setTried(true);
-    const bad = p.forms.reduce((n, f) => n + Object.keys(checkForm(f, vals[f.id]).errors).length, 0);
+    const bad = forms.reduce((n, f) => n + Object.keys(checkForm(f, vals[f.id]).errors).length, 0);
     if (bad) { setError(''); return; }
     if (p.mode === 'preview') { setDone(true); window.scrollTo(0, 0); return; }
     startT(async () => {
-      const r = await p.submit(p.forms.map((f) => ({ templateId: f.id, input: vals[f.id] })));
+      const r = await p.submit(forms.map((f) => ({ templateId: f.id, input: vals[f.id] })));
       if (r.errors) { setServerErr(r.errors); setError(r.error ?? ''); return; }
       if (r.error) { setError(r.error); return; }
       setDone(true); window.scrollTo(0, 0);
@@ -121,6 +125,14 @@ export function FormFillView(p: FillProps) {
     </header>
   );
 
+  if (!done && !forms.length && p.empty) return (
+    <div className="page" style={S("max-width:680px;margin:0 auto;box-sizing:border-box;padding:40px 20px;display:flex;flex-direction:column;gap:12px;font-family:'Geist',system-ui,sans-serif;color:#0E1116")}>
+      <h1 style={S('margin:0;font-size:26px;font-weight:600;letter-spacing:-0.02em')}>{p.empty.title}</h1>
+      <p style={S('margin:0;color:#5E6673;font-size:15.5px')}>{p.empty.text}</p>
+      {p.empty.link && <div><Link href={p.empty.link.href} style={S('display:inline-flex;align-items:center;height:48px;padding:0 24px;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:15px;font-weight:500;text-decoration:none')}>{p.empty.link.label}</Link></div>}
+    </div>
+  );
+
   const title = p.mode === 'staff' ? 'Fill in with ' + p.first : 'Before your visit';
   const sub = p.mode === 'staff'
     ? `Ask ${p.first} these questions and type in what they say, or hand over the screen. Nothing is saved until you press Save form.`
@@ -141,7 +153,7 @@ export function FormFillView(p: FillProps) {
           {p.mode !== 'public' && <Link href={p.links.back ?? '/clients/forms'} style={S('flex:1 1 180px;height:52px;box-sizing:border-box;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none')}>{p.links.backLabel ? 'Back to ' + p.links.backLabel.toLowerCase() : 'Back to client forms'}</Link>}
         </div>
       </section>
-      {p.forms.map((f) => (
+      {forms.map((f) => (
         <section key={f.id} style={S(CARD + 'padding:28px;gap:8px')}>
           <h2 style={S('margin:0;font-size:16px;font-weight:600')}>{multi ? f.name + ': your answers' : 'Your answers'}</h2>
           <dl style={S('margin:0;display:flex;flex-direction:column;border-top:1px solid #EEF0F3')}>
@@ -171,7 +183,7 @@ export function FormFillView(p: FillProps) {
         </div>
       </div>
       {tried && total > 0 && <p role="alert" style={S('margin:0;padding:12px 16px;border-radius:14px;background:#FDECEA;color:#B42318;font-size:14px;font-weight:600')}>{total === 1 ? 'There is 1 thing to fix below.' : 'There are ' + total + ' things to fix below.'}</p>}
-      {p.forms.map((f) => {
+      {forms.map((f) => {
         const e = errs(f);
         return (
           <div key={f.id} style={S('display:flex;flex-direction:column;gap:16px')}>

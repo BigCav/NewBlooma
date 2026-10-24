@@ -23,11 +23,11 @@ export default async function FormPage({ params }: { params: Promise<{ token: st
   const [rows, { data: mt }] = await Promise.all([rowsForBooking(sb, b, salon.timezone), sb.from('booking_tokens').select('token').eq('booking_id', b.id).eq('purpose', 'manage_booking').maybeSingle()]);
   const manage = mt ? `/manage/${mt.token}` : undefined;
   const pend = clientPending(rows);
-  if (!pend.length) return <Card title="You are all set" text="There are no forms for you to complete before this appointment. Thank you." link={manage ? { href: manage, label: 'Manage booking' } : { href: `/b/${salon.slug}`, label: 'Back to ' + salon.name }} />;
   const when = new Intl.DateTimeFormat('en-NZ', { timeZone: salon.timezone, weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(b.startsAt)) + ', ' + time12(b.startsAt, salon.timezone);
   void dateLong;
   return (
     <FormFillView mode="public" salon={salon.name} first={b.clientName.split(' ')[0]} clientName={b.clientName} apptLine={when} svcLine={`${b.services} with ${b.staff}`}
-      forms={pend.map((r) => toFill(r.tpl))} submit={submitPublicForms.bind(null, token)} links={{ manage, home: `/b/${salon.slug}` }} />
+      forms={pend.map((r) => toFill(r.tpl))} submit={submitPublicForms.bind(null, token)} links={{ manage, home: `/b/${salon.slug}` }}
+      empty={{ title: 'You are all set', text: 'There are no forms for you to complete before this appointment. Thank you.', link: manage ? { href: manage, label: 'Manage booking' } : { href: `/b/${salon.slug}`, label: 'Back to ' + salon.name } }} />
   );
 }
