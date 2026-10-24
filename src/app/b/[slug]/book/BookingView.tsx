@@ -51,7 +51,7 @@ function useBooking(p: Props) {
   const money = useMemo(() => makeMoney(p.currency), [p.currency]);
 
   const [step, setStep] = useState(1);
-  const [done, setDone] = useState<{ staffName: string; email: string; first: string; when: string; count: string; dur: string; total: string; note: string } | null>(null);
+  const [done, setDone] = useState<{ staffName: string; email: string; first: string; when: string; count: string; dur: string; total: string; note: string; forms?: { names: string[]; url: string; ask: boolean } } | null>(null);
   const [acct, setAcct] = useState<Account | null>(p.account);
   const [au, setAuState] = useState<Au>(EMPTY_AU);
   const [save, setSave] = useState(false);
@@ -148,7 +148,7 @@ function useBooking(p: Props) {
         const note = r.account === 'created' ? 'Your account is ready. Sign in next time to skip the details step.' : r.account === 'saved' ? 'Saved to your account.' : r.account === 'exists' ? 'You already have an account with this email. Sign in next time to skip the details step.' : '';
         if (r.account === 'created') setAcct({ name: form.name.trim(), email: form.email.trim().toLowerCase(), phone: form.phone.trim() });
         else if (r.account === 'saved' && acct) setAcct({ ...acct, name: acct.name || form.name.trim(), phone: form.phone.trim() || acct.phone });
-        setDone({ staffName: r.staffName || member?.name || 'The team', email: form.email.trim(), first: form.name.trim().split(' ')[0] || 'there', when: whenOf(slotMin ?? 0), count: countText, dur: durText, total: money(totalCents), note });
+        setDone({ staffName: r.staffName || member?.name || 'The team', email: form.email.trim(), first: form.name.trim().split(' ')[0] || 'there', when: whenOf(slotMin ?? 0), count: countText, dur: durText, total: money(totalCents), note, forms: r.forms });
         setError('');
       } catch { setError('Something went wrong. Please try again.'); } finally { setBusy(false); }
       return;
@@ -405,9 +405,18 @@ const primaryLabel = (m: M) => m.busy ? (m.p.autoConfirm ? 'Booking…' : 'Sendi
 const primaryStyle = (m: M, h: number) => 'width:100%;height:' + h + 'px;border:0;border-radius:999px;font-size:14.5px;font-weight:500;font-family:inherit;background:' + (m.canGo ? '#0E1116' : '#D5D9E0') + ';color:' + (m.canGo ? '#FFFFFF' : '#5E6673') + ';cursor:' + (m.canGo ? 'pointer' : 'default');
 
 function DoneNote({ m }: { m: M }) {
-  const n = m.done?.note;
-  if (!n) return null;
-  return <div role="status" style={S('box-sizing:border-box;padding:18px 20px;border-radius:24px;background:#0E1116;color:#FFFFFF;font-size:15px;font-weight:500;line-height:1.4')}>{n}</div>;
+  const n = m.done?.note, f = m.done?.forms;
+  if (!n && !f) return null;
+  return (<>
+    {n && <div role="status" style={S('box-sizing:border-box;padding:18px 20px;border-radius:24px;background:#0E1116;color:#FFFFFF;font-size:15px;font-weight:500;line-height:1.4')}>{n}</div>}
+    {f && (
+      <div role="status" style={S('box-sizing:border-box;padding:20px;border-radius:24px;background:#EFEBFF;color:#2B1F8A;display:flex;flex-direction:column;gap:10px')}>
+        <div style={S('font-size:16px;font-weight:600')}>{f.ask ? 'One more thing before your visit' : 'Forms for your visit'}</div>
+        <p style={S('margin:0;font-size:14.5px;line-height:1.45;overflow-wrap:anywhere')}>{f.ask ? `Please complete ${f.names.join(' and ')} now. It takes about two minutes.` : `Please complete ${f.names.join(' and ')} before your visit.${m.p.emailOn ? ' We have also emailed you the link.' : ''}`}</p>
+        <a href={f.url} style={S('align-self:flex-start;display:inline-flex;align-items:center;height:48px;padding:0 24px;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;text-decoration:none')}>Complete your form</a>
+      </div>
+    )}
+  </>);
 }
 
 function DoneCard({ m, wide = false }: { m: M; wide?: boolean }) {

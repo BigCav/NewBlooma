@@ -1,6 +1,7 @@
 import 'server-only';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { dateLong, time12 } from '@/lib/format';
+import { outstandingForBooking } from '@/lib/forms';
 
 const base = () => process.env.NEXT_PUBLIC_APP_URL ?? '';
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
@@ -48,8 +49,11 @@ async function compose(r: Row): Promise<{ subject: string; text: string; html: s
     default: return null;
   }
   if (bref) lines.push(`Booking reference: ${bref}`);
-  const text = `${lines.join('\n')}\n\n${cta}: ${link}\n\n${salon.name}${salon.phone ? ` · ${salon.phone}` : ''}`;
-  const html = `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:auto"><h2>${esc(salon.name)}</h2>${lines.map((l) => `<p>${esc(l)}</p>`).join('')}<p><a href="${link}" style="background:#5B3DF5;color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none;display:inline-block">${esc(cta)}</a></p></div>`;
+  // Forms the client still owes for this visit go in the same email, with their own link.
+  const forms = r.booking_id && (r.template === 'booking_confirmation' || r.template === 'reminder_24h') ? await outstandingForBooking(r.booking_id).catch(() => null) : null;
+  if (forms) lines.push(`Before your visit, please complete: ${forms.names.join(', ')}. It takes about two minutes.`);
+  const text = `${lines.join('\n')}\n\n${cta}: ${link}${forms ? `\n\nComplete your form: ${forms.url}` : ''}\n\n${salon.name}${salon.phone ? ` · ${salon.phone}` : ''}`;
+  const html = `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:auto"><h2>${esc(salon.name)}</h2>${lines.map((l) => `<p>${esc(l)}</p>`).join('')}<p><a href="${link}" style="background:#5B3DF5;color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none;display:inline-block">${esc(cta)}</a></p>${forms ? `<p><a href="${forms.url}" style="background:#0E1116;color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none;display:inline-block">Complete your form</a></p>` : ''}</div>`;
   return { subject, text, html, from: fromFor(salon.name) };
 }
 

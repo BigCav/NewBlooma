@@ -7,6 +7,7 @@ import { currentClient, salonIdFor, clearClientCookie, clientToken, setClientCoo
 import { friendly } from '@/lib/session';
 import { minutesOfDay } from '@/lib/format';
 import { nextAvailableLabel } from '@/lib/public';
+import { outstandingForBooking } from '@/lib/forms';
 
 export type Slot = { key: string; min: number };
 
@@ -72,7 +73,7 @@ export async function clientSignOut(): Promise<void> {
   await clearClientCookie();
 }
 
-export async function publicBook(slug: string, i: BookInput): Promise<{ error?: string; staffName?: string; account?: 'created' | 'exists' | 'saved' }> {
+export async function publicBook(slug: string, i: BookInput): Promise<{ error?: string; staffName?: string; account?: 'created' | 'exists' | 'saved'; forms?: { names: string[]; url: string; ask: boolean } }> {
   if (i.website) return { error: 'Could not complete your booking.' }; // honeypot
   if (i.name.length > 80 || i.email.length > 254 || i.phone.length > 30 || i.notes.length > 500 || i.services.length > 12 || i.slot.length > 100 || (i.password ?? '').length > 72) return { error: 'One of the details is too long. Please shorten it and try again.' };
   // Nobody books a salon solid or fills a stranger's inbox: cap bookings per address and per email.
@@ -104,8 +105,9 @@ export async function publicBook(slug: string, i: BookInput): Promise<{ error?: 
     if (ins.error) return { error: 'Could not save your details. Please try again.' };
     client = ins.data;
   }
-  const { error } = await sb.rpc('create_booking', { p_salon: salon.id, p_client: client.id, p_staff: staffId, p_starts_at: startsAt, p_service_ids: i.services, p_source: 'online', p_notes: i.notes.trim() || null, p_mode: 'public' });
+  const { data: newId, error } = await sb.rpc('create_booking', { p_salon: salon.id, p_client: client.id, p_staff: staffId, p_starts_at: startsAt, p_service_ids: i.services, p_source: 'online', p_notes: i.notes.trim() || null, p_mode: 'public' });
   if (error) return { error: friendly(error.message) };
+  const owed = typeof newId === 'string' ? await outstandingForBooking(newId).catch(() => null) : null;
   await flushOutbox();
   const { data: st } = await sb.from('staff').select('name').eq('id', staffId).maybeSingle();
   let account: 'created' | 'exists' | 'saved' | undefined;
@@ -117,7 +119,7 @@ export async function publicBook(slug: string, i: BookInput): Promise<{ error?: 
     if (ce || !token) account = 'exists';
     else { await setClientCookie(String(token)); account = 'created'; }
   }
-  return { staffName: st?.name ?? '', account };
+  return { staffName: st?.name ?? '', account, forms: owed ? { names: owed.names, url: owed.url, ask: owed.askNames.length > 0 } : undefined };
 }
 
 export async function publicWaitlist(slug: string, i: { name: string; phone: string; serviceId: string; staffId: string }): Promise<{ error?: string }> {

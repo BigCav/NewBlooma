@@ -1,6 +1,8 @@
 import { requireCtx } from '@/lib/session';
 import { minutesOfDay, ymd, zonedToUtc } from '@/lib/format';
 import { weekStartOf, addDaysYmd, money2, toneFor, TONE_LIST, type CalBooking, type CalBlock } from '@/lib/cal';
+import { loadSubs, loadTemplates } from '@/lib/forms';
+import { formRows } from '@/lib/forms-shared';
 import { CalendarView } from './CalendarView';
 import { buildCfg, buildHours, buildOffers, buildRecent, buildServices } from './base';
 
@@ -30,6 +32,8 @@ export default async function Calendar({ searchParams }: { searchParams: Promise
   const ids = (bk ?? []).map((x) => x.id);
   const { data: sales } = ids.length ? await sb.from('sales').select('id,booking_id,status,total_cents,method').in('booking_id', ids).neq('status', 'refunded') : { data: [] as any[] };
   const catIdx = new Map<string, number>(); 
+  const tpls = await loadTemplates(sb, salon.id);
+  const subs = tpls.length ? await loadSubs(sb, [...new Set((bk ?? []).map((x: any) => x.client_id).filter(Boolean))] as string[]) : [];
   const bookings: CalBooking[] = (bk ?? []).map((x: any) => {
     const lines = (x.booking_services ?? []) as any[];
     const cid = lines[0]?.services?.category_id as string | undefined;
@@ -42,6 +46,14 @@ export default async function Calendar({ searchParams }: { searchParams: Promise
       dayYmd: ymd(x.starts_at, salon.timezone), start: minutesOfDay(x.starts_at, salon.timezone), end: minutesOfDay(x.ends_at, salon.timezone) || 24 * 60,
       status: x.status, priceCents: lines.reduce((s, l) => s + l.price_cents, 0), paid: sale?.status === 'paid', paidText: sale?.status === 'paid' ? `Paid ${money2(sale.total_cents / 100).replace(/\.00$/, '')}${sale.method ? ' by ' + ({ card: 'Card', cash: 'Cash', gift_card: 'Gift card' } as Record<string, string>)[sale.method] : ''}` : '', saleId: sale?.id ?? null, serviceIds: lines.map((l) => l.service_id),
       tone: Math.max(0, TONE_LIST.indexOf(toneFor(cname, cid ? catIdx.get(cid)! : 0))), walkin: x.notes === 'Walk-in', notes: x.notes,
+      forms: (() => {
+        if (!tpls.length || !x.client_id || x.status === 'completed') return null;
+        const rows = formRows(tpls, subs.filter((s) => s.client_id === x.client_id), { id: x.id, dayYmd: ymd(x.starts_at, salon.timezone), catIds: [...new Set(lines.map((l) => l.services?.category_id).filter(Boolean))] as string[] }, salon.timezone, ymd).filter((r) => r.needed);
+        const bad = rows.find((r) => r.state === 'reaction');
+        if (bad) return { level: 'alert' as const, text: bad.tpl.name + ': a reaction is on file. Check before treating.' };
+        const todo = rows.filter((r) => r.state === 'missing' || r.state === 'expired');
+        return todo.length ? { level: 'todo' as const, text: 'Forms needed: ' + todo.map((r) => r.tpl.name).join(', ') } : null;
+      })(),
     };
   });
   const blocks: CalBlock[] = (bl ?? []).map((x) => ({ id: x.id, staffId: x.staff_id, dayYmd: ymd(x.starts_at, salon.timezone), start: minutesOfDay(x.starts_at, salon.timezone), end: minutesOfDay(x.ends_at, salon.timezone) || 24 * 60, kind: x.kind, note: x.note }));

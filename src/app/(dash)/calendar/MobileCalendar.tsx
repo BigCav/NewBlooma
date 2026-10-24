@@ -202,6 +202,7 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
                   <div style={S('font-size:14px;color:#5E6673;overflow-wrap:anywhere')}>{sel.b.services}</div>
                 </div>
               </div>
+              {sel.b.forms && <a href={'/clients/forms?c=' + sel.b.clientId} style={S('display:block;border-radius:16px;text-decoration:none;padding:12px 14px;font-size:13.5px;font-weight:500;background:' + (sel.b.forms.level === 'alert' ? '#FDECEA;color:#B42318' : '#FFF4E5;color:#8A4B00'))}>{sel.b.forms.text}<span style={S('display:block;margin-top:2px;font-size:12.5px;font-weight:600;text-decoration:underline')}>Open forms</span></a>}
               <dl style={S('margin:0;display:flex;flex-direction:column')}>
                 <div style={S(DLROW)}><dt style={S('color:#5E6673')}>Booking</dt><dd style={S('margin:0;font-weight:500;text-align:right;white-space:nowrap')}>{'B-' + sel.b.ref}</dd></div>
                 <div style={S(DLROW)}><dt style={S('color:#5E6673')}>Time</dt><dd style={S('margin:0;font-weight:500;text-align:right;white-space:nowrap')}>{sel.time}</dd></div>

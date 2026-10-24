@@ -158,8 +158,9 @@ function Desktop({ c }: { c: C }) {
   return (
     <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 8px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <PageHeader title="Clients" subtitle="Everyone who has booked with you" query={c.query} onQuery={c.setQuery} placeholder="Search clients" actionLabel="New client" onAction={c.openNew} />
-      <section aria-label="Clients at a glance" style={S('display:flex;flex-wrap:wrap;gap:20px 64px')}>
+      <section aria-label="Clients at a glance" style={S('display:flex;flex-wrap:wrap;align-items:flex-end;gap:20px 64px')}>
         {big('Clients', String(c.count))}{big('New this month', String(c.newThisMonth))}{big('Rebook rate', c.rebookRate)}
+        <span style={S('margin-left:auto')}><Link href="/clients/forms" className="ghost" style={S('display:inline-flex;align-items:center;min-height:44px;padding:0 18px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;text-decoration:none')}>Client forms</Link></span>
       </section>
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
         <section aria-label="Client list" style={S('flex:999 1 620px;min-width:0;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;overflow:hidden')}>
@@ -214,6 +215,7 @@ function Mobile({ c }: { c: C }) {
           <div><div style={S('color:#5E6673;font-size:13px')}>Clients</div><div style={S('margin-top:2px;font-size:30px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{String(c.count)}</div></div>
           <div><div style={S('color:#5E6673;font-size:13px')}>New this month</div><div style={S('margin-top:2px;font-size:30px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{String(c.newThisMonth)}</div></div>
         </section>
+        <div><Link href="/clients/forms" className="ghost" style={S('display:inline-flex;align-items:center;min-height:44px;padding:0 18px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;text-decoration:none')}>Client forms</Link></div>
         <button onClick={c.openNew} style={S('display:flex;align-items:center;justify-content:center;gap:8px;height:48px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500')}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
           New client

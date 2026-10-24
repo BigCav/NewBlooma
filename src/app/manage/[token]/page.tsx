@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { ymd, minutesOfDay } from '@/lib/format';
 import { ManageView } from './ManageView';
 import { CANCEL_HOURS, policyInfo } from './shared';
+import { outstandingForBooking } from '@/lib/forms';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Your appointment' };
@@ -26,7 +27,8 @@ export default async function Manage({ params }: { params: Promise<{ token: stri
   });
   const items = (b.booking_services as any[]).map((x) => ({ name: x.services.name as string, dur: x.duration_min as number, cents: x.price_cents as number }));
   const canAct = ['pending', 'confirmed'].includes(b.status) && new Date(b.starts_at) > new Date();
+  const forms = canAct ? await outstandingForBooking(t.booking_id!).catch(() => null) : null;
   const pol = policyInfo(b.starts_at, tz, CANCEL_HOURS[st!.free_cancel_before] ?? 24);
   return <ManageView bookingRef={'B-' + (b as any).ref_no} token={token} salonName={salon!.name} slug={salon!.slug} address={salon!.address ?? ''} currency={salon!.currency || 'NZD'} staffName={(b as any).staff?.name ?? ''} status={b.status}
-    items={items} startYmd={ymd(b.starts_at, tz)} startMin={minutesOfDay(b.starts_at, tz)} canAct={canAct} free={pol.free} deadline={pol.deadline} hours={hours} today={ymd(new Date(), tz)} windowDays={({ '1w': 8, '2w': 15, '4w': 29, '8w': 57 } as Record<string, number>)[st!.booking_window] ?? 29} />;
+    items={items} startYmd={ymd(b.starts_at, tz)} startMin={minutesOfDay(b.starts_at, tz)} canAct={canAct} free={pol.free} deadline={pol.deadline} hours={hours} today={ymd(new Date(), tz)} forms={forms ? { names: forms.names, url: forms.url } : null} windowDays={({ '1w': 8, '2w': 15, '4w': 29, '8w': 57 } as Record<string, number>)[st!.booking_window] ?? 29} />;
 }

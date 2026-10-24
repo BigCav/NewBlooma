@@ -12,6 +12,8 @@ type Props = {
   bookingRef: string; token: string; salonName: string; slug: string; address: string; currency: string; staffName: string; status: string;
   items: Item[]; startYmd: string; startMin: number; canAct: boolean; free: boolean; deadline: string;
   hours: ({ from: string; to: string } | null)[]; today: string; windowDays: number;
+  /** Forms this client still has to complete before the visit. */
+  forms?: { names: string[]; url: string } | null;
 };
 const DAY_ABBR = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const DAY_NAME = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -194,6 +196,11 @@ function Desktop({ m }: { m: M }) {
         </div>
         {showAside && (
           <aside className="bk-flow" style={S('flex:1 1 320px;max-width:380px;min-width:0;position:sticky;top:24px;display:flex;flex-direction:column;gap:16px')}>
+            {view && !!m.p.forms && <div style={S(ASIDE_CARD + ';background:#EFEBFF;border-color:#D9D1FF')}>
+              <h2 style={S('margin:0;font-size:18px;font-weight:600;letter-spacing:-0.02em;color:#2B1F8A')}>Before your visit</h2>
+              <p style={S('margin:0;color:#2B1F8A;font-size:14px;overflow-wrap:anywhere')}>Please complete {m.p.forms.names.join(' and ')}. It takes about two minutes.</p>
+              <a href={m.p.forms.url} style={S('display:flex;align-items:center;justify-content:center;height:48px;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;text-decoration:none')}>Complete your form</a>
+            </div>}
             {view && <div style={S(ASIDE_CARD)}>
               <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Manage your appointment</h2>
               <p style={S('margin:0;color:#5E6673;font-size:14px')}>{m.policyLine}</p>

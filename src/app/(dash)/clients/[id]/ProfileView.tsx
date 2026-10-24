@@ -219,6 +219,7 @@ function Header({ c, m }: { c: C; m: boolean }) {
           <Link href={book} style={S(pri + 'display:flex;align-items:center;justify-content:center;text-decoration:none;box-sizing:border-box;' + (m ? 'flex:1 1 0' : 'flex:0 0 auto'))}>{m ? 'Book' : 'Book appointment'}</Link>
           <button className="ghost" onClick={() => { c.setMode('message'); c.setError(''); c.setNotice(''); }} style={S(msgS + (m ? 'flex:1 1 0' : 'flex:0 0 auto'))}>Message</button>
           <button className="ghost" onClick={c.startEdit} style={S(msgS + (m ? 'flex:1 1 0' : 'flex:0 0 auto'))}>Edit</button>
+          <Link href={'/clients/forms?c=' + c.row.id} className="ghost" style={S(msgS + (m ? 'flex:1 1 0' : 'flex:0 0 auto') + ';text-decoration:none;display:inline-flex;align-items:center;justify-content:center')}>Forms</Link>
         </div>
       )}
     </section>
