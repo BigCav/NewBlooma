@@ -19,7 +19,7 @@ const chip = (on: boolean) => 'flex:0 0 auto;height:44px;padding:0 18px;border-r
 const tick = (on: boolean) => 'flex:0 0 auto;display:flex;align-items:center;gap:8px;height:44px;padding:0 18px 0 12px;border-radius:999px;font:inherit;font-size:14px;font-weight:500;cursor:pointer;border:1px solid ' + (on ? '#5B3DF5' : '#E1E4E9') + ';background:' + (on ? '#EFEBFF' : '#FFFFFF') + ';color:' + (on ? '#3B2BB5' : '#0E1116');
 const INPUT = 'box-sizing:border-box;width:100%;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF';
 const noMin = { minHeight: 0 } as const;
-const ICON = 'width:36px;height:36px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;';
+const ICON = 'flex:0 0 auto;width:36px;height:36px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;';
 
 function useForms(props: Props) {
   const router = useRouter();
@@ -63,10 +63,11 @@ function useForms(props: Props) {
 }
 type C = ReturnType<typeof useForms>;
 
-const Section = ({ id, label, children, help }: { id: string; label: string; children: React.ReactNode; help?: string }) => (
+const SCROLL = 'display:flex;flex-wrap:nowrap;align-items:center;gap:8px;overflow-x:auto;margin:0 -20px;padding:0 20px 2px;scrollbar-width:none;-webkit-overflow-scrolling:touch';
+const Section = ({ id, label, children, help, m }: { id: string; label: string; children: React.ReactNode; help?: string; m?: boolean }) => (
   <div style={S('display:flex;flex-direction:column;gap:8px')}>
     <span id={id} style={S('font-size:14px;font-weight:600')}>{label}</span>
-    <div role="group" aria-labelledby={id} style={S('display:flex;flex-wrap:wrap;gap:8px')}>{children}</div>
+    <div role="group" aria-labelledby={id} style={S(m ? SCROLL : 'display:flex;flex-wrap:wrap;gap:8px')}>{children}</div>
     {!!help && <p style={S('margin:0;color:#5E6673;font-size:13.5px')}>{help}</p>}
   </div>
 );
@@ -94,22 +95,22 @@ function Editor({ c, m }: { c: C; m: boolean }) {
           <label htmlFor="fm-name" style={S('font-size:14px;font-weight:600')}>Form name</label>
           <input id="fm-name" className="field" type="text" maxLength={80} value={d.name} onChange={(e) => c.patch((x) => { x.name = e.target.value; })} style={{ ...S(INPUT), ...noMin }} />
         </div>
-        <Section id="g-cats" label="Needed for" help={c.cats.length ? undefined : 'Add a service category under Services first.'}>
+        <Section m={m} id="g-cats" label="Needed for" help={c.cats.length ? undefined : 'Add a service category under Services first.'}>
           {c.cats.map((o) => { const on = d.catIds.includes(o.id); return <button key={o.id} type="button" aria-pressed={on} onClick={() => c.patch((x) => { x.catIds = on ? x.catIds.filter((y) => y !== o.id) : x.catIds.concat(o.id); })} style={S(tick(on))}>
             <span aria-hidden="true" style={S('flex:0 0 20px;width:20px;height:20px;border-radius:6px;border:1.5px solid ' + (on ? '#5B3DF5' : '#B9BFC9') + ';background:#FFFFFF;display:flex;align-items:center;justify-content:center')}>{on && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5B3DF5" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>}</span>{o.name}</button>; })}
         </Section>
-        <Section id="g-valids" label="Valid for" help={d.validMonths === 0 ? 'Clients complete this form again at every visit.' : 'After it is completed, it stays valid for ' + validName + '. Then clients are asked again.'}>
+        <Section m={m} id="g-valids" label="Valid for" help={d.validMonths === 0 ? 'Clients complete this form again at every visit.' : 'After it is completed, it stays valid for ' + validName + '. Then clients are asked again.'}>
           {VALID_OPTS.map(([v, l]) => <button key={v} type="button" aria-pressed={d.validMonths === v} onClick={() => c.patch((x) => { x.validMonths = v; })} style={S(chip(d.validMonths === v))}>{l}</button>)}
         </Section>
-        <Section id="g-hows" label="Who completes it">
+        <Section m={m} id="g-hows" label="Who completes it">
           {HOW_OPTS.map(([v, l]) => <button key={v} type="button" aria-pressed={d.how === v} onClick={() => c.patch((x) => { x.how = v; if (v === 'staff' && x.miss === 'ask') x.miss = 'warn'; })} style={S(chip(d.how === v))}>{l}</button>)}
         </Section>
-        <Section id="g-miss" label="If it is missing at the appointment" help={staff ? 'Staff-recorded forms cannot be asked for online, so staff are warned on the calendar.' : missOn === 'ask' ? 'Clients are asked to complete it as soon as they book online. Staff still see a warning.' : 'Staff see a warning on the appointment in the calendar. Booking still goes through.'}>
+        <Section m={m} id="g-miss" label="If it is missing at the appointment" help={staff ? 'Staff-recorded forms cannot be asked for online, so staff are warned on the calendar.' : missOn === 'ask' ? 'Clients are asked to complete it as soon as they book online. Staff still see a warning.' : 'Staff see a warning on the appointment in the calendar. Booking still goes through.'}>
           <button type="button" aria-pressed={missOn === 'warn'} onClick={() => c.patch((x) => { x.miss = 'warn'; })} style={S(chip(missOn === 'warn'))}>Warn staff</button>
           <button type="button" aria-pressed={missOn === 'ask'} disabled={staff} onClick={() => c.patch((x) => { x.miss = 'ask'; })} style={S(chip(missOn === 'ask') + (staff ? ';opacity:0.45;cursor:not-allowed' : ''))}>Ask client when booking</button>
         </Section>
         {staff && (
-          <Section id="g-patch" label="Patch test" help="A patch test is recorded with a date and a result. A reaction puts a warning on the appointment and on the client.">
+          <Section m={m} id="g-patch" label="Patch test" help="A patch test is recorded with a date and a result. A reaction puts a warning on the appointment and on the client.">
             <button type="button" aria-pressed={d.isPatch} onClick={() => c.patch((x) => { x.isPatch = !x.isPatch; })} style={S(chip(d.isPatch))}>{d.isPatch ? 'This is a patch test' : 'Treat as a patch test'}</button>
           </Section>
         )}
@@ -118,7 +119,7 @@ function Editor({ c, m }: { c: C; m: boolean }) {
             <label htmlFor="fm-consent" style={S('font-size:14px;font-weight:600')}>Consent statement (optional)</label>
             <textarea id="fm-consent" className="field" rows={4} maxLength={1000} value={d.consentText} onChange={(e) => c.patch((x) => { x.consentText = e.target.value; })} placeholder="Clients tick to agree and type their name to sign" style={{ ...S('box-sizing:border-box;width:100%;padding:12px 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF;resize:vertical'), ...noMin }} />
           </div>
-          <Section id="g-photos" label="Photos">
+          <Section m={m} id="g-photos" label="Photos">
             <button type="button" aria-pressed={d.askPhotos} onClick={() => c.patch((x) => { x.askPhotos = !x.askPhotos; })} style={S(chip(d.askPhotos))}>{d.askPhotos ? 'Asking permission for photos' : 'Ask permission for photos'}</button>
           </Section>
         </>)}
@@ -127,16 +128,16 @@ function Editor({ c, m }: { c: C; m: boolean }) {
       <div style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:' + (m ? 20 : 28) + 'px;display:flex;flex-direction:column;gap:16px')}>
         <div><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Questions</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>{staff && d.isPatch ? 'A patch test is recorded as a date, a result and notes. These questions are shown with the answers.' : 'Clients see these in this order.'}</p></div>
         {d.qs.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>{d.consentText.trim() ? 'No questions. Clients only see the consent statement.' : 'No questions yet. Add the first one below.'}</p>}
-        <ul style={S('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px')}>
+        <ul style={S('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:' + (m ? 16 : 12) + 'px')}>
           {d.qs.map((q, i) => (
-            <li key={q.id} style={S('display:flex;flex-direction:column;gap:10px;padding:14px;border:1px solid #EEF0F3;border-radius:18px;background:#FAFAFB')}>
+            <li key={q.id} style={S(m ? 'display:flex;flex-direction:column;gap:10px;padding:' + (i === 0 ? '0' : '16px') + ' 0 0;border-top:' + (i === 0 ? '0' : '1px solid #EEF0F3') : 'display:flex;flex-direction:column;gap:10px;padding:14px;border:1px solid #EEF0F3;border-radius:18px;background:#FAFAFB')}>
               <input aria-label={'Question ' + (i + 1)} className="field" type="text" maxLength={200} value={q.label} onChange={(e) => c.patch((x) => { x.qs[i].label = e.target.value; })} style={{ ...S(INPUT), ...noMin }} />
-              <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:8px')}>
-                <select aria-label={'Answer type for question ' + (i + 1)} value={q.type} onChange={(e) => c.patch((x) => { x.qs[i].type = e.target.value as QType; })} style={{ ...S('box-sizing:border-box;height:36px;padding:0 10px;border:1px solid #E1E4E9;border-radius:999px;font:inherit;font-size:13px;color:#0E1116;background:#FFFFFF'), ...noMin, width: 'auto' }}>
+              <div style={S(m ? SCROLL : 'display:flex;flex-wrap:wrap;align-items:center;gap:8px')}>
+                <select aria-label={'Answer type for question ' + (i + 1)} value={q.type} onChange={(e) => c.patch((x) => { x.qs[i].type = e.target.value as QType; })} style={{ ...S('flex:0 0 auto;box-sizing:border-box;height:36px;padding:0 10px;border:1px solid #E1E4E9;border-radius:999px;font:inherit;font-size:13px;color:#0E1116;background:#FFFFFF'), ...noMin, width: 'auto' }}>
                   {QTYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                 </select>
                 <button type="button" aria-pressed={q.required} onClick={() => c.patch((x) => { x.qs[i].required = !x.qs[i].required; })} style={S('flex:0 0 auto;height:36px;padding:0 14px;border-radius:999px;font:inherit;font-size:13px;font-weight:500;cursor:pointer;border:1px solid ' + (q.required ? '#14624A' : '#E1E4E9') + ';background:' + (q.required ? '#DDF3EA' : '#FFFFFF') + ';color:' + (q.required ? '#14624A' : '#5E6673'))}>{q.required ? 'Required' : 'Optional'}</button>
-                <span style={S('flex:1 1 auto')} />
+                {!m && <span style={S('flex:1 1 auto')} />}
                 <button type="button" onClick={() => mv(i, -1)} disabled={i === 0} aria-label="Move up" style={S(ICON + 'opacity:' + (i > 0 ? 1 : 0.35))}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 14l6-6 6 6" /></svg></button>
                 <button type="button" onClick={() => mv(i, 1)} disabled={i === d.qs.length - 1} aria-label="Move down" style={S(ICON + 'opacity:' + (i < d.qs.length - 1 ? 1 : 0.35))}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 10l6 6 6-6" /></svg></button>
                 <button type="button" onClick={() => c.patch((x) => { x.qs.splice(i, 1); })} aria-label="Remove question" style={S(ICON + 'color:#B42318')}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12" /></svg></button>
