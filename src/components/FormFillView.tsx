@@ -65,7 +65,7 @@ export function FormFillView(p: FillProps) {
     const set = (x: string | string[]) => patch(f.id, (s) => ({ ...s, answers: { ...s.answers, [q.id]: x } }));
     const hint = q.type === 'many' ? 'Tick all that apply.' : q.required ? '' : 'Optional.';
     return (
-      <section key={q.id} style={S(CARD + 'padding:28px')}>
+      <section key={q.id} style={S(CARD + 'padding:clamp(20px,5vw,28px)')}>
         <div><h2 style={S('margin:0;font-size:17px;font-weight:600;letter-spacing:-0.02em;overflow-wrap:anywhere')}>{q.label}</h2>{hint && <p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>{hint}</p>}</div>
         {q.type === 'yesno' && (<>
           <div role="group" aria-label={q.label} style={S('display:flex;gap:10px')}>
@@ -100,7 +100,7 @@ export function FormFillView(p: FillProps) {
     if (!f.consentText && !f.askPhotos) return null;
     const v = vals[f.id];
     return (
-      <section key={f.id + '-consent'} style={S(CARD + 'padding:28px')}>
+      <section key={f.id + '-consent'} style={S(CARD + 'padding:clamp(20px,5vw,28px)')}>
         <h2 style={S('margin:0;font-size:17px;font-weight:600;letter-spacing:-0.02em')}>{f.consentText && f.askPhotos ? 'Consent and photos' : f.consentText ? 'Consent' : 'Photos'}</h2>
         {!!f.consentText && <p style={S('margin:0;padding:14px 16px;border-radius:14px;background:#F4F5F7;color:#2B323C;font-size:14.5px;line-height:1.5;overflow-wrap:anywhere;white-space:pre-wrap')}>{f.consentText}</p>}
         {!!f.consentText && <button type="button" aria-pressed={v.agree} onClick={() => patch(f.id, (s) => ({ ...s, agree: !s.agree }))} style={S(pickCss(v.agree, false) + (e.agree ? ';border-color:#D92D20' : ''))}><Tick on={v.agree} /><span>I agree to the statement above</span></button>}
@@ -139,9 +139,9 @@ export function FormFillView(p: FillProps) {
     : `A few quick questions so ${p.svcLine.split(' with ')[1] ?? 'we'} can look after you properly. It takes about two minutes.`;
 
   if (done) return (
-    <div className="page" style={S("max-width:680px;margin:0 auto;box-sizing:border-box;padding:24px 20px 72px;display:flex;flex-direction:column;gap:24px;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4;color:#0E1116")}>
+    <div className="page" style={S("max-width:680px;margin:0 auto;box-sizing:border-box;padding:16px 20px 56px;display:flex;flex-direction:column;gap:24px;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4;color:#0E1116")}>
       {header}
-      <section role="status" style={S(CARD + 'padding:28px;align-items:flex-start')}>
+      <section role="status" style={S(CARD + 'padding:clamp(20px,5vw,28px);align-items:flex-start')}>
         <span aria-hidden="true" style={S('width:56px;height:56px;border-radius:999px;background:#DDF3EA;color:#14624A;display:flex;align-items:center;justify-content:center')}><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
         <div>
           <h1 style={S('margin:0;font-size:24px;font-weight:600;letter-spacing:-0.02em')}>{p.mode === 'preview' ? 'This is what clients see when they finish' : p.mode === 'staff' ? 'Saved for ' + p.first : 'Thanks, ' + p.first}</h1>
@@ -154,7 +154,7 @@ export function FormFillView(p: FillProps) {
         </div>
       </section>
       {forms.map((f) => (
-        <section key={f.id} style={S(CARD + 'padding:28px;gap:8px')}>
+        <section key={f.id} style={S(CARD + 'padding:clamp(20px,5vw,28px);gap:8px')}>
           <h2 style={S('margin:0;font-size:16px;font-weight:600')}>{multi ? f.name + ': your answers' : 'Your answers'}</h2>
           <dl style={S('margin:0;display:flex;flex-direction:column;border-top:1px solid #EEF0F3')}>
             {checkForm(f, vals[f.id]).answers.map((a, i) => (
@@ -169,7 +169,7 @@ export function FormFillView(p: FillProps) {
   );
 
   return (
-    <div className="page" style={S("max-width:680px;margin:0 auto;box-sizing:border-box;padding:24px 20px 72px;display:flex;flex-direction:column;gap:24px;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4;color:#0E1116")}>
+    <div className="page" style={S("max-width:680px;margin:0 auto;box-sizing:border-box;padding:16px 20px 56px;display:flex;flex-direction:column;gap:24px;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4;color:#0E1116")}>
       {header}
       {p.mode === 'preview' && <p role="note" style={S('margin:0;padding:12px 16px;border-radius:14px;background:#EFEBFF;color:#3B2BB5;font-size:14px;font-weight:600')}>Preview. This is what clients see. Nothing you enter here is saved.</p>}
       <div style={S('display:flex;flex-direction:column;gap:16px')}>

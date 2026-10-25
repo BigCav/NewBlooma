@@ -10,7 +10,8 @@ import { recordPatchTest, sendFormLinks } from './actions';
 
 export type RowVM = { tplId: string; name: string; how: How; isPatch: boolean; needed: boolean; state: FormState; line: string; canSend: boolean; canFill: boolean; canRecord: boolean; answers: { k: string; v: string }[] };
 export type ClientCard = { id: string; name: string; init: string; email: string; bookingId: string; when: string; svc: string; who: string; level: 'ok' | 'todo' | 'alert'; todoCount: number; banner: { title: string; text: string }; rows: RowVM[]; sendable: number };
-type Props = { cards: ClientCard[]; initial: string; hasForms: boolean; owner: boolean; today: string };
+export type DoneRow = { id: string; clientId: string; client: string; form: string; date: string; by: string; flagged: boolean; answers: { k: string; v: string }[] };
+type Props = { cards: ClientCard[]; done: DoneRow[]; initial: string; hasForms: boolean; owner: boolean; today: string };
 
 const STAT: Record<FormState, { t: string; bg: string; fg: string }> = {
   valid: { t: 'Valid', bg: '#DDF3EA', fg: '#14624A' }, expired: { t: 'Expired', bg: '#FDECEA', fg: '#B42318' }, missing: { t: 'Not completed', bg: '#FFF4E5', fg: '#8A4B00' },
@@ -28,6 +29,7 @@ function useClientForms(props: Props) {
   const [busy, startT] = useTransition();
   const [narrow, setNarrow] = useState<boolean | null>(null);
   useEffect(() => { const mq = window.matchMedia('(max-width:900px)'); const f = () => setNarrow(mq.matches); f(); mq.addEventListener('change', f); return () => mq.removeEventListener('change', f); }, []);
+  const [tab, setTab] = useState<'upcoming' | 'done'>('upcoming');
   const [sel, setSel] = useState(props.initial);
   const [open, setOpen] = useState('');
   const [sent, setSent] = useState<Record<string, boolean>>({});
@@ -41,7 +43,7 @@ function useClientForms(props: Props) {
     if (!cur || !rec) return;
     startT(async () => { const r = await recordPatchTest(cur.id, rec.tplId, rec.date, rec.reaction, rec.note); if (r.error) { setError(r.error); return; } setError(''); setRec(null); setNotice(r.notice ?? 'Saved'); router.refresh(); });
   };
-  return { ...props, busy, narrow, cur, sel, pick, open, setOpen, sent, notice, error, setError, rec, setRec, send, saveRec };
+  return { ...props, tab, setTab, busy, narrow, cur, sel, pick, open, setOpen, sent, notice, error, setError, rec, setRec, send, saveRec };
 }
 type C = ReturnType<typeof useClientForms>;
 
@@ -131,6 +133,33 @@ function Body({ c, m }: { c: C; m: boolean }) {
   );
 }
 
+function Tabs({ c }: { c: C }) {
+  return (
+    <div role="tablist" aria-label="Client forms view" style={S('display:flex;gap:4px;padding:4px;border-radius:999px;background:#E9ECF0;flex:0 0 auto;max-width:420px')}>
+      {([['upcoming', 'Upcoming visits'], ['done', 'Completed']] as const).map(([id, label]) => <button key={id} role="tab" aria-selected={c.tab === id} onClick={() => c.setTab(id)} style={S('flex:1 1 0;height:44px;border:0;border-radius:999px;font:inherit;font-size:14px;font-weight:500;cursor:pointer;background:' + (c.tab === id ? '#0E1116' : 'transparent') + ';color:' + (c.tab === id ? '#FFFFFF' : '#0E1116'))}>{label}</button>)}
+    </div>
+  );
+}
+
+function Completed({ c, m }: { c: C; m: boolean }) {
+  const [open, setOpen] = useState('');
+  return (
+    <section aria-label="Completed forms" style={S('display:flex;flex-direction:column;gap:12px;min-width:0')}>
+      {c.done.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14.5px')}>No forms have been completed yet. When a client or a team member fills one in, it appears here.</p>}
+      {c.done.map((r) => (
+        <article key={r.id} style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid ' + (r.flagged ? '#F4C7C2' : '#E6E8EC') + ';border-radius:24px;padding:' + (m ? 18 : 22) + 'px;display:flex;flex-direction:column;gap:10px')}>
+          <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:8px 12px')}>
+            <div style={S('min-width:0')}><h3 style={S('margin:0;font-size:16px;font-weight:600;overflow-wrap:anywhere')}>{r.form}</h3><p style={S('margin:2px 0 0;font-size:13.5px;color:#5E6673;overflow-wrap:anywhere')}><Link href={'/clients/' + r.clientId} style={S('color:#0E1116;font-weight:500')}>{r.client}</Link> · {r.date} · {r.by}</p></div>
+            {r.flagged && <span style={S('padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;background:#FDECEA;color:#B42318')}>Reaction</span>}
+          </div>
+          <div><button type="button" onClick={() => setOpen(open === r.id ? '' : r.id)} aria-expanded={open === r.id} className="ghost" style={S(GHOST)}>{open === r.id ? 'Hide answers' : 'View answers'}</button></div>
+          {open === r.id && <dl style={S('margin:0;display:flex;flex-direction:column;border-top:1px solid #EEF0F3')}>{r.answers.map((a, i) => <div key={i} style={S('display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 16px;padding:10px 0;border-bottom:1px solid #EEF0F3;font-size:14px')}><dt style={S('color:#5E6673')}>{a.k}</dt><dd style={S('margin:0;font-weight:500;text-align:right;overflow-wrap:anywhere')}>{a.v}</dd></div>)}</dl>}
+        </article>
+      ))}
+    </section>
+  );
+}
+
 function List({ c, m }: { c: C; m: boolean }) {
   if (!c.cards.length) return null;
   return (
@@ -153,7 +182,7 @@ export function ClientFormsView(props: Props) {
     {c.narrow !== false && (
       <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
         <MobileHeader title="Client forms" subtitle="Forms for upcoming appointments" showSearch={false} />
-        <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:16px')}>{back}<List c={c} m={true} /><Body c={c} m={true} /></main>
+        <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:16px')}>{back}<Tabs c={c} />{c.tab === 'done' ? <Completed c={c} m={true} /> : <><List c={c} m={true} /><Body c={c} m={true} /></>}</main>
         <MobileTabs active="clients" />
       </div>
     )}
@@ -161,7 +190,8 @@ export function ClientFormsView(props: Props) {
       <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 8px;display:flex;flex-direction:column;gap:24px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
         <div>{back}</div>
         <PageHeader title="Client forms" subtitle="See which forms each client has done for their next appointment, send what is missing, and record patch tests." showSearch={false} showAction={false} />
-        <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}><List c={c} m={false} /><div style={S('flex:999 1 520px;min-width:0')}><Body c={c} m={false} /></div></div>
+        <Tabs c={c} />
+        {c.tab === 'done' ? <div style={S('max-width:860px')}><Completed c={c} m={false} /></div> : <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}><List c={c} m={false} /><div style={S('flex:999 1 520px;min-width:0')}><Body c={c} m={false} /></div></div>}
       </div>
     )}
   </>);

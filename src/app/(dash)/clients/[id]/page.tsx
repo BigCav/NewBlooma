@@ -4,6 +4,7 @@ import { emailConfigured, smsConfigured } from '@/lib/notify';
 import { minutesOfDay, ymd } from '@/lib/format';
 import { fmtClock, fmtDay, loadOverview } from '../data';
 import { sinceText } from '../shared';
+import { niceDate } from '@/lib/forms-shared';
 import { ProfileView, type ProfileData } from './ProfileView';
 
 export const metadata = { title: 'Client' };
@@ -21,11 +22,12 @@ export default async function ClientProfile({ params }: { params: Promise<{ id: 
   const { sb, salon } = ctx;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const tz = salon.timezone, today = ymd(new Date(), tz);
-  const [{ data: c }, ov, { data: notes }, { data: hist }] = await Promise.all([
+  const [{ data: c }, ov, { data: notes }, { data: hist }, { data: subs }] = await Promise.all([
     sb.from('clients').select('id,name,email,phone,created_at,allergies,patch_test_on,colour_formula,reminders,marketing').eq('id', id).maybeSingle(),
     loadOverview(ctx),
     sb.from('client_notes').select('id,body').eq('client_id', id).order('created_at'),
     sb.from('bookings').select('id,starts_at,staff(name),booking_services(price_cents,services(name)),sales(status,method,total_cents)').eq('client_id', id).eq('status', 'completed').order('starts_at', { ascending: false }).limit(SHOWN),
+    sb.from('form_submissions').select('id,answers,flagged,performed_on,completed_at,form_templates(name)').eq('client_id', id).order('completed_at', { ascending: false }).limit(30),
   ]);
   if (!c) notFound();
   const row = ov.rows.find((r) => r.id === id)!;
@@ -45,7 +47,8 @@ export default async function ClientProfile({ params }: { params: Promise<{ id: 
   if (!switcher.some((s) => s.id === id)) switcher.push({ id, label: shortName(c.name) });
   const data: ProfileData = {
     row, since: sinceText(c.created_at), allergies: c.allergies ?? [], patchOn: c.patch_test_on, formula: c.colour_formula ?? '', reminders: c.reminders, marketing: c.marketing,
-    notes: (notes ?? []).map((n) => ({ id: n.id, text: n.body })), history, historyTotal: row.visits, switcher, today, channels: { sms: smsConfigured(), email: emailConfigured() },
+    notes: (notes ?? []).map((n) => ({ id: n.id, text: n.body })), history,
+    forms: ((subs ?? []) as any[]).map((s) => ({ id: s.id, name: s.form_templates?.name ?? 'Form', date: niceDate(s.performed_on ?? ymd(s.completed_at, tz)), flagged: !!s.flagged, answers: ((s.answers ?? []) as { q: string; a: string }[]).map((a) => ({ k: a.q, v: a.a || 'No answer' })) })), historyTotal: row.visits, switcher, today, channels: { sms: smsConfigured(), email: emailConfigured() },
   };
   return <ProfileView key={id} data={data} />;
 }

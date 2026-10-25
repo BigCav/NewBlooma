@@ -13,6 +13,7 @@ import { MSG_TEMPLATES, initialsOf, money, patchInfo, type Channels, type Client
 export type ProfileData = {
   row: ClientRow; since: string; allergies: string[]; patchOn: string | null; formula: string; reminders: boolean; marketing: boolean;
   notes: { id: string; text: string }[];
+  forms: { id: string; name: string; date: string; flagged: boolean; answers: { k: string; v: string }[] }[];
   history: { id: string; date: string; service: string; staff: string; cents: number; when: string; paid: string }[]; historyTotal: number;
   switcher: { id: string; label: string }[]; today: string; channels: Channels;
 };
@@ -161,7 +162,28 @@ function Sections({ c, pad }: { c: C; pad: number }) {
       </div>
     </section>
   );
-  return { history, notes, alerts, formula, prefs };
+  const forms = <FormsCard forms={d.forms} clientId={c.row.id} card={card} />;
+  return { history, notes, alerts, formula, prefs, forms };
+}
+
+/** Everything this client has completed, newest first, with their answers. */
+function FormsCard({ forms, clientId, card }: { forms: ProfileData['forms']; clientId: string; card: string }) {
+  const [open, setOpen] = useState('');
+  return (
+    <section style={S(card)}>
+      <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><h2 style={S('margin:0;font-size:16px;font-weight:600')}>Forms</h2><Link href={'/clients/forms?c=' + clientId} style={S('font-size:13.5px;font-weight:500;color:#5B3DF5;text-decoration:none')}>Forms for next visit</Link></div>
+      {forms.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No forms completed yet.</p>}
+      {forms.map((f) => (
+        <div key={f.id} style={S('display:flex;flex-direction:column;gap:8px;padding-top:12px;border-top:1px solid #EEF0F3')}>
+          <div style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 12px')}>
+            <div style={S('min-width:0')}><div style={S('font-size:14.5px;font-weight:600;overflow-wrap:anywhere')}>{f.name}</div><div style={S('font-size:13px;color:#5E6673')}>{f.date}{f.flagged ? ' · reaction' : ''}</div></div>
+            <button className="ghost" onClick={() => setOpen(open === f.id ? '' : f.id)} aria-expanded={open === f.id} style={S('height:36px;padding:0 14px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font:inherit;font-size:13px;font-weight:500;cursor:pointer')}>{open === f.id ? 'Hide answers' : 'View answers'}</button>
+          </div>
+          {open === f.id && <dl style={S('margin:0;display:flex;flex-direction:column;border-top:1px solid #EEF0F3')}>{f.answers.map((a, i) => <div key={i} style={S('display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 16px;padding:10px 0;border-bottom:1px solid #EEF0F3;font-size:14px')}><dt style={S('color:#5E6673')}>{a.k}</dt><dd style={S('margin:0;font-weight:500;text-align:right;overflow-wrap:anywhere')}>{a.v}</dd></div>)}</dl>}
+        </div>
+      ))}
+    </section>
+  );
 }
 
 function Header({ c, m }: { c: C; m: boolean }) {
@@ -255,7 +277,7 @@ function Desktop({ c }: { c: C }) {
       <Header c={c} m={false} />
       <Stats c={c} cols={5} big />
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:24px')}>
-        <div style={S('flex:1.4 1 480px;min-width:0;display:flex;flex-direction:column;gap:24px')}>{s.history}{s.notes}</div>
+        <div style={S('flex:1.4 1 480px;min-width:0;display:flex;flex-direction:column;gap:24px')}>{s.history}{s.notes}{s.forms}</div>
         <div style={S('flex:1 1 340px;min-width:0;display:flex;flex-direction:column;gap:24px')}>{s.alerts}{s.formula}{s.prefs}</div>
       </div>
     </div>
@@ -274,7 +296,7 @@ function Mobile({ c }: { c: C }) {
         <Switcher c={c} />
         <Header c={c} m={true} />
         <Stats c={c} cols={2} big={false} />
-        {s.alerts}{s.history}{s.notes}{s.formula}{s.prefs}
+        {s.alerts}{s.history}{s.notes}{s.forms}{s.formula}{s.prefs}
       </main>
       <MobileTabs active="clients" />
     </div>

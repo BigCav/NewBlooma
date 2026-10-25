@@ -2,7 +2,7 @@ import { requireCtx } from '@/lib/session';
 import { dateLong, time12, ymd } from '@/lib/format';
 import { loadSubs, loadTemplates } from '@/lib/forms';
 import { formRows, niceDate, type FormRow } from '@/lib/forms-shared';
-import { ClientFormsView, type ClientCard, type RowVM } from './ClientFormsView';
+import { ClientFormsView, type ClientCard, type DoneRow, type RowVM } from './ClientFormsView';
 
 export const metadata = { title: 'Client forms' };
 export const dynamic = 'force-dynamic';
@@ -52,6 +52,8 @@ export default async function ClientForms({ searchParams }: { searchParams: Prom
         : { title: `All set for ${when}`, text: `${svc} with ${who}. Every form it needs is up to date.` };
     return { id: b.client_id, name: b.clients?.name ?? 'Client', init: initials(b.clients?.name ?? 'Client'), email: b.clients?.email ?? '', bookingId: b.id, when, svc, who, level, todoCount: todo.length, banner, rows: vms, sendable: todo.filter((r) => r.tpl.how === 'client').length };
   });
+  const { data: recent } = await sb.from('form_submissions').select('id,client_id,answers,flagged,performed_on,completed_at,form_templates(name),clients(name),staff:recorded_by(name)').order('completed_at', { ascending: false }).limit(60);
+  const done: DoneRow[] = ((recent ?? []) as any[]).map((s) => ({ id: s.id, clientId: s.client_id, client: s.clients?.name ?? 'Client', form: s.form_templates?.name ?? 'Form', date: niceDate(s.performed_on ?? ymd(s.completed_at, tz)), by: s.staff?.name ? 'Recorded by ' + s.staff.name : 'Completed by the client', flagged: !!s.flagged, answers: ((s.answers ?? []) as { q: string; a: string }[]).map((a) => ({ k: a.q, v: a.a || 'No answer' })) }));
   const pickId = cards.find((x) => x.id === c)?.id ?? cards.find((x) => x.level !== 'ok')?.id ?? cards[0]?.id ?? '';
-  return <ClientFormsView cards={cards} initial={pickId} hasForms={tpls.length > 0} owner={staff.app_role === 'owner'} today={ymd(new Date(), tz)} />;
+  return <ClientFormsView cards={cards} done={done} initial={pickId} hasForms={tpls.length > 0} owner={staff.app_role === 'owner'} today={ymd(new Date(), tz)} />;
 }
