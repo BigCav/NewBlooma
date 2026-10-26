@@ -74,7 +74,7 @@ const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct
 export const niceDate = (d: string) => { const [y, m, day] = d.split('-').map(Number); return `${day} ${MON[m - 1]} ${y}`; };
 
 export type FormState = 'valid' | 'expired' | 'missing' | 'reaction' | 'na';
-export type Sub = { id: string; template_id: string; client_id: string; booking_id: string | null; answers: Answer[]; signed_name: string | null; flagged: boolean; performed_on: string | null; completed_at: string; recorded_by: string | null };
+export type Sub = { id: string; template_id: string; client_id: string; booking_id: string | null; answers: Answer[]; signed_name: string | null; flagged: boolean; performed_on: string | null; completed_at: string; recorded_by: string | null; booking_at?: string | null; booking_ref?: number | null };
 export type Tpl = {
   id: string; name: string; validMonths: number; how: How; miss: Miss; consentText: string | null; askPhotos: boolean; isPatch: boolean; sort: number;
   catIds: string[]; questions: Question[];
@@ -88,11 +88,14 @@ export type FormRow = { tpl: Tpl; needed: boolean; state: FormState; doneOn: str
 export function formRows(tpls: Tpl[], subs: Sub[], booking: { id: string; dayYmd: string; catIds: string[] }, tz: string, dayOf: (iso: string, tz: string) => string): FormRow[] {
   return tpls.map((tpl) => {
     const needed = tpl.catIds.some((c) => booking.catIds.includes(c));
-    const latest = subs.filter((s) => s.template_id === tpl.id).sort((a, b) => b.completed_at.localeCompare(a.completed_at))[0] ?? null;
+    const mine = subs.filter((s) => s.template_id === tpl.id).sort((a, b) => b.completed_at.localeCompare(a.completed_at));
+    // "Every visit" means once per day: two appointments on the same day share one form.
+    const sameVisit = (s: Sub) => s.booking_id === booking.id || (!!s.booking_at && dayOf(s.booking_at, tz) === booking.dayYmd);
+    const latest = (tpl.validMonths === 0 ? mine.find(sameVisit) : undefined) ?? mine[0] ?? null;
     if (!latest) return { tpl, needed, state: needed ? 'missing' : 'na', doneOn: null, until: null, sub: null } as FormRow;
     const doneOn = latest.performed_on ?? dayOf(latest.completed_at, tz);
     const until = tpl.validMonths === 0 ? null : addMonthsYmd(doneOn, tpl.validMonths);
-    const valid = tpl.validMonths === 0 ? latest.booking_id === booking.id : booking.dayYmd <= until!;
+    const valid = tpl.validMonths === 0 ? sameVisit(latest) : booking.dayYmd <= until!;
     const state: FormState = valid ? (latest.flagged ? 'reaction' : 'valid') : needed ? 'expired' : 'na';
     return { tpl, needed, state, doneOn, until, sub: latest };
   });

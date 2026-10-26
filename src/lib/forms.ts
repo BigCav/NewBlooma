@@ -23,8 +23,8 @@ export async function loadTemplates(sb: Sb, salonId: string): Promise<Tpl[]> {
 
 export async function loadSubs(sb: Sb, clientIds: string[]): Promise<Sub[]> {
   if (!clientIds.length) return [];
-  const { data } = await sb.from('form_submissions').select('id,template_id,client_id,booking_id,answers,signed_name,flagged,performed_on,completed_at,recorded_by').in('client_id', clientIds).order('completed_at', { ascending: false }).limit(2000);
-  return (data ?? []) as Sub[];
+  const { data } = await sb.from('form_submissions').select('id,template_id,client_id,booking_id,answers,signed_name,flagged,performed_on,completed_at,recorded_by,bookings(starts_at,ref_no)').in('client_id', clientIds).order('completed_at', { ascending: false }).limit(2000);
+  return ((data ?? []) as any[]).map(({ bookings, ...s }) => ({ ...s, booking_at: bookings?.starts_at ?? null, booking_ref: bookings?.ref_no ?? null })) as Sub[];
 }
 
 export type BookingInfo = { id: string; salonId: string; clientId: string; startsAt: string; status: string; dayYmd: string; catIds: string[]; services: string; staff: string; clientName: string; clientEmail: string | null };

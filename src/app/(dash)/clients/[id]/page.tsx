@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { requireCtx } from '@/lib/session';
 import { emailConfigured, smsConfigured } from '@/lib/notify';
-import { minutesOfDay, ymd } from '@/lib/format';
+import { minutesOfDay, time12, ymd } from '@/lib/format';
 import { fmtClock, fmtDay, loadOverview } from '../data';
 import { sinceText } from '../shared';
 import { niceDate } from '@/lib/forms-shared';
@@ -27,7 +27,7 @@ export default async function ClientProfile({ params }: { params: Promise<{ id: 
     loadOverview(ctx),
     sb.from('client_notes').select('id,body').eq('client_id', id).order('created_at'),
     sb.from('bookings').select('id,starts_at,staff(name),booking_services(price_cents,services(name)),sales(status,method,total_cents)').eq('client_id', id).eq('status', 'completed').order('starts_at', { ascending: false }).limit(SHOWN),
-    sb.from('form_submissions').select('id,answers,flagged,performed_on,completed_at,form_templates(name)').eq('client_id', id).order('completed_at', { ascending: false }).limit(30),
+    sb.from('form_submissions').select('id,answers,flagged,performed_on,completed_at,form_templates(name),bookings(ref_no)').eq('client_id', id).order('completed_at', { ascending: false }).limit(30),
   ]);
   if (!c) notFound();
   const row = ov.rows.find((r) => r.id === id)!;
@@ -48,7 +48,7 @@ export default async function ClientProfile({ params }: { params: Promise<{ id: 
   const data: ProfileData = {
     row, since: sinceText(c.created_at), allergies: c.allergies ?? [], patchOn: c.patch_test_on, formula: c.colour_formula ?? '', reminders: c.reminders, marketing: c.marketing,
     notes: (notes ?? []).map((n) => ({ id: n.id, text: n.body })), history,
-    forms: ((subs ?? []) as any[]).map((s) => ({ id: s.id, name: s.form_templates?.name ?? 'Form', date: niceDate(s.performed_on ?? ymd(s.completed_at, tz)), flagged: !!s.flagged, answers: ((s.answers ?? []) as { q: string; a: string }[]).map((a) => ({ k: a.q, v: a.a || 'No answer' })) })), historyTotal: row.visits, switcher, today, channels: { sms: smsConfigured(), email: emailConfigured() },
+    forms: ((subs ?? []) as any[]).map((s) => ({ id: s.id, name: s.form_templates?.name ?? 'Form', date: (s.performed_on ? `Applied ${niceDate(s.performed_on)} · recorded ` : '') + `${niceDate(ymd(s.completed_at, tz))}, ${time12(s.completed_at, tz)}` + (s.bookings?.ref_no ? ' · booking B-' + s.bookings.ref_no : ''), flagged: !!s.flagged, answers: ((s.answers ?? []) as { q: string; a: string }[]).map((a) => ({ k: a.q, v: a.a || 'No answer' })) })), historyTotal: row.visits, switcher, today, channels: { sms: smsConfigured(), email: emailConfigured() },
   };
   return <ProfileView key={id} data={data} />;
 }

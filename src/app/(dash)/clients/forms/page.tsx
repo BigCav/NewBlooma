@@ -15,13 +15,13 @@ export default async function ClientForms({ searchParams }: { searchParams: Prom
   const tz = salon.timezone;
   const tpls = await loadTemplates(sb, salon.id);
   const { data: bk } = await sb.from('bookings')
-    .select('id,client_id,starts_at,status,staff(name),clients(name,email),booking_services(services(name,category_id))')
-    .in('status', ['pending', 'confirmed', 'checked_in', 'in_progress']).gte('starts_at', new Date(Date.now() - 6 * 3600e3).toISOString()).order('starts_at').limit(300);
-  const next = new Map<string, any>();
-  for (const b of (bk ?? []) as any[]) if (b.client_id && !next.has(b.client_id)) next.set(b.client_id, b);
-  const subs = await loadSubs(sb, [...next.keys()]);
+    .select('id,ref_no,client_id,starts_at,status,staff(name),clients(name,email),booking_services(services(name,category_id))')
+    .in('status', ['pending', 'confirmed', 'checked_in', 'in_progress']).gte('starts_at', new Date(Date.now() - 6 * 3600e3).toISOString()).order('starts_at').limit(80);
+  const upcoming = ((bk ?? []) as any[]).filter((b) => b.client_id);
+  const subs = await loadSubs(sb, [...new Set(upcoming.map((b) => b.client_id as string))]);
+  const stamp = (iso: string) => `${niceDate(ymd(iso, tz))}, ${time12(iso, tz)}`;
 
-  const cards: ClientCard[] = [...next.values()].map((b) => {
+  const cards: ClientCard[] = upcoming.map((b) => {
     const lines = (b.booking_services ?? []) as any[];
     const when = `${dateLong(b.starts_at, tz)}, ${time12(b.starts_at, tz)}`;
     const svc = lines.map((l) => l.services?.name).filter(Boolean).join(' + ');
@@ -31,7 +31,7 @@ export default async function ClientForms({ searchParams }: { searchParams: Prom
     const vms: RowVM[] = rows.map((r): RowVM => {
       const open = r.needed && (r.state === 'missing' || r.state === 'expired');
       let line = '';
-      if (r.state === 'valid') line = `${r.tpl.how === 'staff' ? 'Recorded' : 'Completed'} ${niceDate(r.doneOn!)}${r.until ? ' · valid until ' + niceDate(r.until) : ' · for this visit'}${r.sub?.answers.find((a) => /^Result/.test(a.q)) ? ' · ' + r.sub.answers.find((a) => /^Result/.test(a.q))!.a : ''}`;
+      if (r.state === 'valid') line = `${r.sub?.performed_on ? 'Applied ' + niceDate(r.sub.performed_on) + ' · recorded' : r.tpl.how === 'staff' ? 'Recorded' : 'Completed'} ${stamp(r.sub!.completed_at)}${r.until ? ' · valid until ' + niceDate(r.until) : ' · for this visit'}${r.sub?.booking_ref ? ' · booking B-' + r.sub.booking_ref : ''}${r.sub?.answers.find((a) => /^Result/.test(a.q)) ? ' · ' + r.sub.answers.find((a) => /^Result/.test(a.q))!.a : ''}`;
       else if (r.state === 'expired') line = `Last done ${niceDate(r.doneOn!)} · expired ${r.until ? niceDate(r.until) : 'after that visit'}`;
       else if (r.state === 'reaction') line = `Recorded ${niceDate(r.doneOn!)} · reaction, check before treating`;
       else if (r.state === 'missing') line = r.tpl.how === 'staff' ? 'Needs a staff member to do it and record the result' : 'Not yet completed';
@@ -50,10 +50,10 @@ export default async function ClientForms({ searchParams }: { searchParams: Prom
       : level === 'todo'
         ? { title: `${todo.length} ${todo.length === 1 ? 'form' : 'forms'} needed before ${when}`, text: `${svc} with ${who} needs: ${todo.map((r) => r.tpl.name.toLowerCase()).join(', ')}.` }
         : { title: `All set for ${when}`, text: `${svc} with ${who}. Every form it needs is up to date.` };
-    return { id: b.client_id, name: b.clients?.name ?? 'Client', init: initials(b.clients?.name ?? 'Client'), email: b.clients?.email ?? '', bookingId: b.id, when, svc, who, level, todoCount: todo.length, banner, rows: vms, sendable: todo.filter((r) => r.tpl.how === 'client').length };
+    return { id: b.id, clientId: b.client_id, ref: 'B-' + b.ref_no, time: time12(b.starts_at, tz), name: b.clients?.name ?? 'Client', init: initials(b.clients?.name ?? 'Client'), email: b.clients?.email ?? '', bookingId: b.id, when, svc, who, level, todoCount: todo.length, banner, rows: vms, sendable: todo.filter((r) => r.tpl.how === 'client').length };
   });
-  const { data: recent } = await sb.from('form_submissions').select('id,client_id,answers,flagged,performed_on,completed_at,form_templates(name),clients(name),staff:recorded_by(name)').order('completed_at', { ascending: false }).limit(60);
-  const done: DoneRow[] = ((recent ?? []) as any[]).map((s) => ({ id: s.id, clientId: s.client_id, client: s.clients?.name ?? 'Client', form: s.form_templates?.name ?? 'Form', date: niceDate(s.performed_on ?? ymd(s.completed_at, tz)), by: s.staff?.name ? 'Recorded by ' + s.staff.name : 'Completed by the client', flagged: !!s.flagged, answers: ((s.answers ?? []) as { q: string; a: string }[]).map((a) => ({ k: a.q, v: a.a || 'No answer' })) }));
-  const pickId = cards.find((x) => x.id === c)?.id ?? cards.find((x) => x.level !== 'ok')?.id ?? cards[0]?.id ?? '';
+  const { data: recent } = await sb.from('form_submissions').select('id,client_id,answers,flagged,performed_on,completed_at,form_templates(name),clients(name),staff:recorded_by(name),bookings(ref_no)').order('completed_at', { ascending: false }).limit(60);
+  const done: DoneRow[] = ((recent ?? []) as any[]).map((s) => ({ id: s.id, clientId: s.client_id, client: s.clients?.name ?? 'Client', form: s.form_templates?.name ?? 'Form', date: (s.performed_on ? `Applied ${niceDate(s.performed_on)} · recorded ` : '') + stamp(s.completed_at), ref: s.bookings?.ref_no ? 'Booking B-' + s.bookings.ref_no : '', by: s.staff?.name ? 'Recorded by ' + s.staff.name : 'Completed by the client', flagged: !!s.flagged, answers: ((s.answers ?? []) as { q: string; a: string }[]).map((a) => ({ k: a.q, v: a.a || 'No answer' })) }));
+  const pickId = cards.find((x) => x.clientId === c && x.level !== 'ok')?.id ?? cards.find((x) => x.clientId === c)?.id ?? cards.find((x) => x.level !== 'ok')?.id ?? cards[0]?.id ?? '';
   return <ClientFormsView cards={cards} done={done} initial={pickId} hasForms={tpls.length > 0} owner={staff.app_role === 'owner'} today={ymd(new Date(), tz)} />;
 }

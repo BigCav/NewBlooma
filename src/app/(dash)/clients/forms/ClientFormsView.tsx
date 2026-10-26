@@ -9,8 +9,8 @@ import { addMonthsYmd, niceDate, type FormState, type How } from '@/lib/forms-sh
 import { recordPatchTest, sendFormLinks } from './actions';
 
 export type RowVM = { tplId: string; name: string; how: How; isPatch: boolean; needed: boolean; state: FormState; line: string; canSend: boolean; canFill: boolean; canRecord: boolean; answers: { k: string; v: string }[] };
-export type ClientCard = { id: string; name: string; init: string; email: string; bookingId: string; when: string; svc: string; who: string; level: 'ok' | 'todo' | 'alert'; todoCount: number; banner: { title: string; text: string }; rows: RowVM[]; sendable: number };
-export type DoneRow = { id: string; clientId: string; client: string; form: string; date: string; by: string; flagged: boolean; answers: { k: string; v: string }[] };
+export type ClientCard = { id: string; clientId: string; ref: string; time: string; name: string; init: string; email: string; bookingId: string; when: string; svc: string; who: string; level: 'ok' | 'todo' | 'alert'; todoCount: number; banner: { title: string; text: string }; rows: RowVM[]; sendable: number };
+export type DoneRow = { id: string; clientId: string; client: string; form: string; date: string; ref: string; by: string; flagged: boolean; answers: { k: string; v: string }[] };
 type Props = { cards: ClientCard[]; done: DoneRow[]; initial: string; hasForms: boolean; owner: boolean; today: string };
 
 const STAT: Record<FormState, { t: string; bg: string; fg: string }> = {
@@ -41,7 +41,7 @@ function useClientForms(props: Props) {
   const send = () => { if (!cur) return; const k = cur.bookingId; startT(async () => { const r = await sendFormLinks(k); if (r.error) { setError(r.error); setNotice(''); return; } setError(''); setNotice(r.notice ?? 'Link sent'); setSent((s) => ({ ...s, [k]: true })); }); };
   const saveRec = () => {
     if (!cur || !rec) return;
-    startT(async () => { const r = await recordPatchTest(cur.id, rec.tplId, rec.date, rec.reaction, rec.note); if (r.error) { setError(r.error); return; } setError(''); setRec(null); setNotice(r.notice ?? 'Saved'); router.refresh(); });
+    startT(async () => { const r = await recordPatchTest(cur.clientId, rec.tplId, rec.date, rec.reaction, rec.note); if (r.error) { setError(r.error); return; } setError(''); setRec(null); setNotice(r.notice ?? 'Saved'); router.refresh(); });
   };
   return { ...props, tab, setTab, busy, narrow, cur, sel, pick, open, setOpen, sent, notice, error, setError, rec, setRec, send, saveRec };
 }
@@ -67,8 +67,8 @@ function Body({ c, m }: { c: C; m: boolean }) {
           <span aria-hidden="true" style={S('flex:0 0 48px;width:48px;height:48px;border-radius:999px;background:#EEF0F3;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600')}>{k.init}</span>
           <div style={S('min-width:0')}><h2 style={S('margin:0;font-size:19px;font-weight:600;letter-spacing:-0.02em;overflow-wrap:anywhere')}>{k.name}</h2><p style={S('margin:2px 0 0;color:#5E6673;font-size:13.5px;overflow-wrap:anywhere')}>{k.email || 'No email on file'}</p></div>
         </div>
-        <div style={S('flex:1 1 220px;min-width:0')}><span style={S('color:#5E6673;font-size:13px')}>Next appointment</span><div style={S('font-size:14.5px;font-weight:600;overflow-wrap:anywhere')}>{k.when} · {k.svc}{k.who ? ' with ' + k.who : ''}</div></div>
-        <Link href={`/clients/${k.id}`} className="ghost" style={S(GHOST)}>Open profile</Link>
+        <div style={S('flex:1 1 220px;min-width:0')}><span style={S('color:#5E6673;font-size:13px')}>Appointment {k.ref}</span><div style={S('font-size:14.5px;font-weight:600;overflow-wrap:anywhere')}>{k.when} · {k.svc}{k.who ? ' with ' + k.who : ''}</div></div>
+        <Link href={`/clients/${k.clientId}`} className="ghost" style={S(GHOST)}>Open profile</Link>
       </section>
 
       <section role="status" style={S('box-sizing:border-box;border-radius:20px;background:' + lv.bg + ';color:' + lv.fg + ';padding:16px 20px;display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px')}>
@@ -149,7 +149,7 @@ function Completed({ c, m }: { c: C; m: boolean }) {
       {c.done.map((r) => (
         <article key={r.id} style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid ' + (r.flagged ? '#F4C7C2' : '#E6E8EC') + ';border-radius:24px;padding:' + (m ? 18 : 22) + 'px;display:flex;flex-direction:column;gap:10px')}>
           <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:8px 12px')}>
-            <div style={S('min-width:0')}><h3 style={S('margin:0;font-size:16px;font-weight:600;overflow-wrap:anywhere')}>{r.form}</h3><p style={S('margin:2px 0 0;font-size:13.5px;color:#5E6673;overflow-wrap:anywhere')}><Link href={'/clients/' + r.clientId} style={S('color:#0E1116;font-weight:500')}>{r.client}</Link> · {r.date} · {r.by}</p></div>
+            <div style={S('min-width:0')}><h3 style={S('margin:0;font-size:16px;font-weight:600;overflow-wrap:anywhere')}>{r.form}</h3><p style={S('margin:2px 0 0;font-size:13.5px;color:#5E6673;overflow-wrap:anywhere')}><Link href={'/clients/' + r.clientId} style={S('color:#0E1116;font-weight:500')}>{r.client}</Link> · {r.date} · {r.by}{r.ref ? ' · ' + r.ref : ''}</p></div>
             {r.flagged && <span style={S('padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;background:#FDECEA;color:#B42318')}>Reaction</span>}
           </div>
           <div><button type="button" onClick={() => setOpen(open === r.id ? '' : r.id)} aria-expanded={open === r.id} className="ghost" style={S(GHOST)}>{open === r.id ? 'Hide answers' : 'View answers'}</button></div>
@@ -165,11 +165,11 @@ function List({ c, m }: { c: C; m: boolean }) {
   return (
     <nav aria-label="Clients with appointments" style={S(m ? '' : 'flex:0 0 300px;display:flex;flex-direction:column;gap:8px')}>
       {m
-        ? <div className="hscroll" style={S('display:flex;gap:8px;overflow-x:auto')}>{c.cards.map((x) => { const on = x.id === c.cur?.id; return <button key={x.id} type="button" onClick={() => c.pick(x.id)} aria-current={on} style={S(chip(on) + ';display:flex;align-items:center;gap:8px')}><span aria-hidden="true" style={S('width:8px;height:8px;border-radius:999px;background:' + LVL[x.level].dot)} />{x.name.split(' ')[0]}</button>; })}</div>
+        ? <div className="hscroll" style={S('display:flex;gap:8px;overflow-x:auto')}>{c.cards.map((x) => { const on = x.id === c.cur?.id; return <button key={x.id} type="button" onClick={() => c.pick(x.id)} aria-current={on} style={S(chip(on) + ';display:flex;align-items:center;gap:8px')}><span aria-hidden="true" style={S('width:8px;height:8px;border-radius:999px;background:' + LVL[x.level].dot)} />{x.name.split(' ')[0]} · {x.time}</button>; })}</div>
         : c.cards.map((x) => { const on = x.id === c.cur?.id; return (
           <button key={x.id} type="button" onClick={() => c.pick(x.id)} aria-current={on} style={S('width:100%;box-sizing:border-box;text-align:left;font:inherit;cursor:pointer;padding:12px 14px;border-radius:16px;display:flex;align-items:center;gap:12px;border:1px solid ' + (on ? '#0E1116' : '#E6E8EC') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116'))}>
             <span aria-hidden="true" style={S('flex:0 0 40px;width:40px;height:40px;border-radius:999px;background:' + (on ? '#FFFFFF' : '#EEF0F3') + ';color:#0E1116;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600')}>{x.init}</span>
-            <span style={S('min-width:0')}><span style={S('display:block;font-size:14.5px;font-weight:600;overflow-wrap:anywhere')}>{x.name}</span><span style={S('display:flex;align-items:center;gap:6px;font-size:12.5px;color:' + (on ? '#C9CDD5' : '#5E6673'))}><span aria-hidden="true" style={S('width:8px;height:8px;border-radius:999px;background:' + LVL[x.level].dot)} />{x.level === 'ok' ? 'All set' : x.level === 'alert' ? 'Reaction recorded' : x.todoCount + ' needed'}</span></span>
+            <span style={S('min-width:0')}><span style={S('display:block;font-size:14.5px;font-weight:600;overflow-wrap:anywhere')}>{x.name}</span><span style={S('display:flex;align-items:center;gap:6px;font-size:12.5px;color:' + (on ? '#C9CDD5' : '#5E6673'))}><span aria-hidden="true" style={S('width:8px;height:8px;border-radius:999px;background:' + LVL[x.level].dot)} />{x.level === 'ok' ? 'All set' : x.level === 'alert' ? 'Reaction recorded' : x.todoCount + ' needed'} · {x.when}</span></span>
           </button>); })}
     </nav>
   );
