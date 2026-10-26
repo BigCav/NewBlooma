@@ -44,7 +44,8 @@ export function checkForm(f: FillForm, inp: FormInput): { errors: Record<string,
       if (typeof v === 'string' && v && q.options.includes(v)) a = v;
       else if (q.required) errors[q.id] = 'Choose one.';
     } else {
-      const arr = Array.isArray(v) ? v.filter((x) => q.options.includes(x)) : [];
+      let arr = Array.isArray(v) ? v.filter((x) => q.options.includes(x)) : [];
+      if (arr.length > 1 && arr.some(noneLike)) arr = arr.filter((x) => !noneLike(x));
       a = arr.join(', ');
       if (q.required && !arr.length) errors[q.id] = 'Choose at least one.';
     }

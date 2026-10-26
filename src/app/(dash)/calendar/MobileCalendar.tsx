@@ -132,6 +132,13 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
             </section>
           )}
 
+          {c.laterLate.length > 0 && !sq && (
+            <section aria-label="Not checked in" style={S('display:flex;flex-direction:column;gap:10px')}>
+              <h2 style={S('margin:0;font-size:16px;font-weight:600')}>Not checked in</h2>
+              {c.laterLate.map(renderLater)}
+            </section>
+          )}
+
           <section aria-label="Later today" style={S('flex-direction:column;gap:10px;display:' + (sq ? 'none' : 'flex'))}>
             <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
               <h2 style={S('margin:0;font-size:16px;font-weight:600')}>{day === today ? 'Later today' : 'Appointments'}</h2>
