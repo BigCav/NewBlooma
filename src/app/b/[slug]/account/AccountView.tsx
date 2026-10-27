@@ -58,7 +58,6 @@ function SignIn({ slug, salon }: { slug: string; salon: string }) {
           {!!error && <p role="alert" style={err}>{error}</p>}
           <button type="submit" disabled={busy} style={{ ...dark, height: 48 }}>{busy ? 'Signing in…' : 'Sign in'}</button>
           <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '14px 16px', borderRadius: 16, background: '#F4F5F7', fontSize: 13.5, color: '#5E6673', lineHeight: 1.45 }}>
-            <span aria-hidden style={{ flex: '0 0 auto', width: 22, height: 22, borderRadius: 999, background: '#ECE8FF', color: '#3B2BB5', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700 }}>+</span>
             <span><strong style={{ color: '#0E1116', fontWeight: 600 }}>New here?</strong> <Link href={`/b/${slug}/book`} style={{ color: '#5B3DF5', fontWeight: 600, textDecoration: 'none' }}>Book an appointment</Link> and tick “Save my details for next time” to create your account.</span>
           </div>
         </form>
