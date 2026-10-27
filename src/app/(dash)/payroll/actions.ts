@@ -38,7 +38,7 @@ export async function markPaid(staffId: string, from: string, to: string): Promi
   const { sb, staff } = await requireCtx();
   if (staff.app_role !== 'owner') return { error: 'Only the owner can mark payouts as paid.' };
   const { error } = await sb.rpc('mark_payout_paid', { p_staff: staffId, p_from: from, p_to: to });
-  if (error) return { error: error.message.includes('period_open') ? 'That week is not over yet.' : error.message.includes('already_paid') ? 'Already marked as paid.' : friendly(error.message) };
+  if (error) return { error: error.message.includes('period_open') ? 'That week is not over yet.' : error.message.includes('already_paid') ? 'Already marked as paid.' : error.message.includes('period_overlap') ? 'Part of that period is already paid in another payout.' : error.message.includes('bad_period') ? 'Choose a pay period of up to 31 days.' : friendly(error.message) };
   revalidatePath('/payroll'); return { notice: 'Marked as paid' };
 }
 

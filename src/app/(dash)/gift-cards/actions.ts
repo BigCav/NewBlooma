@@ -8,7 +8,7 @@ export async function issueGiftCard(i: { amount: string; name: string; code: str
   const { sb, salon } = await requireOwner();
   const n = Number(String(i.amount).replace(/[^0-9.]/g, ''));
   const code = i.code.trim().toUpperCase();
-  if (!Number.isFinite(n) || n <= 0) return { error: 'Choose or enter an amount.' };
+  if (!Number.isFinite(n) || Math.round(n * 100) < 1) return { error: 'Choose or enter an amount.' };
   if (n > 10000) return { error: 'That amount is too large.' };
   if (code.length < 4) return { error: 'Codes need at least 4 characters.' };
   if (!/^[A-Z0-9-]+$/.test(code)) return { error: 'Codes can only use letters, numbers and dashes.' };

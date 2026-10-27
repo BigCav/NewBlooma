@@ -38,7 +38,7 @@ export async function saveService(i: SvcInput): Promise<{ error?: string; id?: s
   const name = i.name.trim();
   const price = parseFloat(i.price);
   if (!name) return { error: 'Give the service a name.' };
-  if (isNaN(price) || price <= 0) return { error: 'Enter a price above zero, like 45 or 45.50.' };
+  if (isNaN(price) || Math.round(price * 100) < 1) return { error: 'Enter a price above zero, like 45 or 45.50.' };
   // An add-on has no category of its own: it sits with the first service it is offered with.
   let categoryId = i.categoryId;
   if (i.addon) {
