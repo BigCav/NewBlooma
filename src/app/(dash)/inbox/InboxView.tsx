@@ -97,18 +97,21 @@ function Panel({ c, m }: { c: C; m: boolean }) {
   const actionable = sel.type === 'request' && sel.status === 'new' && !sel.cancelled;
   const calHref = sel.bookingId && sel.calendarDay ? `/calendar?d=${sel.calendarDay}&b=${sel.bookingId}` : null;
   const clientHref = sel.clientId ? `/clients/${sel.clientId}` : null;
+  const who = (<>
+    <div style={S('flex:0 0 56px;width:56px;height:56px;border-radius:999px;background:#EEF0F3;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600')}>{initialsOf(sel.client)}</div>
+    <div style={S('min-width:0')}><div style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em;line-height:1.2;overflow-wrap:anywhere')}>{sel.client}</div><div style={S('font-size:14px;color:#5E6673;overflow-wrap:anywhere')}>{sel.email || 'No email'}</div></div>
+  </>);
   const rebookHref = sel.clientId ? `/calendar/new?client=${sel.clientId}` : '/calendar?new=1';
   const composer = c.mode === 'compose' || isMsg;
   const showRow = c.mode === 'view' && !isMsg;
   return (<>
+    {clientHref
+      ? <Link href={clientHref} aria-label={`Open ${sel.client} profile`} style={S('display:flex;align-items:center;gap:14px;color:inherit;text-decoration:none')}>{who}</Link>
+      : <div style={S('display:flex;align-items:center;gap:14px')}>{who}</div>}
     <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:8px')}>
       <span style={S(typeStyle(sel.type))}>{TYPES[sel.type].label}</span>
       {hasChip(sel) && <span style={S(chipStyle(sel))}>{statusText(sel)}</span>}
       {!!c.notice && <span role="status" style={S('padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.notice}</span>}
-    </div>
-    <div style={S('display:flex;align-items:center;gap:14px')}>
-      <div style={S('flex:0 0 56px;width:56px;height:56px;border-radius:999px;background:#EEF0F3;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600')}>{initialsOf(sel.client)}</div>
-      <div style={S('min-width:0')}><div style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em;line-height:1.2;overflow-wrap:anywhere')}>{sel.client}</div><div style={S('font-size:14px;color:#5E6673;overflow-wrap:anywhere')}>{sel.email || 'No email'}</div></div>
     </div>
     {sel.rows.length > 0 && (
       <dl style={S('margin:0;display:flex;flex-direction:column')}>
@@ -129,7 +132,7 @@ function Panel({ c, m }: { c: C; m: boolean }) {
         {isCancel
           ? <Link href={rebookHref} className="ghost" style={S(LNK)}>Book again</Link>
           : calHref ? <Link href={calHref} className="ghost" style={S(LNK)}>View in calendar</Link>
-          : clientHref ? <Link href={clientHref} className="ghost" style={S(LNK)}>View client</Link> : null}
+          : null}
       </div>
     )}
     {showRow && isResched && sel.status === 'new' && <button className="ghost" onClick={c.finish} disabled={c.busy} style={S(BTN2 + ';flex:0 0 auto')}>Mark as done</button>}
@@ -158,8 +161,6 @@ function Panel({ c, m }: { c: C; m: boolean }) {
         </div>
       </div>
     )}
-    {isMsg && clientHref && <Link href={clientHref} className="ghost" style={S(LNK + ';flex:0 0 auto;padding:0 20px')}>View client</Link>}
-    {showRow && clientHref && (calHref || isCancel) && <Link href={clientHref} style={S('align-self:center;color:#5E6673;font-size:13.5px;text-decoration:underline')}>View {first}&apos;s profile</Link>}
   </>);
 }
 
