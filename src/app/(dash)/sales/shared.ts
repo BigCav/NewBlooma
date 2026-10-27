@@ -1,5 +1,5 @@
 export type SaleRow = {
-  id: string; client: string; service: string; staffName: string; firstName: string; time: string; method: string;
+  id: string; ref: string; client: string; service: string; staffName: string; firstName: string; time: string; method: string;
   status: 'Paid' | 'Pending' | 'Refunded'; initials: string; amount: number; tip: number; tax: number; total: number; canEdit: boolean; discount: number; discountNote: string; taxRate: number; taxIncl: boolean;
 };
 export type PayMethod = { id: 'terminal' | 'online' | 'cash' | 'gift_card'; label: string };

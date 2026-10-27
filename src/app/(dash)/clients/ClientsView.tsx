@@ -147,6 +147,7 @@ function Panel({ c, m }: { c: C; m: boolean }) {
 }
 
 function Desktop({ c }: { c: C }) {
+  const router = useRouter();
   const rows = c.filtered.slice(0, SHOW_MAX);
   const chipS = (on: boolean) => 'height:40px;padding:0 16px;border-radius:999px;font-size:13.5px;font-weight:500;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
   const rowS = (on: boolean) => 'display:flex;align-items:center;gap:16px;width:100%;box-sizing:border-box;min-height:64px;padding:8px 20px;border:0;border-bottom:1px solid #EEF0F3;text-align:left;font:inherit;font-size:14px;color:#0E1116;background:' + (on ? '#F4F5F7' : 'transparent');
@@ -173,7 +174,7 @@ function Desktop({ c }: { c: C }) {
                 <div style={S('flex:0.7 1 0;min-width:0')}>Visits</div><div style={S('flex:0.9 1 0;min-width:0')}>Spent</div><div style={S('flex:1 1 0;min-width:0')}>Status</div>
               </div>
               {rows.map((r) => (
-                <button key={r.id} className="s-row" onClick={() => c.select(r.id)} aria-label={`${r.name}, ${r.tag}, last visit ${r.last}`} style={S(rowS(r.id === c.sel?.id && c.mode !== 'new'))}>
+                <button key={r.id} className="s-row" onClick={() => c.select(r.id)} onDoubleClick={() => router.push(`/clients/${r.id}`)} title="Double-click to open the profile" aria-label={`${r.name}, ${r.tag}, last visit ${r.last}`} style={S(rowS(r.id === c.sel?.id && c.mode !== 'new'))}>
                   <span style={S('flex:2.4 1 0;min-width:0;display:flex;align-items:center;gap:12px')}>
                     <span style={S('flex:0 0 40px;width:40px;height:40px;border-radius:999px;background:#EEF0F3;color:#0E1116;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600')}>{initialsOf(r.name)}</span>
                     <span style={S('min-width:0')}><span style={S('display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{r.name}</span><span style={S('display:block;font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{r.email || 'No email'}</span></span>

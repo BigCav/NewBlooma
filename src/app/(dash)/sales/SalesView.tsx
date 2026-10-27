@@ -109,7 +109,7 @@ function useSales(props: Props) {
   };
 
   const sq = query.trim().toLowerCase();
-  const list = rows.filter((t) => (filter === 'all' || t.status === filter) && (!sq || (t.client + ' ' + t.service + ' ' + t.staffName + ' ' + t.status + ' ' + t.method + ' ' + t.total / 100).toLowerCase().includes(sq.replace(/[$,]/g, ''))));
+  const list = rows.filter((t) => (filter === 'all' || t.status === filter) && (!sq || (t.client + ' ' + t.ref + ' ' + t.service + ' ' + t.staffName + ' ' + t.status + ' ' + t.method + ' ' + t.total / 100).toLowerCase().includes(sq.replace(/[$,]/g, ''))));
   return { ...props, busy, narrow, rows, list, sel, selectedId, filter, setFilter, query, setQuery, mode, setMode, open, notice, error, setError, confirmRefund, setConfirmRefund,
     canDiscount: props.canDiscount, pay, setPay, tipPctOf, editAmount, setEditAmount, nw, setNw, txn, wait, pick, openNew, cancel, close, takePayment, saveEdit, doRefund, receipt, createSale,
     paidTotal: props.todayTotal, pendingCount: rows.filter((r) => r.status === 'Pending').length };
@@ -218,7 +218,7 @@ function Panel({ c, m }: { c: C; m: boolean }) {
       <div style={S('min-width:0')}><div style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em;line-height:1.2;overflow-wrap:anywhere')}>{s.client}</div><div style={S('font-size:14px;color:#5E6673;overflow-wrap:anywhere')}>{s.service}</div></div>
     </div>
     <dl style={S('margin:0;display:flex;flex-direction:column')}>
-      {DL('Time', s.time)}{DL('With', s.staffName, { wrap: true })}{DL('Payment', s.method, { wrap: true })}{DL('Service', fmt(s.amount))}{s.discount ? DL('Discount' + (s.discountNote ? ' (' + s.discountNote + ')' : ''), '-' + fmt(s.discount), { wrap: true }) : null}{DL('Tip', s.tip ? fmt(s.tip) : 'None')}{s.tax ? DL('Tax', fmt(s.tax)) : null}{DL('Total', fmt(s.total), { last: true, bold: true })}
+      {s.ref ? DL('Booking', s.ref) : null}{DL('Time', s.time)}{DL('With', s.staffName, { wrap: true })}{DL('Payment', s.method, { wrap: true })}{DL('Service', fmt(s.amount))}{s.discount ? DL('Discount' + (s.discountNote ? ' (' + s.discountNote + ')' : ''), '-' + fmt(s.discount), { wrap: true }) : null}{DL('Tip', s.tip ? fmt(s.tip) : 'None')}{s.tax ? DL('Tax', fmt(s.tax)) : null}{DL('Total', fmt(s.total), { last: true, bold: true })}
     </dl>
     {!c.confirmRefund && (
       <div style={S('display:flex;gap:10px')}>
@@ -265,9 +265,9 @@ function Desktop({ c }: { c: C }) {
               <div role="group" aria-label="Filter sales" style={S('display:flex;flex-wrap:wrap;gap:8px')}>{FILTERS.map((f) => <button key={f.id} onClick={() => c.setFilter(f.id)} aria-pressed={c.filter === f.id} style={S('height:40px;padding:0 16px;border-radius:999px;font-size:13.5px;font-weight:500;border:1px solid ' + (c.filter === f.id ? '#0E1116' : '#E1E4E9') + ';background:' + (c.filter === f.id ? '#0E1116' : '#FFFFFF') + ';color:' + (c.filter === f.id ? '#FFFFFF' : '#0E1116'))}>{f.label}</button>)}</div>
               <span style={S('color:#5E6673;font-size:13.5px')}>{`Showing ${c.list.length} of ${c.rows.length}`}</span>
             </div>
-            <div style={S('overflow-x:auto')}><div style={S('min-width:800px')}>
+            <div style={S('overflow-x:auto')}><div style={S('min-width:880px')}>
               <div style={S('display:flex;align-items:center;gap:16px;padding:12px 20px;border-bottom:1px solid #EEF0F3;color:#5E6673;font-size:12.5px;font-weight:500')}>
-                {([['2.2', 'Client'], ['1.6', 'Service'], ['1', 'Staff'], ['1', 'Time'], ['0.9', 'Total'], ['1', 'Status']] as const).map(([f, l]) => <div key={l} style={S(`flex:${f} 1 0;min-width:0`)}>{l}</div>)}
+                {([['2.2', 'Client'], ['0.8', 'Booking'], ['1.6', 'Service'], ['1', 'Staff'], ['1', 'Time'], ['0.9', 'Total'], ['1', 'Status']] as const).map(([f, l]) => <div key={l} style={S(`flex:${f} 1 0;min-width:0`)}>{l}</div>)}
               </div>
               {c.list.map((t) => (
                 <button key={t.id} className="s-row" onClick={() => c.pick(t.id)} aria-label={`${t.client}, ${t.service}, ${fmt(t.total)}, ${t.status}`}
@@ -276,6 +276,7 @@ function Desktop({ c }: { c: C }) {
                     <span style={S('flex:0 0 40px;width:40px;height:40px;border-radius:999px;background:#EEF0F3;color:#0E1116;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600')}>{t.initials}</span>
                     <span style={S('min-width:0;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.client}</span>
                   </span>
+                  <span style={S('flex:0.8 1 0;min-width:0;white-space:nowrap;color:#5E6673')}>{t.ref || '—'}</span>
                   <span style={S('flex:1.6 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.service}</span>
                   <span style={S('flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.firstName}</span>
                   <span style={S('flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.time}</span>
@@ -322,7 +323,7 @@ function Mobile({ c }: { c: C }) {
             <li key={t.id}>
               <button onClick={() => c.pick(t.id)} aria-label={`${t.client}, ${t.service}, ${fmt(t.total)}, ${t.status}`} style={S('display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:68px;padding:10px 16px;border:0;border-bottom:1px solid #EEF0F3;background:transparent;text-align:left;font:inherit;color:#0E1116;cursor:pointer')}>
                 <span style={S('flex:0 0 44px;width:44px;height:44px;border-radius:999px;background:#EEF0F3;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600')}>{t.initials}</span>
-                <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.client}</span><span style={S('display:block;font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.service}, {t.time}</span></span>
+                <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.client}</span><span style={S('display:block;font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.ref ? t.ref + ' · ' : ''}{t.service}, {t.time}</span></span>
                 <span style={S('flex:0 0 auto;text-align:right')}><span style={S('display:block;font-size:14.5px;font-weight:600')}>{fmt(t.total)}</span><span style={S('display:block;margin-top:2px')}><span style={S(statusStyle(t.status))}>{t.status}</span></span></span>
               </button>
             </li>
