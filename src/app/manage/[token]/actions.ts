@@ -2,6 +2,7 @@
 import { flushOutbox } from '@/lib/notify';
 import { revalidatePath } from 'next/cache';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { allow, clientIp } from '@/lib/rate-limit';
 import { minutesOfDay } from '@/lib/format';
 import { CANCEL_HOURS, policyInfo } from './shared';
 
@@ -16,6 +17,7 @@ async function load(token: string) {
 /** Open start times on one day for moving this appointment (the appointment's own slot counts as free). */
 export async function manageSlots(token: string, date: string): Promise<{ slots: { iso: string; min: number }[]; error?: string }> {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { slots: [] };
+  if (!(await allow('mslots:' + (await clientIp()), 240, 600))) return { slots: [], error: 'Too many requests from here for now. Please try again in a few minutes.' };
   const l = await load(token); if (!l) return { slots: [], error: 'This link has expired.' };
   const { sb, b } = l;
   const { data: salon } = await sb.from('salons').select('timezone').eq('id', b.salon_id).single();
@@ -25,6 +27,7 @@ export async function manageSlots(token: string, date: string): Promise<{ slots:
 }
 
 export async function moveBooking(token: string, startsAtIso: string): Promise<{ error?: string; free?: boolean; deadline?: string }> {
+  if (!(await allow('move:' + (await clientIp()), 30, 3600))) return { error: 'Too many changes from here for now. Please try again later.' };
   const l = await load(token); if (!l) return { error: 'This link has expired.' };
   const { sb, b } = l;
   const { error } = await sb.rpc('client_reschedule', { p_token: token, p_starts_at: startsAtIso });

@@ -14,6 +14,7 @@ export type Slot = { key: string; min: number };
 /** Open start times for one day. With "any professional" each start time appears once. */
 export async function publicSlots(slug: string, date: string, serviceIds: string[], staffId: string): Promise<{ slots: Slot[]; error?: string }> {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !serviceIds.length || serviceIds.length > 12) return { slots: [] };
+  if (!(await allow('slots:' + (await clientIp()), 240, 600))) return { slots: [], error: 'Too many requests from here for now. Please try again in a few minutes.' };
   const sb = supabaseAdmin();
   const { data: salon } = await sb.from('salons').select('id,timezone').eq('slug', slug).maybeSingle();
   if (!salon) return { slots: [] };
@@ -27,6 +28,7 @@ export async function publicSlots(slug: string, date: string, serviceIds: string
 /** Next open online time for the chosen services (or the quickest on the menu), for the banner on the first step. */
 export async function nextAvailable(slug: string, serviceIds: string[], staffId?: string): Promise<string | null> {
   if (serviceIds.length > 12) return null;
+  if (!(await allow('slots:' + (await clientIp()), 240, 600))) return null;
   const { data: salon } = await supabaseAdmin().from('salons').select('id,timezone').eq('slug', slug).maybeSingle();
   if (!salon) return null;
   return nextAvailableLabel(salon.id, salon.timezone, serviceIds, staffId).catch(() => null);
@@ -81,6 +83,8 @@ export async function publicBook(slug: string, i: BookInput): Promise<{ error?: 
   const sb = supabaseAdmin();
   const { data: salon } = await sb.from('salons').select('id').eq('slug', slug).maybeSingle();
   if (!salon) return { error: 'This booking page is not available.' };
+  // A flood of fake bookings could fill a whole calendar, so one salon can only take so many online bookings an hour.
+  if (!(await allow('salon-book:' + salon.id, 60, 3600))) return { error: 'This salon is taking a lot of online bookings right now. Please call the salon, or try again later.' };
   const me = await currentClient(salon.id);
   const name = (me?.name || i.name).trim(), email = (me?.email || i.email).trim().toLowerCase();
   let phone = (i.phone.trim() || me?.phone || '').trim();
@@ -105,6 +109,8 @@ export async function publicBook(slug: string, i: BookInput): Promise<{ error?: 
     if (ins.error) return { error: 'Could not save your details. Please try again.' };
     client = ins.data;
   }
+  const { count: upcoming } = await sb.from('bookings').select('id', { count: 'exact', head: true }).eq('client_id', client.id).in('status', ['pending', 'confirmed']).gt('starts_at', new Date().toISOString());
+  if ((upcoming ?? 0) >= 5) return { error: 'You already have several upcoming appointments with us. Please call the salon to book more.' };
   const { data: newId, error } = await sb.rpc('create_booking', { p_salon: salon.id, p_client: client.id, p_staff: staffId, p_starts_at: startsAt, p_service_ids: i.services, p_source: 'online', p_notes: i.notes.trim() || null, p_mode: 'public' });
   if (error) return { error: friendly(error.message) };
   const owed = typeof newId === 'string' ? await outstandingForBooking(newId).catch(() => null) : null;
