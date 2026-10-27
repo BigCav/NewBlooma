@@ -26,8 +26,8 @@ export function ReplyView({ token, salon, first, context, thread }: { token: str
           <ul ref={listRef} aria-label="Messages" style={{ margin: 0, padding: '2px 4px 2px 0', listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 'min(44dvh, 360px)', overflowY: 'auto', overscrollBehavior: 'contain' }}>
             {msgs.map((m, k) => (
               <li key={k} style={{ display: 'flex', justifyContent: m.mine ? 'flex-start' : 'flex-end' }}>
-                <span style={{ display: 'block', maxWidth: '86%' }}>
-                  <span style={{ display: 'block', padding: '10px 14px', borderRadius: 18, overflowWrap: 'anywhere', whiteSpace: 'pre-wrap', background: m.mine ? '#F4F5F7' : '#0E1116', color: m.mine ? '#0E1116' : '#FFFFFF' }}>{m.text}</span>
+                <span style={{ display: 'block', maxWidth: '86%', flex: '0 0 auto' }}>
+                  <span style={{ display: 'block', padding: '10px 14px', borderRadius: 18, overflowWrap: 'break-word', whiteSpace: 'pre-wrap', background: m.mine ? '#F4F5F7' : '#0E1116', color: m.mine ? '#0E1116' : '#FFFFFF' }}>{m.text}</span>
                   <span style={{ display: 'block', marginTop: 4, fontSize: 12, color: '#5E6673', textAlign: m.mine ? 'left' : 'right' }}>{m.mine ? salon : 'You'}, {m.at}</span>
                 </span>
               </li>

@@ -116,7 +116,7 @@ function Panel({ c, m }: { c: C; m: boolean }) {
       </dl>
     )}
     {!!sel.note && <p style={S('margin:0;padding:14px 16px;border-radius:16px;background:#F4F5F7;font-size:14px;overflow-wrap:anywhere')}>{sel.note}</p>}
-    {isMsg && <Thread thread={sel.thread} first={first} />}
+    {isMsg && <Thread key={sel.id} thread={sel.thread} first={first} />}
     {actionable && c.mode === 'view' && (
       <div style={S('display:flex;gap:10px')}>
         <button onClick={c.accept} disabled={c.busy} style={S(BTN)}>Accept</button>
@@ -271,8 +271,8 @@ function Thread({ thread, first }: { thread: InboxItem['thread']; first: string 
   return (
     <ul ref={ref} aria-label="Conversation" style={S('margin:0;padding:2px 4px 2px 0;list-style:none;display:flex;flex-direction:column;gap:10px;max-height:min(44dvh,360px);overflow-y:auto;overscroll-behavior:contain')}>
       {thread.map((t, k) => (
-        <li key={k} style={S('display:flex;justify-content:' + (t.mine ? 'flex-end' : 'flex-start'))}><span style={S('display:block;max-width:86%;min-width:0')}>
-          <span style={S('box-sizing:border-box;padding:10px 14px;border-radius:18px;font-size:14px;overflow-wrap:anywhere;white-space:pre-wrap;background:' + (t.mine ? '#0E1116' : '#F4F5F7') + ';color:' + (t.mine ? '#FFFFFF' : '#0E1116') + ';display:block')}>{t.text}</span>
+        <li key={k} style={S('display:flex;justify-content:' + (t.mine ? 'flex-end' : 'flex-start'))}><span style={S('display:block;max-width:86%;flex:0 0 auto')}>
+          <span style={S('box-sizing:border-box;padding:10px 14px;border-radius:18px;font-size:14px;overflow-wrap:break-word;white-space:pre-wrap;background:' + (t.mine ? '#0E1116' : '#F4F5F7') + ';color:' + (t.mine ? '#FFFFFF' : '#0E1116') + ';display:block')}>{t.text}</span>
           <span style={S('display:block;margin-top:4px;font-size:12px;color:#5E6673;text-align:' + (t.mine ? 'right' : 'left'))}>{t.mine ? 'You' : first}, {t.at}</span></span></li>
       ))}
     </ul>
