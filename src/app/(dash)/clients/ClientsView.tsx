@@ -9,7 +9,7 @@ import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
 import { BookPanel, type BookData } from './BookPanel';
 import { addNote, createClient, sendClientMessage } from './actions';
-import { FILTERS, MSG_TEMPLATES, channelNote, initialsOf, money, type Channels, type ClientRow } from './shared';
+import { FILTERS, channelNote, initialsOf, money, type Channels, type ClientRow } from './shared';
 
 type Props = { clients: ClientRow[]; count: number; newThisMonth: number; rebookRate: string; book: BookData; channels: Channels };
 type Mode = 'view' | 'book' | 'message' | 'new';
@@ -127,10 +127,6 @@ function Panel({ c, m }: { c: C; m: boolean }) {
     {c.mode === 'message' && sel && (
       <div style={S('display:flex;flex-direction:column;gap:18px')}>
         <div><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em;overflow-wrap:anywhere')}>Message {c.first}</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px;overflow-wrap:anywhere')}>{channelNote(c.channels, sel.phone, sel.email)}</p></div>
-        <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="msg-tpl-label" style={S('font-size:14px;font-weight:600')}>Quick replies</span>
-          <div role="group" className="hscroll" aria-labelledby="msg-tpl-label" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
-            {MSG_TEMPLATES.map((t) => <button key={t.id} onClick={() => { c.setMsg(t.text(c.first)); c.setError(''); }} style={S(pill)}>{t.label}</button>)}
-          </div></div>
         <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="msg-text" style={S('font-size:14px;font-weight:600')}>Message</label>
           <textarea id="msg-text" value={c.msg} onChange={(e) => { c.setMsg(e.target.value); c.setError(''); }} placeholder="Write a message" style={S('box-sizing:border-box;width:100%;min-height:120px;resize:vertical;padding:12px 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;color:#0E1116;background:#FFFFFF')} /></div>
         {err}

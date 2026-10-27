@@ -7,7 +7,7 @@ import { useEffect, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
 import { acceptRequest, declineRequest, markDone, markRead, replyToItem } from './actions';
-import { FILTERS, QUICK, REASONS, STATUS, TYPES, initialsOf, isAction, isInfo, type InboxItem } from './shared';
+import { FILTERS, REASONS, STATUS, TYPES, initialsOf, isAction, isInfo, type InboxItem } from './shared';
 
 const PER_PAGE = 15;
 
@@ -158,10 +158,6 @@ function Panel({ c, m }: { c: C; m: boolean }) {
     {composer && (
       <div style={S('display:flex;flex-direction:column;gap:14px')}>
         <div style={S('font-size:15px;font-weight:600')}>{isMsg ? 'Reply to ' + first : 'Message ' + first}</div>
-        {(QUICK[sel.type] ?? []).length > 0 && <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="quick-label" style={S('font-size:14px;font-weight:600')}>Quick replies</span>
-          <div role="group" className="hscroll" aria-labelledby="quick-label" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
-            {(QUICK[sel.type] ?? []).map((t) => <button key={t} onClick={() => { c.setDraft(t); c.setError(''); }} style={S(pill(false))}>{t}</button>)}
-          </div></div>}
         <textarea aria-label="Your message" value={c.draft} onChange={(e) => { c.setDraft(e.target.value); c.setError(''); }} placeholder="Write a message" style={S('box-sizing:border-box;width:100%;min-height:96px;resize:vertical;padding:12px 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;color:#0E1116;background:#FFFFFF')} />
         {err}
         <div style={S('display:flex;gap:10px')}>

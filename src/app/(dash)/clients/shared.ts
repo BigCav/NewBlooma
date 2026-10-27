@@ -24,11 +24,6 @@ export function patchInfo(on: string | null, today: string): { text: string; ton
 }
 export const sinceText = (iso: string) => { const d = new Date(iso); return `Client since ${MON[d.getUTCMonth()]} ${d.getUTCFullYear()}`; };
 
-export const MSG_TEMPLATES: { id: string; label: string; text: (n: string) => string }[] = [
-  { id: 'reminder', label: 'Reminder', text: (n) => 'Hi ' + n + ', a quick reminder about your appointment with us. See you soon!' },
-  { id: 'late', label: 'Running late', text: (n) => 'Hi ' + n + ', we are running a few minutes behind. Thank you for your patience.' },
-  { id: 'rebook', label: 'Rebook', text: (n) => 'Hi ' + n + ', it has been a while. Would you like to book your next visit?' },
-];
 export type Channels = { sms: boolean; email: boolean };
 export const channelNote = (ch: Channels, phone: string, email: string) =>
   ch.sms && phone ? `Sent as a text to ${phone}.` : ch.email && email ? `Sent by email to ${email}.` : 'Messaging is not set up yet. Add Twilio or Resend keys to send.';

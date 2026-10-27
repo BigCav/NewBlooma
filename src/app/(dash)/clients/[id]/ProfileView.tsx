@@ -8,7 +8,7 @@ import { MobileTabs } from '@/components/Chrome';
 import { S } from '../../calendar/pickers';
 import { addNote, deleteClient, recordPatchTest, removeNote, saveFormula, sendClientMessage, setAllergies, setPreference, updateClient } from '../actions';
 import { phoneInput } from '@/lib/phone';
-import { MSG_TEMPLATES, initialsOf, money, patchInfo, type Channels, type ClientRow } from '../shared';
+import { initialsOf, money, patchInfo, type Channels, type ClientRow } from '../shared';
 
 export type ProfileData = {
   row: ClientRow; since: string; allergies: string[]; patchOn: string | null; formula: string; reminders: boolean; marketing: boolean;
@@ -209,9 +209,6 @@ function Header({ c, m }: { c: C; m: boolean }) {
       {c.mode === 'message' && (
         <div style={S('display:flex;flex-direction:column;gap:10px')}>
           <label htmlFor="pf-msg" style={S('font-size:14px;font-weight:600')}>Message {c.first}</label>
-          <div role="group" className="hscroll" aria-label="Quick replies" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
-            {MSG_TEMPLATES.map((t) => <button key={t.id} onClick={() => { c.setMsg(t.text(c.first)); c.setError(''); }} style={S('flex:0 0 auto;height:40px;padding:0 14px;border-radius:999px;font-size:13.5px;font-weight:500;border:1px solid #E1E4E9;background:#FFFFFF;color:#0E1116')}>{t.label}</button>)}
-          </div>
           <textarea id="pf-msg" value={c.msg} onChange={(e) => { c.setMsg(e.target.value); c.setError(''); }} placeholder="Write a message" style={S('box-sizing:border-box;width:100%;min-height:96px;resize:vertical;padding:12px 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:14.5px;color:#0E1116;background:#FFFFFF')} />
           {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
           <div style={S('display:flex;gap:10px')}><button onClick={c.sendMsg} disabled={c.busy} style={S(pri + 'flex:1 1 0')}>Send</button><button className="ghost" onClick={() => { c.setMode('view'); c.setError(''); }} style={S(msgS + 'flex:1 1 0')}>Cancel</button></div>

@@ -20,14 +20,6 @@ export const STATUS: Record<Exclude<ItemStatus, 'new'>, { t: string; bg: string;
   declined: { t: 'Declined', bg: '#FCE3E3', fg: '#9B1C1C' },
   done: { t: 'Done', bg: '#EEF0F3', fg: '#4A525E' },
 };
-export const QUICK: Partial<Record<ItemType, string[]>> = {
-  request: ['Thanks, we will confirm your booking shortly.', 'We may need to change the time. Is another time OK?'],
-  booking: ['Thanks for booking, we look forward to seeing you.', 'Is there anything we should know before your visit?'],
-  rescheduled: ['Thanks, your new time is confirmed. See you then.', 'Sorry, that new time is a problem. Could we find another?'],
-  message: ['Yes, we can do that.', 'Let me check and get back to you.', 'Sorry, we cannot do that.'],
-  cancellation: ['Thanks for letting us know. Would you like to rebook?', 'No problem, we hope to see you soon.'],
-  reschedule: ['Yes, that works. See you then.', 'That time is not free. Could you pick another?'],
-};
 export const REASONS = ['Not available then', 'Fully booked', 'Something else'];
 export const FILTERS = [{ id: 'all', label: 'All' }, { id: 'action', label: 'Needs action' }, { id: 'message', label: 'Messages' }, { id: 'cancellation', label: 'Cancellations' }];
 export const isAction = (t: ItemType) => t === 'request' || t === 'reschedule';
