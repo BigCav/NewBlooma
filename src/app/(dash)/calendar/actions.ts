@@ -240,6 +240,12 @@ export async function editBooking(id: string, dayYmd: string, startMin: number, 
   const { data: adds } = add.length ? await sb.from('services').select('id,duration_min,price_cents').in('id', add) : { data: [] as any[] };
   const dur = keep.reduce((a, l) => a + l.duration_min, 0) + (adds ?? []).reduce((a: number, l: any) => a + l.duration_min, 0);
   if (!keep.length && !(adds ?? []).length && !extras.length) return { error: 'Keep at least one service on the booking.' };
+  // The database only stops two bookings overlapping, so opening hours, shifts and blocked time are checked here.
+  if (dur > 0) { const why = await slotProblem(dayYmd, b.staff_id, startMin, dur, id); if (why) return { error: why }; }
+  if (extras.length) {
+    const { data: xs } = await sb.from('services').select('id,duration_min').in('id', extras.map((x) => x.serviceId));
+    for (const x of extras) { const why = await slotProblem(dayYmd, x.staffId, x.startMin, (xs ?? []).find((s: any) => s.id === x.serviceId)?.duration_min ?? 0); if (why) return { error: why }; }
+  }
   if (dur > 0) {
     const hh = String(Math.floor(startMin / 60)).padStart(2, '0'), mi = String(startMin % 60).padStart(2, '0');
     const s0 = zonedToUtc(dayYmd, `${hh}:${mi}`, salon.timezone);
@@ -259,8 +265,9 @@ export async function editBooking(id: string, dayYmd: string, startMin: number, 
 export async function rebookBooking(id: string, dayYmd: string, startMin: number): Promise<R> {
   const { sb, salon } = await requireCtx();
   const { data: b } = await sb.from('bookings').select('client_id,staff_id').eq('id', id).single();
-  const { data: lines } = await sb.from('booking_services').select('service_id').eq('booking_id', id);
+  const { data: lines } = await sb.from('booking_services').select('service_id,duration_min').eq('booking_id', id);
   if (!b || !lines?.length) return { error: 'Booking not found.' };
+  const why = await slotProblem(dayYmd, b.staff_id, startMin, lines.reduce((a, l) => a + l.duration_min, 0)); if (why) return { error: why };
   const hh = String(Math.floor(startMin / 60)).padStart(2, '0'), mi = String(startMin % 60).padStart(2, '0');
   const { error } = await sb.rpc('create_booking', { p_salon: salon.id, p_client: b.client_id, p_staff: b.staff_id, p_starts_at: zonedToUtc(dayYmd, `${hh}:${mi}`, salon.timezone).toISOString(), p_service_ids: lines.map((l) => l.service_id), p_source: 'staff', p_notes: null, p_mode: 'staff' });
   if (error) return { error: friendly(error.message) };
