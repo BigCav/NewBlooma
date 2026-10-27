@@ -5,7 +5,7 @@ import { NO_DISC, discountCents, type DiscPick } from '../sales/shared';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { TONE_LIST, addDaysYmd, dayInfo, fmtMin, initials, weekStartOf, type CalBlock, type CalBooking, type CalHours, type CalService, type CalSettings, type CalStaff, BLOCK_KINDS, slotsBetween } from '@/lib/cal';
-import { noShowBooking, messageBookingClient, addWalkIn, approveBooking, cancelBooking, checkInBooking, checkoutBooking, createBlock, dayAvailability, deleteBlock, editBooking, rebookBooking, rescheduleBooking, walkinPlan, createNewAppointment, searchBookings, type SearchHit } from './actions';
+import { delayStaffDay, noShowBooking, messageBookingClient, addWalkIn, approveBooking, cancelBooking, checkInBooking, checkoutBooking, createBlock, dayAvailability, deleteBlock, editBooking, rebookBooking, rescheduleBooking, walkinPlan, createNewAppointment, searchBookings, type SearchHit } from './actions';
 
 import { first, usd, m2, BLOCK_DURS_M, METHODS, TIP_OPTS, STEP, chipTone, kindOf, note, HATCH, type Avail, type Props } from './calUi';
 export function useCalendar(props: Props) {
@@ -19,7 +19,7 @@ export function useCalendar(props: Props) {
   const [query, setQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<'view' | 'new' | 'checkout' | 'edit' | 'blockview' | 'block' | 'walkin' | 'resched' | 'message'>('view');
+  const [mode, setMode] = useState<'view' | 'new' | 'checkout' | 'edit' | 'blockview' | 'block' | 'late' | 'walkin' | 'resched' | 'message'>('view');
   const [selId, setSelId] = useState<string | null>(null);
   const [blockId, setBlockId] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
@@ -230,6 +230,16 @@ export function useCalendar(props: Props) {
     act(() => editBooking(cur.id, cur.dayYmd, pl.start, pl.removed, pl.added, pl.extras.map((x) => ({ serviceId: x.svc.id, staffId: x.sid!, startMin: x.at! }))), msg, () => { setOpen(false); setMode('view'); });
   };
 
+  /* ---------- running late ---------- */
+  const [lf, setLf] = useState({ s: '', mins: 30, tell: true });
+  const openLate = () => { setLf({ s: team[0]?.id ?? '', mins: 30, tell: true }); setMode('late'); setOpen(true); setError(''); setNotice(''); };
+  const lateList = bookings.filter((b) => b.staffId === lf.s && b.dayYmd === day && (b.status === 'pending' || b.status === 'confirmed')).sort((a, b) => a.start - b.start);
+  const saveLate = () => {
+    if (!lf.s) { setError('Choose a team member.'); return; }
+    if (!lateList.length) { setError('There is nothing left to move for them on this day.'); return; }
+    act(() => delayStaffDay(lf.s, day, lf.mins, lf.tell), 'Appointments moved', () => { setOpen(false); setMode('view'); });
+  };
+
   /* ---------- block ---------- */
   const bfDur = bf.dur === -1 ? (av ? av.to - av.from : 0) : bf.dur;
   const saveBlock = () => {
@@ -405,5 +415,5 @@ export function useCalendar(props: Props) {
   }) : [];
 
   const nLock = lockFor(nf.services), edLock = lockFor(ed.ids);
-  return { laterUp, laterLate, laterDone, nLock, edLock, lockFor, HOUR_PX, act, activeCards, addWalkin, amap, av, avail, availKey, backToView, bf, bfDur, blank, blockId, blockRows, blocks, bookings, busy, bvB, cards, cfg, charge, chk, close, co, coMath, createNew, cur, day, dayB, dayHrs, days14, di, doneBk, ed, editPlan, error, firstOpenDay, gEnd, gHours, gStart, go, hasError, hours, hrsOf, later, laterBk, minutesFromIso, mode, moveBooking, nFirstSvc, nKeyStr, nKeys, nOffers, nPickSvc, nPlan, nSlots, nWhy, nf, notice, now, nowTop, offered, offers, open, openBlock, openBooking, openDays, openNew, pageSubtitle, pageTitle, pendingSel, plan, primary, query, reason, refresh, router, row, rs, saveBlock, saveEdit, searchOpen, seg, sel, selId, services, setAmap, setAvail, setBf, setBlockId, setCo, setEd, setError, setMode, setNf, setNotice, setNow, setOpen, setPendingSel, setPlan, setQuery, setRs, setSearchOpen, setSelId, setSres, setStaffSel, setWi, setWkOpen, slotsFor, sq, sres, staffName, staffSel, startCheckout, startResched, startT, statCount, statRevenue, statNext, strip, svcMap, team, today, todayList, tz, upcoming, view, viewEvents, vm, weekDays, wi, wiPlanText, wiPlanCss, wiSvc, wkCards, wkOpen, wkRange, wkStaff, wkTitle, ws, msg, setMsg, startMessage, sendMessage, started, markNoShow };
+  return { laterUp, laterLate, laterDone, nLock, edLock, lockFor, HOUR_PX, act, activeCards, addWalkin, amap, av, avail, availKey, backToView, bf, bfDur, blank, blockId, blockRows, blocks, bookings, busy, bvB, cards, cfg, charge, chk, close, co, coMath, createNew, cur, day, dayB, dayHrs, days14, di, doneBk, ed, editPlan, error, firstOpenDay, gEnd, gHours, gStart, go, hasError, hours, hrsOf, later, laterBk, minutesFromIso, mode, moveBooking, nFirstSvc, nKeyStr, nKeys, nOffers, nPickSvc, nPlan, nSlots, nWhy, nf, notice, now, nowTop, offered, offers, open, openBlock, openBooking, openDays, openNew, pageSubtitle, pageTitle, pendingSel, plan, primary, query, reason, refresh, router, row, rs, saveBlock, saveEdit, searchOpen, seg, sel, selId, services, setAmap, setAvail, setBf, setBlockId, setCo, setEd, setError, setMode, setNf, setNotice, setNow, setOpen, setPendingSel, setPlan, setQuery, setRs, setSearchOpen, setSelId, setSres, setStaffSel, setWi, setWkOpen, slotsFor, sq, sres, staffName, staffSel, startCheckout, startResched, startT, statCount, statRevenue, statNext, strip, svcMap, team, today, todayList, tz, upcoming, view, viewEvents, vm, weekDays, wi, wiPlanText, wiPlanCss, wiSvc, wkCards, wkOpen, wkRange, wkStaff, wkTitle, ws, msg, setMsg, startMessage, sendMessage, started, markNoShow, lf, setLf, openLate, lateList, saveLate };
 }

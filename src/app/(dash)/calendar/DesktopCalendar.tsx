@@ -33,6 +33,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
     plan, primary, query, reason, rs, saveBlock, saveEdit, services, setBf, setCo, setEd, setError, setMode, setNf, setNotice, setOpen, setQuery, setRs, setSelId, setStaffSel,
     setWi, slotsFor, sres, staffName, staffSel, startResched, svcMap, team, today, view, weekDays, wi, wiPlanCss, wiPlanText, wiSvc, wkRange, wkStaff, cfg,
     gHours, gStart, HOUR_PX, nowTop, setBlockId, vm, wkOpen: _wo, ws: _ws, nLock, edLock, lockFor,
+    lf, setLf, openLate, lateList, saveLate,
   } = c;
 
   const sq = query.trim();
@@ -131,6 +132,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
             </div>
             <div style={S('display:flex;gap:8px')}>
               <button onClick={openWalkin} style={S('height:40px;padding:0 16px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:13.5px;font-weight:500')}>Walk-in</button>
+              <button className="ghost" onClick={openLate} style={S('height:40px;padding:0 16px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:13.5px;font-weight:500')}>Running late</button>
               <button className="ghost" onClick={openBlockForm} style={S('height:40px;padding:0 16px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:13.5px;font-weight:500')}>Block time</button>
             </div>
               </div>
@@ -406,6 +408,25 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
                 <button className="ghost" onClick={() => addWalkin(false)} disabled={busy} style={S(BTN2)}>Add to calendar</button>
               </div>
               <button className="ghost" onClick={backToView} style={S('height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>Cancel</button>
+            </div>
+          )}
+
+          {mode === 'late' && (
+            <div style={S('display:flex;flex-direction:column;gap:18px')}>
+              <div><h2 style={S(H2D)}>Running late</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>Pushes back everything that has not started for one team member on {dayInfo(day).short}.</p></div>
+              <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="lt-who" style={S(LBL)}>Team member</span><TeamPicker team={team} selected={lf.s} onPick={(id) => { setLf({ ...lf, s: id }); setError(''); }} /></div>
+              <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="lt-mins" style={S(LBL)}>Running late by</span><div role="group" aria-labelledby="lt-mins" className="hscroll" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto')}>
+                {([[15, '15 min'], [30, '30 min'], [45, '45 min'], [60, '1 hour'], [90, '1.5 hours']] as const).map(([m, l]) => <button key={m} onClick={() => { setLf({ ...lf, mins: m }); setError(''); }} aria-pressed={lf.mins === m} style={S(chipD(lf.mins === m))}>{l}</button>)}</div></div>
+              <div style={S('display:flex;flex-direction:column;gap:6px')}><span style={S(LBL)}>{lateList.length ? lateList.length + (lateList.length === 1 ? ' appointment moves' : ' appointments move') : 'Nothing left to move'}</span>
+                {lateList.map((b) => <div key={b.id} style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 14px;border-radius:14px;background:#F4F5F7;font-size:14px')}><span style={S('min-width:0;overflow-wrap:anywhere')}>{b.client}</span><span style={S('flex:0 0 auto;color:#5E6673')}>{fmtMin(b.start)} to {fmtMin(b.start + lf.mins)}</span></div>)}</div>
+              <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="lt-tell" style={S(LBL)}>Tell the clients</span><div role="group" aria-labelledby="lt-tell" style={S('display:flex;gap:8px')}>
+                <button onClick={() => setLf({ ...lf, tell: true })} aria-pressed={lf.tell} style={S(chipD(lf.tell))}>Message them</button>
+                <button onClick={() => setLf({ ...lf, tell: false })} aria-pressed={!lf.tell} style={S(chipD(!lf.tell))}>Do not message</button></div></div>
+              {errP()}
+              <div style={S('display:flex;gap:10px')}>
+                <button onClick={saveLate} disabled={busy || !lateList.length} style={S(BTN)}>Move {lateList.length || ''} {lateList.length === 1 ? 'appointment' : 'appointments'}</button>
+                <BackBtn />
+              </div>
             </div>
           )}
 

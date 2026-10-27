@@ -14,7 +14,7 @@ import type { useCalendar } from './useCalendar';
 import type { Props } from './calUi';
 
 export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>; props: Props }) {
-  const { HOUR_PX, act, activeCards, addWalkin, amap, av, avail, availKey, backToView, bf, bfDur, blank, blockId, blockRows, blocks, bookings, busy, bvB, cards, cfg, charge, chk, close, co, coMath, createNew, cur, day, dayB, dayHrs, days14, di, doneBk, ed, editPlan, error, firstOpenDay, gEnd, gHours, gStart, go, hasError, hours, hrsOf, later, laterBk, minutesFromIso, mode, moveBooking, nFirstSvc, nKeyStr, nKeys, nOffers, nPickSvc, nPlan, nSlots, nWhy, nf, notice, now, nowTop, offered, offers, open, openBlock, openBooking, openDays, openNew, pageSubtitle, pageTitle, pendingSel, plan, primary, query, reason, refresh, router, row, rs, saveBlock, saveEdit, searchOpen, seg, sel, selId, services, setAmap, setAvail, setBf, setBlockId, setCo, setEd, setError, setMode, setNf, setNotice, setNow, setOpen, setPendingSel, setPlan, setQuery, setRs, setSearchOpen, setSelId, setSres, setStaffSel, setWi, setWkOpen, slotsFor, sq, sres, staffName, staffSel, startCheckout, startResched, startT, statCount, statRevenue, statNext, strip, svcMap, team, today, todayList, tz, upcoming, view, viewEvents, vm, weekDays, wi, wiPlanText, wiPlanCss, wiSvc, wkCards, wkOpen, wkRange, wkStaff, wkTitle, ws, nLock, edLock, lockFor } = c;
+  const { HOUR_PX, act, activeCards, addWalkin, amap, av, avail, availKey, backToView, bf, bfDur, blank, blockId, blockRows, blocks, bookings, busy, bvB, cards, cfg, charge, chk, close, co, coMath, createNew, cur, day, dayB, dayHrs, days14, di, doneBk, ed, editPlan, error, firstOpenDay, gEnd, gHours, gStart, go, hasError, hours, hrsOf, later, laterBk, minutesFromIso, mode, moveBooking, nFirstSvc, nKeyStr, nKeys, nOffers, nPickSvc, nPlan, nSlots, nWhy, nf, notice, now, nowTop, offered, offers, open, openBlock, openBooking, openDays, openNew, pageSubtitle, pageTitle, pendingSel, plan, primary, query, reason, refresh, router, row, rs, saveBlock, saveEdit, searchOpen, seg, sel, selId, services, setAmap, setAvail, setBf, setBlockId, setCo, setEd, setError, setMode, setNf, setNotice, setNow, setOpen, setPendingSel, setPlan, setQuery, setRs, setSearchOpen, setSelId, setSres, setStaffSel, setWi, setWkOpen, slotsFor, sq, sres, staffName, staffSel, startCheckout, startResched, startT, statCount, statRevenue, statNext, strip, svcMap, team, today, todayList, tz, upcoming, view, viewEvents, vm, weekDays, wi, wiPlanText, wiPlanCss, wiSvc, wkCards, wkOpen, wkRange, wkStaff, wkTitle, ws, nLock, edLock, lockFor, lf, setLf, openLate, lateList, saveLate } = c;
   const renderLater = (b: (typeof later)[number]) => (
               <div key={b.id} style={S('display:flex;align-items:center;gap:12px')}>
                 <span style={S('flex:0 0 40px;font-size:13px;color:#5E6673')}>{b.startText}</span>
@@ -144,6 +144,7 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
               <h2 style={S('margin:0;font-size:16px;font-weight:600')}>{day === today ? 'Later today' : 'Appointments'}</h2>
               <span style={S('display:flex;gap:8px')}>
                 <button onClick={() => { setOpen(true); setMode('walkin'); setWi({ name: '', clientId: null, svc: null, pro: 'any', cat: '' }); setError(''); setNotice(''); }} style={S('height:36px;padding:0 14px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:13px;font-weight:500;cursor:pointer')}>Walk-in</button>
+                <button onClick={openLate} style={S('height:36px;padding:0 14px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:13px;font-weight:500;cursor:pointer')}>Late</button>
                 <button onClick={() => { setOpen(true); setMode('block'); setBf({ s: team[0]?.id ?? '', kind: 'lunch', day: day < today ? today : day, dur: 60, start: null }); setError(''); setNotice(''); }} style={S('height:36px;padding:0 14px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:13px;font-weight:500;cursor:pointer')}>Block time</button>
               </span>
             </div>
@@ -308,6 +309,23 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
               <div style={S('display:flex;gap:10px')}>
                 <button onClick={() => act(() => deleteBlock(bvB.id), 'Block removed', () => { setBlockId(null); setOpen(false); setMode('view'); })} style={S(PRIMARY)}>Remove block</button>
                 <button onClick={close} style={S(SECOND)}>Close</button>
+              </div>
+            </>)}
+
+            {mode === 'late' && (<>
+              <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><div style={S('min-width:0')}><h2 style={S(H2S)}>Running late</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>Moves everything not started for one person on {dayInfo(day).short}.</p></div><button onClick={close} aria-label="Close" style={S(CLOSE_BTN)}><CloseX sw={2} /></button></div>
+              <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="lt-who" style={S('font-size:14px;font-weight:600')}>Team member</span><TeamPicker team={team} selected={lf.s} onPick={(id) => { setLf({ ...lf, s: id }); setError(''); }} /></div>
+              <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="lt-mins" style={S('font-size:14px;font-weight:600')}>Running late by</span><div role="group" aria-labelledby="lt-mins" className="hscroll" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto')}>
+                {([[15, '15 min'], [30, '30 min'], [45, '45 min'], [60, '1 hour'], [90, '1.5 hours']] as const).map(([m, l]) => <button key={m} onClick={() => { setLf({ ...lf, mins: m }); setError(''); }} aria-pressed={lf.mins === m} style={S(chip(lf.mins === m))}>{l}</button>)}</div></div>
+              <div style={S('display:flex;flex-direction:column;gap:6px')}><span style={S('font-size:14px;font-weight:600')}>{lateList.length ? lateList.length + (lateList.length === 1 ? ' appointment moves' : ' appointments move') : 'Nothing left to move'}</span>
+                {lateList.map((b) => <div key={b.id} style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 14px;border-radius:14px;background:#F4F5F7;font-size:14px')}><span style={S('min-width:0;overflow-wrap:anywhere')}>{b.client}</span><span style={S('flex:0 0 auto;color:#5E6673')}>{fmtMin(b.start)} to {fmtMin(b.start + lf.mins)}</span></div>)}</div>
+              <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="lt-tell" style={S('font-size:14px;font-weight:600')}>Tell the clients</span><div role="group" aria-labelledby="lt-tell" style={S('display:flex;gap:8px')}>
+                <button onClick={() => setLf({ ...lf, tell: true })} aria-pressed={lf.tell} style={S(chip(lf.tell))}>Message them</button>
+                <button onClick={() => setLf({ ...lf, tell: false })} aria-pressed={!lf.tell} style={S(chip(!lf.tell))}>Do not message</button></div></div>
+              {errP()}
+              <div style={S('display:flex;gap:10px')}>
+                <button onClick={saveLate} disabled={busy || !lateList.length} style={S(PRIMARY)}>Move {lateList.length || ''}</button>
+                <button onClick={close} style={S(SECOND)}>Cancel</button>
               </div>
             </>)}
 

@@ -164,6 +164,9 @@ export async function createBlock(staffId: string, dayYmd: string, startMin: num
   const hh = String(Math.floor(startMin / 60)).padStart(2, '0'), mi = String(startMin % 60).padStart(2, '0');
   const s = zonedToUtc(dayYmd, `${hh}:${mi}`, salon.timezone);
   const e = new Date(s.getTime() + durMin * 60000);
+  // Blocking time over booked clients would leave them there with no warning.
+  const { data: under } = await sb.from('bookings').select('clients(name)').eq('staff_id', staffId).in('status', ['pending', 'confirmed', 'checked_in', 'in_progress']).lt('starts_at', e.toISOString()).gt('ends_at', s.toISOString());
+  if (under?.length) return { error: `${under.length === 1 ? 'There is an appointment' : 'There are ' + under.length + ' appointments'} in that time (${under.slice(0, 3).map((u: any) => String(u.clients?.name ?? 'Client').split(' ')[0]).join(', ')}${under.length > 3 ? ' and more' : ''}). Move or cancel ${under.length === 1 ? 'it' : 'them'} first, or use Running late.` };
   const { error } = await sb.from('staff_blocks').insert({ salon_id: salon.id, staff_id: staffId, kind, starts_at: s.toISOString(), ends_at: e.toISOString() });
   if (error) return { error: friendly(error.message) };
   revalidatePath('/calendar'); return { ok: true };
@@ -332,4 +335,67 @@ export async function createNewAppointment(name: string, clientId: string | null
   }
   revalidatePath('/calendar');
   return { ok: true, id: main.data as string };
+}
+
+
+/**
+ * A team member is running late: push everything that has not started on a day back by some minutes.
+ * Checked first (closing time, shift end, blocked time, anyone already in the chair), then moved newest first so nothing overlaps on the way.
+ */
+export async function delayStaffDay(staffId: string, dayYmd: string, minutes: number, tell: boolean): Promise<R> {
+  const { sb, salon } = await requireCtx();
+  const tz = salon.timezone;
+  if (![10, 15, 20, 30, 45, 60, 90, 120].includes(minutes)) return { error: 'Choose how late they are running.' };
+  const a = zonedToUtc(dayYmd, '00:00', tz), z = zonedToUtc(dayYmd, '23:59:59', tz);
+  const [{ data: all }, { data: blocks }, { data: st }, av] = await Promise.all([
+    sb.from('bookings').select('id,client_id,starts_at,ends_at,status,clients(name,email,phone),booking_services(services(name))').eq('staff_id', staffId).not('status', 'in', '(cancelled,no_show)').gte('starts_at', a.toISOString()).lt('starts_at', z.toISOString()).order('starts_at', { ascending: false }),
+    sb.from('staff_blocks').select('starts_at,ends_at').eq('staff_id', staffId).lt('starts_at', z.toISOString()).gt('ends_at', a.toISOString()),
+    sb.from('staff').select('name').eq('id', staffId).maybeSingle(),
+    dayAvailability(dayYmd, staffId),
+  ]);
+  const move = ((all ?? []) as any[]).filter((b) => b.status === 'pending' || b.status === 'confirmed');
+  const stay = ((all ?? []) as any[]).filter((b) => !(b.status === 'pending' || b.status === 'confirmed'));
+  if (!move.length) return { error: 'There is nothing left to move for that team member on that day.' };
+  if (move.length > 40) return { error: 'That is too many appointments to move at once.' };
+  if (!av.open) return { error: 'That team member is not working that day.' };
+  const ms = minutes * 60000;
+  const mm = (iso: string) => minutesOfDay(iso, tz);
+  for (const b of move) {
+    const ns = new Date(new Date(b.starts_at).getTime() + ms), ne = new Date(new Date(b.ends_at).getTime() + ms);
+    const who = String(b.clients?.name ?? 'A client').split(' ')[0];
+    if (mm(ne.toISOString()) > av.to || ymdOf(ne.toISOString(), tz) !== dayYmd) return { error: `${who}'s appointment would finish after closing (${time12(ne.toISOString(), tz)}). Move or cancel it first, or choose a shorter delay.` };
+    if ((blocks ?? []).some((k: any) => ns < new Date(k.ends_at) && new Date(k.starts_at) < ne)) return { error: `${who}'s new time would land on blocked time. Remove the block first or choose a different delay.` };
+    if (stay.some((o) => ns < new Date(o.ends_at) && new Date(o.starts_at) < ne)) return { error: `${who}'s new time would clash with an appointment that is already under way.` };
+  }
+  const done: any[] = [];
+  for (const b of move) {
+    const { error } = await sb.from('bookings').update({ starts_at: new Date(new Date(b.starts_at).getTime() + ms).toISOString(), ends_at: new Date(new Date(b.ends_at).getTime() + ms).toISOString() }).eq('id', b.id);
+    if (error) {
+      for (const d of done.reverse()) await sb.from('bookings').update({ starts_at: d.starts_at, ends_at: d.ends_at }).eq('id', d.id);
+      return { error: friendly(error.message) };
+    }
+    done.push(b);
+  }
+  let told = 0, noContact = 0, failed = 0;
+  if (tell) {
+    const stylist = String(st?.name ?? 'Your stylist').split(' ')[0];
+    for (const b of [...move].reverse()) {
+      const c = b.clients;
+      if (!c || (!c.email && !c.phone)) { noContact++; continue; }
+      const svc = ((b.booking_services ?? []) as any[]).map((l) => l.services?.name).filter(Boolean).join(' + ') || 'appointment';
+      const text = `Hi ${String(c.name ?? 'there').split(' ')[0]}, ${stylist} is running about ${minutes} minutes late today. Your ${svc} is now at ${time12(new Date(new Date(b.starts_at).getTime() + ms).toISOString(), tz)} instead of ${time12(b.starts_at, tz)}. Sorry about that, and thank you for your patience.`;
+      try {
+        const th = await ensureThread(salon.id, b.client_id, b.id);
+        const r = await sendCustomMessage(salon.id, c, text, undefined, replyUrl(th.token));
+        if (!r.ok) { if (th.created) await dropEmptyThread(th.id); failed++; continue; }
+        await logStaffMessage(salon.id, th.id, text); told++;
+      } catch { failed++; }
+    }
+  }
+  revalidatePath('/calendar'); revalidatePath('/inbox');
+  const parts = [`${move.length} appointment${move.length === 1 ? '' : 's'} moved ${minutes} minutes later`];
+  if (tell) parts.push(`${told} client${told === 1 ? '' : 's'} told`);
+  if (noContact) parts.push(`${noContact} with no email or phone`);
+  if (failed) parts.push(`${failed} could not be messaged`);
+  return { ok: true, note: parts.join(', ') };
 }
