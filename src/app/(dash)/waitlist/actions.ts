@@ -34,7 +34,7 @@ export async function addToWaitlist(name: string, clientId: string | null, servi
     salon_id: salon.id, client_id: cid, service_id: serviceId, staff_id: staffId || null, weekdays,
     earliest_time: win === 'pm' ? '12:00' : null, latest_time: win === 'am' ? '12:00' : null, added_by: staff.id,
   }).select('id').single();
-  if (error) return { error: friendly(error.message) };
+  if (error) return { error: error.code === '23505' ? 'They are already on the waitlist for that service.' : friendly(error.message) };
   revalidatePath('/waitlist');
   return { ok: true, id: data.id, notice: `${first(name)} added to the waitlist` };
 }

@@ -150,6 +150,6 @@ export async function publicWaitlist(slug: string, i: { name: string; phone: str
     client = ins.data;
   }
   const { error } = await sb.from('waitlist_entries').insert({ salon_id: salon.id, client_id: client.id, service_id: svc.id, staff_id: staffId });
-  if (error) return { error: friendly(error.message) };
+  if (error && error.code !== '23505') return { error: friendly(error.message) }; // already waiting for this service: nothing more to do
   return {};
 }
