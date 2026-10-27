@@ -18,3 +18,9 @@ Import the `app` folder as the project root, add every variable from `.env.examp
 - Payment credentials are AES-256-GCM encrypted (APP_ENCRYPTION_KEY) in a table the browser cannot read.
 - Windcave results are always re-checked with Windcave server-side before a sale is marked paid.
 - No localStorage or sessionStorage anywhere.
+
+## Tests
+
+- `npm run check` type-checks and runs the unit tests (dates and time zones, redirects, phone and price inputs, email layout and escaping).
+- `npm run test:db` runs the database tests in `supabase/tests` (tenant isolation, roles and money, booking rules). It needs `TEST_DATABASE_URL`, pointing at a copy of the database, and rolls back everything it creates.
+- GitHub runs the type check and unit tests on every push (`.github/workflows/test.yml`); the database tests join in once a `TEST_DATABASE_URL` repository secret exists.

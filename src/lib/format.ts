@@ -14,18 +14,27 @@ export function ymd(iso: string | Date, tz: string) {
   return new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: tz }).format(new Date(iso));
 }
 export function toCents(v: FormDataEntryValue | null) {
-  const n = Number(String(v ?? '').replace(/[^0-9.]/g, ''));
-  return Number.isFinite(n) ? Math.round(n * 100) : 0;
+  const t = String(v ?? '').replace(/[^0-9.]/g, '');
+  if (!/^\d*\.?\d*$/.test(t) || !/\d/.test(t)) return 0;
+  // Worked out from the digits, not by multiplying, so 1.005 is 101 cents and never 100.49999.
+  const [whole = '', frac = ''] = t.split('.');
+  const f = (frac + '000').slice(0, 3);
+  return Number(whole || 0) * 100 + Number(f.slice(0, 2)) + (Number(f[2]) >= 5 ? 1 : 0);
 }
 export const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 /** Convert a wall-clock date + time in `tz` to a UTC Date. */
 export function zonedToUtc(date: string, time: string, tz: string) {
   const guess = new Date(`${date}T${time.length === 5 ? time + ':00' : time}Z`);
-  const parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).formatToParts(guess);
-  const g = (t: string) => Number(parts.find((p) => p.type === t)!.value);
-  const asLocal = Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'), g('second'));
-  return new Date(guess.getTime() - (asLocal - guess.getTime()));
+  const fmt = new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const offsetAt = (at: Date) => {
+    const parts = fmt.formatToParts(at);
+    const g = (t: string) => Number(parts.find((p) => p.type === t)!.value);
+    return Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'), g('second')) - at.getTime();
+  };
+  // The offset must be read at the answer, not at the guess, or the two days a year the clocks change come out an hour wrong.
+  const first = new Date(guess.getTime() - offsetAt(guess));
+  return new Date(guess.getTime() - offsetAt(first));
 }
 export function addDays(date: string, n: number) {
   const d = new Date(`${date}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10);
