@@ -49,3 +49,14 @@ begin
   perform pg_temp.ok(pg_temp.dml_as(us, format('update staff set commission_pct = 100 where id = %L', stfs)) = 'OK 0', 'stylist changed their own commission');
   perform pg_temp.ok(pg_temp.cnt_as(us, 'select 1 from staff_invites') = '0', 'stylist can read invites');
 end $t$;
+
+-- when the owner removes someone through the app (not as the database's own login), their open invite is cancelled too
+do $t$
+declare sa uuid := pg_temp.f('sa'); ua uuid := pg_temp.f('ua'); m uuid; tok text;
+begin
+  insert into staff (salon_id, name, role_title, app_role) values (sa, 'Leaver 2', 'Stylist', 'stylist') returning id into m;
+  tok := create_staff_invite(m);
+  perform pg_temp.ok(pg_temp.dml_as(ua, format('update staff set active = false, online_bookable = false where id = %L', m)) = 'OK 1', 'owner could not remove a team member');
+  perform set_config('request.jwt.claims', '', true);
+  perform pg_temp.ok((select expires_at from staff_invites where token = tok) <= now(), 'the removed member''s invite stayed open');
+end $t$;
