@@ -2,6 +2,7 @@
 import { revalidatePath } from 'next/cache';
 import { requireCtx, friendly } from '@/lib/session';
 import { sendCustomMessage } from '@/lib/notify';
+import { mailP, mailButton } from '@/lib/email-layout';
 import { ymd } from '@/lib/format';
 import { ensureFormToken, formUrl, loadBooking, loadTemplates, rowsForBooking, saveForms } from '@/lib/forms';
 import { niceDate, type FormInput } from '@/lib/forms-shared';
@@ -23,8 +24,8 @@ export async function sendFormLinks(bookingId: string): Promise<Res> {
   const first = b.clientName.split(' ')[0];
   const names = pend.map((r) => r.tpl.name);
   const text = `Hi ${first}, before your visit please complete ${names.join(' and ')}. It takes about two minutes: ${url}`;
-  const html = `<p style="margin:0 0 12px;font-size:15px;line-height:1.5">Hi ${esc(first)},</p><p style="margin:0 0 12px;font-size:15px;line-height:1.5">Before your visit, please complete: ${names.map(esc).join(', ')}. It takes about two minutes.</p><p style="margin:18px 0"><a href="${url}" style="background:#5B3DF5;color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none;display:inline-block">Complete your form</a></p>`;
-  const r = await sendCustomMessage(salon.id, { email: b.clientEmail }, text, { subject: `Please complete your form before your visit to ${salon.name}`, html });
+  const html = mailP(`Hi ${first},`) + mailP(`Before your visit, please complete: ${names.join(', ')}. It takes about two minutes.`) + mailButton('Complete your form', url);
+  const r = await sendCustomMessage(salon.id, { email: b.clientEmail }, text, { subject: `Please complete your form before your visit to ${salon.name}`, heading: 'Please complete your form', html }, { label: 'Complete your form', url });
   if (!r.ok) return { error: r.error };
   return { notice: 'Link sent to ' + b.clientEmail };
 }

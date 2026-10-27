@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { requireCtx, friendly } from '@/lib/session';
 import { releaseOnline, startOnline,startTerminal, pollTerminal, cancelTerminal, refundCard } from '@/lib/windcave';
 import { sendCustomMessage } from '@/lib/notify';
+import { mailP } from '@/lib/email-layout';
 import { dateLong } from '@/lib/format';
 import { fmt } from './shared';
 
@@ -102,7 +103,7 @@ export async function sendReceipt(saleId: string): Promise<Res> {
     ...(s.tax_inclusive && s.tax_cents ? [`<tr><td colspan="2" style="padding:0 0 4px;font-size:12.5px;color:#5E6673">Includes ${e(fmt(s.tax_cents))} tax</td></tr>`] : []),
   ].join('');
   const when = s.paid_at ? dateLong(s.paid_at, salon.timezone) : '';
-  const html = `<div style="font-size:15px;line-height:1.5;margin-bottom:4px">Hi ${e(first)}, thanks for visiting. Here is your receipt.</div><div style="font-size:13px;color:#5E6673;margin-bottom:16px">${[when, how ? 'Paid by ' + e(how) : ''].filter(Boolean).join(' · ')}</div><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse">${rows}</table>`;
-  const r = await sendCustomMessage(salon.id, { phone: c.phone, email: c.email }, text, { subject: `Your receipt from ${salon.name}`, html, footer: (s as any).bookings?.ref_no ? `Booking B-${(s as any).bookings.ref_no}` : undefined });
+  const html = mailP(`Hi ${first}, thanks for visiting. Here is your receipt.`) + `<div style="font-size:13px;color:#5E6673;margin:-6px 0 14px">${[when, how ? 'Paid by ' + e(how) : ''].filter(Boolean).join(' · ')}</div><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse">${rows}</table>`;
+  const r = await sendCustomMessage(salon.id, { phone: c.phone, email: c.email }, text, { subject: `Your receipt from ${salon.name}`, heading: 'Your receipt', html, footer: (s as any).bookings?.ref_no ? `${salon.name} · Booking B-${(s as any).bookings.ref_no}` : undefined });
   return r.ok ? { notice: `Receipt sent to ${first}` } : { error: r.error };
 }

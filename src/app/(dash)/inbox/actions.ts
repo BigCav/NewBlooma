@@ -51,7 +51,7 @@ export async function declineRequest(id: string, reason: string): Promise<R> {
   refresh();
   const svc = (b?.booking_services ?? []).map((l: any) => l.services?.name).filter(Boolean).join(' + ') || 'your booking';
   const text = `Hi ${first(c?.name)}, sorry, we can't take your booking for ${svc} on ${dateLong(b.starts_at, salon.timezone)} at ${time12(b.starts_at, salon.timezone)}: ${REASON_TEXT[reason]}. Please pick another time on our booking page.`;
-  const r = await sendCustomMessage(salon.id, c ?? {}, text);
+  const r = await sendCustomMessage(salon.id, c ?? {}, text, { subject: `About your booking request at ${salon.name}`, heading: 'We could not take your booking' }, { label: 'Book another time', url: `${process.env.NEXT_PUBLIC_APP_URL ?? ''}/b/${salon.slug}` });
   return { ok: true, notice: r.ok ? `Declined. ${first(c?.name)} has been told.` : `Declined. ${first(c?.name)} was not told: ${r.error}` };
 }
 

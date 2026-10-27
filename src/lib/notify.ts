@@ -2,9 +2,9 @@ import 'server-only';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { dateLong, time12 } from '@/lib/format';
 import { outstandingForBooking } from '@/lib/forms';
+import { mailShell, mailP, mailNote, mailButton, mailDetails, textDetails } from '@/lib/email-layout';
 
 const base = () => process.env.NEXT_PUBLIC_APP_URL ?? '';
-const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 
 // Email goes through the "send-email" Supabase edge function (which holds the Resend key), or straight to Resend with RESEND_API_KEY only when Supabase is not configured.
 const viaSupabase = () => !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -15,12 +15,14 @@ export const smsConfigured = () => !!(process.env.TWILIO_ACCOUNT_SID && process.
 
 type Row = { id: string; salon_id: string; booking_id: string | null; channel: 'email' | 'sms'; to_address: string; template: string; payload: any; attempts: number };
 
+const footerFor = (salon: { name: string; phone?: string | null }) => `${salon.name}${salon.phone ? ` · ${salon.phone}` : ''}`;
+
 async function compose(r: Row): Promise<{ subject: string; text: string; html: string; from: string } | null> {
   const sb = supabaseAdmin();
   const { data: salon } = await sb.from('salons').select('name,phone,timezone,slug').eq('id', r.salon_id).single();
   if (!salon) return null;
-  let when = '', who = '', manage = '', bref = '';
-  let b0: unknown = null;
+  let service = '', staffName = '', date = '', time = '', bref = '', clientName = '';
+  let manage = '';
   if (r.booking_id) {
     const { data: b } = await sb.from('bookings').select('ref_no,starts_at,status,staff(name),clients(name,reminders),booking_services(services(name))').eq('id', r.booking_id).single();
     if (!b) return null;
@@ -28,33 +30,39 @@ async function compose(r: Row): Promise<{ subject: string; text: string; html: s
     if (!cancelledTpl && ['cancelled', 'no_show'].includes(b.status)) return null; // nothing to tell them
     if (cancelledTpl && b.status !== 'cancelled') return null; // it was reinstated
     if (r.template.startsWith('reminder') && (b as any).clients?.reminders === false) return null; // client turned reminders off
-    b0 = b; bref = 'B-' + (b as any).ref_no;
-    when = `${dateLong(b.starts_at, salon.timezone)} at ${time12(b.starts_at, salon.timezone)}`;
-    who = `${(b as any).booking_services.map((x: any) => x.services.name).join(', ')} with ${(b as any).staff?.name}`;
+    bref = 'B-' + (b as any).ref_no;
+    clientName = String((b as any).clients?.name ?? '');
+    date = dateLong(b.starts_at, salon.timezone); time = time12(b.starts_at, salon.timezone);
+    service = (b as any).booking_services.map((x: any) => x.services.name).join(', ');
+    staffName = (b as any).staff?.name ?? '';
     const { data: t } = await sb.from('booking_tokens').select('token').eq('booking_id', r.booking_id).eq('purpose', 'manage_booking').maybeSingle();
     if (t) manage = `${base()}/manage/${t.token}`;
   }
-  let subject = '', lines: string[] = [], link = manage, cta = 'View or change your appointment';
+  const first = clientName.split(' ')[0] || 'there';
+  const visit: [string, string][] = [['Service', service], ['With', staffName], ['Date', date], ['Time', time], ['Booking', bref]];
+  let subject = '', heading = '', intro = '', details: [string, string | null | undefined][] = visit, outro = '', link = manage, cta = 'View or change your appointment';
   switch (r.template) {
-    case 'booking_confirmation': subject = `Booking confirmed at ${salon.name}`; lines = [`You are booked in for ${who}.`, when]; break;
-    case 'booking_cancelled': subject = `Your booking at ${salon.name} was cancelled`; lines = [`Your appointment has been cancelled: ${who}.`, `It was booked for ${when}.`, 'If this was a mistake, or you would like another time, you can book again online.']; link = `${base()}/b/${salon.slug}`; cta = 'Book again'; break;
-    case 'owner_new_booking': subject = `New booking: ${(b0 as any)?.clients?.name ?? 'a client'}`; lines = [`${(b0 as any)?.clients?.name ?? 'A client'} booked online: ${who}.`, when]; link = `${base()}/inbox`; cta = 'Open your inbox'; break;
-    case 'owner_booking_cancelled': subject = `Cancellation: ${(b0 as any)?.clients?.name ?? 'a client'}`; lines = [`${(b0 as any)?.clients?.name ?? 'A client'} cancelled: ${who}.`, `It was booked for ${when}.`]; link = `${base()}/calendar`; cta = 'Open your calendar'; break;
-    case 'reminder_24h': subject = `Reminder: tomorrow at ${salon.name}`; lines = [`Just a reminder of your appointment: ${who}.`, when]; break;
-    case 'reminder_2h': subject = `Reminder: today at ${salon.name}`; lines = [`See you soon: ${who}.`, when]; break;
+    case 'booking_confirmation': subject = `Booking confirmed at ${salon.name}`; heading = 'You are booked in'; intro = `Hi ${first}, your appointment is confirmed. Here are the details.`; break;
+    case 'booking_cancelled': subject = `Your booking at ${salon.name} was cancelled`; heading = 'Appointment cancelled'; intro = `Hi ${first}, your appointment has been cancelled.`; outro = 'If this was a mistake, or you would like another time, you can book again online.'; link = `${base()}/b/${salon.slug}`; cta = 'Book again'; break;
+    case 'owner_new_booking': subject = `New booking: ${clientName || 'a client'}`; heading = 'New online booking'; intro = `${clientName || 'A client'} booked online.`; details = [['Client', clientName], ...visit]; link = `${base()}/inbox`; cta = 'Open your inbox'; break;
+    case 'owner_booking_cancelled': subject = `Cancellation: ${clientName || 'a client'}`; heading = 'Booking cancelled'; intro = `${clientName || 'A client'} cancelled their appointment.`; details = [['Client', clientName], ...visit]; link = `${base()}/calendar`; cta = 'Open your calendar'; break;
+    case 'reminder_24h': subject = `Reminder: tomorrow at ${salon.name}`; heading = 'See you tomorrow'; intro = `Hi ${first}, just a reminder of your appointment.`; break;
+    case 'reminder_2h': subject = `Reminder: today at ${salon.name}`; heading = 'See you soon'; intro = `Hi ${first}, your appointment is coming up.`; break;
     case 'waitlist_offer': {
-      subject = `A time opened up at ${salon.name}`; link = `${base()}/offer/${r.payload.token}`; cta = 'Book this time';
-      lines = [`A time you were waiting for is available: ${dateLong(r.payload.starts_at, salon.timezone)} at ${time12(r.payload.starts_at, salon.timezone)}.`, 'It is held for you for a short time.']; break; }
-    case 'review_request': subject = `How was your visit to ${salon.name}?`; link = `${base()}/review/${r.payload.token}`; cta = 'Leave a review'; lines = ['Thanks for visiting. We would love to hear how it went.']; break;
+      subject = `A time opened up at ${salon.name}`; heading = 'A time opened up'; intro = 'A time you were waiting for is now available.'; outro = 'It is held for you for a short time.';
+      link = `${base()}/offer/${r.payload.token}`; cta = 'Book this time';
+      details = [['Date', dateLong(r.payload.starts_at, salon.timezone)], ['Time', time12(r.payload.starts_at, salon.timezone)]]; break; }
+    case 'review_request': subject = `How was your visit to ${salon.name}?`; heading = 'How was your visit?'; intro = 'Thanks for visiting. We would love to hear how it went.'; details = []; link = `${base()}/review/${r.payload.token}`; cta = 'Leave a review'; break;
     default: return null;
   }
-  if (bref) lines.push(`Booking reference: ${bref}`);
   // Forms the client still owes for this visit go in the same email, with their own link.
   const forms = r.booking_id && (r.template === 'booking_confirmation' || r.template === 'reminder_24h') ? await outstandingForBooking(r.booking_id).catch(() => null) : null;
-  if (forms) lines.push(`Before your visit, please complete: ${forms.names.join(', ')}. It takes about two minutes.`);
-  const text = `${lines.join('\n')}\n\n${cta}: ${link}${forms ? `\n\nComplete your form: ${forms.url}` : ''}\n\n${salon.name}${salon.phone ? ` · ${salon.phone}` : ''}`;
-  const html = `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:auto"><h2>${esc(salon.name)}</h2>${lines.map((l) => `<p>${esc(l)}</p>`).join('')}<p><a href="${link}" style="background:#5B3DF5;color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none;display:inline-block">${esc(cta)}</a></p>${forms ? `<p><a href="${forms.url}" style="background:#0E1116;color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none;display:inline-block">Complete your form</a></p>` : ''}</div>`;
-  return { subject, text, html, from: fromFor(salon.name) };
+  const formLine = forms ? `Before your visit, please complete: ${forms.names.join(', ')}. It takes about two minutes.` : '';
+  const text = [heading, '', intro, textDetails(details), outro, formLine, '', link ? `${cta}: ${link}` : '', forms ? `Complete your form: ${forms.url}` : '', '', footerFor(salon)]
+    .filter((x, i, a) => x !== '' || (i > 0 && a[i - 1] !== '')).join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  const body = mailP(intro) + mailDetails(details) + (outro ? `<div style="height:8px"></div>${mailP(outro)}` : '') + (formLine ? `<div style="height:8px"></div>${mailP(formLine)}` : '')
+    + (link ? mailButton(cta, link) : '') + (forms ? mailButton('Complete your form', forms.url, 'dark') : '');
+  return { subject, text, html: mailShell({ brand: salon.name, heading, body, footer: footerFor(salon), preheader: intro }), from: fromFor(salon.name) };
 }
 
 async function sendEmail(to: string, m: { subject: string; text: string; html: string; from: string }) {
@@ -100,8 +108,11 @@ export async function processOutbox(limit = 50) {
   return stats;
 }
 
-/** Sends a one-off message typed by staff, right away, and keeps a record of it in the outbox. */
-export async function sendCustomMessage(salonId: string, to: { phone?: string | null; email?: string | null }, text: string, email?: { subject: string; html: string; footer?: string }, replyUrl?: string): Promise<{ ok: true; via: 'sms' | 'email' } | { ok: false; error: string }> {
+/** A button under a custom message. A bare string is a "Reply" link. */
+type Action = string | { label: string; url: string };
+
+/** Sends a one-off message typed by staff, right away, and keeps a record of it in the outbox. `email` customises the subject, heading and body of the email version. */
+export async function sendCustomMessage(salonId: string, to: { phone?: string | null; email?: string | null }, text: string, email?: { subject: string; html?: string; heading?: string; footer?: string }, action?: Action): Promise<{ ok: true; via: 'sms' | 'email' } | { ok: false; error: string }> {
   const sb = supabaseAdmin();
   const { data: salon } = await sb.from('salons').select('name,phone').eq('id', salonId).single();
   if (!salon) return { ok: false, error: 'Salon not found.' };
@@ -109,14 +120,14 @@ export async function sendCustomMessage(salonId: string, to: { phone?: string | 
   if (!channel) return { ok: false, error: smsConfigured() || emailConfigured() ? 'This client has no phone or email that can receive messages.' : 'Messaging is not set up yet. Add the Twilio or Resend keys to send.' };
   const address = (channel === 'sms' ? to.phone : to.email)!;
   const row = { salon_id: salonId, channel, to_address: address, template: 'custom_message', payload: { text } };
+  const act = typeof action === 'string' ? { label: 'Reply', url: action } : action;
   try {
-    if (channel === 'sms') await sendSms(address, `${salon.name}: ${text}${replyUrl ? ` Reply: ${replyUrl}` : ''}`);
+    if (channel === 'sms') await sendSms(address, `${salon.name}: ${text}${act ? ` ${act.label}: ${act.url}` : ''}`);
     else {
-      const foot = email?.footer ? esc(email.footer) : `${esc(salon.name)}${salon.phone ? ` · ${esc(salon.phone)}` : ''}`;
-      const button = replyUrl ? `<p style="margin:20px 0 0"><a href="${esc(replyUrl)}" style="display:inline-block;background:#0E1116;color:#FFFFFF;text-decoration:none;font-weight:500;font-size:15px;padding:12px 26px;border-radius:999px">Reply</a></p>` : '';
-      const body = (email?.html ?? text.split(/\n+/).map((l) => `<p style="margin:0 0 12px;font-size:15px;line-height:1.5">${esc(l)}</p>`).join('')) + button;
-      await sendEmail(address, { from: fromFor(salon.name), subject: email?.subject ?? `Message from ${salon.name}`, text: `${text}${replyUrl ? `\n\nReply: ${replyUrl}` : ''}\n\n${email?.footer ?? salon.name + (salon.phone ? ` · ${salon.phone}` : '')}`,
-        html: `<div style="background:#F4F5F7;padding:24px 12px;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#0E1116"><div style="max-width:480px;margin:auto;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:20px;padding:28px"><div style="font-size:20px;font-weight:600;letter-spacing:-0.01em;margin-bottom:18px">${esc(salon.name)}</div>${body}</div><div style="max-width:480px;margin:12px auto 0;text-align:center;font-size:12.5px;color:#5E6673">${foot}</div></div>` });
+      const foot = email?.footer ?? footerFor(salon);
+      const body = (email?.html ?? text.split(/\n+/).map(mailP).join('')) + (act ? mailButton(act.label, act.url, 'dark') : '');
+      await sendEmail(address, { from: fromFor(salon.name), subject: email?.subject ?? `Message from ${salon.name}`, text: `${text}${act ? `\n\n${act.label}: ${act.url}` : ''}\n\n${foot}`,
+        html: mailShell({ brand: salon.name, heading: email?.heading ?? 'You have a message', body, footer: foot, preheader: text.slice(0, 90) }) });
     }
   } catch (e: any) {
     await sb.from('notifications_outbox').insert({ ...row, status: 'failed', attempts: 1, error: String(e.message).slice(0, 200) });
@@ -136,14 +147,11 @@ export async function flushOutbox() {
 export async function sendWelcomeEmail(to: string, name: string) {
   if (!emailConfigured()) return;
   try {
-    const first = esc(name.trim().split(/\s+/)[0] || 'there');
+    const first = name.trim().split(/\s+/)[0] || 'there';
     const link = `${base()}/setup`;
-    const text = `Hi ${name.trim().split(/\s+/)[0] || 'there'}, welcome to Aster.
-
-Your account is ready. Set up your salon in a few minutes and start taking bookings.
-
-Set up your salon: ${link}`;
-    const html = `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:auto"><h2>Welcome to Aster, ${first}</h2><p>Your account is ready. Set up your salon in a few minutes and start taking bookings.</p><p><a href="${link}" style="background:#5B3DF5;color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none;display:inline-block">Set up your salon</a></p></div>`;
+    const intro = `Hi ${first}, your account is ready. Set up your salon in a few minutes and start taking bookings.`;
+    const text = `Welcome to Aster\n\n${intro}\n\nSet up your salon: ${link}\n\nAster`;
+    const html = mailShell({ brand: 'Aster', heading: 'Welcome to Aster', body: mailP(intro) + mailButton('Set up your salon', link), footer: 'Aster', preheader: intro });
     await sendEmail(to, { subject: 'Welcome to Aster', text, html, from: fromFor('Aster') });
   } catch { /* welcome emails are a courtesy */ }
 }
@@ -152,12 +160,10 @@ Set up your salon: ${link}`;
 export async function sendPasswordResetEmail(to: string, link: string): Promise<boolean> {
   if (!emailConfigured()) return false;
   try {
-    const text = `We got a request to reset your Aster password.
-
-Choose a new password: ${link}
-
-If you did not ask for this, you can ignore this email. The link works once and expires soon.`;
-    const html = `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:auto"><h2>Reset your password</h2><p>We got a request to reset your Aster password.</p><p><a href="${link}" style="background:#5B3DF5;color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none;display:inline-block">Choose a new password</a></p><p style="color:#5E6673;font-size:13px">If you did not ask for this, you can ignore this email. The link works once and expires soon.</p></div>`;
+    const intro = 'We got a request to reset your Aster password.';
+    const note = 'If you did not ask for this, you can ignore this email. The link works once and expires soon.';
+    const text = `Reset your password\n\n${intro}\n\nChoose a new password: ${link}\n\n${note}\n\nAster`;
+    const html = mailShell({ brand: 'Aster', heading: 'Reset your password', body: mailP(intro) + mailButton('Choose a new password', link) + mailNote(note), footer: 'Aster', preheader: intro });
     await sendEmail(to, { subject: 'Reset your Aster password', text, html, from: fromFor('Aster') });
     return true;
   } catch { return false; }

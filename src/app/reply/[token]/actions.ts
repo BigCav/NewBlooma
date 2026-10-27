@@ -2,6 +2,7 @@
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { allow, clientIp } from '@/lib/rate-limit';
 import { sendCustomMessage } from '@/lib/notify';
+import { mailP } from '@/lib/email-layout';
 
 /** A client answers a message from the salon using the link in their email or text. The reply lands in the salon's Inbox. */
 export async function sendClientReply(token: string, text: string): Promise<{ error?: string; ok?: boolean }> {
@@ -20,7 +21,7 @@ export async function sendClientReply(token: string, text: string): Promise<{ er
     const { data: s } = await sb.from('salons').select('email').eq('id', it.salon_id).single();
     const name = (it as any).clients?.name ?? 'A client';
     const base = process.env.NEXT_PUBLIC_APP_URL ?? '';
-    if (s?.email) await sendCustomMessage(it.salon_id, { email: s.email }, `${name} replied: ${text}\n\nOpen your inbox to answer: ${base}/inbox`);
+    if (s?.email) await sendCustomMessage(it.salon_id, { email: s.email }, text, { subject: `${name} replied`, heading: `${name} replied`, html: mailP(text) }, { label: 'Open your inbox', url: `${base}/inbox` });
   } catch { /* the Inbox badge still shows it */ }
   return { ok: true };
 }
