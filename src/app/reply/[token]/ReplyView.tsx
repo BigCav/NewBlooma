@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { sendClientReply } from './actions';
 
 type Msg = { mine: boolean; text: string; at: string };
@@ -7,6 +7,8 @@ const card: React.CSSProperties = { boxSizing: 'border-box', background: '#FFFFF
 
 export function ReplyView({ token, salon, first, context, thread }: { token: string; salon: string; first: string; context: string; thread: Msg[] }) {
   const [msgs, setMsgs] = useState(thread); const [text, setText] = useState(''); const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
+  const listRef = useRef<HTMLUListElement>(null);
+  useEffect(() => { const el = listRef.current; if (el) el.scrollTop = el.scrollHeight; }, [msgs.length]);
   const send = async () => {
     const t = text.trim(); if (!t) { setError('Write your reply first.'); return; }
     setBusy(true); setError('');
@@ -21,7 +23,7 @@ export function ReplyView({ token, salon, first, context, thread }: { token: str
         <div style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em' }}>{salon}</div>
         <section style={card} aria-label="Conversation">
           <div><h1 style={{ margin: 0, fontSize: 26, fontWeight: 600, letterSpacing: '-0.03em' }}>Hi {first}</h1>{!!context && <p style={{ margin: '6px 0 0', color: '#5E6673' }}>{context}</p>}</div>
-          <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <ul ref={listRef} aria-label="Messages" style={{ margin: 0, padding: '2px 4px 2px 0', listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 'min(44dvh, 360px)', overflowY: 'auto', overscrollBehavior: 'contain' }}>
             {msgs.map((m, k) => (
               <li key={k} style={{ display: 'flex', justifyContent: m.mine ? 'flex-start' : 'flex-end' }}>
                 <span style={{ display: 'block', maxWidth: '86%' }}>

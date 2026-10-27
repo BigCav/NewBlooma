@@ -3,7 +3,7 @@
 // only the {{ }} holes are real data and handlers are real server actions.
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
 import { acceptRequest, declineRequest, markDone, markRead, replyToItem } from './actions';
@@ -116,15 +116,7 @@ function Panel({ c, m }: { c: C; m: boolean }) {
       </dl>
     )}
     {!!sel.note && <p style={S('margin:0;padding:14px 16px;border-radius:16px;background:#F4F5F7;font-size:14px;overflow-wrap:anywhere')}>{sel.note}</p>}
-    {isMsg && (
-      <ul style={S('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px')}>
-        {sel.thread.map((t, k) => (
-          <li key={k} style={S('display:flex;justify-content:' + (t.mine ? 'flex-end' : 'flex-start'))}><span style={S('display:block;max-width:86%')}>
-            <span style={S('max-width:86%;box-sizing:border-box;padding:10px 14px;border-radius:18px;font-size:14px;overflow-wrap:anywhere;background:' + (t.mine ? '#0E1116' : '#F4F5F7') + ';color:' + (t.mine ? '#FFFFFF' : '#0E1116') + ';display:block')}>{t.text}</span>
-            <span style={S('display:block;margin-top:4px;font-size:12px;color:#5E6673;text-align:right')}>{t.mine ? 'You' : first}, {t.at}</span></span></li>
-        ))}
-      </ul>
-    )}
+    {isMsg && <Thread thread={sel.thread} first={first} />}
     {actionable && c.mode === 'view' && (
       <div style={S('display:flex;gap:10px')}>
         <button onClick={c.accept} disabled={c.busy} style={S(BTN)}>Accept</button>
@@ -269,4 +261,20 @@ export function InboxView({ items }: { items: InboxItem[] }) {
     {c.narrow !== false && <Mobile c={c} />}
     {c.narrow !== true && <Desktop c={c} />}
   </>);
+}
+
+
+/** The conversation: fixed height, scrolls inside itself and opens at the newest message. */
+function Thread({ thread, first }: { thread: InboxItem['thread']; first: string }) {
+  const ref = useRef<HTMLUListElement>(null);
+  useEffect(() => { const el = ref.current; if (el) el.scrollTop = el.scrollHeight; }, [thread.length]);
+  return (
+    <ul ref={ref} aria-label="Conversation" style={S('margin:0;padding:2px 4px 2px 0;list-style:none;display:flex;flex-direction:column;gap:10px;max-height:min(44dvh,360px);overflow-y:auto;overscroll-behavior:contain')}>
+      {thread.map((t, k) => (
+        <li key={k} style={S('display:flex;justify-content:' + (t.mine ? 'flex-end' : 'flex-start'))}><span style={S('display:block;max-width:86%;min-width:0')}>
+          <span style={S('box-sizing:border-box;padding:10px 14px;border-radius:18px;font-size:14px;overflow-wrap:anywhere;white-space:pre-wrap;background:' + (t.mine ? '#0E1116' : '#F4F5F7') + ';color:' + (t.mine ? '#FFFFFF' : '#0E1116') + ';display:block')}>{t.text}</span>
+          <span style={S('display:block;margin-top:4px;font-size:12px;color:#5E6673;text-align:' + (t.mine ? 'right' : 'left'))}>{t.mine ? 'You' : first}, {t.at}</span></span></li>
+      ))}
+    </ul>
+  );
 }
