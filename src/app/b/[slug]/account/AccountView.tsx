@@ -34,18 +34,35 @@ function SignIn({ slug, salon }: { slug: string; salon: string }) {
     setBusy(false);
   };
   return (
-    <div style={page}><div style={{ ...wrap, maxWidth: 520 }}>
-      <Link href={`/b/${slug}`} style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: '#0E1116', textDecoration: 'none' }}>{salon}</Link>
-      <form onSubmit={(e) => { e.preventDefault(); go(); }} style={card}>
-        <h1 style={{ margin: 0, fontSize: 28, fontWeight: 600, letterSpacing: '-0.03em' }}>Your account</h1>
-        <p style={{ margin: 0, color: '#5E6673' }}>Sign in to see and manage your appointments.</p>
-        <input aria-label="Email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" style={input} />
-        <input aria-label="Password" type="password" autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Password" style={input} />
-        {!!error && <p role="alert" style={err}>{error}</p>}
-        <button type="submit" disabled={busy} style={{ ...dark, height: 48 }}>{busy ? 'Signing in…' : 'Sign in'}</button>
-        <p style={{ margin: 0, color: '#5E6673', fontSize: 13 }}>No account yet? Book an appointment and choose “Save my details for next time”.</p>
-        <Link href={`/b/${slug}/book`} style={{ ...light, height: 48 }}>Book an appointment</Link>
-      </form>
+    <div style={{ ...page, display: 'flex', alignItems: 'center' }}><div style={{ ...wrap, maxWidth: 1000, width: '100%', gap: 20 }}>
+      <Link href={`/b/${slug}`} className="only-m" style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: '#0E1116', textDecoration: 'none' }}>{salon}</Link>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'stretch', gap: 20 }}>
+        <aside className="only-d" style={{ display: 'flex', flex: '1 1 0', minWidth: 0, boxSizing: 'border-box', borderRadius: 28, background: '#0E1116', color: '#FFFFFF', padding: 40, flexDirection: 'column', justifyContent: 'space-between', gap: 40 }}>
+          <Link href={`/b/${slug}`} style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: '#FFFFFF', textDecoration: 'none' }}>{salon}</Link>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <h2 style={{ margin: 0, fontSize: 32, lineHeight: 1.15, fontWeight: 600, letterSpacing: '-0.03em' }}>Your appointments, all in one place.</h2>
+            <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {['See your upcoming visits', 'Change or cancel in a tap', 'Rebook your favourites faster', 'Your details saved for next time'].map((t) => (
+                <li key={t} style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 15, color: '#D5D9E0' }}>
+                  <span aria-hidden style={{ flex: '0 0 auto', width: 22, height: 22, borderRadius: 999, background: '#ECE8FF', color: '#3B2BB5', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>✓</span>{t}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </aside>
+        <form onSubmit={(e) => { e.preventDefault(); go(); }} style={{ ...card, flex: '1 1 0', minWidth: 0, padding: 32 }}>
+          <div><h1 style={{ margin: 0, fontSize: 28, fontWeight: 600, letterSpacing: '-0.03em' }}>Your account</h1>
+            <p style={{ margin: '6px 0 0', color: '#5E6673' }}>Sign in to see and manage your appointments.</p></div>
+          <input aria-label="Email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" style={input} />
+          <input aria-label="Password" type="password" autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Password" style={input} />
+          {!!error && <p role="alert" style={err}>{error}</p>}
+          <button type="submit" disabled={busy} style={{ ...dark, height: 48 }}>{busy ? 'Signing in…' : 'Sign in'}</button>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '14px 16px', borderRadius: 16, background: '#F4F5F7', fontSize: 13.5, color: '#5E6673', lineHeight: 1.45 }}>
+            <span aria-hidden style={{ flex: '0 0 auto', width: 22, height: 22, borderRadius: 999, background: '#ECE8FF', color: '#3B2BB5', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700 }}>+</span>
+            <span><strong style={{ color: '#0E1116', fontWeight: 600 }}>New here?</strong> <Link href={`/b/${slug}/book`} style={{ color: '#5B3DF5', fontWeight: 600, textDecoration: 'none' }}>Book an appointment</Link> and tick “Save my details for next time” to create your account.</span>
+          </div>
+        </form>
+      </div>
     </div></div>
   );
 }
