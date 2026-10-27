@@ -63,6 +63,7 @@ export async function setPrice(saleId: string, dollars: string): Promise<Res> {
   const { sb } = await requireCtx();
   const n = Number(String(dollars).replace(/[^0-9.]/g, ''));
   if (!Number.isFinite(n) || n <= 0) return { error: 'Enter a price above zero, like 45 or 45.50.' };
+  await releaseOnline(saleId);
   const { error } = await sb.rpc('set_sale_service_price', { p_sale: saleId, p_cents: Math.round(n * 100) });
   if (error) return { error: friendly(error.message) };
   revalidatePath('/sales'); return { notice: 'Sale updated' };
