@@ -2,7 +2,7 @@ import 'server-only';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { dateLong, time12 } from '@/lib/format';
 import { outstandingForBooking } from '@/lib/forms';
-import { mailShell, mailP, mailNote, mailButton, mailDetails, textDetails } from '@/lib/email-layout';
+import { mailShell, mailP, mailNote, mailButton, mailButtonPair, mailDetails, textDetails } from '@/lib/email-layout';
 
 const base = () => process.env.NEXT_PUBLIC_APP_URL ?? '';
 
@@ -58,11 +58,11 @@ async function compose(r: Row): Promise<{ subject: string; text: string; html: s
   // Forms the client still owes for this visit go in the same email, with their own link.
   const forms = r.booking_id && (r.template === 'booking_confirmation' || r.template === 'reminder_24h') ? await outstandingForBooking(r.booking_id).catch(() => null) : null;
   const formLine = forms ? `Before your visit, please complete: ${forms.names.join(', ')}. It takes about two minutes.` : '';
-  const text = [heading, '', intro, textDetails(details), outro, formLine, '', link ? `${cta}: ${link}` : '', forms ? `Complete your form: ${forms.url}` : '', '', footerFor(salon)]
+  const text = [heading, '', intro, textDetails(details), outro, formLine, '', link ? `${cta}: ${link}` : '', forms ? `Complete your form: ${forms.url}` : '', '', bref ? `${salon.name} · ${bref}` : footerFor(salon)]
     .filter((x, i, a) => x !== '' || (i > 0 && a[i - 1] !== '')).join('\n').replace(/\n{3,}/g, '\n\n').trim();
   const body = mailP(intro) + mailDetails(details) + (outro ? `<div style="height:8px"></div>${mailP(outro)}` : '') + (formLine ? `<div style="height:8px"></div>${mailP(formLine)}` : '')
-    + (link ? mailButton(cta, link) : '') + (forms ? mailButton('Complete your form', forms.url, 'dark') : '');
-  return { subject, text, html: mailShell({ brand: salon.name, heading, body, footer: footerFor(salon), preheader: intro }), from: fromFor(salon.name) };
+    + (link && forms ? mailButtonPair({ label: 'Manage booking', url: link }, { label: 'Complete form', url: forms.url }) : link ? mailButton(cta, link) : '');
+  return { subject, text, html: mailShell({ brand: salon.name, heading, body, footer: bref ? `${salon.name} · ${bref}` : footerFor(salon), preheader: intro }), from: fromFor(salon.name) };
 }
 
 async function sendEmail(to: string, m: { subject: string; text: string; html: string; from: string }) {

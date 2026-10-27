@@ -35,3 +35,10 @@ export function mailShell(o: { brand: string; heading?: string; body: string; fo
     + `</div>`
     + `<div style="max-width:480px;margin:14px auto 0;text-align:center;font-size:12.5px;line-height:1.5;color:#5E6673">${esc(o.footer ?? o.brand)}</div></div></body></html>`;
 }
+
+/** Two buttons side by side: the main action in the accent colour, the second outlined. */
+export const mailButtonPair = (a: { label: string; url: string }, b: { label: string; url: string }) =>
+  `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:20px"><tr>`
+  + `<td width="50%" style="padding-right:5px"><a href="${esc(a.url)}" style="display:block;text-align:center;background:#5B3DF5;color:#FFFFFF;text-decoration:none;font-weight:500;font-size:14.5px;padding:14px 8px;border-radius:999px">${esc(a.label)}</a></td>`
+  + `<td width="50%" style="padding-left:5px"><a href="${esc(b.url)}" style="display:block;text-align:center;background:#FFFFFF;color:#0E1116;border:1.5px solid #D5D9E0;text-decoration:none;font-weight:500;font-size:14.5px;padding:12.5px 8px;border-radius:999px">${esc(b.label)}</a></td>`
+  + `</tr></table>`;
