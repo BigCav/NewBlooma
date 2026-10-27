@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { requireCtx, friendly } from '@/lib/session';
 import { ymd } from '@/lib/format';
 import { sendCustomMessage } from '@/lib/notify';
+import { dropEmptyThread, ensureThread, logStaffMessage, replyUrl } from '@/lib/conversation';
 import { type ClientRow } from './shared';
 
 type R = { error?: string; ok?: boolean };
@@ -58,8 +59,11 @@ export async function sendClientMessage(clientId: string, text: string): Promise
   if (text.length > 600) return { error: 'Keep the message under 600 characters.' };
   const { data: c } = await sb.from('clients').select('phone,email').eq('id', clientId).maybeSingle();
   if (!c) return { error: 'Client not found.' };
-  const r = await sendCustomMessage(salon.id, c, text);
-  return r.ok ? { ok: true } : { error: r.error };
+  const th = await ensureThread(salon.id, clientId, null);
+  const r = await sendCustomMessage(salon.id, c, text, undefined, replyUrl(th.token));
+  if (!r.ok) { if (th.created) await dropEmptyThread(th.id); return { error: r.error }; }
+  await logStaffMessage(salon.id, th.id, text);
+  return { ok: true };
 }
 
 export async function addNote(clientId: string, text: string): Promise<R & { id?: string }> {

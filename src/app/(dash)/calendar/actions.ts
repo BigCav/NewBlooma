@@ -1,5 +1,6 @@
 'use server';
 import { flushOutbox, sendCustomMessage } from '@/lib/notify';
+import { dropEmptyThread, ensureThread, logStaffMessage, replyUrl } from '@/lib/conversation';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireCtx, friendly } from '@/lib/session';
@@ -106,11 +107,13 @@ export async function messageBookingClient(bookingId: string, text: string): Pro
   text = text.trim();
   if (!text) return { error: 'Write a message first.' };
   if (text.length > 600) return { error: 'Keep the message under 600 characters.' };
-  const { data: b } = await sb.from('bookings').select('clients(name,email,phone)').eq('id', bookingId).maybeSingle();
+  const { data: b } = await sb.from('bookings').select('client_id,clients(name,email,phone)').eq('id', bookingId).maybeSingle();
   const c = (b as any)?.clients;
-  if (!c) return { error: 'That booking no longer exists.' };
-  const r = await sendCustomMessage(salon.id, c, text);
-  if (!r.ok) return { error: r.error };
+  if (!c || !(b as any).client_id) return { error: 'That booking no longer exists.' };
+  const th = await ensureThread(salon.id, (b as any).client_id, bookingId);
+  const r = await sendCustomMessage(salon.id, c, text, undefined, replyUrl(th.token));
+  if (!r.ok) { if (th.created) await dropEmptyThread(th.id); return { error: r.error }; }
+  await logStaffMessage(salon.id, th.id, text);
   return { ok: true, note: `Message sent to ${String(c.name ?? 'the client').split(' ')[0]}` };
 }
 

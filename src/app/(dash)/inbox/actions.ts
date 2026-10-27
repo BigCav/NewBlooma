@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { requireCtx, friendly } from '@/lib/session';
 import { dateLong, time12 } from '@/lib/format';
 import { emailConfigured, flushOutbox, sendCustomMessage } from '@/lib/notify';
+import { dropEmptyThread, ensureThread, logStaffMessage, replyUrl } from '@/lib/conversation';
 
 type R = { error?: string; ok?: boolean; notice?: string };
 const refresh = () => { revalidatePath('/inbox'); revalidatePath('/', 'layout'); };
@@ -58,13 +59,15 @@ export async function replyToItem(id: string, text: string): Promise<R> {
   const { sb, salon } = await requireCtx();
   text = text.trim(); if (!text) return { error: 'Write a reply first.' };
   if (text.length > 600) return { error: 'Keep the message under 600 characters.' };
-  const { data: it } = await sb.from('inbox_items').select('type,clients(name,email,phone)').eq('id', id).maybeSingle();
+  const { data: it } = await sb.from('inbox_items').select('type,client_id,booking_id,reply_token,clients(name,email,phone)').eq('id', id).maybeSingle();
   if (!it) return { error: 'Item not found.' };
   const c = (it as any).clients;
-  const r = await sendCustomMessage(salon.id, c ?? {}, text);
-  if (!r.ok) return { error: r.error };
-  if (it.type === 'message') await sb.from('inbox_messages').insert({ salon_id: salon.id, item_id: id, mine: true, body: text });
+  if (!it.client_id) return { error: 'This item has no client to message.' };
+  const th = it.type === 'message' ? { id, token: it.reply_token as string, created: false } : await ensureThread(salon.id, it.client_id, it.booking_id);
+  const r = await sendCustomMessage(salon.id, c ?? {}, text, undefined, replyUrl(th.token));
+  if (!r.ok) { if (th.created) await dropEmptyThread(th.id); return { error: r.error }; }
+  await logStaffMessage(salon.id, th.id, text);
   await sb.from('inbox_items').update({ unread: false }).eq('id', id);
   refresh();
-  return { ok: true, notice: it.type === 'message' ? 'Reply sent' : `Message sent to ${first(c?.name)}` };
+  return { ok: true, notice: it.type === 'message' ? 'Reply sent' : `Message sent to ${first(c?.name)}. The conversation is under Messages.` };
 }

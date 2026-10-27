@@ -49,12 +49,16 @@ export async function loadInbox(ctx: Pick<Ctx, 'sb' | 'salon'>): Promise<InboxIt
     else if (type === 'reschedule') { summary = `Wants to move ${svc} with ${staffFirst}`; rows = [['Service', svcDur], ['Now', when], ['With', staffFull]]; note = i.body ?? ''; }
     else if (type === 'rescheduled') { summary = `Moved ${svc} with ${staffFirst}`; rows = [['Service', svcDur], ['Now', range], ['With', staffFull]]; note = i.body ?? ''; }
     else if (type === 'cancellation') { summary = `Cancelled ${svc} with ${staffFirst}`; rows = [['Service', svcDur], ['Was', when], ['With', staffFull]]; if (b && new Date(b.starts_at) > new Date()) rows.push(['Slot', 'Free again']); }
-    if (b?.ref_no && rows.length) rows.unshift(['Booking', 'B-' + b.ref_no]);
+    if (b?.ref_no && rows.length && type !== 'message') rows.unshift(['Booking', 'B-' + b.ref_no]);
     const thread = type === 'message' ? [
       ...(i.body ? [{ mine: false, text: i.body as string, at: stamp(i.created_at, tz, today) }] : []),
       ...((msgs ?? []) as any[]).filter((m) => m.item_id === i.id).map((m) => ({ mine: m.mine as boolean, text: m.body as string, at: stamp(m.created_at, tz, today) })),
     ] : [];
-    if (type === 'message') summary = (thread.filter((m) => !m.mine).pop()?.text ?? thread[0]?.text ?? 'Message').slice(0, 120);
+    if (type === 'message') {
+      const last = thread[thread.length - 1];
+      summary = (last ? (last.mine ? 'You: ' : '') + last.text : 'Message').slice(0, 120);
+      if (b) rows = [['Booking', b.ref_no ? 'B-' + b.ref_no : '—'], ['Service', svcDur], ['When', range]];
+    }
     const cancelled = ['booking', 'request', 'reschedule', 'rescheduled'].includes(type) && ['cancelled', 'no_show'].includes(b?.status) && i.status !== 'declined';
     return { id: i.id, type, client, email: i.clients?.email ?? '', time: stamp(i.created_at, tz, today), unread: i.unread, status, cancelled, summary, rows, note, thread, calendarDay: b ? ymd(b.starts_at, tz) : null, clientId: i.client_id ?? null, bookingId: b && i.booking_id && !['cancelled', 'no_show'].includes(b.status) ? i.booking_id : null };
   });
