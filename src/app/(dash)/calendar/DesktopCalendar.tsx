@@ -61,7 +61,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
   const evStyle = (b: (typeof bookings)[number], weekCol: boolean) => {
     const v = vm(b), tone = v.tone, compact = b.end - b.start <= 30, selected = mode === 'view' && selB?.id === b.id;
     const h = (b.end - b.start) / 60 * HOUR_PX - 4;
-    const accent = 'color-mix(in srgb,' + tone.bg + ',#0E1116 45%)';
+    const accent = tone.fg.toUpperCase() === '#FFFFFF' ? '#5B3DF5' : tone.fg;
     const out = selected ? 'box-shadow:inset 4px 0 0 ' + accent + ',0 8px 18px -8px ' + accent + ';z-index:2;' : '';
     if (weekCol) return 'position:absolute;left:3px;right:3px;top:' + topOf(b.start) + 'px;height:' + h + 'px;box-sizing:border-box;border:0;border-radius:10px;text-align:left;overflow:hidden;font:inherit;background:' + tone.bg + ';color:' + tone.fg + ';padding:' + (compact ? '0 8px' : '6px 8px') + ';display:flex;flex-direction:column;justify-content:' + (compact ? 'center' : 'flex-start') + ';gap:1px;' + out;
     return 'position:absolute;left:5px;right:5px;top:' + topOf(b.start) + 'px;height:' + h + 'px;box-sizing:border-box;border:0;border-radius:12px;text-align:left;overflow:hidden;font:inherit;background:' + tone.bg + ';color:' + tone.fg + ';padding:' + (compact ? '0 10px' : '7px 10px') + ';display:flex;flex-direction:' + (compact ? 'row' : 'column') + ';align-items:' + (compact ? 'center' : 'flex-start') + ';gap:' + (compact ? 8 : 1) + 'px;' + out;
