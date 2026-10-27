@@ -26,7 +26,7 @@ const dayLabel = (iso: string, tz: string, today: string) => {
 export async function loadInbox(ctx: Pick<Ctx, 'sb' | 'salon'>): Promise<InboxItem[]> {
   const { sb, salon } = ctx, tz = salon.timezone, today = ymd(new Date(), tz);
   const { data } = await sb.from('inbox_items')
-    .select('id,type,body,unread,status,created_at,client_id,booking_id,clients(name,email),bookings(status,starts_at,ends_at,notes,staff(name),booking_services(price_cents,duration_min,services(name)))')
+    .select('id,type,body,unread,status,created_at,client_id,booking_id,clients(name,email),bookings(ref_no,status,starts_at,ends_at,notes,staff(name),booking_services(price_cents,duration_min,services(name)))')
     .order('created_at', { ascending: false }).limit(500);
   const ids = (data ?? []).filter((i: any) => i.type === 'message').map((i: any) => i.id);
   const { data: msgs } = ids.length ? await sb.from('inbox_messages').select('item_id,mine,body,created_at').in('item_id', ids).order('created_at') : { data: [] as any[] };
@@ -49,6 +49,7 @@ export async function loadInbox(ctx: Pick<Ctx, 'sb' | 'salon'>): Promise<InboxIt
     else if (type === 'reschedule') { summary = `Wants to move ${svc} with ${staffFirst}`; rows = [['Service', svcDur], ['Now', when], ['With', staffFull]]; note = i.body ?? ''; }
     else if (type === 'rescheduled') { summary = `Moved ${svc} with ${staffFirst}`; rows = [['Service', svcDur], ['Now', range], ['With', staffFull]]; note = i.body ?? ''; }
     else if (type === 'cancellation') { summary = `Cancelled ${svc} with ${staffFirst}`; rows = [['Service', svcDur], ['Was', when], ['With', staffFull]]; if (b && new Date(b.starts_at) > new Date()) rows.push(['Slot', 'Free again']); }
+    if (b?.ref_no && rows.length) rows.unshift(['Booking', 'B-' + b.ref_no]);
     const thread = type === 'message' ? [
       ...(i.body ? [{ mine: false, text: i.body as string, at: stamp(i.created_at, tz, today) }] : []),
       ...((msgs ?? []) as any[]).filter((m) => m.item_id === i.id).map((m) => ({ mine: m.mine as boolean, text: m.body as string, at: stamp(m.created_at, tz, today) })),
