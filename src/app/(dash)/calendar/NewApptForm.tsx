@@ -15,8 +15,6 @@ export function NewApptForm({ c, props, onCancel }: { c: ReturnType<typeof useCa
                 <label htmlFor="ap-client" style={S('font-size:14px;font-weight:600')}>Client</label>
                 <input id="ap-client" type="text" value={nf.client} onChange={(e) => { setNf({ ...nf, client: e.target.value, clientId: null }); setError(''); }} placeholder="Search or type a client name" style={{ ...S('box-sizing:border-box;width:100%;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF'), minHeight: 0 }} />
                 <ClientMatches mobile query={nf.client} pickedId={nf.clientId} onPick={(h) => { setNf({ ...nf, client: h.name, clientId: h.id }); setError(''); }} />
-                {!nf.client.trim() && props.recent.length > 0 && <div role="group" className="hscroll" aria-label="Recent clients" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
-                  {props.recent.map((r) => <button key={r.id} onClick={() => { setNf({ ...nf, client: r.name, clientId: r.id }); setError(''); }} aria-pressed={nf.client.trim() === r.name} style={S(chip(nf.client.trim() === r.name))}>{r.name}</button>)}</div>}
               </div>
               <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="ap-service-label" style={S('font-size:14px;font-weight:600')}>Service</span>
                 <ServicePicker lock={nLock} services={services} selected={nf.services} initialCat={nFirstSvc?.cat} chipHeight={44} onPick={nPickSvc} note={(x) => (nf.staff && !offered(x.id, nf.staff) ? ((offers[x.id] ?? [])[0] ? 'separate booking with ' + first(staffName(offers[x.id][0])) : 'no one offers this') : '')} /></div>

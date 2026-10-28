@@ -336,6 +336,11 @@ export function useCalendar(props: Props) {
   // A team member is available to pick if they offer any chosen service, so the order the services were chosen in does not matter.
   const nOffers = (sid: string) => !nf.services.length || nf.services.some((id) => offered(id, sid));
   const nPickSvc = (id: string) => {
+    // Keep the sheet where it was: choosing or dropping a service must not scroll it back to the top.
+    let sc: HTMLElement | null = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    while (sc && !(sc.scrollHeight > sc.clientHeight && /auto|scroll/.test(getComputedStyle(sc).overflowY))) sc = sc.parentElement;
+    const top = sc?.scrollTop ?? 0;
+    if (sc) { const keep = sc; requestAnimationFrame(() => { keep.scrollTop = top; requestAnimationFrame(() => { keep.scrollTop = top; }); }); }
     let ids = nf.services.includes(id) ? nf.services.filter((i) => i !== id) : [...nf.services, id];
     ids = ids.filter((i) => { const sv = svcMap.get(i); return !sv?.addon || (sv.parents ?? []).some((p) => ids.includes(p)); });
     const f0 = svcMap.get(ids[0]);

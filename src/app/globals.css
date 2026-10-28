@@ -109,3 +109,4 @@ html::-webkit-scrollbar,body::-webkit-scrollbar{display:none;width:0;height:0}
 /* Night mode: the dashboard colours are set inline, so the page is inverted as a whole and pictures are turned back. */
 html[data-theme=dark]{filter:invert(.93) hue-rotate(180deg);background:#fff}
 html[data-theme=dark] img,html[data-theme=dark] video,html[data-theme=dark] iframe,html[data-theme=dark] [data-keep]{filter:hue-rotate(180deg) invert(.93)}
+#ap-client:focus,#ap-client:focus-visible{outline:none;box-shadow:none}

@@ -532,8 +532,6 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
                 <label htmlFor="ap-client" style={S(LBL)}>Client</label>
                 <input id="ap-client" type="text" value={nf.client} onChange={(e) => { setNf({ ...nf, client: e.target.value, clientId: null }); setError(''); }} placeholder="Search or type a client name" style={inp(INPUT)} autoComplete="off" />
                 <ClientMatches query={nf.client} pickedId={nf.clientId} onPick={(h) => { setNf({ ...nf, client: h.name, clientId: h.id }); setError(''); }} />
-                {!nf.client.trim() && props.recent.length > 0 && <div role="group" className="hscroll" aria-label="Recent clients" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
-                  {props.recent.map((r) => <button key={r.id} onClick={() => { setNf({ ...nf, client: r.name, clientId: r.id }); setError(''); }} aria-pressed={nf.client.trim() === r.name} style={S(chipD(nf.client.trim() === r.name))}>{r.name}</button>)}</div>}
               </div>
               <div style={S('display:flex;flex-direction:column;gap:8px')}>
                 <span id="ap-service-label" style={S(LBL)}>Service</span>
