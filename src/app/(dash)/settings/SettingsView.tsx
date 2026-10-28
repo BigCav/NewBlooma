@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
+import { useNightMode } from '@/components/Theme';
 import { saveSettings } from './actions';
 import { DAY_FULL, validate, type Values } from './shared';
 
@@ -17,6 +18,7 @@ const SECTIONS = [
   { id: 'booking', label: 'Online booking', desc: 'Booking rules for clients' },
   { id: 'payments', label: 'Payments', desc: 'Methods, tips and tax' },
   { id: 'notifications', label: 'Notifications', desc: 'Emails and reminders' },
+  { id: 'appearance', label: 'Appearance', desc: 'Light or night mode' },
 ];
 const GROUPS: Record<string, [string, string][]> = {
   window: [['1w', '1 week'], ['2w', '2 weeks'], ['4w', '4 weeks'], ['8w', '8 weeks']],
@@ -95,6 +97,7 @@ function Field({ id, label, k, c, type, mode, ph }: { id: string; label: string;
 
 function Content({ c, m }: { c: C; m: boolean }) {
   const v = c.v, s = c.section;
+  const [night, setNight] = useNightMode();
   return (<>
     {s === 'business' && (
       <div style={S('display:flex;flex-direction:column;gap:18px')}>
@@ -161,11 +164,16 @@ function Content({ c, m }: { c: C; m: boolean }) {
         <SwRow id="st-cancelled" title="Tell me about cancellations" on={v.cancelled} toggle={() => c.set('cancelled', !v.cancelled)} />
       </div>
     )}
+    {s === 'appearance' && (
+      <div style={S('display:flex;flex-direction:column')}>
+        <SwRow id="st-night" title="Night mode" sub="Darker colours for the dashboard. Saved on this device." on={night} toggle={() => setNight(!night)} />
+      </div>
+    )}
     {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
-    <div style={S('display:flex;gap:10px')}>
+    {s !== 'appearance' && <div style={S('display:flex;gap:10px')}>
       <button onClick={c.save} disabled={!c.dirty || c.busy} style={S('flex:1 1 0;height:' + (m ? 48 : 44) + 'px;border:0;border-radius:999px;font-size:14px;font-weight:500;font-family:inherit;background:' + (c.dirty ? '#0E1116' : '#D5D9E0') + ';color:' + (c.dirty ? '#FFFFFF' : '#5E6673') + ';cursor:' + (c.dirty ? 'pointer' : 'default'))}>Save changes</button>
       <button className="ghost" onClick={c.discard} disabled={!c.dirty} style={S('flex:1 1 0;height:' + (m ? 48 : 44) + 'px;border:1px solid #E1E4E9;border-radius:999px;font-size:14px;font-weight:500;font-family:inherit;background:#FFFFFF;color:' + (c.dirty ? '#0E1116' : '#8A93A0') + ';cursor:' + (c.dirty ? 'pointer' : 'default'))}>Discard</button>
-    </div>
+    </div>}
   </>);
 }
 
