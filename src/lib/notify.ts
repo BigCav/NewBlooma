@@ -89,12 +89,16 @@ async function sendSms(to: string, body: string) {
 /** Sends due messages. Channels with no provider configured stay queued rather than being faked or dropped. */
 export async function processOutbox(limit = 50) {
   const sb = supabaseAdmin();
-  const { data: rows } = await sb.from('notifications_outbox').select('*').eq('status', 'queued').lte('send_after', new Date().toISOString()).lt('attempts', 5).order('created_at').limit(limit);
+  const nowIso = new Date().toISOString();
+  const { data: rows } = await sb.from('notifications_outbox').select('*').eq('status', 'queued').lte('send_after', nowIso).lt('attempts', 5).order('created_at').limit(limit);
   const stats = { sent: 0, failed: 0, skipped: 0, waiting: 0 };
   for (const r of (rows ?? []) as Row[]) {
     if ((r.channel === 'email' && !emailConfigured()) || (r.channel === 'sms' && !smsConfigured())) { stats.waiting++; continue; }
     const stale = Date.now() - new Date((r as any).created_at ?? Date.now()).getTime() > 48 * 3600e3;
     if (stale) { await sb.from('notifications_outbox').update({ status: 'skipped', error: 'stale' }).eq('id', r.id); stats.skipped++; continue; }
+    // Claim the message for ten minutes so a booking's own send and the scheduled run never both send it. A crash just means it is retried after that.
+    const { data: claimed } = await sb.from('notifications_outbox').update({ send_after: new Date(Date.now() + 10 * 60e3).toISOString() }).eq('id', r.id).eq('status', 'queued').lte('send_after', nowIso).select('id');
+    if (!claimed?.length) continue;
     const msg = await compose(r);
     if (!msg) { await sb.from('notifications_outbox').update({ status: 'skipped', error: 'nothing to send' }).eq('id', r.id); stats.skipped++; continue; }
     try {
