@@ -94,11 +94,21 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
         )}
 
         {view === 'day' && (<>
-          <section aria-label="Today at a glance" style={S('display:flex;justify-content:space-between;gap:12px')}>
-            <div><div style={S('color:#5E6673;font-size:13px')}>Appointments</div><div style={S('margin-top:2px;font-size:30px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{statCount}</div></div>
-            <div><div style={S('color:#5E6673;font-size:13px')}>Booked revenue</div><div style={S('margin-top:2px;font-size:30px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{statRevenue}</div></div>
-            <div><div style={S('color:#5E6673;font-size:13px')}>Next opening</div><div style={S('margin-top:2px;font-size:30px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{statNext}</div></div>
-          </section>
+          <div style={S('display:flex;flex-direction:column;gap:12px')}>
+            <section aria-label="Today at a glance" style={S('display:flex;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:16px 0')}>
+              {([['Appointments', statCount], ['Booked revenue', statRevenue], ['Next opening', statNext]] as const).map(([l, v], i) => (
+                <div key={l} style={S('flex:1 1 0;min-width:0;padding:0 16px;' + (i ? 'border-left:1px solid #EEF0F3' : ''))}>
+                  <div style={S('color:#5E6673;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{l}</div>
+                  <div style={S('margin-top:4px;font-size:22px;line-height:1.2;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{v}</div>
+                </div>
+              ))}
+            </section>
+            <div style={S('display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px')}>
+              <button onClick={() => { if (day !== today || view !== 'day') go(today, 'day'); setOpen(true); setMode('walkin'); setWi({ name: '', clientId: null, svc: null, pro: 'any', cat: '' }); setError(''); setNotice(''); }} style={S('height:46px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap')}>Walk-in</button>
+              <button onClick={openLate} style={S('height:46px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap')}>Late</button>
+              <button onClick={() => { setOpen(true); setMode('block'); setBf({ s: team[0]?.id ?? '', kind: 'lunch', day: day < today ? today : day, dur: 60, start: null }); setError(''); setNotice(''); }} style={S('height:46px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap')}>Block time</button>
+            </div>
+          </div>
 
           {!!sq && (
             <section aria-label="Search results" style={S('display:flex;flex-direction:column;gap:10px')}>
@@ -140,15 +150,12 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
             </section>
           )}
 
-          <section aria-label="Later today" style={S('flex-direction:column;gap:10px;display:' + (sq ? 'none' : 'flex'))}>
-            <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
-              <h2 style={S('margin:0;font-size:16px;font-weight:600')}>{day === today ? 'Later today' : 'Appointments'}</h2>
-              <span style={S('display:flex;gap:8px')}>
-                <button onClick={() => { if (day !== today || view !== 'day') go(today, 'day'); setOpen(true); setMode('walkin'); setWi({ name: '', clientId: null, svc: null, pro: 'any', cat: '' }); setError(''); setNotice(''); }} style={S('height:36px;padding:0 14px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:13px;font-weight:500;cursor:pointer')}>Walk-in</button>
-                <button onClick={openLate} style={S('height:36px;padding:0 14px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:13px;font-weight:500;cursor:pointer')}>Late</button>
-                <button onClick={() => { setOpen(true); setMode('block'); setBf({ s: team[0]?.id ?? '', kind: 'lunch', day: day < today ? today : day, dur: 60, start: null }); setError(''); setNotice(''); }} style={S('height:36px;padding:0 14px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:13px;font-weight:500;cursor:pointer')}>Block time</button>
-              </span>
+          <section aria-label="Later today" style={S('flex-direction:column;gap:12px;display:' + (sq ? 'none' : 'flex'))}>
+            <div style={S('display:flex;align-items:baseline;justify-content:space-between;gap:12px')}>
+              <h2 style={S('margin:0;font-size:17px;font-weight:600;letter-spacing:-0.01em')}>{day === today ? 'Later today' : 'Appointments'}</h2>
+              <span style={S('color:#5E6673;font-size:13px')}>{c.laterUp.length === 0 ? '' : c.laterUp.length + (c.laterUp.length === 1 ? ' appointment' : ' appointments')}</span>
             </div>
+            {c.laterUp.length === 0 && <p style={S('margin:0;padding:18px 16px;border:1px dashed #D5D9E0;border-radius:18px;text-align:center;color:#5E6673;font-size:14px')}>{day === today ? 'Nothing else booked for today.' : 'Nothing booked for this day.'}</p>}
             {c.laterUp.map(renderLater)}
           </section>
           {c.laterDone.length > 0 && !sq && (
