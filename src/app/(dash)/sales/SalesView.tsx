@@ -8,6 +8,7 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { ClientMatches } from '../calendar/ClientMatches';
 import { S } from '../calendar/pickers';
+import { CloseX, CLOSE_BTN } from '../calendar/calUi';
 import { createWalkin, payFlow, refundSale, sendReceipt, setPrice, terminalCancel, terminalPoll } from './actions';
 import { DISC_PCTS, FILTERS, NO_DISC, STATUS, TIP_OPTS, discOf, discountCents, fmt, type DiscPick, type PayMethod, type SaleRow, type SvcOpt } from './shared';
 
@@ -129,6 +130,75 @@ const Chips = ({ id, label, children }: { id: string; label: string; children: R
   <div style={S('display:flex;flex-direction:column;gap:8px')}><span id={id} style={S('font-size:14px;font-weight:600')}>{label}</span><div role="group" className="hscroll" aria-labelledby={id} style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>{children}</div></div>
 );
 
+/** The phone's sale details, laid out like a booking: status, client, details, lines, then the total and actions pinned at the bottom. */
+function MobileSale({ c, s }: { c: C; s: SaleRow }) {
+  const ic = (children: React.ReactNode) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')} aria-hidden="true">{children}</svg>;
+  const detail = [
+    ['Time', s.time, <><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></>],
+    ['With', s.staffName, <><circle cx="12" cy="8.5" r="3.5" /><path d="M5 20c.6-3.4 3.3-5 7-5s6.4 1.6 7 5" /></>],
+    ['Payment', s.method, <><rect x="3.5" y="6" width="17" height="12" rx="2.5" /><path d="M3.5 10.5h17" /></>],
+  ] as const;
+  const extra: [string, string][] = [
+    ...(s.discount ? [['Discount' + (s.discountNote ? ' (' + s.discountNote + ')' : ''), '-' + fmt(s.discount)] as [string, string]] : []),
+    ...(s.tip ? [['Tip', fmt(s.tip)] as [string, string]] : []),
+    ...(s.gst ? [[s.taxIncl ? 'Includes ' + s.taxRate + '% GST' : 'GST ' + s.taxRate + '%', fmt(s.gst)] as [string, string]] : []),
+  ];
+  const pending = s.status === 'Pending';
+  const secondary = s.status === 'Paid' ? 'Refund' : pending && s.canEdit ? 'Edit sale' : null;
+  const BTN = 'height:52px;border-radius:999px;font-size:14.5px;font-weight:500;cursor:pointer';
+  return (<>
+    <div style={S('display:flex;justify-content:flex-end;margin-bottom:-8px')}><button onClick={c.close} aria-label="Close" style={S(CLOSE_BTN)}><CloseX /></button></div>
+    <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
+      <h2 style={S('margin:0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em;min-width:0')}>{s.dayShort}</h2>
+      <span style={S(statusStyle(s.status) + ';flex:0 0 auto;font-size:14px;padding:8px 16px')}>{s.status}</span>
+    </div>
+    <div style={S('display:flex;align-items:center;gap:14px;padding:16px;border:1px solid #E6E8EC;border-radius:22px')}>
+      <div style={S('flex:0 0 52px;width:52px;height:52px;border-radius:999px;background:#EEEAFE;color:#3A2BB5;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600')}>{s.initials}</div>
+      <div style={S('flex:1 1 auto;min-width:0')}>
+        <div style={S('font-size:19px;font-weight:600;letter-spacing:-0.02em;line-height:1.2;overflow-wrap:anywhere')}>{s.client}</div>
+        <div style={S('margin-top:2px;font-size:13.5px;color:#5E6673')}>{s.ref ? 'Booking ' + s.ref : 'Sale'}</div>
+      </div>
+    </div>
+    <div className="sum-rows" style={S('padding:2px 16px;border:1px solid #E6E8EC;border-radius:22px')}>
+      {detail.map(([l, v, icon]) => <div key={l} style={S('display:flex;align-items:center;gap:12px;padding:14px 0;font-size:15px')}>{ic(icon)}<span style={S('min-width:0;overflow-wrap:anywhere')} aria-label={l}>{v}</span></div>)}
+    </div>
+    <div style={S('display:flex;flex-direction:column;gap:10px')}>
+      <h3 style={S('margin:0;font-size:17px;font-weight:600;letter-spacing:-0.01em')}>Services</h3>
+      {s.lines.map((l, i) => (
+        <div key={l.label + i} style={S('display:flex;align-items:center;gap:12px')}>
+          <span style={S('flex:0 0 4px;align-self:stretch;min-height:28px;border-radius:999px;background:#B9AEFB')} />
+          <span style={S('flex:1 1 auto;min-width:0;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{l.label + (l.qty > 1 ? ' x' + l.qty : '')}</span>
+          <span style={S('flex:0 0 auto;font-size:14.5px;font-weight:500')}>{fmt(l.cents * l.qty)}</span>
+        </div>
+      ))}
+    </div>
+    {extra.length > 0 && (
+      <div className="sum-rows" style={S('padding:2px 16px;border:1px solid #E6E8EC;border-radius:22px')}>
+        {extra.map(([l, v]) => <div key={l} style={S('display:flex;justify-content:space-between;gap:12px;padding:13px 0;font-size:15px')}><span style={S('color:#5E6673;overflow-wrap:anywhere')}>{l}</span><span style={S('font-weight:500;white-space:nowrap')}>{v}</span></div>)}
+      </div>
+    )}
+    <div style={S('position:sticky;bottom:-40px;margin:0 -20px -40px;padding:14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3;display:flex;flex-direction:column;gap:12px')}>
+      {!!c.notice && <span role="status" style={S('align-self:flex-start;padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.notice}</span>}
+      {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
+      <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px')}><span style={S('color:#5E6673;font-size:14px')}>{pending ? 'To pay' : 'Total'}</span><span style={S('font-size:22px;font-weight:600;letter-spacing:-0.02em')}>{fmt(s.total)}</span></div>
+      {!c.confirmRefund ? (
+        <div style={S('display:flex;gap:10px')}>
+          {secondary && <button className="ghost" onClick={() => { if (s.status === 'Paid') c.setConfirmRefund(true); else { c.setEditAmount(String(s.amount / 100)); c.setMode('edit'); c.setError(''); } }} style={S('flex:1 1 0;border:1px solid #E1E4E9;background:#FFFFFF;color:#0E1116;' + BTN)}>{secondary}</button>}
+          <button onClick={() => { if (pending) { c.setPay({ method: c.methods[0]?.id ?? 'cash', tip: c.tipPctOf(s), code: '', disc: discOf(s) }); c.setMode('pay'); c.setError(''); } else c.receipt(); }} disabled={c.busy} style={S('flex:1 1 0;border:0;background:#0E1116;color:#FFFFFF;' + BTN)}>{pending ? 'Take payment' : 'Send receipt'}</button>
+        </div>
+      ) : (
+        <div role="alertdialog" aria-label="Confirm refund" style={S('display:flex;flex-direction:column;gap:12px;box-sizing:border-box;padding:16px;border:1px solid #F3C6C3;border-radius:18px;background:#FEF3F2')}>
+          <div><div style={S('font-size:14.5px;font-weight:600')}>Refund {fmt(s.total)}?</div><div style={S('margin-top:2px;font-size:13px;color:#5E6673')}>The sale is marked as refunded and removed from today&apos;s sales.</div></div>
+          <div style={S('display:flex;gap:10px')}>
+            <button className="ghost" onClick={() => c.setConfirmRefund(false)} style={S('flex:1 1 0;border:1px solid #E1E4E9;background:#FFFFFF;color:#0E1116;' + BTN)}>Cancel</button>
+            <button onClick={c.doRefund} disabled={c.busy} style={S('flex:1 1 0;border:0;background:#C0261B;color:#FFFFFF;' + BTN)}>Refund</button>
+          </div>
+        </div>
+      )}
+    </div>
+  </>);
+}
+
 function Panel({ c, m }: { c: C; m: boolean }) {
   const h = m ? 48 : 44, s = c.sel;
   const notice = !!c.notice && <span role="status" style={S('padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.notice}</span>;
@@ -209,6 +279,7 @@ function Panel({ c, m }: { c: C; m: boolean }) {
       <div style={S('display:flex;gap:10px')}><button onClick={c.saveEdit} disabled={c.busy} style={S(DARK(h))}>Save sale</button><button className="ghost" onClick={c.cancel} style={S(GHOST(h))}>Cancel</button></div>
     </div>
   );
+  if (m) return <MobileSale c={c} s={s} />;
   // view
   const secondary = s.status === 'Paid' ? 'Refund' : s.status === 'Pending' && s.canEdit ? 'Edit sale' : null;
   return (<>
@@ -339,7 +410,7 @@ function Mobile({ c }: { c: C }) {
           <button onClick={c.close} aria-label="Close details" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
           <div className="sheet" role="dialog" aria-label="Sale details" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:86%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column;gap:16px')}>
             <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0')} />
-            <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Sale</h2><button onClick={c.close} aria-label="Close" style={S('flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer')}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg></button></div>
+            {(c.mode !== 'view' || !c.sel) && <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Sale</h2><button onClick={c.close} aria-label="Close" style={S('flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer')}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg></button></div>}
             <Panel c={c} m={true} />
           </div>
         </div>

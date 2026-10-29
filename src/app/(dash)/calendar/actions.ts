@@ -1,6 +1,7 @@
 'use server';
 import { flushOutbox, sendCustomMessage } from '@/lib/notify';
-import { releaseOnline } from '@/lib/windcave';
+import { releaseOnline, startOnline } from '@/lib/windcave';
+import { headers } from 'next/headers';
 import { dropEmptyThread, ensureThread, logStaffMessage, replyUrl } from '@/lib/conversation';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -263,6 +264,18 @@ export async function checkoutBooking(bookingId: string, method: 'card' | 'cash'
   if (done.error) { await sb.rpc('void_pending_sale', { p_sale: id }); return { error: friendly(done.error.message) }; }
   revalidatePath('/calendar'); revalidatePath('/sales');
   return { ok: true, saleId: id as string };
+}
+
+/** Express checkout: card, no tip, no discount, straight to the on-screen Windcave payment page. With only a terminal switched on it returns the sale so the Sales page can send it there. */
+export async function payNowBooking(bookingId: string): Promise<R & { saleId?: string; url?: string }> {
+  const r = await checkoutBooking(bookingId, 'card', 0);
+  if (r.error || !r.saleId) return r;
+  const { sb, salon } = await requireCtx();
+  const { data: pay } = await sb.from('salon_payment_settings').select('online_cards_enabled').eq('salon_id', salon.id).maybeSingle();
+  if (!pay?.online_cards_enabled) return { ok: true, saleId: r.saleId };
+  const h = await headers();
+  const o = await startOnline(r.saleId, process.env.NEXT_PUBLIC_APP_URL || `https://${h.get('x-forwarded-host') ?? h.get('host')}`);
+  return o.error ? { error: o.error, saleId: r.saleId } : { ok: true, saleId: r.saleId, url: o.url };
 }
 
 /** Change the services on a booking (and optionally its start), and book services another team member performs as separate appointments. */

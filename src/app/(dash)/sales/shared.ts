@@ -1,6 +1,7 @@
 export type SaleRow = {
   id: string; ref: string; client: string; service: string; staffName: string; firstName: string; time: string; method: string;
   status: 'Paid' | 'Pending' | 'Refunded'; initials: string; amount: number; tip: number; tax: number; total: number; canEdit: boolean; discount: number; discountNote: string; taxRate: number; taxIncl: boolean;
+  dayShort: string; gst: number; lines: { label: string; qty: number; cents: number }[];
 };
 export type PayMethod = { id: 'terminal' | 'online' | 'cash' | 'gift_card'; label: string };
 export type SvcOpt = { id: string; name: string; priceCents: number };

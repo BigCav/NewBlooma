@@ -9,7 +9,7 @@ import { MessageBox } from './MessageBox';
 import { DiscountPick } from './DiscountPick';
 import Link from 'next/link';
 import { dayInfo, fmtMin, initials, addDaysYmd, BLOCK_KINDS } from '@/lib/cal';
-import { cancelBooking, checkoutBooking, deleteBlock, setBookingStatus } from './actions';
+import { cancelBooking, deleteBlock, payNowBooking, setBookingStatus } from './actions';
 import { STATUS_LABEL } from '@/lib/format';
 import { CancelPick } from './CancelPick';
 import { S, ServicePicker, TeamPicker } from './pickers';
@@ -271,7 +271,7 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
                   {sel.k === 'done'
                     ? (sel.b.saleId ? <button onClick={() => primary(sel.b)} style={S(PRIMARY + ';height:52px')}>View sale</button> : null)
                     : (<>
-                      {cfg.acceptCard && <button disabled={busy} onClick={() => act(async () => { const r = await checkoutBooking(sel.b.id, 'card', cfg.askTip ? cfg.tipDefault : 0); if (!r.error && r.saleId) router.push(`/sales?sale=${r.saleId}&pay=1`); return r; }, '')} style={S(SECOND + ';height:52px')}>Pay now</button>}
+                      {cfg.acceptCard && <button disabled={busy} onClick={() => act(async () => { const r = await payNowBooking(sel.b.id); if (!r.error && r.url) { window.location.href = r.url; return r; } if (!r.error && r.saleId) router.push(`/sales?sale=${r.saleId}&pay=1`); return r; }, '')} style={S(SECOND + ';height:52px')}>Pay now</button>}
                       <button onClick={() => startCheckout(sel.b.id)} style={S(PRIMARY + ';height:52px')}>Checkout</button>
                     </>)}
                 </div>
