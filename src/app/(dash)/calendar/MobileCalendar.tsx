@@ -96,10 +96,10 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
         {view === 'day' && (<>
           <div style={S('display:flex;flex-direction:column;gap:12px')}>
             <section aria-label="Today at a glance" style={S('display:flex;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:16px 0')}>
-              {([['Appointments', statCount], ['Booked revenue', statRevenue], ['Next opening', statNext]] as const).map(([l, v], i) => (
-                <div key={l} style={S('flex:1 1 0;min-width:0;padding:0 16px;' + (i ? 'border-left:1px solid #EEF0F3' : ''))}>
+              {([['Bookings', statCount], ['Revenue', statRevenue], ['Next free', statNext]] as const).map(([l, v], i) => (
+                <div key={l} style={S('flex:1 1 0;min-width:0;padding:0 12px 0 14px;' + (i ? 'border-left:1px solid #EEF0F3' : ''))}>
                   <div style={S('color:#5E6673;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{l}</div>
-                  <div style={S('margin-top:4px;font-size:22px;line-height:1.2;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{v}</div>
+                  <div style={S('margin-top:4px;font-size:20px;line-height:1.2;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{v}</div>
                 </div>
               ))}
             </section>
