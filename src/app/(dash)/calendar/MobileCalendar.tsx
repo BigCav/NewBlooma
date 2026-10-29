@@ -8,16 +8,18 @@ import { MessageBox } from './MessageBox';
 import { DiscountPick } from './DiscountPick';
 import Link from 'next/link';
 import { dayInfo, fmtMin, initials, addDaysYmd, BLOCK_KINDS } from '@/lib/cal';
-import { cancelBooking, deleteBlock } from './actions';
+import { cancelBooking, checkoutBooking, deleteBlock, setBookingStatus } from './actions';
+import { STATUS_LABEL } from '@/lib/format';
 import { CancelPick } from './CancelPick';
 import { S, ServicePicker, TeamPicker } from './pickers';
-import { HATCH, first, usd, m2, BLOCK_DURS_M, METHODS, TIP_OPTS, chip, slotCss, dayCss, note, PRIMARY, SECOND, CLOSE_BTN, H2S, ERR, DLROW, CloseX, Mag } from './calUi';
+import { chipTone, HATCH, first, usd, m2, BLOCK_DURS_M, METHODS, TIP_OPTS, chip, slotCss, dayCss, note, PRIMARY, SECOND, CLOSE_BTN, H2S, ERR, DLROW, CloseX, Mag } from './calUi';
 import type { useCalendar } from './useCalendar';
 import type { Props } from './calUi';
 
 export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>; props: Props }) {
   const { HOUR_PX, act, activeCards, addWalkin, amap, av, avail, availKey, backToView, bf, bfDur, blank, blockId, blockRows, blocks, bookings, busy, bvB, cards, cfg, charge, chk, close, co, coMath, createNew, cur, day, dayB, dayHrs, days14, di, doneBk, ed, editPlan, error, firstOpenDay, gEnd, gHours, gStart, go, hasError, hours, hrsOf, later, laterBk, minutesFromIso, mode, moveBooking, nFirstSvc, nKeyStr, nKeys, nOffers, nPickSvc, nPlan, nSlots, nWhy, nf, notice, now, nowTop, offered, offers, open, openBlock, openBooking, openDays, openNew, pageSubtitle, pageTitle, pendingSel, plan, primary, query, reason, refresh, router, row, rs, saveBlock, saveEdit, searchOpen, seg, sel, selId, services, setAmap, setAvail, setBf, setBlockId, setCo, setEd, setError, setMode, setNf, setNotice, setNow, setOpen, setPendingSel, setPlan, setQuery, setRs, setSearchOpen, setSelId, setSres, setStaffSel, setWi, setWkOpen, slotsFor, sq, sres, staffName, staffSel, startCheckout, startResched, startT, statCount, statRevenue, statNext, strip, svcMap, team, today, todayList, tz, upcoming, view, viewEvents, vm, weekDays, wi, wiPlanText, wiPlanCss, wiSvc, wkCards, wkOpen, wkRange, wkStaff, wkTitle, ws, nLock, edLock, lockFor, lf, setLf, openLate, lateList, saveLate } = c;
   const [qa, setQa] = useState(false);
+  const [st, setSt] = useState<'' | 'list' | 'cancel'>('');
   const renderLater = (b: (typeof later)[number]) => (
               <div key={b.id} style={S('display:flex;align-items:center;gap:12px')}>
                 <span style={S('flex:0 0 40px;font-size:13px;color:#5E6673')}>{b.startText}</span>
@@ -207,13 +209,22 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
             <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0')} />
 
             {mode === 'view' && sel && (<>
-              <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
-                <div style={S('display:flex;align-items:center;gap:8px;flex-wrap:wrap')}><span style={S(sel.chipStyle)}>{sel.chipText}</span>
-                  {sel.b.paid && <span style={S('padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{sel.b.paidText}</span>}
-                  {!!notice && <span role="status" style={S('padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{notice}</span>}</div>
+              <div style={S('display:flex;justify-content:flex-end;margin-bottom:-8px')}>
                 <button onClick={close} aria-label="Close" style={S(CLOSE_BTN)}><CloseX /></button>
               </div>
-              <h2 style={S('margin:0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>{dayInfo(sel.b.dayYmd).short}</h2>
+              <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
+                <h2 style={S('margin:0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em;min-width:0')}>{dayInfo(sel.b.dayYmd).short}</h2>
+                {sel.k === 'done'
+                  ? <span style={S(sel.chipStyle + ';flex:0 0 auto;font-size:14px;padding:8px 16px')}>{STATUS_LABEL[sel.b.status] ?? sel.chipText}</span>
+                  : <button onClick={() => setSt('list')} aria-haspopup="dialog" aria-label={'Status: ' + (STATUS_LABEL[sel.b.status] ?? sel.chipText) + '. Change'} style={S('flex:0 0 auto;display:flex;align-items:center;gap:8px;height:42px;padding:0 14px 0 18px;border:0;border-radius:999px;font:inherit;font-size:14.5px;font-weight:500;cursor:pointer;background:' + chipTone[sel.k].bg + ';color:' + chipTone[sel.k].fg)}>
+                    {STATUS_LABEL[sel.b.status] ?? sel.chipText}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+                  </button>}
+              </div>
+              {(sel.b.paid || !!notice) && <div style={S('display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:-6px')}>
+                {sel.b.paid && <span style={S('padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{sel.b.paidText}</span>}
+                {!!notice && <span role="status" style={S('padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{notice}</span>}
+              </div>}
               <div style={S('display:flex;align-items:center;gap:14px;padding:16px;border:1px solid #E6E8EC;border-radius:22px')}>
                 <div style={S(sel.avatarStyle)}>{initials(sel.b.client)}</div>
                 <div style={S('flex:1 1 auto;min-width:0')}>
@@ -249,12 +260,20 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
               </div>
               {errP()}
               <div style={S('position:sticky;bottom:-28px;margin:0 -20px -28px;padding:14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3;display:flex;flex-direction:column;gap:12px')}>
-                <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px')}><span style={S('color:#5E6673;font-size:14px')}>Total</span><span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{sel.priceText}</span></div>
+                <div style={S('display:flex;flex-direction:column;gap:2px')}>
+                  <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px;color:#5E6673;font-size:14px')}><span>Total</span><span>{sel.priceText}</span></div>
+                  <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-weight:600')}><span style={S('font-size:15px')}>{sel.b.paid ? 'Paid' : 'To pay'}</span><span style={S('font-size:20px;letter-spacing:-0.02em')}>{sel.priceText}</span></div>
+                </div>
                 <div style={S('display:flex;gap:10px')}>
                   <button onClick={() => setQa(true)} aria-label="More actions" aria-haspopup="dialog" style={S('flex:0 0 52px;width:52px;height:52px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer')}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="#0E1116"><circle cx="12" cy="5.5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="18.5" r="1.6" /></svg>
                   </button>
-                  <button onClick={() => primary(sel.b)} style={S(PRIMARY + ';height:52px')}>{sel.primaryLabel}</button>
+                  {sel.k === 'done'
+                    ? (sel.b.saleId ? <button onClick={() => primary(sel.b)} style={S(PRIMARY + ';height:52px')}>View sale</button> : null)
+                    : (<>
+                      {cfg.acceptCard && <button disabled={busy} onClick={() => act(async () => { const r = await checkoutBooking(sel.b.id, 'card', cfg.askTip ? cfg.tipDefault : 0); if (!r.error && r.saleId) router.push(`/sales?sale=${r.saleId}&pay=1`); return r; }, '')} style={S(SECOND + ';height:52px')}>Pay now</button>}
+                      <button onClick={() => startCheckout(sel.b.id)} style={S(PRIMARY + ';height:52px')}>Checkout</button>
+                    </>)}
                 </div>
               </div>
             </>)}
@@ -431,7 +450,6 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
             {(() => {
               const ITEM = 'display:flex;align-items:center;width:100%;min-height:54px;box-sizing:border-box;padding:0;border:0;background:transparent;font:inherit;font-size:16px;text-align:left;text-decoration:none;color:#0E1116;cursor:pointer';
               const grp = 'display:flex;flex-direction:column;padding:4px 0;border-top:1px solid #EEF0F3';
-              const noShow = (sel.k === 'confirmed' || sel.k === 'pending') && c.started(sel.b);
               return (<>
                 <div style={S('display:flex;flex-direction:column;padding:4px 0')}>
                   <button onClick={() => { setQa(false); c.startMessage(); }} style={S(ITEM)}>{'Message ' + first(sel.b.client)}</button>
@@ -441,9 +459,43 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
                   {sel.canEdit && <button onClick={() => { setQa(false); setEd({ ids: sel.b.serviceIds.slice(), start: null }); setMode('edit'); setError(''); setNotice(''); }} style={S(ITEM)}>Edit or cancel booking</button>}
                   <button onClick={() => { setQa(false); startResched(sel.b, sel.k === 'done'); }} style={S(ITEM)}>{sel.secondaryLabel}</button>
                 </div>
-                {noShow && <div style={S(grp)}><button onClick={() => { setQa(false); c.markNoShow(sel.b); }} style={S(ITEM + ';color:#B42318')}>Mark as no-show</button></div>}
               </>);
             })()}
+          </div>
+        </div>
+      )}
+
+      {st && open && mode === 'view' && sel && (
+        <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:6')}>
+          <button onClick={() => setSt('')} aria-label="Close status" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
+          <div className="sheet" role="dialog" aria-label="Change status" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:92%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column;gap:6px')}>
+            <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0;margin-bottom:12px')} />
+            {st === 'cancel'
+              ? <CancelPick name={first(sel.b.client)} mobile busy={busy} onBack={() => setSt('list')} onConfirm={(why) => act(() => cancelBooking(sel.b.id, why), first(sel.b.client) + "'s booking cancelled", () => { setSt(''); setOpen(false); setMode('view'); })} />
+              : (() => {
+                const ITEM = 'display:flex;align-items:center;gap:14px;width:100%;min-height:56px;box-sizing:border-box;padding:0;border:0;background:transparent;font:inherit;font-size:16px;text-align:left;color:#0E1116;cursor:pointer';
+                const ico = (children: React.ReactNode) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')} aria-hidden="true">{children}</svg>;
+                const tick = <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={S('margin-left:auto;flex:0 0 auto')} aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>;
+                const pick = (t: 'confirmed' | 'checked_in' | 'in_progress', label: string) => {
+                  setSt('');
+                  if (t !== 'confirmed' && sel.b.dayYmd > today) { setError('You can check someone in on the day of their appointment.'); return; }
+                  act(() => setBookingStatus(sel.b.id, t), first(sel.b.client) + ' is now ' + label.toLowerCase());
+                };
+                const cur = sel.b.status;
+                const rows: [string, 'confirmed' | 'checked_in' | 'in_progress', string, React.ReactNode][] = [
+                  ['confirmed', 'confirmed', 'Confirmed', ico(<path d="M7 11v8H4v-8zM7 11l4-7c1.5 0 2.5 1 2.2 2.5L12.7 9H18a2 2 0 0 1 2 2.4l-1.2 6A2 2 0 0 1 16.9 19H7" />)],
+                  ['checked_in', 'checked_in', 'Checked in', ico(<><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0C18.5 15.4 12 21 12 21z" /><circle cx="12" cy="10" r="2.4" /></>)],
+                  ['in_progress', 'in_progress', 'Started', ico(<path d="M7 4.5v15L19 12z" />)],
+                ];
+                const canNoShow = (cur === 'pending' || cur === 'confirmed') && c.started(sel.b);
+                return (<>
+                  <h2 style={S(H2S + ';margin-bottom:4px')}>Change status</h2>
+                  {cur === 'pending' && <div style={S(ITEM + ';cursor:default')}>{ico(<><rect x="3.5" y="5" width="17" height="15.5" rx="3" /><path d="M3.5 10h17M12 13v4M10 15h4" /></>)}Needs approval{tick}</div>}
+                  {rows.map(([id, t, label, icon]) => <button key={id} onClick={() => pick(t, label)} aria-current={cur === id ? 'true' : undefined} style={S(ITEM)}>{icon}{label}{cur === id && tick}</button>)}
+                  {canNoShow && <button onClick={() => { setSt(''); c.markNoShow(sel.b); }} style={S(ITEM + ';color:#B42318')}>{ico(<><path d="M3 12s3.5-6 9-6c1.7 0 3.2.6 4.5 1.4M21 12s-3.5 6-9 6c-1.7 0-3.2-.6-4.5-1.4M4 4l16 16" /></>)}No-show</button>}
+                  {sel.canEdit && sel.k !== 'live' && <button onClick={() => setSt('cancel')} style={S(ITEM + ';color:#B42318')}>{ico(<><rect x="3.5" y="5" width="17" height="15.5" rx="3" /><path d="M3.5 10h17M10 13.5l4 4M14 13.5l-4 4" /></>)}Cancel booking</button>}
+                </>);
+              })()}
           </div>
         </div>
       )}

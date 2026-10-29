@@ -85,6 +85,25 @@ export async function noShowBooking(id: string): Promise<R> {
   revalidatePath('/calendar'); return { ok: true };
 }
 
+/** Move a booking between confirmed, checked in and started. A booking that still needs approval is approved first. */
+export async function setBookingStatus(id: string, target: 'confirmed' | 'checked_in' | 'in_progress'): Promise<R> {
+  const { sb } = await requireCtx();
+  if (!['confirmed', 'checked_in', 'in_progress'].includes(target)) return { error: 'Choose a status.' };
+  const { data: b } = await sb.from('bookings').select('status,starts_at').eq('id', id).maybeSingle();
+  if (!b) return { error: 'That booking no longer exists.' };
+  if (!['pending', 'confirmed', 'checked_in', 'in_progress'].includes(b.status)) return { error: 'This booking can no longer change status.' };
+  if (b.status === target) return { ok: true };
+  if (target !== 'confirmed' && new Date(b.starts_at).getTime() - Date.now() > 24 * 3600e3) return { error: 'You can check someone in on the day of their appointment.' };
+  if (b.status === 'pending') {
+    const r = await sb.rpc('confirm_booking', { p_booking: id });
+    if (r.error) return { error: friendly(r.error.message) };
+    if (target === 'confirmed') { revalidatePath('/calendar'); return { ok: true }; }
+  }
+  const { error } = await sb.from('bookings').update({ status: target }).eq('id', id);
+  if (error) return { error: friendly(error.message) };
+  revalidatePath('/calendar'); return { ok: true };
+}
+
 /** Busy intervals (minutes) and opening hours for one staff member on one day. */
 /** Everything the new-appointment sheet needs, for opening it from pages other than the calendar. */
 export async function loadNewAppt() {
