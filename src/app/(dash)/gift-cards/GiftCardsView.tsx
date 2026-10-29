@@ -173,7 +173,8 @@ function Desktop({ c }: { c: C }) {
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
         <section aria-label="Gift card list" style={S('flex:999 1 620px;min-width:0;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;overflow:hidden')}>
           <div style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid #E6E8EC')}>
-                <span style={S('color:#5E6673;font-size:13.5px')}>{c.shown.length + (c.shown.length === 1 ? ' card' : ' cards')}</span>
+            <div role="group" aria-label="Filter gift cards" style={S('display:flex;flex-wrap:wrap;gap:8px')}>{FILTERS.map(([id, l]) => <button key={id} onClick={() => c.setFilter(id)} aria-pressed={c.filter === id} style={S(chip(c.filter === id, false))}>{l}</button>)}</div>
+            <span style={S('color:#5E6673;font-size:13.5px')}>{c.shown.length + (c.shown.length === 1 ? ' card' : ' cards')}</span>
           </div>
           <div style={S('overflow-x:auto')}>
             <div style={S('min-width:720px')}>
@@ -228,7 +229,6 @@ function Mobile({ c }: { c: C }) {
           )}
         </div>
         {c.filter !== 'all' && <ActiveFilter label={opts.find((f) => f.id === c.filter)?.label ?? ''} onClear={() => c.setFilter('all')} />}
-        <div role="group" aria-label="Filter gift cards" className="hscroll" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto')}>{FILTERS.map(([id, l]) => <button key={id} onClick={() => c.setFilter(id)} aria-pressed={c.filter === id} style={S(chip(c.filter === id, true))}>{l}</button>)}</div>
         {c.shown.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>{noneText(c)}</p>}
         <ul style={S('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px')}>
           {c.shown.map((g) => {
