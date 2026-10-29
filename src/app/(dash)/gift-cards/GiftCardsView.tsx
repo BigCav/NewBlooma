@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
+import { ActiveFilter, FilterButton, FilterSheet } from '@/components/FilterBits';
 import { issueGiftCard, voidGiftCard } from './actions';
 
 export type GiftRow = { id: string; code: string; name: string; issued: string; original: number; balance: number; voided: boolean; hist: { d: string; label: string; a: number }[] };
@@ -172,8 +173,7 @@ function Desktop({ c }: { c: C }) {
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
         <section aria-label="Gift card list" style={S('flex:999 1 620px;min-width:0;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;overflow:hidden')}>
           <div style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid #E6E8EC')}>
-            <div role="group" aria-label="Filter gift cards" style={S('display:flex;flex-wrap:wrap;gap:8px')}>{FILTERS.map(([id, l]) => <button key={id} onClick={() => c.setFilter(id)} aria-pressed={c.filter === id} style={S(chip(c.filter === id, false))}>{l}</button>)}</div>
-            <span style={S('color:#5E6673;font-size:13.5px')}>{c.shown.length + (c.shown.length === 1 ? ' card' : ' cards')}</span>
+                <span style={S('color:#5E6673;font-size:13.5px')}>{c.shown.length + (c.shown.length === 1 ? ' card' : ' cards')}</span>
           </div>
           <div style={S('overflow-x:auto')}>
             <div style={S('min-width:720px')}>
@@ -208,6 +208,8 @@ function Desktop({ c }: { c: C }) {
 }
 
 function Mobile({ c }: { c: C }) {
+  const [fopen, setFopen] = useState(false);
+  const opts = FILTERS.map(([id, label]) => ({ id: id as string, label: label as string }));
   const stat = (l: string, v: string) => <div key={l} style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:20px;padding:16px')}><div style={S('color:#5E6673;font-size:13px')}>{l}</div><div style={S('margin-top:4px;font-size:26px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{v}</div></div>;
   return (
     <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
@@ -216,7 +218,16 @@ function Mobile({ c }: { c: C }) {
         <section aria-label="Gift cards at a glance" style={S('display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px')}>
           {stat('Owed to clients', money(c.owed))}{stat('Active cards', String(c.active))}{stat('Issued this month', money(c.issuedM))}{stat('Redeemed this month', money(c.redeemedM))}
         </section>
-        {c.canIssue && <button onClick={c.openNew} style={S('height:48px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;padding:0 24px')}>Issue gift card</button>}
+        <div style={S('display:flex;gap:10px')}>
+          <FilterButton onClick={() => setFopen(true)} active={c.filter !== 'all'} label="Filter gift cards" />
+          {c.canIssue && (
+            <button onClick={c.openNew} style={S('flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:8px;height:52px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500')}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+              Issue gift card
+            </button>
+          )}
+        </div>
+        {c.filter !== 'all' && <ActiveFilter label={opts.find((f) => f.id === c.filter)?.label ?? ''} onClear={() => c.setFilter('all')} />}
         <div role="group" aria-label="Filter gift cards" className="hscroll" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto')}>{FILTERS.map(([id, l]) => <button key={id} onClick={() => c.setFilter(id)} aria-pressed={c.filter === id} style={S(chip(c.filter === id, true))}>{l}</button>)}</div>
         {c.shown.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>{noneText(c)}</p>}
         <ul style={S('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px')}>
@@ -234,6 +245,7 @@ function Mobile({ c }: { c: C }) {
         </ul>
       </main>
       <MobileTabs active="more" />
+      {fopen && <FilterSheet title="Filter gift cards" options={opts} value={c.filter} onPick={(id) => c.setFilter(id as never)} onClose={() => setFopen(false)} />}
       {c.open && (
         <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:5')}>
           <button onClick={() => c.setOpen(false)} aria-label="Close" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />

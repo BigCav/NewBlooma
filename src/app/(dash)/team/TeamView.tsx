@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
+import { ActiveFilter, FilterButton, FilterSheet } from '@/components/FilterBits';
 import { inviteMember, removeMember, removePhoto, saveMember, uploadPhoto } from './actions';
 import { DAYS, DAY_FULL, FILTERS, SHIFTS, initialsOf, photoCss, squarePhoto, type TeamRow } from './shared';
 
@@ -266,6 +267,7 @@ function Desktop({ c }: { c: C }) {
 }
 
 function Mobile({ c }: { c: C }) {
+  const [fopen, setFopen] = useState(false);
   const stat = (label: string, v: number) => (
     <div><div style={S('color:#5E6673;font-size:13px')}>{label}</div><div style={S('margin-top:2px;font-size:30px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{v}</div></div>
   );
@@ -274,13 +276,14 @@ function Mobile({ c }: { c: C }) {
       <MobileHeader title="Team" subtitle="Who works when, and what they offer" query={c.query} onQuery={c.setQuery} placeholder="Search team" />
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:20px')}>
         <section aria-label="Team at a glance" style={S('display:flex;gap:40px')}>{stat('Team members', c.items.length)}{stat('Working today', c.items.filter((m) => m.todayOn).length)}</section>
-        <button onClick={c.startNew} style={S('display:flex;align-items:center;justify-content:center;gap:8px;height:48px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500')}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
-          New team member
-        </button>
-        <div role="group" className="hscroll" aria-label="Filter team" style={S('display:flex;gap:8px;overflow-x:auto')}>
-          {FILTERS.map((f) => <button key={f.id} onClick={() => c.setFilter(f.id)} aria-pressed={c.filter === f.id} style={S(chipM(c.filter === f.id))}>{f.label}</button>)}
+        <div style={S('display:flex;gap:10px')}>
+          <FilterButton onClick={() => setFopen(true)} active={c.filter !== 'all'} label="Filter team" />
+          <button onClick={c.startNew} style={S('flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:8px;height:52px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500')}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+            New team member
+          </button>
         </div>
+        {c.filter !== 'all' && <ActiveFilter label={FILTERS.find((f) => f.id === c.filter)?.label ?? ''} onClear={() => c.setFilter('all')} />}
         <ul style={S('margin:0;padding:4px 0;list-style:none;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px')}>
           {c.list.map((m) => (
             <li key={m.id}>
@@ -296,6 +299,7 @@ function Mobile({ c }: { c: C }) {
         {c.list.length === 0 && <p style={S('margin:0;text-align:center;color:#5E6673;font-size:14px')}>{EMPTY(c)}</p>}
       </main>
       <MobileTabs active="more" />
+      {fopen && <FilterSheet title="Filter team" options={FILTERS} value={c.filter} onPick={c.setFilter} onClose={() => setFopen(false)} />}
       {c.open && (
         <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:5')}>
           <button onClick={c.close} aria-label="Close editor" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
