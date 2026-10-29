@@ -140,7 +140,7 @@ const Chips = ({ id, label, children }: { id: string; label: string; children: R
 function SaleCheckout({ c, s }: { c: C; s: SaleRow }) {
   const lines = s.lines.map((l, i) => ({ key: l.label + i, name: l.label + (l.qty > 1 ? ' x' + l.qty : ''), sub: l.dur ? l.dur + ' min' : undefined, cents: l.cents * l.qty }));
   return (
-    <CheckoutFlow who={s.client + ', ' + s.service} methods={c.methods.map((m) => [m.id, m.label] as const)}
+    <CheckoutFlow who={s.client + ', ' + s.lines.map((l) => l.label).join(' + ')} methods={c.methods.map((m) => [m.id, m.label] as const)}
       co={{ method: c.pay.method, tip: parseInt(c.pay.tip, 10) || 0, code: c.pay.code, disc: c.pay.disc }}
       setCo={(x) => c.setPay({ method: x.method as PayMethod['id'], tip: String(x.tip), code: x.code, disc: x.disc })}
       cfg={{ canDiscount: c.canDiscount, askTip: c.askTip, taxInclusive: s.taxIncl, taxRate: s.taxRate }}
