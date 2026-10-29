@@ -74,6 +74,55 @@ function useClients(props: Props) {
 }
 type C = ReturnType<typeof useClients>;
 
+/** The phone's quick view of a client, laid out like a booking: tag, client card with a message button, details, figures, and the actions pinned at the bottom. */
+function MobileClientView({ c, sel }: { c: C; sel: ClientRow }) {
+  const tag = TAGS[sel.tag];
+  const ic = (path: string) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')} aria-hidden="true"><path d={path} /></svg>;
+  const rows: [string, string, string][] = [
+    ['Phone', sel.phone || 'No phone', 'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z'],
+    ['Last visit', sel.lastService === 'No visits' ? 'No visits yet' : sel.last + ', ' + sel.lastService, 'M12 7.5V12l3 2M20.5 12a8.5 8.5 0 1 1-17 0 8.5 8.5 0 0 1 17 0z'],
+    ['Next appointment', sel.next, 'M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v11A1.5 1.5 0 0 1 19 19.5H5A1.5 1.5 0 0 1 3.5 18V7A1.5 1.5 0 0 1 5 5.5zM3.5 10h17M8 3.5v4M16 3.5v4'],
+    ['Usually sees', sel.staff, 'M12 12a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM5 20c.6-3.4 3.3-5 7-5s6.4 1.6 7 5'],
+  ];
+  const close = () => { c.setOpen(false); c.setMode('view'); c.setError(''); };
+  const BTN = 'height:52px;border-radius:999px;font-size:14.5px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;text-decoration:none;box-sizing:border-box;flex:1 1 0';
+  return (<>
+    <div style={S('display:flex;justify-content:flex-end;margin-bottom:-8px')}><button onClick={close} aria-label="Close" style={S('flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer')}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg></button></div>
+    <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
+      <h2 style={S('margin:0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>Client</h2>
+      <span style={S('flex:0 0 auto;display:inline-block;padding:8px 16px;border-radius:999px;font-size:14px;font-weight:500;background:' + tag.bg + ';color:' + tag.fg)}>{sel.tag}</span>
+    </div>
+    <div style={S('display:flex;align-items:center;gap:14px;padding:16px;border:1px solid #E6E8EC;border-radius:22px')}>
+      <div style={S('flex:0 0 52px;width:52px;height:52px;border-radius:999px;background:#EEEAFE;color:#3A2BB5;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600')}>{initialsOf(sel.name)}</div>
+      <div style={S('flex:1 1 auto;min-width:0')}>
+        <div style={S('font-size:19px;font-weight:600;letter-spacing:-0.02em;line-height:1.2;overflow-wrap:anywhere')}>{sel.name}</div>
+        <div style={S('margin-top:2px;font-size:13.5px;color:#5E6673;overflow-wrap:anywhere')}>{sel.email || 'No email'}</div>
+      </div>
+      <button onClick={() => { c.setMode('message'); c.setMsg(''); c.setError(''); c.setNotice(''); }} aria-label={'Message ' + c.first} style={S('flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer')}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3.5" y="5.5" width="17" height="13" rx="3" /><path d="m4.5 7.5 7.5 5.5 7.5-5.5" /></svg>
+      </button>
+    </div>
+    <div className="sum-rows" style={S('padding:2px 16px;border:1px solid #E6E8EC;border-radius:22px')}>
+      {rows.map(([l, v, icon]) => (
+        <div key={l} style={S('display:flex;align-items:center;gap:12px;padding:13px 0')}>{ic(icon)}
+          <span style={S('min-width:0')}><span style={S('display:block;font-size:12.5px;color:#5E6673')}>{l}</span><span style={S('display:block;font-size:15px;overflow-wrap:anywhere')}>{v}</span></span>
+        </div>
+      ))}
+    </div>
+    <div style={S('display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px')}>
+      {([['Visits', String(sel.visits)], ['Total spent', money(sel.spentCents)]] as [string, string][]).map(([l, v]) => <div key={l} style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:20px;padding:16px')}><div style={S('font-size:13px;color:#5E6673')}>{l}</div><div style={S('margin-top:4px;font-size:22px;font-weight:600;letter-spacing:-0.02em')}>{v}</div></div>)}
+    </div>
+    <div style={S('position:sticky;bottom:-40px;margin:auto -20px -40px;padding:14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3;display:flex;flex-direction:column;gap:12px')}>
+      {!!c.notice && <span role="status" style={S('align-self:flex-start;padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.notice}</span>}
+      {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
+      <div style={S('display:flex;gap:10px')}>
+        <Link href={`/clients/${sel.id}`} style={S(BTN + ';border:1px solid #E1E4E9;background:#FFFFFF;color:#0E1116')}>View profile</Link>
+        <button onClick={() => { c.setMode('book'); c.setError(''); c.setNotice(''); }} style={S(BTN + ';border:0;background:#0E1116;color:#FFFFFF')}>Book appointment</button>
+      </div>
+    </div>
+  </>);
+}
+
 /* The five side-panel modes, shared by the desktop aside and the mobile sheet (the prototype repeats them with 48px buttons on mobile). */
 function Panel({ c, m }: { c: C; m: boolean }) {
   const { sel, first } = c;
@@ -89,6 +138,7 @@ function Panel({ c, m }: { c: C; m: boolean }) {
     </div>
   );
   const pill = 'flex:0 0 auto;height:' + (m ? 44 : 40) + 'px;padding:0 16px;border-radius:999px;font-size:13.5px;font-weight:500;border:1px solid #E1E4E9;background:#FFFFFF;color:#0E1116';
+  if (m && c.mode === 'view' && sel) return <MobileClientView c={c} sel={sel} />;
   return (<>
     {c.mode === 'view' && !sel && c.items.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No clients yet. Add your first client to get started.</p>}
     {c.mode === 'view' && sel && (<>
@@ -237,10 +287,10 @@ function Mobile({ c }: { c: C }) {
           <button onClick={() => { c.setOpen(false); c.setMode('view'); c.setError(''); }} aria-label="Close details" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
           <div className="sheet" role="dialog" aria-label="Client" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:92%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column;gap:16px')}>
             <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0')} />
-            <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Client</h2>
+            {(c.mode !== 'view' || !c.sel) && <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Client</h2>
               <button onClick={() => { c.setOpen(false); c.setMode('view'); c.setError(''); }} aria-label="Close" style={S('flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center')}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
-              </button></div>
+              </button></div>}
             <Panel c={c} m={true} />
           </div>
         </div>
