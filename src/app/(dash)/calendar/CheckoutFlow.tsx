@@ -28,6 +28,7 @@ export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCha
   const { step, go, jump, forward, back } = useSteps(summaryAt, () => setError(''));
   const [editing, setEditing] = useState(false);
   const [got, setGot] = useState('');
+  const [cashHow, setCashHow] = useState<'partial' | 'exact' | null>(null);
   const kind = kinds[step];
 
   const disc = cfg.canDiscount ? discountCents(gross, co.disc) : 0, net = gross - disc;
@@ -43,10 +44,9 @@ export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCha
   const stepOf = (k: string) => kinds.indexOf(k);
   const canNext = kind === 'method' ? (co.method !== 'gift_card' || !!co.code.trim()) : true;
 
-  // Cash: what was handed over, and the change to give back.
-  const gotCents = got.trim() === '' ? total : Math.round((Number(got) || 0) * 100);
-  const nextUps = Array.from(new Set([50, 100, 200, 500, 1000, 2000, 5000, 10000].map((u) => Math.ceil(total / u) * u).filter((v) => v > total))).slice(0, 3);
-  const cashOpts: [number, string][] = [[total, 'Exact'], ...nextUps.map((v) => [v, m2(v)] as [number, string])];
+  // Cash: exact, or a different amount handed over with the change to give back.
+  const gotCents = cashHow === 'exact' ? total : Math.round((Number(got) || 0) * 100);
+  const cashReady = cashHow === 'exact' || (cashHow === 'partial' && gotCents >= total);
 
   if (editing && edit) return (
     <StepShell plain step={0} titles={['Edit services']} onBack={() => { setError(''); setEditing(false); }} onClose={onClose} error={error}
@@ -61,7 +61,7 @@ export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCha
     <StepShell step={step} titles={kinds.map((k) => titles[k])} onBack={back} onClose={onClose} error={error}
       actions={[
         kind === 'summary' ? { label: cash ? 'Charge ' + m2(total) : 'Charge ' + m2(total), onClick: cash ? forward : onCharge, disabled: busy || !!wait }
-        : kind === 'cash' ? { label: 'Confirm sale', onClick: onCharge, disabled: busy || gotCents < total }
+        : kind === 'cash' ? { label: 'Confirm sale', onClick: onCharge, disabled: busy || !cashReady }
         : { label: 'Continue', onClick: () => { if (!canNext) { setError('Enter the gift card code.'); return; } forward(); }, disabled: !canNext },
       ]}>
       <p style={S('margin:0;color:#5E6673;font-size:14px;overflow-wrap:anywhere')}>{who}</p>
@@ -102,9 +102,11 @@ export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCha
       </>)}
       {kind === 'cash' && (<>
         <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:16px;border:1px solid #E6E8EC;border-radius:22px')}><span style={S('color:#5E6673;font-size:14px')}>To pay</span><span style={S('font-size:24px;font-weight:600;letter-spacing:-0.02em')}>{m2(total)}</span></div>
-        <Tiles label="Cash received" options={cashOpts} value={gotCents} onPick={(v) => setGot(v === total ? '' : String(v / 100))} />
-        <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="co-got" style={S('font-size:14px;font-weight:600')}>Other amount</label><input id="co-got" inputMode="decimal" value={got} onChange={(e) => setGot(decimalInput(e.target.value))} placeholder={'Cash received, ' + (total / 100).toFixed(2)} style={{ ...S(FIELD), minHeight: 0 }} /></div>
-        <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:16px;border-radius:22px;background:' + (gotCents >= total ? '#DDF3EA' : '#FDECEA') + ';color:' + (gotCents >= total ? '#14624A' : '#B42318'))}><span style={S('font-size:14px;font-weight:500')}>{gotCents >= total ? 'Change to give back' : 'Still to receive'}</span><span style={S('font-size:22px;font-weight:600')}>{m2(Math.abs(gotCents - total))}</span></div>
+        <Tiles label="Cash received" options={[['partial', 'Partial'], ['exact', 'Exact']] as const} value={cashHow} onPick={(v) => setCashHow(v)} />
+        {cashHow === 'partial' && (<>
+          <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="co-got" style={S('font-size:14px;font-weight:600')}>Amount received</label><input id="co-got" inputMode="decimal" value={got} onChange={(e) => setGot(decimalInput(e.target.value))} placeholder={'Cash received, ' + (total / 100).toFixed(2)} style={{ ...S(FIELD), minHeight: 0 }} /></div>
+          <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:16px;border-radius:22px;background:' + (gotCents >= total ? '#DDF3EA' : '#FDECEA') + ';color:' + (gotCents >= total ? '#14624A' : '#B42318'))}><span style={S('font-size:14px;font-weight:500')}>{gotCents >= total ? 'Change to give back' : 'Still to receive'}</span><span style={S('font-size:22px;font-weight:600')}>{m2(Math.abs(gotCents - total))}</span></div>
+        </>)}
       </>)}
     </StepShell>
   );
