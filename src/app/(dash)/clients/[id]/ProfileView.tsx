@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { MobileTabs } from '@/components/Chrome';
+import { STATUS_LABEL } from '@/lib/format';
 import { S } from '../../calendar/pickers';
 import { addNote, deleteClient, recordPatchTest, removeNote, saveFormula, sendClientMessage, setAllergies, setPreference, updateClient } from '../actions';
 import { phoneInput } from '@/lib/phone';
@@ -16,6 +17,8 @@ export type ProfileData = {
   forms: { id: string; name: string; date: string; flagged: boolean; answers: { k: string; v: string }[] }[];
   history: { id: string; ref: string; date: string; service: string; staff: string; cents: number; when: string; paid: string }[]; historyTotal: number;
   today: string; channels: Channels;
+  appts: { id: string; dayYmd: string; month: string; label: string; time: string; status: string; staff: string; services: string; cents: number; upcoming: boolean }[];
+  sales: { id: string; ref: string; date: string; method: string; cents: number; status: 'Paid' | 'Pending' | 'Refunded' }[];
 };
 const TONE: Record<string, [string, string]> = { Regular: ['#DDF3EA', '#14624A'], New: ['#DFEEFF', '#1B4A8A'], Lapsed: ['#FFEBD0', '#7A4204'] };
 
@@ -87,7 +90,7 @@ function Pager({ page, pages, total, per, onPage }: { page: number; pages: numbe
 const X = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>;
 
 /* The section cards. `pad` is the card padding (24 desktop, 20 mobile). */
-function Sections({ c, pad }: { c: C; pad: number }) {
+function Sections({ c, pad, titles = true }: { c: C; pad: number; titles?: boolean }) {
   const { d } = c;
   const card = CARD + ';padding:' + pad + 'px';
   const pi = patchInfo(c.patchOn, d.today);
@@ -96,7 +99,7 @@ function Sections({ c, pad }: { c: C; pad: number }) {
   const rs = sw(c.reminders), ms = sw(c.marketing);
   const hPages = Math.max(1, Math.ceil(d.history.length / HIST_PER)), hPage = Math.min(c.histPage, hPages - 1);
   const history = (
-    <section style={S(card)}><div><h2 style={S('margin:0;font-size:16px;font-weight:600')}>Visit history</h2></div>
+    <section style={S(card)}>{titles && <div><h2 style={S('margin:0;font-size:16px;font-weight:600')}>Visit history</h2></div>}
       {d.history.slice(hPage * HIST_PER, (hPage + 1) * HIST_PER).map((h) => {
         const open = c.openHist === h.id;
         return (
@@ -121,7 +124,7 @@ function Sections({ c, pad }: { c: C; pad: number }) {
     </section>
   );
   const notes = (
-    <section style={S(card)}><div><h2 style={S('margin:0;font-size:16px;font-weight:600')}>Notes</h2></div>
+    <section style={S(card)}>{titles && <div><h2 style={S('margin:0;font-size:16px;font-weight:600')}>Notes</h2></div>}
       {c.notes.length === 0 && <p style={S('margin:0;font-size:14px;color:#5E6673')}>No notes yet.</p>}
       {c.notes.map((n) => (
         <div key={n.id} style={S('display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:12px 14px;border-radius:16px;background:#F4F5F7')}>
@@ -135,7 +138,7 @@ function Sections({ c, pad }: { c: C; pad: number }) {
     </section>
   );
   const alerts = (
-    <section style={S(card)}><div><h2 style={S('margin:0;font-size:16px;font-weight:600')}>Alerts</h2></div>
+    <section style={S(card)}>{titles && <div><h2 style={S('margin:0;font-size:16px;font-weight:600')}>Alerts</h2></div>}
       <div style={S('display:flex;flex-direction:column;gap:10px')}>
         <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
           <span style={S('font-size:14px;font-weight:600')}>Allergies</span>
@@ -158,7 +161,7 @@ function Sections({ c, pad }: { c: C; pad: number }) {
     </section>
   );
   const formula = (
-    <section style={S(card)}><div><h2 style={S('margin:0;font-size:16px;font-weight:600')}>Colour formula</h2></div>
+    <section style={S(card)}>{titles && <div><h2 style={S('margin:0;font-size:16px;font-weight:600')}>Colour formula</h2></div>}
       <label htmlFor="pf-formula" style={S('position:absolute;left:-9999px')}>Colour formula</label>
       <textarea id="pf-formula" value={c.formula} onChange={(e) => c.setFormula(e.target.value)} placeholder="No formula saved yet" style={S('box-sizing:border-box;width:100%;min-height:88px;resize:vertical;padding:12px 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:14.5px;color:#0E1116;background:#FFFFFF')} />
       {c.formula !== c.saved && <button onClick={c.saveFormula} disabled={c.busy} style={S('height:44px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500;padding:0 20px')}>Save formula</button>}
@@ -171,7 +174,7 @@ function Sections({ c, pad }: { c: C; pad: number }) {
     </div>
   );
   const prefs = (
-    <section style={S(card)}><div><h2 style={S('margin:0;font-size:16px;font-weight:600')}>Preferences</h2></div>
+    <section style={S(card)}>{titles && <div><h2 style={S('margin:0;font-size:16px;font-weight:600')}>Preferences</h2></div>}
       <div style={S('display:flex;flex-direction:column')}>
         <div style={S('display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #EEF0F3')}><span style={S('color:#5E6673')}>Usually sees</span><span style={S('font-weight:500;text-align:right')}>{c.row.staff}</span></div>
         {switchRow('pf-rem', 'Appointment reminders', 'Text and email', c.reminders, rs, 'reminders')}
@@ -179,18 +182,18 @@ function Sections({ c, pad }: { c: C; pad: number }) {
       </div>
     </section>
   );
-  const forms = <FormsCard forms={d.forms} card={card} />;
+  const forms = <FormsCard forms={d.forms} card={card} titles={titles} />;
   return { history, notes, alerts, formula, prefs, forms };
 }
 
 /** Everything this client has completed, newest first, with their answers. */
-function FormsCard({ forms, card }: { forms: ProfileData['forms']; card: string }) {
+function FormsCard({ forms, card, titles = true }: { forms: ProfileData['forms']; card: string; titles?: boolean }) {
   const [open, setOpen] = useState('');
   const [page, setPage] = useState(0);
   const pages = Math.max(1, Math.ceil(forms.length / FORMS_PER)), pg = Math.min(page, pages - 1);
   return (
     <section style={S(card)}>
-      <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><h2 style={S('margin:0;font-size:16px;font-weight:600')}>Forms</h2></div>
+      {titles && <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><h2 style={S('margin:0;font-size:16px;font-weight:600')}>Forms</h2></div>}
       {forms.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No forms completed yet.</p>}
       {forms.slice(pg * FORMS_PER, (pg + 1) * FORMS_PER).map((f) => (
         <div key={f.id} style={S('display:flex;flex-direction:column;gap:8px;padding-top:12px;border-top:1px solid #EEF0F3')}>
@@ -203,6 +206,42 @@ function FormsCard({ forms, card }: { forms: ProfileData['forms']; card: string 
       ))}
       <Pager page={pg} pages={pages} total={forms.length} per={FORMS_PER} onPage={(p) => { setPage(p); setOpen(''); }} />
     </section>
+  );
+}
+
+const PRI = 'height:44px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500;padding:0 20px;';
+const MSGS = 'height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;padding:0 20px;';
+
+function MessageForm({ c }: { c: C }) {
+  return (
+        <div style={S('display:flex;flex-direction:column;gap:10px')}>
+          <label htmlFor="pf-msg" style={S('font-size:14px;font-weight:600')}>Message {c.first}</label>
+          <textarea id="pf-msg" value={c.msg} onChange={(e) => { c.setMsg(e.target.value); c.setError(''); }} placeholder="Write a message" style={S('box-sizing:border-box;width:100%;min-height:96px;resize:vertical;padding:12px 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:14.5px;color:#0E1116;background:#FFFFFF')} />
+          {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
+          <div style={S('display:flex;gap:10px')}><button onClick={c.sendMsg} disabled={c.busy} style={S(PRI + 'flex:1 1 0')}>Send</button><button className="ghost" onClick={() => { c.setMode('view'); c.setError(''); }} style={S(MSGS + 'flex:1 1 0')}>Cancel</button></div>
+        </div>
+  );
+}
+
+function EditForm({ c }: { c: C }) {
+  return (
+        <div style={S('display:flex;flex-direction:column;gap:12px')}>
+          <label htmlFor="pf-name" style={S('font-size:14px;font-weight:600')}>Full name</label>
+          <input id="pf-name" type="text" value={c.ed.name} onChange={(e) => { c.setEd({ ...c.ed, name: e.target.value }); c.setError(''); }} style={TXTIN(48)} />
+          <label htmlFor="pf-email" style={S('font-size:14px;font-weight:600')}>Email</label>
+          <input id="pf-email" type="email" inputMode="email" value={c.ed.email} onChange={(e) => { c.setEd({ ...c.ed, email: e.target.value }); c.setError(''); }} placeholder="name@example.com" style={TXTIN(48)} />
+          <label htmlFor="pf-phone" style={S('font-size:14px;font-weight:600')}>Phone</label>
+          <input id="pf-phone" type="tel" inputMode="tel" value={c.ed.phone} onChange={(e) => { c.setEd({ ...c.ed, phone: phoneInput(e.target.value) }); c.setError(''); }} placeholder="Optional" style={TXTIN(48)} />
+          {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
+          <div style={S('display:flex;gap:10px')}><button onClick={c.saveEdit} disabled={c.busy} style={S(PRI + 'flex:1 1 0')}>Save details</button><button className="ghost" onClick={() => { c.setMode('view'); c.setError(''); }} style={S(MSGS + 'flex:1 1 0')}>Cancel</button></div>
+          {!c.confirmDel
+            ? <button className="ghost" onClick={() => c.setConfirmDel(true)} style={S('height:44px;border:0;border-radius:999px;background:transparent;color:#B42318;font-size:14px;font-weight:500')}>Delete client</button>
+            : <div style={S('display:flex;flex-direction:column;gap:10px;padding:14px;border:1px solid #F3C6C3;border-radius:16px;background:#FEF3F2')}>
+                <span style={S('font-size:14px;font-weight:600')}>Delete {c.row.name} for good?</span>
+                <span style={S('font-size:13.5px;color:#5E6673')}>Only possible when they have no bookings or sales. Their notes go too.</span>
+                <div style={S('display:flex;gap:10px')}><button onClick={c.removeClient} disabled={c.busy} style={S('flex:1 1 0;height:44px;border:0;border-radius:999px;background:#C0261B;color:#FFFFFF;font-size:14px;font-weight:500')}>Delete client</button><button className="ghost" onClick={() => c.setConfirmDel(false)} style={S(MSGS + 'flex:1 1 0')}>Keep</button></div>
+              </div>}
+        </div>
   );
 }
 
@@ -244,33 +283,8 @@ function Header({ c, m }: { c: C; m: boolean }) {
       {m && actions}
       {!!c.notice && <span role="status" style={S('align-self:flex-start;padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.notice}</span>}
       {!!c.error && c.mode === 'view' && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
-      {c.mode === 'message' && (
-        <div style={S('display:flex;flex-direction:column;gap:10px')}>
-          <label htmlFor="pf-msg" style={S('font-size:14px;font-weight:600')}>Message {c.first}</label>
-          <textarea id="pf-msg" value={c.msg} onChange={(e) => { c.setMsg(e.target.value); c.setError(''); }} placeholder="Write a message" style={S('box-sizing:border-box;width:100%;min-height:96px;resize:vertical;padding:12px 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:14.5px;color:#0E1116;background:#FFFFFF')} />
-          {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
-          <div style={S('display:flex;gap:10px')}><button onClick={c.sendMsg} disabled={c.busy} style={S(pri + 'flex:1 1 0')}>Send</button><button className="ghost" onClick={() => { c.setMode('view'); c.setError(''); }} style={S(msgS + 'flex:1 1 0')}>Cancel</button></div>
-        </div>
-      )}
-      {c.mode === 'edit' && (
-        <div style={S('display:flex;flex-direction:column;gap:12px')}>
-          <label htmlFor="pf-name" style={S('font-size:14px;font-weight:600')}>Full name</label>
-          <input id="pf-name" type="text" value={c.ed.name} onChange={(e) => { c.setEd({ ...c.ed, name: e.target.value }); c.setError(''); }} style={TXTIN(48)} />
-          <label htmlFor="pf-email" style={S('font-size:14px;font-weight:600')}>Email</label>
-          <input id="pf-email" type="email" inputMode="email" value={c.ed.email} onChange={(e) => { c.setEd({ ...c.ed, email: e.target.value }); c.setError(''); }} placeholder="name@example.com" style={TXTIN(48)} />
-          <label htmlFor="pf-phone" style={S('font-size:14px;font-weight:600')}>Phone</label>
-          <input id="pf-phone" type="tel" inputMode="tel" value={c.ed.phone} onChange={(e) => { c.setEd({ ...c.ed, phone: phoneInput(e.target.value) }); c.setError(''); }} placeholder="Optional" style={TXTIN(48)} />
-          {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
-          <div style={S('display:flex;gap:10px')}><button onClick={c.saveEdit} disabled={c.busy} style={S(pri + 'flex:1 1 0')}>Save details</button><button className="ghost" onClick={() => { c.setMode('view'); c.setError(''); }} style={S(msgS + 'flex:1 1 0')}>Cancel</button></div>
-          {!c.confirmDel
-            ? <button className="ghost" onClick={() => c.setConfirmDel(true)} style={S('height:44px;border:0;border-radius:999px;background:transparent;color:#B42318;font-size:14px;font-weight:500')}>Delete client</button>
-            : <div style={S('display:flex;flex-direction:column;gap:10px;padding:14px;border:1px solid #F3C6C3;border-radius:16px;background:#FEF3F2')}>
-                <span style={S('font-size:14px;font-weight:600')}>Delete {c.row.name} for good?</span>
-                <span style={S('font-size:13.5px;color:#5E6673')}>Only possible when they have no bookings or sales. Their notes go too.</span>
-                <div style={S('display:flex;gap:10px')}><button onClick={c.removeClient} disabled={c.busy} style={S('flex:1 1 0;height:44px;border:0;border-radius:999px;background:#C0261B;color:#FFFFFF;font-size:14px;font-weight:500')}>Delete client</button><button className="ghost" onClick={() => c.setConfirmDel(false)} style={S(msgS + 'flex:1 1 0')}>Keep</button></div>
-              </div>}
-        </div>
-      )}
+      {c.mode === 'message' && <MessageForm c={c} />}
+      {c.mode === 'edit' && <EditForm c={c} />}
     </section>
   );
 }
@@ -300,20 +314,176 @@ function Desktop({ c }: { c: C }) {
   );
 }
 
+type Sub = 'home' | 'overview' | 'appointments' | 'sales' | 'details' | 'notes' | 'alerts' | 'formula' | 'forms' | 'prefs';
+const SUB_TITLE: Record<Sub, string> = { home: '', overview: 'Overview', appointments: 'Appointments', sales: 'Sales', details: 'Client details', notes: 'Notes', alerts: 'Allergies and patch tests', formula: 'Colour formula', forms: 'Client forms', prefs: 'Preferences' };
+const CHEV = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')} aria-hidden="true"><path d="M9.5 6l6 6-6 6" /></svg>;
+const BACK = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 6l-6 6 6 6" /></svg>;
+const CLOSE = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>;
+const RING = 'flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer;text-decoration:none;padding:0';
+const UPCOMING = new Set(['pending', 'confirmed', 'checked_in', 'in_progress']);
+
 function Mobile({ c }: { c: C }) {
-  const s = Sections({ c, pad: 20 });
+  const { row, d } = c;
+  const [view, setView] = useState<Sub>('home');
+  const [rec, setRec] = useState(false);
+  const [qa, setQa] = useState(false);
+  const [apFilter, setApFilter] = useState<'all' | 'upcoming' | 'past'>('all');
+  const s = Sections({ c, pad: 20, titles: false });
+  const tone = TONE[row.tag];
+  const book = `/calendar?new=1&c=${encodeURIComponent(row.name)}`;
+  const avatar = (px: number, fs: number) => <div style={S('flex:0 0 ' + px + 'px;width:' + px + 'px;height:' + px + 'px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:' + fs + 'px;font-weight:600;background:' + tone[0] + ';color:' + tone[1])}>{initialsOf(row.name, 2)}</div>;
+  const rowCss = 'display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:58px;padding:0 4px;border:0;background:transparent;font:inherit;font-size:16px;text-align:left;color:#0E1116;cursor:pointer';
+  const menu = (id: Sub, label: string, count?: number, indent?: boolean) => (
+    <button key={id} onClick={() => { c.setError(''); c.setNotice(''); setView(id); }} style={S(rowCss + (indent ? ';padding-left:24px' : ''))}>
+      <span style={S('flex:1 1 auto;min-width:0')}>{label}</span>
+      {!!count && <span style={S('flex:0 0 auto;min-width:24px;height:24px;padding:0 8px;box-sizing:border-box;border-radius:999px;background:#EEF0F3;color:#4A525E;font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center')}>{count}</span>}
+      {CHEV}
+    </button>
+  );
+  const ico = (path: string) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')} aria-hidden="true"><path d={path} /></svg>;
+  const PHONE = 'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z';
+  const MAIL = 'M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zm0 1 8 6 8-6';
+  const CAL = 'M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v11A1.5 1.5 0 0 1 19 19.5H5A1.5 1.5 0 0 1 3.5 18V7A1.5 1.5 0 0 1 5 5.5zM3.5 10h17M8 3.5v4M16 3.5v4';
+  const card = 'box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:8px 20px';
+  const sheet = (title: string, body: React.ReactNode, onClose: () => void) => (
+    <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:6')}>
+      <button onClick={onClose} aria-label="Close" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
+      <div className="sheet" role="dialog" aria-label={title} style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column;gap:6px')}>
+        <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0;margin-bottom:12px')} />
+        <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px')}><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{title}</h2><button onClick={onClose} aria-label="Close" style={S(RING)}>{CLOSE}</button></div>
+        {body}
+      </div>
+    </div>
+  );
+
+  // Messaging and editing take over the page.
+  if (c.mode === 'message' || c.mode === 'edit') {
+    return (
+      <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;background:#FFFFFF;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
+        <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px')}>
+          <button onClick={() => { c.setMode('view'); c.setError(''); }} aria-label="Back" style={S(RING)}>{BACK}</button>
+          <h1 style={S('margin:0;flex:1 1 auto;font-size:22px;font-weight:600;letter-spacing:-0.025em')}>{c.mode === 'message' ? 'Message ' + c.first : 'Edit details'}</h1>
+        </header>
+        <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:8px 20px 28px;display:flex;flex-direction:column;gap:16px')}>
+          {c.mode === 'message' ? <MessageForm c={c} /> : <EditForm c={c} />}
+        </main>
+      </div>
+    );
+  }
+
+  const appts = d.appts.filter((a) => (apFilter === 'all' ? true : apFilter === 'upcoming' ? a.upcoming : !a.upcoming));
+  const groups: { month: string; items: typeof appts }[] = [];
+  appts.forEach((a) => { const g = groups[groups.length - 1]; if (g && g.month === a.month) g.items.push(a); else groups.push({ month: a.month, items: [a] }); });
+  const avg = row.visits ? Math.round(row.spentCents / row.visits) : 0;
+
   return (
-    <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
-      <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px')}>
-        <Link href="/clients" aria-label="Back to clients" style={S('flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center')}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 6 8.5 12l6 6" /></svg></Link>
-        <div style={S('min-width:0')}><div style={S('font-size:13px;color:#5E6673')}>Client profile</div></div>
+    <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
+      <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px;' + (view !== 'home' ? 'border-bottom:1px solid #E6E8EC;margin-bottom:8px' : ''))}>
+        {view === 'home'
+          ? <Link href="/clients" aria-label="Back to clients" style={S(RING)}>{BACK}</Link>
+          : <button onClick={() => { setView('home'); c.setError(''); c.setNotice(''); }} aria-label="Back to profile" style={S(RING)}>{BACK}</button>}
+        {view !== 'home' && <>{avatar(36, 13)}<div style={S('flex:1 1 auto;min-width:0;font-size:18px;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{row.name}</div></>}
+        {view === 'home' && <div style={S('flex:1 1 auto')} />}
+        <Link href="/clients" aria-label="Close profile" style={S(RING)}>{CLOSE}</Link>
       </header>
-      <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:20px')}>
-          <Header c={c} m={true} />
-        <Stats c={c} cols={2} big={false} />
-        {s.history}{s.forms}{s.notes}{s.alerts}{s.formula}{s.prefs}
+      <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 24px;display:flex;flex-direction:column;gap:16px')}>
+        {!!c.notice && <span role="status" style={S('align-self:flex-start;padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.notice}</span>}
+        {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
+
+        {view === 'home' && (<>
+          <div style={S('display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0 4px;text-align:center')}>
+            {avatar(112, 34)}
+            <h1 style={S('margin:12px 0 0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em;overflow-wrap:anywhere')}>{row.name}</h1>
+            <div style={S('display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px')}><span style={S('display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;background:' + tone[0] + ';color:' + tone[1])}>{row.tag}</span>{!!row.email && <span style={S('font-size:14px;color:#5E6673;overflow-wrap:anywhere')}>{row.email}</span>}</div>
+          </div>
+          <div style={S('display:flex;gap:10px')}>
+            <button onClick={() => setQa(true)} aria-label="More actions" aria-haspopup="dialog" style={S(RING + ';flex:0 0 52px;width:52px;height:52px')}><svg width="20" height="20" viewBox="0 0 24 24" fill="#0E1116"><circle cx="12" cy="5.5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="18.5" r="1.6" /></svg></button>
+            <Link href={book} style={S('flex:1 1 0;height:52px;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none')}>Book now</Link>
+          </div>
+          <div style={S(card + ';display:flex;flex-direction:column')} className="sum-rows">
+            {[[PHONE, row.phone || 'No phone'], [MAIL, row.email || 'No email'], [CAL, d.since]].map(([p, t]) => <div key={p} style={S('display:flex;align-items:center;gap:12px;padding:14px 0;font-size:15px')}>{ico(p)}<span style={S('min-width:0;overflow-wrap:anywhere')}>{t}</span></div>)}
+          </div>
+          <div style={S(card + ';display:flex;flex-direction:column')} className="sum-rows">
+            {menu('overview', 'Overview')}
+            {menu('appointments', 'Appointments', d.appts.length)}
+            {menu('sales', 'Sales', d.sales.length)}
+            {menu('details', 'Client details')}
+            <button onClick={() => setRec(!rec)} aria-expanded={rec} style={S(rowCss)}><span style={S('flex:1 1 auto')}>Records</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto;transform:rotate(' + (rec ? 180 : 0) + 'deg)')} aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg></button>
+            {rec && <>
+              {menu('notes', 'Notes', c.notes.length, true)}
+              {menu('alerts', 'Allergies and patch tests', c.allergies.length, true)}
+              {menu('formula', 'Colour formula', undefined, true)}
+              {menu('forms', 'Client forms', d.forms.length, true)}
+            </>}
+            {menu('prefs', 'Preferences')}
+          </div>
+        </>)}
+
+        {view !== 'home' && <h2 style={S('margin:8px 0 0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>{SUB_TITLE[view]}</h2>}
+
+        {view === 'overview' && (<>
+          <section aria-label="Client stats" style={S('display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px')}>
+            {([['Visits', String(row.visits)], ['Total spent', money(row.spentCents)], ['Average visit', money(Math.round(avg / 100) * 100)], ['Last visit', row.last], ['Next booking', row.next]] as [string, string][]).map(([l, v]) => <div key={l} style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:20px;padding:16px')}><div style={S('font-size:13px;color:#5E6673')}>{l}</div><div style={S('margin-top:4px;font-size:20px;font-weight:600;letter-spacing:-0.02em;overflow-wrap:anywhere')}>{v}</div></div>)}
+          </section>
+          {s.history}
+        </>)}
+
+        {view === 'appointments' && (<>
+          <div role="group" aria-label="Filter appointments" className="hscroll" style={S('display:flex;gap:8px;overflow-x:auto')}>
+            {([['all', 'All'], ['upcoming', 'Upcoming'], ['past', 'Past']] as const).map(([id, l]) => <button key={id} onClick={() => setApFilter(id)} aria-pressed={apFilter === id} style={S('flex:0 0 auto;height:44px;padding:0 18px;border-radius:999px;font-size:14px;font-weight:500;border:1px solid ' + (apFilter === id ? '#0E1116' : '#E1E4E9') + ';background:' + (apFilter === id ? '#0E1116' : '#FFFFFF') + ';color:' + (apFilter === id ? '#FFFFFF' : '#0E1116'))}>{l}</button>)}
+          </div>
+          {groups.map((g) => (
+            <div key={g.month} style={S('display:flex;flex-direction:column;gap:10px')}>
+              <h3 style={S('margin:6px 0 0;font-size:15px;font-weight:600;color:#5E6673')}>{g.month}</h3>
+              {g.items.map((a) => (
+                <Link key={a.id} href={`/calendar?d=${a.dayYmd}&b=${a.id}`} aria-label={a.label + ', ' + a.services} style={S('display:block;text-decoration:none;box-sizing:border-box;padding:14px 16px;border-radius:20px;background:' + (a.upcoming ? '#ECE8FE' : '#EEF0F3') + ';color:' + (a.upcoming ? '#3A2BB5' : '#4A525E'))}>
+                  <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px')}><span style={S('font-size:16px;font-weight:600')}>{a.label}</span><span style={S('font-size:14.5px;font-weight:500;flex:0 0 auto')}>{money(a.cents)}</span></div>
+                  <div style={S('margin-top:2px;font-size:14px;overflow-wrap:anywhere')}>{a.time + ' · ' + a.services + (a.staff ? ' with ' + a.staff : '')}</div>
+                  {a.status !== 'confirmed' && a.status !== 'completed' && <span style={S('display:inline-block;margin-top:8px;padding:3px 10px;border-radius:999px;background:#FFFFFF;font-size:12px;font-weight:500;color:#0E1116')}>{STATUS_LABEL[a.status] ?? a.status}</span>}
+                </Link>
+              ))}
+            </div>
+          ))}
+          {appts.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>{apFilter === 'upcoming' ? 'Nothing coming up.' : apFilter === 'past' ? 'No past appointments.' : 'No appointments yet.'}</p>}
+        </>)}
+
+        {view === 'sales' && (<>
+          <div style={S(card + ';display:flex;flex-direction:column')} className="sum-rows">
+            {d.sales.map((x) => (
+              <Link key={x.id} href={`/sales?sale=${x.id}`} style={S('display:flex;align-items:center;gap:12px;padding:14px 0;text-decoration:none;color:#0E1116')}>
+                <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600')}>{x.date}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{(x.ref ? x.ref + ' · ' : '') + x.method}</span></span>
+                <span style={S('flex:0 0 auto;text-align:right')}><span style={S('display:block;font-size:15px;font-weight:600')}>{money(x.cents)}</span><span style={S('display:block;font-size:12.5px;color:' + (x.status === 'Paid' ? '#14624A' : x.status === 'Pending' ? '#7A4204' : '#9B1C1C'))}>{x.status}</span></span>
+                {CHEV}
+              </Link>
+            ))}
+            {d.sales.length === 0 && <p style={S('margin:0;padding:14px 0;color:#5E6673;font-size:14px')}>No sales yet.</p>}
+          </div>
+        </>)}
+
+        {view === 'details' && (<>
+          <div style={S(card + ';display:flex;flex-direction:column')} className="sum-rows">
+            {([['Name', row.name], ['Phone', row.phone || 'Not added'], ['Email', row.email || 'Not added'], ['Client since', d.since.replace('Client since ', '')]] as [string, string][]).map(([l, v]) => <div key={l} style={S('display:flex;justify-content:space-between;gap:12px;padding:14px 0;font-size:15px')}><span style={S('color:#5E6673')}>{l}</span><span style={S('font-weight:500;text-align:right;overflow-wrap:anywhere')}>{v}</span></div>)}
+          </div>
+          <button onClick={c.startEdit} style={S('height:52px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14.5px;font-weight:500;cursor:pointer')}>Edit details</button>
+        </>)}
+
+        {view === 'notes' && s.notes}
+        {view === 'alerts' && s.alerts}
+        {view === 'formula' && s.formula}
+        {view === 'forms' && (<>
+          {s.forms}
+          <Link href={'/clients/forms?c=' + row.id} style={S('display:flex;align-items:center;justify-content:center;height:52px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14.5px;font-weight:500;text-decoration:none')}>Open client forms</Link>
+        </>)}
+        {view === 'prefs' && s.prefs}
       </main>
       <MobileTabs active="clients" />
+      {qa && sheet('Quick actions', (
+        <div style={S('display:flex;flex-direction:column')}>
+          <button onClick={() => { setQa(false); c.setMode('message'); c.setError(''); c.setNotice(''); }} style={S(rowCss)}>{'Message ' + c.first}</button>
+          <button onClick={() => { setQa(false); c.startEdit(); }} style={S(rowCss)}>Edit details</button>
+          <Link href={'/clients/forms?c=' + row.id} style={S(rowCss + ';text-decoration:none')}>Client forms</Link>
+        </div>
+      ), () => setQa(false))}
     </div>
   );
 }
