@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's Mobile.dc.html (+ MobileHeader, MobileTabs). Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
+import { useState } from 'react';
 import { ClientMatches } from './ClientMatches';
 import { NewApptForm } from './NewApptForm';
 import { MessageBox } from './MessageBox';
@@ -16,6 +17,7 @@ import type { Props } from './calUi';
 
 export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>; props: Props }) {
   const { HOUR_PX, act, activeCards, addWalkin, amap, av, avail, availKey, backToView, bf, bfDur, blank, blockId, blockRows, blocks, bookings, busy, bvB, cards, cfg, charge, chk, close, co, coMath, createNew, cur, day, dayB, dayHrs, days14, di, doneBk, ed, editPlan, error, firstOpenDay, gEnd, gHours, gStart, go, hasError, hours, hrsOf, later, laterBk, minutesFromIso, mode, moveBooking, nFirstSvc, nKeyStr, nKeys, nOffers, nPickSvc, nPlan, nSlots, nWhy, nf, notice, now, nowTop, offered, offers, open, openBlock, openBooking, openDays, openNew, pageSubtitle, pageTitle, pendingSel, plan, primary, query, reason, refresh, router, row, rs, saveBlock, saveEdit, searchOpen, seg, sel, selId, services, setAmap, setAvail, setBf, setBlockId, setCo, setEd, setError, setMode, setNf, setNotice, setNow, setOpen, setPendingSel, setPlan, setQuery, setRs, setSearchOpen, setSelId, setSres, setStaffSel, setWi, setWkOpen, slotsFor, sq, sres, staffName, staffSel, startCheckout, startResched, startT, statCount, statRevenue, statNext, strip, svcMap, team, today, todayList, tz, upcoming, view, viewEvents, vm, weekDays, wi, wiPlanText, wiPlanCss, wiSvc, wkCards, wkOpen, wkRange, wkStaff, wkTitle, ws, nLock, edLock, lockFor, lf, setLf, openLate, lateList, saveLate } = c;
+  const [qa, setQa] = useState(false);
   const renderLater = (b: (typeof later)[number]) => (
               <div key={b.id} style={S('display:flex;align-items:center;gap:12px')}>
                 <span style={S('flex:0 0 40px;font-size:13px;color:#5E6673')}>{b.startText}</span>
@@ -211,28 +213,51 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
                   {!!notice && <span role="status" style={S('padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{notice}</span>}</div>
                 <button onClick={close} aria-label="Close" style={S(CLOSE_BTN)}><CloseX /></button>
               </div>
-              <div style={S('display:flex;align-items:center;gap:14px')}>
+              <h2 style={S('margin:0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>{dayInfo(sel.b.dayYmd).short}</h2>
+              <div style={S('display:flex;align-items:center;gap:14px;padding:16px;border:1px solid #E6E8EC;border-radius:22px')}>
                 <div style={S(sel.avatarStyle)}>{initials(sel.b.client)}</div>
-                <div style={S('min-width:0')}>
-                  <div style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em;line-height:1.2;overflow-wrap:anywhere')}>{sel.b.client}</div>
-                  <div style={S('font-size:14px;color:#5E6673;overflow-wrap:anywhere')}>{sel.b.services}</div>
+                <div style={S('flex:1 1 auto;min-width:0')}>
+                  <div style={S('font-size:19px;font-weight:600;letter-spacing:-0.02em;line-height:1.2;overflow-wrap:anywhere')}>{sel.b.client}</div>
+                  <div style={S('margin-top:2px;font-size:13.5px;color:#5E6673;overflow-wrap:anywhere')}>{'Booking B-' + sel.b.ref}</div>
                 </div>
+                <button onClick={c.startMessage} aria-label={'Message ' + first(sel.b.client)} style={S('flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer')}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3.5" y="5.5" width="17" height="13" rx="3" /><path d="m4.5 7.5 7.5 5.5 7.5-5.5" /></svg>
+                </button>
               </div>
               {sel.b.forms && <a href={'/clients/forms?c=' + sel.b.clientId} style={S('display:block;border-radius:16px;text-decoration:none;padding:12px 14px;font-size:13.5px;font-weight:500;background:' + (sel.b.forms.level === 'alert' ? '#FDECEA;color:#B42318' : '#FFF4E5;color:#8A4B00'))}>{sel.b.forms.text}<span style={S('display:block;margin-top:2px;font-size:12.5px;font-weight:600;text-decoration:underline')}>Open forms</span></a>}
-              <dl style={S('margin:0;display:flex;flex-direction:column')}>
-                <div style={S(DLROW)}><dt style={S('color:#5E6673')}>Booking</dt><dd style={S('margin:0;font-weight:500;text-align:right;white-space:nowrap')}>{'B-' + sel.b.ref}</dd></div>
-                <div style={S(DLROW)}><dt style={S('color:#5E6673')}>Time</dt><dd style={S('margin:0;font-weight:500;text-align:right;white-space:nowrap')}>{sel.time}</dd></div>
-                <div style={S(DLROW)}><dt style={S('color:#5E6673')}>With</dt><dd style={S('margin:0;font-weight:500;text-align:right;overflow-wrap:anywhere')}>{staffName(sel.b.staffId)}</dd></div>
-                <div style={S(DLROW + ';border-bottom:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>Price</dt><dd style={S('margin:0;font-weight:500;text-align:right;overflow-wrap:anywhere')}>{sel.priceText}</dd></div>
-              </dl>
-              {errP()}
-              <div style={S('display:flex;gap:10px')}>
-                <button onClick={() => primary(sel.b)} style={S(PRIMARY)}>{sel.primaryLabel}</button>
-                <button onClick={() => startResched(sel.b, sel.k === 'done')} style={S(SECOND)}>{sel.secondaryLabel}</button>
+              <div className="sum-rows" style={S('padding:2px 16px;border:1px solid #E6E8EC;border-radius:22px')}>
+                {([
+                  ['Date', dayInfo(sel.b.dayYmd).full, <><rect x="3.5" y="5" width="17" height="15.5" rx="3" /><path d="M3.5 10h17M8 3v4M16 3v4" /></>],
+                  ['Time', sel.time, <><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></>],
+                  ['With', staffName(sel.b.staffId), <><circle cx="12" cy="8.5" r="3.5" /><path d="M5 20c.6-3.4 3.3-5 7-5s6.4 1.6 7 5" /></>],
+                ] as const).map(([l, v, icon]) => (
+                  <div key={l} style={S('display:flex;align-items:center;gap:12px;padding:14px 0;font-size:15px')}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')} aria-label={l}>{icon}</svg>
+                    <span style={S('min-width:0;overflow-wrap:anywhere')}>{v}</span>
+                  </div>
+                ))}
               </div>
-              {sel.canEdit && <button onClick={() => { setEd({ ids: sel.b.serviceIds.slice(), start: null }); setMode('edit'); setError(''); setNotice(''); }} style={S('height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14.5px;font-weight:500;cursor:pointer')}>Edit booking</button>}
-              <button onClick={c.startMessage} style={S('height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14.5px;font-weight:500;cursor:pointer')}>{'Message ' + first(sel.b.client)}</button>
-              {(sel.k === 'confirmed' || sel.k === 'pending') && c.started(sel.b) && <button onClick={() => c.markNoShow(sel.b)} style={S('height:48px;border:0;border-radius:999px;background:transparent;color:#B42318;font-size:14.5px;font-weight:500;cursor:pointer')}>Mark as no-show</button>}
+              <div style={S('display:flex;flex-direction:column;gap:10px')}>
+                <h3 style={S('margin:0;font-size:17px;font-weight:600;letter-spacing:-0.01em')}>Services</h3>
+                {(sel.b.serviceIds.map((id) => svcMap.get(id)).filter(Boolean) as NonNullable<ReturnType<typeof svcMap.get>>[]).map((v) => (
+                  <div key={v.id} style={S('display:flex;align-items:center;gap:12px')}>
+                    <span style={S('flex:0 0 4px;align-self:stretch;border-radius:999px;background:#B9AEFB')} />
+                    <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{v.name}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{v.dur + ' min'}</span></span>
+                    <span style={S('flex:0 0 auto;font-size:14.5px;font-weight:500')}>{usd(v.priceCents)}</span>
+                  </div>
+                ))}
+                {sel.b.serviceIds.every((id) => !svcMap.has(id)) && <div style={S('font-size:14.5px;color:#4A525E')}>{sel.b.services}</div>}
+              </div>
+              {errP()}
+              <div style={S('position:sticky;bottom:-28px;margin:0 -20px -28px;padding:14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3;display:flex;flex-direction:column;gap:12px')}>
+                <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px')}><span style={S('color:#5E6673;font-size:14px')}>Total</span><span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{sel.priceText}</span></div>
+                <div style={S('display:flex;gap:10px')}>
+                  <button onClick={() => setQa(true)} aria-label="More actions" aria-haspopup="dialog" style={S('flex:0 0 52px;width:52px;height:52px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer')}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="#0E1116"><circle cx="12" cy="5.5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="18.5" r="1.6" /></svg>
+                  </button>
+                  <button onClick={() => primary(sel.b)} style={S(PRIMARY + ';height:52px')}>{sel.primaryLabel}</button>
+                </div>
+              </div>
             </>)}
 
             {mode === 'checkout' && sel && (() => {
@@ -394,6 +419,32 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
                 <button onClick={backToView} style={S(SECOND)}>Cancel</button>
               </div>
             </>)}
+          </div>
+        </div>
+      )}
+
+      {qa && open && mode === 'view' && sel && (
+        <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:6')}>
+          <button onClick={() => setQa(false)} aria-label="Close quick actions" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
+          <div className="sheet" role="dialog" aria-label="Quick actions" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:92%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column')}>
+            <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0;margin-bottom:12px')} />
+            <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px')}><h2 style={S(H2S)}>Quick actions</h2><button onClick={() => setQa(false)} aria-label="Close" style={S(CLOSE_BTN)}><CloseX /></button></div>
+            {(() => {
+              const ITEM = 'display:flex;align-items:center;width:100%;min-height:54px;box-sizing:border-box;padding:0;border:0;background:transparent;font:inherit;font-size:16px;text-align:left;text-decoration:none;color:#0E1116;cursor:pointer';
+              const grp = 'display:flex;flex-direction:column;padding:4px 0;border-top:1px solid #EEF0F3';
+              const noShow = (sel.k === 'confirmed' || sel.k === 'pending') && c.started(sel.b);
+              return (<>
+                <div style={S('display:flex;flex-direction:column;padding:4px 0')}>
+                  <button onClick={() => { setQa(false); c.startMessage(); }} style={S(ITEM)}>{'Message ' + first(sel.b.client)}</button>
+                  <Link href={'/clients/' + sel.b.clientId} style={S(ITEM)}>Open client profile</Link>
+                </div>
+                <div style={S(grp)}>
+                  {sel.canEdit && <button onClick={() => { setQa(false); setEd({ ids: sel.b.serviceIds.slice(), start: null }); setMode('edit'); setError(''); setNotice(''); }} style={S(ITEM)}>Edit or cancel booking</button>}
+                  <button onClick={() => { setQa(false); startResched(sel.b, sel.k === 'done'); }} style={S(ITEM)}>{sel.secondaryLabel}</button>
+                </div>
+                {noShow && <div style={S(grp)}><button onClick={() => { setQa(false); c.markNoShow(sel.b); }} style={S(ITEM + ';color:#B42318')}>Mark as no-show</button></div>}
+              </>);
+            })()}
           </div>
         </div>
       )}
