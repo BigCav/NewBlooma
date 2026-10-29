@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { openNewAppt } from '@/components/NewApptHost';
 
 const S = (children: ReactNode, size = 20, sw = 1.7) => (
@@ -30,13 +30,37 @@ const RAIL: [string, string, string][] = [
   ['products', '/products', 'Products'], ['gift', '/gift-cards', 'Gift cards'], ['reviews', '/reviews', 'Reviews'], ['reports', '/reports', 'Reports'],
 ];
 
-export function SideNav({ slug, unread }: { slug: string; unread: number }) {
+/** Rail items that open a menu of their own instead of going straight to a page. */
+const MENUS: Record<string, { title: string; items: { href: string; label: string }[]; hide?: (role: string) => string[] }> = {
+  clients: { title: 'Clients', items: [{ href: '/clients', label: 'All clients' }, { href: '/clients/forms', label: 'Client forms' }] },
+  sales: { title: 'Sales', items: [{ href: '/sales', label: 'Sales' }, { href: '/sales/summary', label: 'Daily summary' }], hide: (role) => (role === 'stylist' ? ['/sales/summary'] : []) },
+};
+const itemsOf = (id: string, role: string) => (MENUS[id]?.items ?? []).filter((x) => !MENUS[id].hide?.(role).includes(x.href));
+const hasMenu = (id: string, role: string) => itemsOf(id, role).length > 1;
+
+export function SideNav({ slug, unread, role }: { slug: string; unread: number; role: string }) {
   const p = usePathname();
+  const here = RAIL.find(([, href]) => p.startsWith(href))?.[0];
+  const [open, setOpen] = useState<string | null>(here && hasMenu(here, role) ? here : null);
+  const lastOpen = useRef<string | null>(open);
+  if (open) lastOpen.current = open;
+  // Going to a page that has no menu of its own closes the menu.
+  useEffect(() => { if (!(here && hasMenu(here, role))) setOpen(null); }, [here, role]);
   const [wide, setWide] = useState(false);
   useEffect(() => { try { setWide(localStorage.getItem('aster_rail') === '1'); } catch { /* storage blocked */ } }, []);
   const toggle = () => setWide((w) => { try { localStorage.setItem('aster_rail', w ? '0' : '1'); } catch { /* storage blocked */ } return !w; });
   const item = (id: string, href: string, label: string, extra?: React.CSSProperties, ext = false) => {
     const on = !ext && p.startsWith(href);
+    if (hasMenu(id, role)) {
+      const pressed = open === id;
+      return (
+        <button key={id} type="button" className="rail-link" onClick={() => setOpen(pressed ? null : id)} aria-expanded={pressed} aria-controls="subpanel" aria-current={on ? 'page' : undefined} title={label}
+          style={{ height: 44, borderRadius: 14, border: 0, font: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', background: on ? '#0E1116' : pressed ? '#DDE0E5' : 'transparent', color: on ? '#fff' : pressed ? '#0E1116' : '#4A525E', ...extra }}>
+          {ICON[id]()}
+          <span className="rail-label">{label}</span>
+        </button>
+      );
+    }
     return (
       <Link key={id} href={href} className="rail-link" aria-label={id === 'inbox' && unread > 0 ? `Inbox, ${unread} need attention` : label} title={label} aria-current={on ? 'page' : undefined} target={ext ? '_blank' : undefined}
         style={{ width: 44, height: 44, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', background: on ? '#0E1116' : 'transparent', color: on ? '#fff' : '#4A525E', ...extra }}>
@@ -46,7 +70,9 @@ export function SideNav({ slug, unread }: { slug: string; unread: number }) {
       </Link>
     );
   };
-  return (
+  const shown = open ?? lastOpen.current;
+  const cur = shown ? [...itemsOf(shown, role)].sort((a, b) => b.href.length - a.href.length).find((x) => p === x.href || p.startsWith(x.href + '/'))?.href : undefined;
+  return (<>
     <nav className={'rail' + (wide ? ' wide' : '')} aria-label="Main">
       <div className="rail-head">
       <button type="button" onClick={toggle} aria-expanded={wide} aria-label={wide ? 'Collapse menu' : 'Expand menu'} title={wide ? 'Collapse menu' : 'Expand menu'} className="rail-logo" style={{ width: 40, height: 40, flex: '0 0 auto', border: 0, padding: 0, cursor: 'pointer', borderRadius: 14, background: '#0E1116', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
@@ -58,7 +84,15 @@ export function SideNav({ slug, unread }: { slug: string; unread: number }) {
       {item('store', `/b/${slug}`, 'View your public salon page', { marginTop: 'auto' }, true)}
       {item('settings', '/settings', 'Settings')}
     </nav>
-  );
+    <div id="subpanel" className={'subpanel' + (open ? ' open' : '')}>
+      <nav className="subpanel-in" aria-label={shown ? MENUS[shown].title : undefined}>
+        {shown && <>
+          <h2 className="subpanel-title">{MENUS[shown].title}</h2>
+          {itemsOf(shown, role).map((x) => <Link key={x.href} href={x.href} className="subpanel-link" aria-current={cur === x.href ? 'page' : undefined}>{x.label}</Link>)}
+        </>}
+      </nav>
+    </div>
+  </>);
 }
 
 export function TabBar() {
