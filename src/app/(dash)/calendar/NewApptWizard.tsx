@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { dayInfo, fmtMin, initials } from '@/lib/cal';
 import { findClients, type ClientHit } from './actions';
-import { S, ServicePicker, TeamPicker } from './pickers';
+import { S, ServicePicker } from './pickers';
 import { first, usd, slotCss, dayCss, PRIMARY, CLOSE_BTN, ERR, CloseX } from './calUi';
 import type { useCalendar } from './useCalendar';
 import type { Props } from './calUi';
@@ -56,7 +56,7 @@ export function NewApptWizard({ c, props, onCancel }: { c: ReturnType<typeof use
   const ico = (children: React.ReactNode) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')} aria-hidden="true">{children}</svg>;
 
   return (
-    <div style={S('display:flex;flex-direction:column;flex:1 1 auto;min-height:0;margin:-20px -20px -40px')}>
+    <div style={S('display:flex;flex-direction:column;flex:1 1 auto;min-height:0;margin:0 -20px -40px')}>
       <div style={S('flex:0 0 auto;padding:0 20px 14px')}>
         <div style={S('display:flex;align-items:center;gap:12px;min-height:44px')}>
           {step > 0 && <button onClick={back} aria-label="Back" style={S(CLOSE_BTN)}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 6l-6 6 6 6" /></svg></button>}
@@ -97,7 +97,18 @@ export function NewApptWizard({ c, props, onCancel }: { c: ReturnType<typeof use
         )}
 
         {step === 2 && (
-          <TeamPicker team={team} selected={nf.staff} offers={nOffers} onPick={(id) => { setNf({ ...nf, staff: id, time: null }); setError(''); }} />
+          <div role="group" aria-label="Team member" style={S('display:flex;flex-direction:column')}>
+            {team.map((m) => {
+              const off = !nOffers(m.id), on = nf.staff === m.id && !off;
+              return (
+                <button key={m.id} disabled={off} aria-pressed={on} onClick={() => { setNf({ ...nf, staff: on ? '' : m.id, time: null }); setError(''); }} style={S(ROW(on) + (off ? ';opacity:0.55;cursor:default;background:#FAFBFC' : ''))}>
+                  <span style={S(AV)}>{initials(m.name)}</span>
+                  <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{m.name}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{off ? 'Does not offer this service' : m.role || 'Team member'}</span></span>
+                  {on && TICK}
+                </button>
+              );
+            })}
+          </div>
         )}
 
         {step === 3 && (<>
