@@ -607,8 +607,8 @@ function Mobile({ c }: { c: C }) {
           const f = d.forms.find((x) => x.id === openForm);
           if (!f) return null;
           const [when, ...rest] = f.date.split(' · ');
-          const signed = f.answers.find((a) => /^signed$/i.test(a.k));
-          const answers = f.answers.filter((a) => a !== signed);
+          // Unanswered questions and the signature are left out: the client was signed in to make the booking.
+          const answers = f.answers.filter((a) => !/^signed$/i.test(a.k) && a.v !== 'No answer');
           return (<>
             <div>
               <h2 style={S('margin:8px 0 0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em;overflow-wrap:anywhere')}>{f.name}</h2>
@@ -621,12 +621,6 @@ function Mobile({ c }: { c: C }) {
                 <div style={S('margin-top:3px;font-size:16px;font-weight:600;overflow-wrap:anywhere;' + (a.v === 'No answer' ? 'color:#8A93A0;font-weight:400' : ''))}>{a.v}</div>
               </div>
             ))}
-            {signed && (
-              <div style={S('box-sizing:border-box;padding:14px 16px 16px;border:1px dashed #C9CED6;border-radius:16px;background:#FFFFFF')}>
-                <div style={S('font-size:12.5px;color:#5E6673')}>Signed</div>
-                <div style={S("margin-top:6px;font-size:26px;font-style:italic;font-family:Georgia,'Times New Roman',serif;overflow-wrap:anywhere")}>{signed.v}</div>
-              </div>
-            )}
           </>);
         })()}
         {view === 'prefs' && s.prefs}
