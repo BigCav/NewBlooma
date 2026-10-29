@@ -5,7 +5,7 @@ import { NO_DISC, discountCents, type DiscPick } from '../sales/shared';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { TONE_LIST, addDaysYmd, dayInfo, fmtMin, initials, weekStartOf, type CalBlock, type CalBooking, type CalHours, type CalService, type CalSettings, type CalStaff, BLOCK_KINDS, slotsBetween } from '@/lib/cal';
-import { delayStaffDay, noShowBooking, messageBookingClient, addWalkIn, approveBooking, cancelBooking, checkInBooking, checkoutBooking, createBlock, dayAvailability, deleteBlock, editBooking, rebookBooking, rescheduleBooking, walkinPlan, createNewAppointment, searchBookings, type SearchHit } from './actions';
+import { delayStaffDay, noShowBooking, messageBookingClient, addWalkIn, approveBooking, cancelBooking, checkInBooking, checkoutBooking, createBlock, dayAvailability, deleteBlock, editBooking, rebookBooking, rescheduleBooking, walkinPlan, createNewAppointment, startCardForSale, searchBookings, type SearchHit } from './actions';
 
 import { first, usd, m2, BLOCK_DURS_M, METHODS, TIP_OPTS, STEP, chipTone, kindOf, note, HATCH, type Avail, type Props } from './calUi';
 export function useCalendar(props: Props) {
@@ -175,7 +175,12 @@ export function useCalendar(props: Props) {
       setError('');
       const r = await checkoutBooking(cur.id, method, cfg.askTip ? co.tip : 0, co.code, cfg.canDiscount ? co.disc : undefined, co.svc ?? undefined);
       if (r.error) { setError(r.error); return; }
-      if (method === 'card' && r.saleId) { router.push(`/sales?sale=${r.saleId}&pay=1`); return; }
+      if (method === 'card' && r.saleId) {
+        const o = await startCardForSale(r.saleId);
+        if (o.url) { window.location.href = o.url; return; }
+        if (o.error) { setError(o.error); return; }
+        router.push(`/sales?sale=${r.saleId}&pay=1`); return;
+      }
       setMode('view'); setNotice(''); refresh();
     });
   };

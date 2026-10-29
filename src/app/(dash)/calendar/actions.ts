@@ -266,15 +266,21 @@ export async function checkoutBooking(bookingId: string, method: 'card' | 'cash'
   return { ok: true, saleId: id as string };
 }
 
-/** Express checkout: card, no tip, no discount, straight to the on-screen Windcave payment page. With only a terminal switched on it returns the sale so the Sales page can send it there. */
+/** Open the on-screen Windcave page for a pending sale. With only a card terminal switched on there is no page, so the caller sends the sale to the Sales page. */
+export async function startCardForSale(saleId: string): Promise<R & { url?: string }> {
+  const { sb, salon } = await requireCtx();
+  const { data: pay } = await sb.from('salon_payment_settings').select('online_cards_enabled').eq('salon_id', salon.id).maybeSingle();
+  if (!pay?.online_cards_enabled) return { ok: true };
+  const h = await headers();
+  const o = await startOnline(saleId, process.env.NEXT_PUBLIC_APP_URL || `https://${h.get('x-forwarded-host') ?? h.get('host')}`);
+  return o.error ? { error: o.error } : { ok: true, url: o.url };
+}
+
+/** Express checkout: card, no tip, no discount, straight to the on-screen Windcave payment page. */
 export async function payNowBooking(bookingId: string): Promise<R & { saleId?: string; url?: string }> {
   const r = await checkoutBooking(bookingId, 'card', 0);
   if (r.error || !r.saleId) return r;
-  const { sb, salon } = await requireCtx();
-  const { data: pay } = await sb.from('salon_payment_settings').select('online_cards_enabled').eq('salon_id', salon.id).maybeSingle();
-  if (!pay?.online_cards_enabled) return { ok: true, saleId: r.saleId };
-  const h = await headers();
-  const o = await startOnline(r.saleId, process.env.NEXT_PUBLIC_APP_URL || `https://${h.get('x-forwarded-host') ?? h.get('host')}`);
+  const o = await startCardForSale(r.saleId);
   return o.error ? { error: o.error, saleId: r.saleId } : { ok: true, saleId: r.saleId, url: o.url };
 }
 

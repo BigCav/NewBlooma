@@ -9,6 +9,7 @@ import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { ClientMatches } from '../calendar/ClientMatches';
 import { S } from '../calendar/pickers';
 import { CloseX, CLOSE_BTN } from '../calendar/calUi';
+import { CheckoutFlow } from '../calendar/CheckoutFlow';
 import { createWalkin, payFlow, refundSale, sendReceipt, setPrice, terminalCancel, terminalPoll } from './actions';
 import { DISC_PCTS, FILTERS, NO_DISC, STATUS, TIP_OPTS, discOf, discountCents, fmt, type DiscPick, type PayMethod, type SaleRow, type SvcOpt } from './shared';
 
@@ -91,6 +92,11 @@ function useSales(props: Props) {
     if (!props.methods.length) { setError('No payment methods are switched on. Turn some on in Settings.'); return; }
     startT(async () => { setError(''); settle(await payFlow(sel.id, pay.method, parseInt(pay.tip, 10) || 0, pay.code, props.canDiscount ? pay.disc : undefined)); });
   };
+  // Express: card on screen, no tip, no discount, straight to the payment page.
+  const payNow = () => {
+    if (!sel) return;
+    startT(async () => { setError(''); settle(await payFlow(sel.id, 'online', 0, '', props.canDiscount ? NO_DISC : undefined)); });
+  };
   const saveEdit = () => { if (sel) startT(async () => { const r = await setPrice(sel.id, editAmount); if (r.error) { setError(r.error); return; } setMode('view'); setError(''); setNotice(r.notice ?? ''); router.refresh(); }); };
   const doRefund = () => { if (sel) startT(async () => { const r = await refundSale(sel.id); setConfirmRefund(false); if (r.error) { setError(r.error); return; } setError(''); setNotice(r.notice ?? ''); router.refresh(); }); };
   const receipt = () => { if (sel) startT(async () => { const r = await sendReceipt(sel.id); if (r.error) { setError(r.error); setNotice(''); } else { setError(''); setNotice(r.notice ?? ''); } }); };
@@ -113,7 +119,7 @@ function useSales(props: Props) {
   const sq = query.trim().toLowerCase();
   const list = rows.filter((t) => (filter === 'all' || t.status === filter) && (!sq || (t.client + ' ' + t.ref + ' ' + t.service + ' ' + t.staffName + ' ' + t.status + ' ' + t.method + ' ' + t.total / 100).toLowerCase().includes(sq.replace(/[$,]/g, ''))));
   return { ...props, busy, narrow, rows, list, sel, selectedId, filter, setFilter, query, setQuery, mode, setMode, open, notice, error, setError, confirmRefund, setConfirmRefund,
-    canDiscount: props.canDiscount, pay, setPay, tipPctOf, editAmount, setEditAmount, nw, setNw, txn, wait, pick, openNew, cancel, close, takePayment, saveEdit, doRefund, receipt, createSale,
+    canDiscount: props.canDiscount, pay, setPay, tipPctOf, editAmount, setEditAmount, nw, setNw, txn, wait, pick, openNew, cancel, close, takePayment, payNow, saveEdit, doRefund, receipt, createSale,
     paidTotal: props.todayTotal, pendingCount: rows.filter((r) => r.status === 'Pending').length };
 }
 type C = ReturnType<typeof useSales>;
@@ -130,22 +136,35 @@ const Chips = ({ id, label, children }: { id: string; label: string; children: R
   <div style={S('display:flex;flex-direction:column;gap:8px')}><span id={id} style={S('font-size:14px;font-weight:600')}>{label}</span><div role="group" className="hscroll" aria-labelledby={id} style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>{children}</div></div>
 );
 
-/** The phone's sale details, laid out like a booking: status, client, details, lines, then the total and actions pinned at the bottom. */
+/** The phone's checkout for a sale: the same steps as the calendar's checkout. */
+function SaleCheckout({ c, s }: { c: C; s: SaleRow }) {
+  const lines = s.lines.map((l, i) => ({ key: l.label + i, name: l.label + (l.qty > 1 ? ' x' + l.qty : ''), sub: l.dur ? l.dur + ' min' : undefined, cents: l.cents * l.qty }));
+  return (
+    <CheckoutFlow who={s.client + ', ' + s.service} methods={c.methods.map((m) => [m.id, m.label] as const)}
+      co={{ method: c.pay.method, tip: parseInt(c.pay.tip, 10) || 0, code: c.pay.code, disc: c.pay.disc }}
+      setCo={(x) => c.setPay({ method: x.method as PayMethod['id'], tip: String(x.tip), code: x.code, disc: x.disc })}
+      cfg={{ canDiscount: c.canDiscount, askTip: c.askTip, taxInclusive: s.taxIncl, taxRate: s.taxRate }}
+      lines={lines} gross={s.amount} onCharge={c.takePayment} busy={c.busy || !!c.txn} error={c.error} setError={c.setError} wait={c.wait} onClose={c.cancel} />
+  );
+}
+
+/** The phone's sale details, laid out like a booking: status, client, details, services, then the total and actions pinned at the bottom. */
 function MobileSale({ c, s }: { c: C; s: SaleRow }) {
   const ic = (children: React.ReactNode) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')} aria-hidden="true">{children}</svg>;
-  const detail = [
-    ['Time', s.time, <><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></>],
+  const pending = s.status === 'Pending';
+  const detail: (readonly [string, string, React.ReactNode])[] = [
+    ['Time', s.range || s.time, <><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></>],
     ['With', s.staffName, <><circle cx="12" cy="8.5" r="3.5" /><path d="M5 20c.6-3.4 3.3-5 7-5s6.4 1.6 7 5" /></>],
-    ['Payment', s.method, <><rect x="3.5" y="6" width="17" height="12" rx="2.5" /><path d="M3.5 10.5h17" /></>],
-  ] as const;
+    ...(pending ? [] : [['Payment', s.method, <><rect x="3.5" y="6" width="17" height="12" rx="2.5" /><path d="M3.5 10.5h17" /></>] as const]),
+  ];
   const extra: [string, string][] = [
     ...(s.discount ? [['Discount' + (s.discountNote ? ' (' + s.discountNote + ')' : ''), '-' + fmt(s.discount)] as [string, string]] : []),
     ...(s.tip ? [['Tip', fmt(s.tip)] as [string, string]] : []),
-    ...(s.gst ? [[s.taxIncl ? 'Includes ' + s.taxRate + '% GST' : 'GST ' + s.taxRate + '%', fmt(s.gst)] as [string, string]] : []),
+    ...(!pending && s.gst ? [[s.taxIncl ? 'Includes ' + s.taxRate + '% GST' : 'GST ' + s.taxRate + '%', fmt(s.gst)] as [string, string]] : []),
   ];
-  const pending = s.status === 'Pending';
-  const secondary = s.status === 'Paid' ? 'Refund' : pending && s.canEdit ? 'Edit sale' : null;
+  const online = c.methods.some((m) => m.id === 'online');
   const BTN = 'height:52px;border-radius:999px;font-size:14.5px;font-weight:500;cursor:pointer';
+  const startCheckout = () => { c.setPay({ method: c.methods[0]?.id ?? 'cash', tip: c.tipPctOf(s), code: '', disc: discOf(s) }); c.setMode('pay'); c.setError(''); };
   return (<>
     <div style={S('display:flex;justify-content:flex-end;margin-bottom:-8px')}><button onClick={c.close} aria-label="Close" style={S(CLOSE_BTN)}><CloseX /></button></div>
     <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
@@ -167,7 +186,7 @@ function MobileSale({ c, s }: { c: C; s: SaleRow }) {
       {s.lines.map((l, i) => (
         <div key={l.label + i} style={S('display:flex;align-items:center;gap:12px')}>
           <span style={S('flex:0 0 4px;align-self:stretch;min-height:28px;border-radius:999px;background:#B9AEFB')} />
-          <span style={S('flex:1 1 auto;min-width:0;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{l.label + (l.qty > 1 ? ' x' + l.qty : '')}</span>
+          <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{l.label + (l.qty > 1 ? ' x' + l.qty : '')}</span>{!!l.dur && <span style={S('display:block;font-size:13px;color:#5E6673')}>{l.dur + ' min'}</span>}</span>
           <span style={S('flex:0 0 auto;font-size:14.5px;font-weight:500')}>{fmt(l.cents * l.qty)}</span>
         </div>
       ))}
@@ -180,19 +199,30 @@ function MobileSale({ c, s }: { c: C; s: SaleRow }) {
     <div style={S('position:sticky;bottom:-40px;margin:auto -20px -40px;padding:14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3;display:flex;flex-direction:column;gap:12px')}>
       {!!c.notice && <span role="status" style={S('align-self:flex-start;padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.notice}</span>}
       {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
-      <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px')}><span style={S('color:#5E6673;font-size:14px')}>{pending ? 'To pay' : 'Total'}</span><span style={S('font-size:22px;font-weight:600;letter-spacing:-0.02em')}>{fmt(s.total)}</span></div>
-      {!c.confirmRefund ? (
-        <div style={S('display:flex;gap:10px')}>
-          {secondary && <button className="ghost" onClick={() => { if (s.status === 'Paid') c.setConfirmRefund(true); else { c.setEditAmount(String(s.amount / 100)); c.setMode('edit'); c.setError(''); } }} style={S('flex:1 1 0;border:1px solid #E1E4E9;background:#FFFFFF;color:#0E1116;' + BTN)}>{secondary}</button>}
-          <button onClick={() => { if (pending) { c.setPay({ method: c.methods[0]?.id ?? 'cash', tip: c.tipPctOf(s), code: '', disc: discOf(s) }); c.setMode('pay'); c.setError(''); } else c.receipt(); }} disabled={c.busy} style={S('flex:1 1 0;border:0;background:#0E1116;color:#FFFFFF;' + BTN)}>{pending ? 'Take payment' : 'Send receipt'}</button>
-        </div>
-      ) : (
+      <div>
+        <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px')}><span style={S('color:#5E6673;font-size:14px')}>Total</span><span style={S('color:#5E6673;font-size:16px')}>{fmt(s.total)}</span></div>
+        <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:2px')}><span style={S('font-size:15px;font-weight:600')}>{pending ? 'To pay' : s.status}</span><span style={S('font-size:22px;font-weight:600;letter-spacing:-0.02em')}>{fmt(s.total)}</span></div>
+      </div>
+      {c.confirmRefund ? (
         <div role="alertdialog" aria-label="Confirm refund" style={S('display:flex;flex-direction:column;gap:12px;box-sizing:border-box;padding:16px;border:1px solid #F3C6C3;border-radius:18px;background:#FEF3F2')}>
           <div><div style={S('font-size:14.5px;font-weight:600')}>Refund {fmt(s.total)}?</div><div style={S('margin-top:2px;font-size:13px;color:#5E6673')}>The sale is marked as refunded and removed from today&apos;s sales.</div></div>
           <div style={S('display:flex;gap:10px')}>
             <button className="ghost" onClick={() => c.setConfirmRefund(false)} style={S('flex:1 1 0;border:1px solid #E1E4E9;background:#FFFFFF;color:#0E1116;' + BTN)}>Cancel</button>
             <button onClick={c.doRefund} disabled={c.busy} style={S('flex:1 1 0;border:0;background:#C0261B;color:#FFFFFF;' + BTN)}>Refund</button>
           </div>
+        </div>
+      ) : pending ? (
+        <div style={S('display:flex;gap:10px')}>
+          {s.canEdit && <button onClick={() => { c.setEditAmount(String(s.amount / 100)); c.setMode('edit'); c.setError(''); }} aria-label="Edit sale price" style={S('flex:0 0 52px;width:52px;height:52px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer')}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-4-4L4 16z" /><path d="m13.5 6.5 4 4" /></svg>
+          </button>}
+          {online && <button onClick={c.payNow} disabled={c.busy} style={S('flex:1 1 0;border:1px solid #E1E4E9;background:#FFFFFF;color:#0E1116;' + BTN)}>Pay now</button>}
+          <button onClick={startCheckout} disabled={c.busy} style={S('flex:1 1 0;border:0;background:#0E1116;color:#FFFFFF;' + BTN)}>Checkout</button>
+        </div>
+      ) : (
+        <div style={S('display:flex;gap:10px')}>
+          {s.status === 'Paid' && <button className="ghost" onClick={() => c.setConfirmRefund(true)} style={S('flex:1 1 0;border:1px solid #E1E4E9;background:#FFFFFF;color:#0E1116;' + BTN)}>Refund</button>}
+          <button onClick={c.receipt} disabled={c.busy} style={S('flex:1 1 0;border:0;background:#0E1116;color:#FFFFFF;' + BTN)}>Send receipt</button>
         </div>
       )}
     </div>
@@ -245,6 +275,7 @@ function Panel({ c, m }: { c: C; m: boolean }) {
     </>);
   }
   if (!s) return <p style={S('margin:0;color:#5E6673;font-size:14px')}>No sales yet. Record one with New sale.</p>;
+  if (m && c.mode === 'pay') return <SaleCheckout c={c} s={s} />;
   if (c.mode === 'pay') {
     const pct = c.askTip ? parseInt(c.pay.tip, 10) || 0 : 0;
     const svcCents = s.amount, tipAmt = Math.round(svcCents * pct / 100);
@@ -410,7 +441,7 @@ function Mobile({ c }: { c: C }) {
           <button onClick={c.close} aria-label="Close details" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
           <div className="sheet" role="dialog" aria-label="Sale details" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:86%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column;gap:16px')}>
             <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0')} />
-            {(c.mode !== 'view' || !c.sel) && <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Sale</h2><button onClick={c.close} aria-label="Close" style={S('flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer')}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg></button></div>}
+            {((c.mode !== 'view' && c.mode !== 'pay') || !c.sel) && <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Sale</h2><button onClick={c.close} aria-label="Close" style={S('flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer')}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg></button></div>}
             <Panel c={c} m={true} />
           </div>
         </div>
