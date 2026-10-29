@@ -55,7 +55,7 @@ export function NewApptWizard({ c, props, onCancel }: { c: ReturnType<typeof use
   const ico = (children: React.ReactNode) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')} aria-hidden="true">{children}</svg>;
 
   return (
-    <div style={S('display:flex;flex-direction:column;height:calc(88dvh - 40px);min-height:420px;margin:0 -20px -28px')}>
+    <div style={S('display:flex;flex-direction:column;flex:1 1 auto;min-height:0;margin:0 -20px -28px')}>
       <div style={S('flex:0 0 auto;padding:0 20px 14px')}>
         <div style={S('display:flex;align-items:center;gap:12px;min-height:44px')}>
           {step > 0 && <button onClick={back} aria-label="Back" style={S(CLOSE_BTN)}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 6l-6 6 6 6" /></svg></button>}
@@ -73,7 +73,7 @@ export function NewApptWizard({ c, props, onCancel }: { c: ReturnType<typeof use
             <input id="ap-client" type="text" aria-label="Client" autoFocus value={nf.client} onChange={(e) => { setNf({ ...nf, client: e.target.value, clientId: null }); setError(''); }} placeholder="Search or type a client name" style={{ ...S('box-sizing:border-box;width:100%;height:48px;padding:0 14px 0 42px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF'), minHeight: 0 }} />
           </div>
           <Matches query={nf.client} pickedId={nf.clientId} onPick={(h) => { setNf({ ...nf, client: h.name, clientId: h.id }); setError(''); go(1); }} />
-          {nf.clientId && <div style={S('display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid #0E1116;border-radius:16px')}><span style={S('flex:0 0 40px;width:40px;height:40px;border-radius:999px;background:#EEEAFE;color:#3A2BB5;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600')}>{initials(nf.client)}</span><span style={S('flex:1 1 auto;min-width:0;font-weight:600;overflow-wrap:anywhere')}>{nf.client}</span><span style={S('font-size:12.5px;color:#5E6673')}>Existing client</span></div>}
+          {nf.clientId && <div style={S('display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid #E6E8EC;border-radius:16px')}><span style={S('flex:0 0 40px;width:40px;height:40px;border-radius:999px;background:#EEEAFE;color:#3A2BB5;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600')}>{initials(nf.client)}</span><span style={S('flex:1 1 auto;min-width:0;font-weight:600;overflow-wrap:anywhere')}>{nf.client}</span><span style={S('font-size:12.5px;color:#5E6673')}>Existing client</span></div>}
           {!typed && recent.length > 0 && (<>
             <h3 style={S('margin:6px 0 0;font-size:15px;font-weight:600')}>Recent clients</h3>
             <div style={S('display:flex;flex-direction:column')}>
