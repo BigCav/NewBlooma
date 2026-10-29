@@ -38,8 +38,8 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
     <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
 
       {/* MobileHeader */}
-      <header style={S("display:flex;flex-direction:column;gap:12px;padding:28px 20px 16px;font-family:'Geist',system-ui,sans-serif;color:#0E1116")}>
-        <div style={S('display:flex;align-items:flex-end;justify-content:space-between;gap:12px')}>
+      <header style={S("display:flex;flex-direction:column;gap:12px;padding:28px 20px 18px;margin-bottom:20px;border-bottom:1px solid #E6E8EC;font-family:'Geist',system-ui,sans-serif;color:#0E1116")}>
+        <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
           <div style={S('min-width:0')}>
             <h1 style={S('margin:0;font-size:30px;line-height:1.1;font-weight:600;letter-spacing:-0.03em')}>{pageTitle}</h1>
             <p style={S('margin:4px 0 0;color:#5E6673;font-size:14.5px')}>{pageSubtitle}</p>
