@@ -492,6 +492,7 @@ function Mobile({ c, initial }: { c: C; initial?: string }) {
           </div>
           <div style={S('display:flex;gap:10px')}>
             <button onClick={() => setQa(true)} aria-label="More actions" aria-haspopup="dialog" style={S(RING + ';flex:0 0 52px;width:52px;height:52px')}><svg width="20" height="20" viewBox="0 0 24 24" fill="#0E1116"><circle cx="12" cy="5.5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="18.5" r="1.6" /></svg></button>
+            <button onClick={() => { c.setError(''); c.setNotice(''); setView('messages'); }} aria-label={'Messages with ' + c.first} style={S(RING + ';flex:0 0 52px;width:52px;height:52px')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3.5" y="5.5" width="17" height="13" rx="3" /><path d="m4.5 7.5 7.5 5.5 7.5-5.5" /></svg></button>
             <Link href={book} style={S('flex:1 1 0;height:52px;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none')}>Book now</Link>
           </div>
           <div style={S(card + ';display:flex;flex-direction:column')} className="sum-rows">
