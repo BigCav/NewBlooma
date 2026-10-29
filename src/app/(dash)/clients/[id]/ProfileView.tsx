@@ -7,9 +7,10 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { MobileTabs } from '@/components/Chrome';
 import { STATUS_LABEL } from '@/lib/format';
 import { S } from '../../calendar/pickers';
-import { addNote, deleteClient, recordPatchTest, removeNote, saveFormula, sendClientMessage, setAllergies, setPreference, updateClient } from '../actions';
+import { addNote, deleteClient, recordPatchTest, removeNote, saveFormula, sendClientMessage, setAllergies, setPatchTest, setPreference, updateClient } from '../actions';
 import { phoneInput } from '@/lib/phone';
 import { channelNote, initialsOf, money, patchInfo, type Channels, type ClientRow } from '../shared';
+import { niceDate } from '@/lib/forms-shared';
 
 export type ProfileData = {
   row: ClientRow; since: string; allergies: string[]; patchOn: string | null; formula: string; reminders: boolean; marketing: boolean;
@@ -60,6 +61,7 @@ function useProfile(d: ProfileData) {
     addAllergy: () => { const t = allergyDraft.trim(); if (!t) return; const next = allergies.includes(t) ? allergies : [...allergies, t]; run(() => setAllergies(row.id, next), () => { setAl(next); setAllergyDraft(''); setNotice('Alert added'); }); },
     removeAllergy: (i: number) => { const next = allergies.filter((_, j) => j !== i); run(() => setAllergies(row.id, next), () => setAl(next)); },
     recordPatch: () => startT(async () => { const r = await recordPatchTest(row.id); if (r.error) { fail(r.error); return; } setPatchOn(r.on!); setNotice('Patch test recorded for today'); }),
+    setPatch: (on: string | null) => run(() => setPatchTest(row.id, on), () => { setPatchOn(on); }),
     saveFormula: () => run(() => saveFormula(row.id, formula), () => { setSaved(formula); setNotice('Formula saved'); }),
     toggle: (k: 'reminders' | 'marketing') => { const v = k === 'reminders' ? !reminders : !marketing; run(() => setPreference(row.id, k, v), () => (k === 'reminders' ? setReminders(v) : setMarketing(v))); },
     ed, setEd, confirmDel, setConfirmDel,
@@ -166,8 +168,8 @@ function Sections({ c, pad, titles = true, usually = true }: { c: C; pad: number
       {c.formula !== c.saved && <button onClick={c.saveFormula} disabled={c.busy} style={S('height:44px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500;padding:0 20px')}>Save formula</button>}
     </section>
   );
-  const switchRow = (id: string, title: string, sub: string, on: boolean, st: { st: string; kn: string }, k: 'reminders' | 'marketing') => (
-    <div style={S('display:flex;align-items:center;justify-content:space-between;gap:16px;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #EEF0F3')}>
+  const switchRow = (id: string, title: string, sub: string, on: boolean, st: { st: string; kn: string }, k: 'reminders' | 'marketing', top = true) => (
+    <div style={S('display:flex;align-items:center;justify-content:space-between;gap:16px;justify-content:space-between;gap:12px;padding:12px 0;' + (top ? 'border-top:1px solid #EEF0F3' : ''))}>
       <div><div id={id} style={S('font-size:14px;font-weight:600')}>{title}</div><div style={S('font-size:13px;color:#5E6673')}>{sub}</div></div>
       <button role="switch" aria-checked={on} aria-labelledby={id} onClick={() => c.toggle(k)} style={S(st.st)}><span style={S(st.kn)} /></button>
     </div>
@@ -176,7 +178,7 @@ function Sections({ c, pad, titles = true, usually = true }: { c: C; pad: number
     <section style={S(card)}>{titles && <div><h2 style={S('margin:0;font-size:16px;font-weight:600')}>Preferences</h2></div>}
       <div style={S('display:flex;flex-direction:column')}>
         {usually && <div style={S('display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #EEF0F3')}><span style={S('color:#5E6673')}>Usually sees</span><span style={S('font-weight:500;text-align:right')}>{c.row.staff}</span></div>}
-        {switchRow('pf-rem', 'Appointment reminders', 'Text and email', c.reminders, rs, 'reminders')}
+        {switchRow('pf-rem', 'Appointment reminders', 'Text and email', c.reminders, rs, 'reminders', usually)}
         {switchRow('pf-mk', 'Marketing messages', 'Offers and news', c.marketing, ms, 'marketing')}
       </div>
     </section>
@@ -356,16 +358,17 @@ function Mobile({ c }: { c: C }) {
   const [rec, setRec] = useState(false);
   const [qa, setQa] = useState(false);
   const [apFilter, setApFilter] = useState<'all' | 'upcoming' | 'past'>('all');
+  const [openForm, setOpenForm] = useState('');
   const mainRef = useRef<HTMLElement>(null);
   // Every page opens at its top, whatever the last one was scrolled to.
-  useEffect(() => { mainRef.current?.scrollTo({ top: 0 }); }, [view, c.mode]);
+  useEffect(() => { mainRef.current?.scrollTo({ top: 0 }); }, [view, c.mode, openForm]);
   const s = Sections({ c, pad: 20, titles: false, usually: false });
   const tone = TONE[row.tag];
   const book = `/calendar?new=1&c=${encodeURIComponent(row.name)}`;
   const avatar = (px: number, fs: number) => <div style={S('flex:0 0 ' + px + 'px;width:' + px + 'px;height:' + px + 'px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:' + fs + 'px;font-weight:600;background:' + tone[0] + ';color:' + tone[1])}>{initialsOf(row.name, 2)}</div>;
   const rowCss = 'display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:58px;padding:0 4px;border:0;background:transparent;font:inherit;font-size:16px;text-align:left;color:#0E1116;cursor:pointer';
   const menu = (id: Sub, label: string, count?: number, indent?: boolean) => (
-    <button key={id} onClick={() => { c.setError(''); c.setNotice(''); setView(id); }} style={S(rowCss + (indent ? ';padding-left:24px' : ''))}>
+    <button key={id} onClick={() => { c.setError(''); c.setNotice(''); setOpenForm(''); setView(id); }} style={S(rowCss + (indent ? ';padding-left:24px' : ''))}>
       <span style={S('flex:1 1 auto;min-width:0')}>{label}</span>
       {!!count && <span style={S('flex:0 0 auto;min-width:24px;height:24px;padding:0 8px;box-sizing:border-box;border-radius:999px;background:#EEF0F3;color:#4A525E;font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center')}>{count}</span>}
       {CHEV}
@@ -447,13 +450,12 @@ function Mobile({ c }: { c: C }) {
       <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px;' + (view !== 'home' ? 'border-bottom:1px solid #E6E8EC;margin-bottom:8px' : ''))}>
         {view === 'home'
           ? <Link href="/clients" aria-label="Back to clients" style={S(RING)}>{BACK}</Link>
-          : <button onClick={() => { setView('home'); c.setError(''); c.setNotice(''); }} aria-label="Back to profile" style={S(RING)}>{BACK}</button>}
+          : <button onClick={() => { if (openForm) { setOpenForm(''); return; } setView('home'); c.setError(''); c.setNotice(''); }} aria-label="Back to profile" style={S(RING)}>{BACK}</button>}
         {view !== 'home' && <>{avatar(36, 13)}<div style={S('flex:1 1 auto;min-width:0;font-size:18px;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{row.name}</div></>}
         {view === 'home' && <div style={S('flex:1 1 auto')} />}
         <Link href="/clients" aria-label="Close profile" style={S(RING)}>{CLOSE}</Link>
       </header>
       <main ref={mainRef} className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 24px;display:flex;flex-direction:column;gap:16px')}>
-        {!!c.notice && <span role="status" style={S('align-self:flex-start;padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.notice}</span>}
         {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
 
         {view === 'home' && (<>
@@ -484,13 +486,31 @@ function Mobile({ c }: { c: C }) {
           </div>
         </>)}
 
-        {view !== 'home' && <h2 style={S('margin:8px 0 0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>{SUB_TITLE[view]}</h2>}
+        {view !== 'home' && !openForm && <h2 style={S('margin:8px 0 0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>{SUB_TITLE[view]}</h2>}
 
         {view === 'overview' && (<>
-          <section aria-label="Client stats" style={S('display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px')}>
-            {([['Visits', String(row.visits)], ['Total spent', money(row.spentCents)], ['Average visit', money(Math.round(avg / 100) * 100)], ['Last visit', row.last], ['Next booking', row.next]] as [string, string][]).map(([l, v]) => <div key={l} style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:20px;padding:16px')}><div style={S('font-size:13px;color:#5E6673')}>{l}</div><div style={S('margin-top:4px;font-size:20px;font-weight:600;letter-spacing:-0.02em;overflow-wrap:anywhere')}>{v}</div></div>)}
+          <section aria-label="Total spent" style={S('box-sizing:border-box;border-radius:24px;background:#0E1116;color:#FFFFFF;padding:22px 22px 20px')}>
+            <div style={S('font-size:13.5px;opacity:0.7')}>Total spent</div>
+            <div style={S('margin-top:4px;font-size:40px;line-height:1.1;font-weight:600;letter-spacing:-0.03em')}>{money(row.spentCents)}</div>
+            <div style={S('margin-top:6px;font-size:14px;opacity:0.7')}>{row.visits + (row.visits === 1 ? ' visit' : ' visits') + (row.visits ? ', ' + money(Math.round(avg / 100) * 100) + ' on average' : '')}</div>
           </section>
-          {s.history}
+          <section aria-label="Last and next visit" style={S('display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px')}>
+            <div style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:20px;padding:16px')}><div style={S('font-size:13px;color:#5E6673')}>Last visit</div><div style={S('margin-top:4px;font-size:18px;font-weight:600;letter-spacing:-0.02em;overflow-wrap:anywhere')}>{row.last}</div></div>
+            <div style={S('box-sizing:border-box;background:#ECE8FE;border-radius:20px;padding:16px;color:#3A2BB5')}><div style={S('font-size:13px;opacity:0.8')}>Next booking</div><div style={S('margin-top:4px;font-size:18px;font-weight:600;letter-spacing:-0.02em;overflow-wrap:anywhere')}>{row.next}</div></div>
+          </section>
+          <div style={S(card + ';display:flex;flex-direction:column')} className="sum-rows">
+            {([
+              ['alerts', 'Allergies', c.allergies.length ? c.allergies.join(', ') : 'None recorded'],
+              ['alerts', 'Patch test', pi.text],
+              ['forms', 'Forms completed', String(d.forms.length)],
+              ['notes', 'Notes', String(c.notes.length)],
+            ] as [Sub, string, string][]).map(([v, l, t]) => (
+              <button key={l} onClick={() => { setOpenForm(''); setView(v); }} style={S(rowCss)}>
+                <span style={S('flex:1 1 auto;min-width:0;color:#5E6673')}>{l}</span>
+                <span style={S('flex:0 1 auto;min-width:0;font-weight:500;text-align:right;overflow-wrap:anywhere')}>{t}</span>{CHEV}
+              </button>
+            ))}
+          </div>
         </>)}
 
         {view === 'appointments' && (<>
@@ -543,7 +563,12 @@ function Mobile({ c }: { c: C }) {
             <h3 style={S('margin:0;font-size:16px;font-weight:600')}>Patch test</h3>
             <div style={S(greyRow)}>
               <span style={S('display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:600;background:' + piBg + ';color:' + piFg)}>{pi.text}</span>
-              {pi.needsAction && <button onClick={c.recordPatch} disabled={c.busy} style={S(BLACK + ';height:40px;padding:0 16px')}>Record test</button>}
+              {c.patchOn && <span style={S('font-size:13px;color:#5E6673')}>{'Tested ' + niceDate(c.patchOn)}</span>}
+            </div>
+            <Field label="Test date"><input type="date" value={c.patchOn ?? ''} max={d.today} onChange={(e) => { if (e.target.value) c.setPatch(e.target.value); }} style={FIELD_IN} /></Field>
+            <div style={S('display:flex;gap:10px')}>
+              <button onClick={c.recordPatch} disabled={c.busy} style={S(BLACK + ';flex:1 1 0')}>Record today</button>
+              {c.patchOn && <button className="ghost" onClick={() => c.setPatch(null)} disabled={c.busy} style={S('flex:1 1 0;height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#B42318;font-size:14px;font-weight:500')}>Remove</button>}
             </div>
           </section>
         </>)}
@@ -557,10 +582,53 @@ function Mobile({ c }: { c: C }) {
           </section>
         )}
 
-        {view === 'forms' && (<>
-          {s.forms}
+        {view === 'forms' && !openForm && (<>
+          {d.forms.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No forms completed yet.</p>}
+          {d.forms.map((f) => {
+            const [when, ...rest] = f.date.split(' · ');
+            return (
+              <button key={f.id} onClick={() => setOpenForm(f.id)} style={S('display:flex;align-items:center;gap:14px;width:100%;box-sizing:border-box;padding:16px;border:1px solid #E6E8EC;border-radius:22px;background:#FFFFFF;text-align:left;font:inherit;color:#0E1116;cursor:pointer')}>
+                <span style={S('flex:0 0 44px;width:44px;height:44px;border-radius:14px;background:#EEEAFE;display:flex;align-items:center;justify-content:center')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3A2BB5" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="2.5" /><path d="M9 9h6M9 13h6M9 17h3" /></svg></span>
+                <span style={S('flex:1 1 auto;min-width:0')}>
+                  <span style={S('display:block;font-size:16px;font-weight:600;letter-spacing:-0.01em;overflow-wrap:anywhere')}>{f.name}</span>
+                  <span style={S('display:block;margin-top:2px;font-size:13px;color:#5E6673;overflow-wrap:anywhere')}>{when}</span>
+                  {(rest.length > 0 || f.flagged) && <span style={S('display:flex;flex-wrap:wrap;gap:6px;margin-top:8px')}>
+                    {rest.map((r) => <span key={r} style={S('padding:3px 10px;border-radius:999px;background:#EEF0F3;color:#4A525E;font-size:12px;font-weight:500')}>{r.replace('booking ', 'Booking ')}</span>)}
+                    {f.flagged && <span style={S('padding:3px 10px;border-radius:999px;background:#FDECEA;color:#B42318;font-size:12px;font-weight:600')}>Reaction noted</span>}
+                  </span>}
+                </span>
+                {CHEV}
+              </button>
+            );
+          })}
           <Link href={'/clients/forms?c=' + row.id} style={S('display:flex;align-items:center;justify-content:center;height:52px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14.5px;font-weight:500;text-decoration:none')}>Open client forms</Link>
         </>)}
+        {view === 'forms' && !!openForm && (() => {
+          const f = d.forms.find((x) => x.id === openForm);
+          if (!f) return null;
+          const [when, ...rest] = f.date.split(' · ');
+          const signed = f.answers.find((a) => /^signed$/i.test(a.k));
+          const answers = f.answers.filter((a) => a !== signed);
+          return (<>
+            <div>
+              <h2 style={S('margin:8px 0 0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em;overflow-wrap:anywhere')}>{f.name}</h2>
+              <p style={S('margin:6px 0 0;font-size:14px;color:#5E6673')}>{'Completed ' + when + (rest.length ? ' · ' + rest.map((r) => r.replace('booking ', 'Booking ')).join(' · ') : '')}</p>
+            </div>
+            {f.flagged && <div style={S('padding:12px 14px;border-radius:16px;background:#FDECEA;color:#B42318;font-size:13.5px;font-weight:600')}>A reaction was noted on this form.</div>}
+            {answers.map((a, i) => (
+              <div key={i} style={S('box-sizing:border-box;padding:12px 16px 14px;border:1px solid #E1E4E9;border-radius:16px;background:#FFFFFF')}>
+                <div style={S('font-size:12.5px;color:#5E6673;overflow-wrap:anywhere')}>{a.k}</div>
+                <div style={S('margin-top:3px;font-size:16px;font-weight:600;overflow-wrap:anywhere;' + (a.v === 'No answer' ? 'color:#8A93A0;font-weight:400' : ''))}>{a.v}</div>
+              </div>
+            ))}
+            {signed && (
+              <div style={S('box-sizing:border-box;padding:14px 16px 16px;border:1px dashed #C9CED6;border-radius:16px;background:#FFFFFF')}>
+                <div style={S('font-size:12.5px;color:#5E6673')}>Signed</div>
+                <div style={S("margin-top:6px;font-size:26px;font-style:italic;font-family:Georgia,'Times New Roman',serif;overflow-wrap:anywhere")}>{signed.v}</div>
+              </div>
+            )}
+          </>);
+        })()}
         {view === 'prefs' && s.prefs}
       </main>
       <MobileTabs active="clients" />

@@ -93,6 +93,17 @@ export async function recordPatchTest(clientId: string): Promise<R & { on?: stri
   return error ? { error: friendly(error.message) } : { ok: true, on };
 }
 
+/** Set the patch test date (not in the future), or clear it with null. */
+export async function setPatchTest(clientId: string, on: string | null): Promise<R & { on?: string | null }> {
+  const { sb, salon } = await requireCtx();
+  if (on !== null) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(on)) return { error: 'Choose a date.' };
+    if (on > ymd(new Date(), salon.timezone)) return { error: 'The test date cannot be in the future.' };
+  }
+  const { error } = await sb.from('clients').update({ patch_test_on: on }).eq('id', clientId);
+  return error ? { error: friendly(error.message) } : { ok: true, on };
+}
+
 export async function saveFormula(clientId: string, formula: string): Promise<R> {
   const { sb } = await requireCtx();
   const { error } = await sb.from('clients').update({ colour_formula: formula.trim() || null }).eq('id', clientId);
