@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { ClientMatches } from './ClientMatches';
 import { NewApptForm } from './NewApptForm';
+import { LateWizard, BlockWizard, WalkInWizard } from './QuickWizards';
 import { MessageBox } from './MessageBox';
 import { DiscountPick } from './DiscountPick';
 import Link from 'next/link';
@@ -364,56 +365,11 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
               </div>
             </>)}
 
-            {mode === 'late' && (<>
-              <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><div style={S('min-width:0')}><h2 style={S(H2S)}>Running late</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>Moves everything not started for one person on {dayInfo(day).short}.</p></div><button onClick={close} aria-label="Close" style={S(CLOSE_BTN)}><CloseX sw={2} /></button></div>
-              <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="lt-who" style={S('font-size:14px;font-weight:600')}>Team member</span><TeamPicker team={team} selected={lf.s} onPick={(id) => { setLf({ ...lf, s: id }); setError(''); }} /></div>
-              <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="lt-mins" style={S('font-size:14px;font-weight:600')}>Running late by</span><div role="group" aria-labelledby="lt-mins" className="hscroll" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto')}>
-                {([[15, '15 min'], [30, '30 min'], [45, '45 min'], [60, '1 hour'], [90, '1.5 hours']] as const).map(([m, l]) => <button key={m} onClick={() => { setLf({ ...lf, mins: m }); setError(''); }} aria-pressed={lf.mins === m} style={S(chip(lf.mins === m))}>{l}</button>)}</div></div>
-              <div style={S('display:flex;flex-direction:column;gap:6px')}><span style={S('font-size:14px;font-weight:600')}>{lateList.length ? lateList.length + (lateList.length === 1 ? ' appointment moves' : ' appointments move') : 'Nothing left to move'}</span>
-                {lateList.map((b) => <div key={b.id} style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 14px;border-radius:14px;background:#F4F5F7;font-size:14px')}><span style={S('min-width:0;overflow-wrap:anywhere')}>{b.client}</span><span style={S('flex:0 0 auto;color:#5E6673')}>{fmtMin(b.start)} to {fmtMin(b.start + lf.mins)}</span></div>)}</div>
-              <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="lt-tell" style={S('font-size:14px;font-weight:600')}>Tell the clients</span><div role="group" aria-labelledby="lt-tell" style={S('display:flex;gap:8px')}>
-                <button onClick={() => setLf({ ...lf, tell: true })} aria-pressed={lf.tell} style={S(chip(lf.tell))}>Message them</button>
-                <button onClick={() => setLf({ ...lf, tell: false })} aria-pressed={!lf.tell} style={S(chip(!lf.tell))}>Do not message</button></div></div>
-              {errP()}
-              <div style={S('display:flex;gap:10px')}>
-                <button onClick={saveLate} disabled={busy || !lateList.length} style={S(PRIMARY)}>Move {lateList.length || ''}</button>
-                <button onClick={close} style={S(SECOND)}>Cancel</button>
-              </div>
-            </>)}
+            {mode === 'late' && <LateWizard c={c} />}
 
-            {mode === 'block' && (<>
-              <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><div style={S('min-width:0')}><h2 style={S(H2S)}>Block time</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>Clients cannot book blocked time.</p></div><button onClick={close} aria-label="Close" style={S(CLOSE_BTN)}><CloseX sw={2} /></button></div>
-              <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="bk-who" style={S('font-size:14px;font-weight:600')}>Team member</span><TeamPicker team={team} selected={bf.s} onPick={(id) => { setBf({ ...bf, s: id, start: null }); setError(''); }} /></div>
-              <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="bk-kind" style={S('font-size:14px;font-weight:600')}>Reason</span><div role="group" aria-labelledby="bk-kind" className="hscroll" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto')}>
-                {BLOCK_KINDS.map(([k, l]) => <button key={k} onClick={() => setBf({ ...bf, kind: k })} aria-pressed={bf.kind === k} style={S(chip(bf.kind === k))}>{l}</button>)}</div></div>
-              <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="bk-dur" style={S('font-size:14px;font-weight:600')}>Length</span><div role="group" aria-labelledby="bk-dur" className="hscroll" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto')}>
-                {BLOCK_DURS_M.map(([m, l]) => <button key={m} onClick={() => { setBf({ ...bf, dur: m, start: null }); setError(''); }} aria-pressed={bf.dur === m} style={S(chip(bf.dur === m))}>{l}</button>)}</div></div>
-              <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="bk-day" style={S('font-size:14px;font-weight:600')}>Day</span><div role="group" className="hscroll" aria-labelledby="bk-day" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto')}>
-                {days14.map((d) => <button key={d.ymd} onClick={() => { if (!d.closed) { setBf({ ...bf, day: d.ymd, start: null }); setError(''); } }} disabled={d.closed} aria-pressed={bf.day === d.ymd} aria-label={d.full + (d.closed ? ', closed' : '')} style={S(dayCss(bf.day === d.ymd, d.closed))}><span style={S('font-size:12.5px')}>{d.abbr}</span><span style={S('font-size:17px;font-weight:600')}>{d.num}</span></button>)}</div></div>
-              <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="bk-time" style={S('font-size:14px;font-weight:600')}>Starts at</span><div role="group" aria-labelledby="bk-time" style={S('display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px')}>
-                {slotsFor.map((t) => { const why = reason(bf.day, t, bfDur); const on = bf.start === t && !why; return <button key={t} onClick={() => { if (!why) { setBf({ ...bf, start: t }); setError(''); } }} disabled={!!why} aria-pressed={on} aria-label={fmtMin(t) + (why ? ', unavailable' : '')} style={S(slotCss(on, !!why))}>{fmtMin(t)}</button>; })}</div></div>
-              {errP()}
-              <div style={S('display:flex;gap:10px')}>
-                <button onClick={saveBlock} disabled={busy} style={S(PRIMARY)}>Block time</button>
-                <button onClick={close} style={S(SECOND)}>Cancel</button>
-              </div>
-            </>)}
+            {mode === 'block' && <BlockWizard c={c} />}
 
-            {mode === 'walkin' && (<>
-              <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><div style={S('min-width:0')}><h2 style={S(H2S)}>Walk-in</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>We will find the first free time today.</p></div><button onClick={close} aria-label="Close" style={S(CLOSE_BTN)}><CloseX /></button></div>
-              <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="wi-name" style={S('font-size:14px;font-weight:600')}>Client name</label><input id="wi-name" type="text" value={wi.name} onChange={(e) => { setWi({ ...wi, name: e.target.value, clientId: null }); setError(''); }} placeholder="Search or type a client name" autoComplete="off" style={{ ...S('box-sizing:border-box;width:100%;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF'), minHeight: 0 }} /><ClientMatches mobile query={wi.name} pickedId={wi.clientId} onPick={(h) => { setWi({ ...wi, name: h.name, clientId: h.id }); setError(''); }} /></div>
-              <div style={S('display:flex;flex-direction:column;gap:10px')}><span id="wi-svc" style={S('font-size:14px;font-weight:600')}>Service</span>
-                <ServicePicker extras={false} lock={lockFor([])} services={services} selected={wi.svc ? [wi.svc] : []} initialCat={wiSvc?.cat || wi.cat || undefined} chipHeight={44} onCat={(c) => setWi({ ...wi, cat: c })}
-                  onPick={(id) => { const sv = svcMap.get(id)!; const pro = wi.pro !== 'any' && !offered(id, wi.pro) ? 'any' : wi.pro; setWi(wi.svc === id ? { ...wi, svc: null } : { ...wi, svc: id, cat: sv.cat, pro }); setError(''); }} /></div>
-              <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="wi-pro" style={S('font-size:14px;font-weight:600')}>Team member</span>
-                <TeamPicker team={team} selected={wi.pro} anyLabel="First available" offers={wi.svc ? (sid) => offered(wi.svc!, sid) : undefined} onPick={(id) => { setWi({ ...wi, pro: id || 'any' }); setError(''); }} /></div>
-              <div role="status" style={S(wiPlanCss)}>{wiPlanText}</div>
-              {errP()}
-              <div style={S('display:flex;gap:10px')}>
-                <button onClick={() => addWalkin(true)} disabled={busy} style={S(PRIMARY)}>Add &amp; check out</button>
-                <button onClick={() => addWalkin(false)} disabled={busy} style={S(SECOND)}>Add to calendar</button>
-              </div>
-            </>)}
+            {mode === 'walkin' && <WalkInWizard c={c} props={props} />}
 
             {mode === 'new' && <NewApptForm c={c} props={props} onCancel={close} />}
 
