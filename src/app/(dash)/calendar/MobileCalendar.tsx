@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { ClientMatches } from './ClientMatches';
 import { NewApptForm } from './NewApptForm';
-import { LateWizard, BlockWizard, WalkInWizard } from './QuickWizards';
+import { LateWizard, BlockWizard, WalkInWizard, CheckoutWizard } from './QuickWizards';
 import { MessageBox } from './MessageBox';
 import { DiscountPick } from './DiscountPick';
 import Link from 'next/link';
@@ -23,7 +23,7 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
   const [st, setSt] = useState<'' | 'list' | 'cancel'>('');
   const renderLater = (b: (typeof later)[number]) => (
               <div key={b.id} style={S('display:flex;align-items:center;gap:12px')}>
-                <span style={S('flex:0 0 40px;font-size:13px;color:#5E6673')}>{b.startText}</span>
+                <span style={S('flex:0 0 60px;white-space:nowrap;font-size:13px;color:#5E6673')}>{b.startText}</span>
                 <button onClick={() => (b.isBlock ? openBlock(b.id) : openBooking(b.id))} aria-label={b.label}
                   style={S(b.isBlock ? 'flex:1 1 0;min-width:0;min-height:64px;box-sizing:border-box;padding:10px 16px;border:1px solid #DDE0E6;border-radius:18px;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;font:inherit;color:#4A525E;background:' + HATCH : (b as any).style)}>
                   <span style={S('min-width:0')}><span style={S('display:block;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{b.client}</span><span style={S('display:block;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{b.sub}</span></span>
@@ -177,7 +177,7 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
             {hrs?.open && <div style={S('display:flex;align-items:center;gap:10px')}><div style={S('flex:1 1 auto;background:#EEF0F3;border-radius:999px')}><div style={S('height:6px;border-radius:999px;background:#0E1116;width:' + util + '%')} /></div><span style={S('flex:0 0 auto;font-size:12px;color:#5E6673')}>{util + '% booked'}</span></div>}
             {rows.length === 0 && hrs?.open && <p style={S('margin:0;color:#5E6673;font-size:13.5px')}>Nothing booked yet.</p>}
             {shown.map((r, i) => (
-              <div key={i} style={S('display:flex;align-items:center;gap:8px')}><span style={S('flex:0 0 40px;font-size:12.5px;color:#5E6673')}>{r.startText}</span>
+              <div key={i} style={S('display:flex;align-items:center;gap:8px')}><span style={S('flex:0 0 60px;white-space:nowrap;font-size:12.5px;color:#5E6673')}>{r.startText}</span>
                 <button onClick={r.pick} aria-label={r.startText + ', ' + r.client + ', ' + r.sub}
                   style={S('width:100%;box-sizing:border-box;min-height:52px;padding:8px 12px;border-radius:14px;border:' + (r.isBlock ? '1px solid #DDE0E6' : '0') + ';display:flex;align-items:center;gap:10px;text-align:left;font:inherit;color:#0E1116;background:' + (r.isBlock ? HATCH : '#F7F8FA') + ';cursor:pointer')}>
                   <span style={S('flex:0 0 8px;width:8px;height:8px;border-radius:999px;background:' + r.dot)} />
@@ -278,33 +278,7 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
               </div>
             </>)}
 
-            {mode === 'checkout' && sel && (() => {
-              const cm = coMath(sel.b.priceCents);
-              return (<>
-                <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
-                  <div style={S('min-width:0')}><h2 style={S(H2S)}>Checkout</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px;overflow-wrap:anywhere')}>{sel.b.client + ', ' + sel.b.services}</p></div>
-                  <button onClick={close} aria-label="Close" style={S(CLOSE_BTN)}><CloseX /></button>
-                </div>
-                <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="co-method-label" style={S('font-size:14px;font-weight:600')}>Payment method</span><div role="group" className="hscroll" aria-labelledby="co-method-label" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
-                  {METHODS.filter(([m]) => (m === 'card' ? cfg.acceptCard : m === 'cash' ? cfg.acceptCash : cfg.acceptGift)).map(([m, l]) => <button key={m} onClick={() => setCo({ ...co, method: m })} aria-pressed={co.method === m} style={S(chip(co.method === m))}>{l}</button>)}</div></div>
-                {co.method === 'gift_card' && <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="co-code" style={S('font-size:14px;font-weight:600')}>Gift card code</label><input id="co-code" type="text" value={co.code} onChange={(e) => setCo({ ...co, code: e.target.value })} placeholder="Code" style={{ ...S('box-sizing:border-box;width:100%;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF'), minHeight: 0 }} /></div>}
-                {cfg.canDiscount && <DiscountPick mobile value={co.disc} onChange={(d) => setCo({ ...co, disc: d })} />}
-                {cfg.askTip && <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="co-tip-label" style={S('font-size:14px;font-weight:600')}>Tip</span><div role="group" className="hscroll" aria-labelledby="co-tip-label" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
-                  {TIP_OPTS.map(([p, l]) => <button key={p} onClick={() => setCo({ ...co, tip: p })} aria-pressed={co.tip === p} style={S(chip(co.tip === p))}>{l}</button>)}</div></div>}
-                <dl style={S('margin:0;display:flex;flex-direction:column')}>
-                  <div style={S(DLROW)}><dt style={S('color:#5E6673')}>Service</dt><dd style={S('margin:0;text-align:right;font-weight:500;white-space:nowrap')}>{m2(sel.b.priceCents)}</dd></div>
-                  {cm.disc > 0 && <div style={S(DLROW)}><dt style={S('color:#5E6673')}>Discount</dt><dd style={S('margin:0;text-align:right;font-weight:500;white-space:nowrap')}>{'-' + m2(cm.disc)}</dd></div>}
-                  <div style={S(DLROW)}><dt style={S('color:#5E6673')}>Tip</dt><dd style={S('margin:0;text-align:right;font-weight:500;white-space:nowrap')}>{cm.tip ? m2(cm.tip) : 'None'}</dd></div>
-                  <div style={S(DLROW)}><dt style={S('color:#5E6673')}>{cm.taxLabel}</dt><dd style={S('margin:0;text-align:right;font-weight:500;white-space:nowrap')}>{m2(cm.taxAmt)}</dd></div>
-                  <div style={S(DLROW + ';border-bottom:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>Total</dt><dd style={S('margin:0;text-align:right;font-weight:600;white-space:nowrap')}>{m2(cm.total)}</dd></div>
-                </dl>
-                {errP()}
-                <div style={S('display:flex;gap:10px')}>
-                  <button onClick={charge} disabled={busy} style={S(PRIMARY)}>{'Charge ' + m2(cm.total)}</button>
-                  <button onClick={backToView} style={S(SECOND)}>Cancel</button>
-                </div>
-              </>);
-            })()}
+            {mode === 'checkout' && sel && <CheckoutWizard c={c} />}
 
             {mode === 'edit' && cur && (() => {
               const pl = editPlan()!;

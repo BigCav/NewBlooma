@@ -2,7 +2,9 @@
 import { useState } from 'react';
 import { dayInfo, fmtMin, BLOCK_KINDS } from '@/lib/cal';
 import { S, ServicePicker } from './pickers';
-import { BLOCK_DURS_M } from './calUi';
+import { BLOCK_DURS_M, METHODS, TIP_OPTS, m2 } from './calUi';
+import { DISC_PCTS, NO_DISC } from '../sales/shared';
+import { decimalInput } from '@/lib/numeric';
 import { StepShell, ClientStep, PeopleStep, Tiles, DayTimeStep, ClientCard, DetailRows, ICONS } from './wizardUi';
 import type { useCalendar } from './useCalendar';
 import type { Props } from './calUi';
@@ -94,6 +96,56 @@ export function BlockWizard({ c }: { c: C }) {
           { icon: ICONS.day, text: dayInfo(bf.day).full, step: 3 },
         ]} />
       )}
+    </StepShell>
+  );
+}
+
+const FIELD = 'box-sizing:border-box;width:100%;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF';
+
+/** Checkout as steps: payment method, discount and tip when they are switched on, then the total to charge. */
+export function CheckoutWizard({ c }: { c: C }) {
+  const { sel, co, setCo, coMath, cfg, charge, setError, error, hasError, busy, close } = c;
+  const kinds = ['method', ...(cfg.canDiscount ? ['discount'] : []), ...(cfg.askTip ? ['tip'] : []), 'summary'] as const;
+  const [step, setStep] = useState(0);
+  if (!sel) return null;
+  const kind = kinds[step];
+  const go = (n: number) => { setError(''); setStep(n); };
+  const cm = coMath(sel.b.priceCents);
+  const methods = METHODS.filter(([m]) => (m === 'card' ? cfg.acceptCard : m === 'cash' ? cfg.acceptCash : cfg.acceptGift));
+  const methodLabel = METHODS.find((m) => m[0] === co.method)?.[1] ?? '';
+  const discKey = co.disc.kind === 'none' ? 'none' : co.disc.kind === 'amount' ? 'amt' : 'p' + co.disc.value;
+  const discLabel = co.disc.kind === 'none' ? 'No discount' : co.disc.kind === 'amount' ? (co.disc.value ? '$' + co.disc.value + ' off' : '$ off') : co.disc.value + '% off';
+  const titles: Record<string, string> = { method: 'Payment method', discount: 'Discount', tip: 'Tip', summary: 'Checkout' };
+  const stepOf = (k: string) => (kinds as readonly string[]).indexOf(k);
+  const canNext = kind === 'method' ? (co.method !== 'gift_card' || !!co.code.trim()) : true;
+  return (
+    <StepShell step={step} titles={kinds.map((k) => titles[k])} onBack={() => go(step - 1)} onClose={close} error={hasError ? error : ''}
+      actions={[kind === 'summary' ? { label: 'Charge ' + m2(cm.total), onClick: charge, disabled: busy } : { label: 'Continue', onClick: () => { if (!canNext) { setError('Enter the gift card code.'); return; } go(step + 1); }, disabled: !canNext }]}>
+      <p style={S('margin:0;color:#5E6673;font-size:14px;overflow-wrap:anywhere')}>{sel.b.client + ', ' + sel.b.services}</p>
+      {kind === 'method' && (<>
+        <Tiles label="Payment method" options={methods} value={co.method} onPick={(m) => setCo({ ...co, method: m })} />
+        {co.method === 'gift_card' && <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="co-code" style={S('font-size:14px;font-weight:600')}>Gift card code</label><input id="co-code" type="text" value={co.code} onChange={(e) => setCo({ ...co, code: e.target.value })} placeholder="Code" style={{ ...S(FIELD), minHeight: 0 }} /></div>}
+      </>)}
+      {kind === 'discount' && (<>
+        <Tiles label="Discount" value={discKey} options={[['none', 'None'], ...DISC_PCTS.map((v) => ['p' + v, v + '%'] as const), ['amt', '$ off']] as const}
+          onPick={(k) => setCo({ ...co, disc: k === 'none' ? NO_DISC : k === 'amt' ? { ...co.disc, kind: 'amount', value: co.disc.kind === 'amount' ? co.disc.value : '' } : { ...co.disc, kind: 'percent', value: k.slice(1) } })} />
+        {co.disc.kind === 'amount' && <input aria-label="Discount amount in dollars" inputMode="decimal" value={co.disc.value} onChange={(e) => setCo({ ...co, disc: { ...co.disc, value: decimalInput(e.target.value) } })} placeholder="Amount off, like 10 or 7.50" style={{ ...S(FIELD), minHeight: 0 }} />}
+        {co.disc.kind !== 'none' && <input aria-label="Discount reason" maxLength={60} value={co.disc.note} onChange={(e) => setCo({ ...co, disc: { ...co.disc, note: e.target.value } })} placeholder="Reason (optional), e.g. Staff discount" style={{ ...S(FIELD), minHeight: 0 }} />}
+      </>)}
+      {kind === 'tip' && <Tiles label="Tip" options={TIP_OPTS} value={co.tip} onPick={(p) => setCo({ ...co, tip: p })} />}
+      {kind === 'summary' && (<>
+        <DetailRows go={go} rows={[
+          { icon: ICONS.tag, text: methodLabel + (co.method === 'gift_card' && co.code ? ', ' + co.code : ''), step: 0 },
+          ...(cfg.canDiscount ? [{ icon: ICONS.tag, text: discLabel, step: stepOf('discount') }] : []),
+          ...(cfg.askTip ? [{ icon: ICONS.tag, text: cm.tip ? 'Tip ' + m2(cm.tip) : 'No tip', step: stepOf('tip') }] : []),
+        ]} />
+        <div className="sum-rows" style={S('padding:2px 16px;border:1px solid #E6E8EC;border-radius:22px')}>
+          {([['Service', m2(sel.b.priceCents)], ...(cm.disc > 0 ? [['Discount', '-' + m2(cm.disc)]] : []), ['Tip', cm.tip ? m2(cm.tip) : 'None'], [cm.taxLabel, m2(cm.taxAmt)]] as [string, string][]).map(([l, v]) => (
+            <div key={l} style={S('display:flex;justify-content:space-between;gap:12px;padding:13px 0;font-size:15px')}><span style={S('color:#5E6673')}>{l}</span><span style={S('font-weight:500;white-space:nowrap')}>{v}</span></div>
+          ))}
+          <div style={S('display:flex;justify-content:space-between;gap:12px;padding:15px 0;font-size:18px;font-weight:600')}><span>Total</span><span>{m2(cm.total)}</span></div>
+        </div>
+      </>)}
     </StepShell>
   );
 }
