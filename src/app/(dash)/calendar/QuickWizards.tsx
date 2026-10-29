@@ -134,7 +134,6 @@ export function CheckoutWizard({ c }: { c: C }) {
     <StepShell plain step={0} titles={['Edit services']} onBack={() => { setError(''); setEditing(false); }} onClose={close} error={hasError ? error : ''}
       summary={<div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px')}><span style={S('color:#5E6673;font-size:14px')}>{lines.length + (lines.length === 1 ? ' service' : ' services')}</span><span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{m2(gross)}</span></div>}
       actions={[{ label: 'Done', onClick: () => { setError(''); setEditing(false); } }]}>
-      <h2 style={S('margin:0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>Edit services</h2>
       <p style={S('margin:0;color:#5E6673;font-size:14px')}>This only changes what is charged. The booking and its time stay as they were.</p>
       <ServicePicker lock={lockFor(ids)} services={services} selected={ids} initialCat={lines[0]?.cat} chipHeight={44} onPick={pickSvc} />
     </StepShell>
