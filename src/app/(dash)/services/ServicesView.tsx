@@ -8,6 +8,7 @@ import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
 import { decimalInput, digitsInput } from '@/lib/numeric';
 import { ServiceFlow } from './ServiceFlow';
+import { ActiveFilter, FilterButton, FilterSheet } from '@/components/FilterBits';
 import { addCategory, deleteCategory, deleteService, renameCategory, saveService } from './actions';
 
 export type SvcRow = { id: string; name: string; desc: string; catId: string; cat: string; catIdx: number; dur: number; priceCents: number; online: boolean; staffIds: string[]; addon: boolean; parentIds: string[] };
@@ -353,6 +354,7 @@ function Desktop({ c }: { c: C }) {
 
 function Mobile({ c }: { c: C }) {
   const { services, rows, cats, open, filter, setFilter, mode } = c;
+  const [fopen, setFopen] = useState(false);
   const online = services.filter((s) => s.online).length;
   const chips = [{ id: 'all', label: 'All services' }, ...cats.map((x) => ({ id: x.id, label: x.name }))];
   return (
@@ -365,16 +367,16 @@ function Mobile({ c }: { c: C }) {
           <div><div style={S('color:#5E6673;font-size:13px')}>Bookable online</div><div style={S('margin-top:2px;font-size:30px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{String(online)}</div></div>
         </section>
 
-        {c.canEdit && (
-          <button onClick={c.startNew} style={S('display:flex;align-items:center;justify-content:center;gap:8px;height:48px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500')}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
-            New service
-          </button>
-        )}
-
-        <div role="group" className="hscroll" aria-label="Filter services" style={S('display:flex;gap:8px;overflow-x:auto')}>
-          {chips.map((x) => <button key={x.id} onClick={() => setFilter(x.id)} aria-pressed={filter === x.id} style={S(chipMain(filter === x.id, true))}>{x.label}</button>)}
+        <div style={S('display:flex;gap:10px')}>
+          <FilterButton onClick={() => setFopen(true)} active={filter !== 'all'} label="Filter services" />
+          {c.canEdit && (
+            <button onClick={c.startNew} style={S('flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:8px;height:52px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500')}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+              New service
+            </button>
+          )}
         </div>
+        {filter !== 'all' && <ActiveFilter label={chips.find((x) => x.id === filter)?.label ?? ''} onClear={() => setFilter('all')} />}
 
         <ul style={S('margin:0;padding:4px 0;list-style:none;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px')}>
           {rows.map((s) => (
@@ -391,6 +393,7 @@ function Mobile({ c }: { c: C }) {
       </main>
 
       <MobileTabs active="services" />
+      {fopen && <FilterSheet title="Filter services" options={chips} value={filter} onPick={setFilter} onClose={() => setFopen(false)} />}
 
       {open && (
         <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:5')}>
