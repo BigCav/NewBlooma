@@ -45,7 +45,7 @@ export function ServiceFlow({ c }: { c: ServicesCtl }) {
     return '';
   };
   const next = () => { const e = ready(); if (e) { setError(e); return; } forward(); };
-  const people = (kind === 'who' ? team.filter((t) => d.staff.includes(t.id)).map((t) => t.name) : mains.filter((p) => d.parents.includes(p.id)).map((p) => p.name)).join(', ');
+  const people = (!d.addon ? team.filter((t) => d.staff.includes(t.id)).map((t) => t.name) : mains.filter((p) => d.parents.includes(p.id)).map((p) => p.name)).join(', ');
 
   const toggle = (arr: string[], id: string) => (arr.includes(id) ? arr.filter((i) => i !== id) : [...arr, id]);
   const input = 'box-sizing:border-box;width:100%;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF';
