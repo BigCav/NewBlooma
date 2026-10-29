@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { dayInfo, fmtMin, BLOCK_KINDS } from '@/lib/cal';
 import { S, ServicePicker } from './pickers';
-import { BLOCK_DURS_M, METHODS, TIP_OPTS, m2 } from './calUi';
+import { BLOCK_DURS_M, METHODS, TIP_OPTS, m2, usd } from './calUi';
 import { DISC_PCTS, NO_DISC } from '../sales/shared';
 import { decimalInput } from '@/lib/numeric';
 import { StepShell, ClientStep, PeopleStep, Tiles, DayTimeStep, ClientCard, DetailRows, ICONS } from './wizardUi';
@@ -104,13 +104,25 @@ const FIELD = 'box-sizing:border-box;width:100%;height:48px;padding:0 14px;borde
 
 /** Checkout as steps: payment method, discount and tip when they are switched on, then the total to charge. */
 export function CheckoutWizard({ c }: { c: C }) {
-  const { sel, co, setCo, coMath, cfg, charge, setError, error, hasError, busy, close } = c;
+  const { sel, co, setCo, coMath, cfg, charge, setError, error, hasError, busy, close, svcMap, lockFor, services } = c;
   const kinds = ['method', ...(cfg.canDiscount ? ['discount'] : []), ...(cfg.askTip ? ['tip'] : []), 'summary'] as const;
   const [step, setStep] = useState(0);
+  const [editing, setEditing] = useState(false);
   if (!sel) return null;
   const kind = kinds[step];
   const go = (n: number) => { setError(''); setStep(n); };
-  const cm = coMath(sel.b.priceCents);
+  // The services on the sale. Changing them here only changes what is charged, never the booking.
+  const ids = co.svc ?? sel.b.serviceIds;
+  const lines = ids.map((id) => svcMap.get(id)).filter(Boolean) as NonNullable<ReturnType<typeof svcMap.get>>[];
+  const gross = co.svc ? lines.reduce((a, v) => a + v.priceCents, 0) : sel.b.priceCents;
+  const cm = coMath(gross);
+  const gst = cfg.taxInclusive ? 'Includes ' + cfg.taxRate + '% GST' : 'GST ' + cfg.taxRate + '%';
+  const pickSvc = (id: string) => {
+    let next = ids.includes(id) ? ids.filter((i) => i !== id) : [...ids, id];
+    next = next.filter((i) => { const sv = svcMap.get(i); return !sv?.addon || (sv.parents ?? []).some((pid) => next.includes(pid)); });
+    if (!next.length) { setError('Keep at least one service on the sale.'); return; }
+    setError(''); setCo({ ...co, svc: next });
+  };
   const methods = METHODS.filter(([m]) => (m === 'card' ? cfg.acceptCard : m === 'cash' ? cfg.acceptCash : cfg.acceptGift));
   const methodLabel = METHODS.find((m) => m[0] === co.method)?.[1] ?? '';
   const discKey = co.disc.kind === 'none' ? 'none' : co.disc.kind === 'amount' ? 'amt' : 'p' + co.disc.value;
@@ -118,6 +130,15 @@ export function CheckoutWizard({ c }: { c: C }) {
   const titles: Record<string, string> = { method: 'Payment method', discount: 'Discount', tip: 'Tip', summary: 'Checkout' };
   const stepOf = (k: string) => (kinds as readonly string[]).indexOf(k);
   const canNext = kind === 'method' ? (co.method !== 'gift_card' || !!co.code.trim()) : true;
+  if (editing) return (
+    <StepShell plain step={0} titles={['Edit services']} onBack={() => { setError(''); setEditing(false); }} onClose={close} error={hasError ? error : ''}
+      summary={<div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px')}><span style={S('color:#5E6673;font-size:14px')}>{lines.length + (lines.length === 1 ? ' service' : ' services')}</span><span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{m2(gross)}</span></div>}
+      actions={[{ label: 'Done', onClick: () => { setError(''); setEditing(false); } }]}>
+      <h2 style={S('margin:0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>Edit services</h2>
+      <p style={S('margin:0;color:#5E6673;font-size:14px')}>This only changes what is charged. The booking and its time stay as they were.</p>
+      <ServicePicker lock={lockFor(ids)} services={services} selected={ids} initialCat={lines[0]?.cat} chipHeight={44} onPick={pickSvc} />
+    </StepShell>
+  );
   return (
     <StepShell step={step} titles={kinds.map((k) => titles[k])} onBack={() => go(step - 1)} onClose={close} error={hasError ? error : ''}
       actions={[kind === 'summary' ? { label: 'Charge ' + m2(cm.total), onClick: charge, disabled: busy } : { label: 'Continue', onClick: () => { if (!canNext) { setError('Enter the gift card code.'); return; } go(step + 1); }, disabled: !canNext }]}>
@@ -139,8 +160,19 @@ export function CheckoutWizard({ c }: { c: C }) {
           ...(cfg.canDiscount ? [{ icon: ICONS.tag, text: discLabel, step: stepOf('discount') }] : []),
           ...(cfg.askTip ? [{ icon: ICONS.tag, text: cm.tip ? 'Tip ' + m2(cm.tip) : 'No tip', step: stepOf('tip') }] : []),
         ]} />
+        <div style={S('display:flex;flex-direction:column;gap:10px')}>
+          <div style={S('display:flex;align-items:center;justify-content:space-between')}><h3 style={S('margin:0;font-size:17px;font-weight:600;letter-spacing:-0.01em')}>Services</h3><button onClick={() => { setError(''); setEditing(true); }} style={S('border:0;background:transparent;font:inherit;font-size:14px;font-weight:500;text-decoration:underline;cursor:pointer;color:#0E1116')}>Edit</button></div>
+          {lines.map((v) => (
+            <div key={v.id} style={S('display:flex;align-items:center;gap:12px')}>
+              <span style={S('flex:0 0 4px;align-self:stretch;border-radius:999px;background:#B9AEFB')} />
+              <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{v.name}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{v.dur + ' min'}</span></span>
+              <span style={S('flex:0 0 auto;font-size:14.5px;font-weight:500')}>{usd(v.priceCents)}</span>
+            </div>
+          ))}
+          {!lines.length && <div style={S('font-size:14.5px;color:#4A525E')}>{sel.b.services}</div>}
+        </div>
         <div className="sum-rows" style={S('padding:2px 16px;border:1px solid #E6E8EC;border-radius:22px')}>
-          {([['Service', m2(sel.b.priceCents)], ...(cm.disc > 0 ? [['Discount', '-' + m2(cm.disc)]] : []), ['Tip', cm.tip ? m2(cm.tip) : 'None'], [cm.taxLabel, m2(cm.taxAmt)]] as [string, string][]).map(([l, v]) => (
+          {([['Service', m2(gross)], ...(cm.disc > 0 ? [['Discount', '-' + m2(cm.disc)]] : []), ['Tip', cm.tip ? m2(cm.tip) : 'None'], [gst, m2(cm.taxAmt)]] as [string, string][]).map(([l, v]) => (
             <div key={l} style={S('display:flex;justify-content:space-between;gap:12px;padding:13px 0;font-size:15px')}><span style={S('color:#5E6673')}>{l}</span><span style={S('font-weight:500;white-space:nowrap')}>{v}</span></div>
           ))}
           <div style={S('display:flex;justify-content:space-between;gap:12px;padding:15px 0;font-size:18px;font-weight:600')}><span>Total</span><span>{m2(cm.total)}</span></div>

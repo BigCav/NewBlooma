@@ -28,7 +28,7 @@ export function useCalendar(props: Props) {
   const [bf, setBf] = useState<{ s: string; kind: string; day: string; dur: number; start: number | null }>({ s: '', kind: 'lunch', day: today, dur: 60, start: null });
   const [rs, setRs] = useState<{ day: string; time: number | null; rebook: boolean }>({ day: today, time: null, rebook: false });
   const [wi, setWi] = useState<{ name: string; clientId: string | null; svc: string | null; pro: string; cat: string }>({ name: '', clientId: null, svc: null, pro: 'any', cat: '' });
-  const [co, setCo] = useState<{ method: string; tip: number; code: string; disc: DiscPick }>({ method: 'card', tip: 0, code: '', disc: NO_DISC });
+  const [co, setCo] = useState<{ method: string; tip: number; code: string; disc: DiscPick; svc: string[] | null }>({ method: 'card', tip: 0, code: '', disc: NO_DISC, svc: null });
   const [ed, setEd] = useState<{ ids: string[]; start: number | null }>({ ids: [], start: null });
   const [avail, setAvail] = useState<Avail>(null);
   const [plan, setPlan] = useState<Awaited<ReturnType<typeof walkinPlan>> | null>(null);
@@ -108,7 +108,7 @@ export function useCalendar(props: Props) {
   const sendMessage = () => { if (!cur) return; if (!msg.trim()) { setError('Write a message first.'); return; } act(() => messageBookingClient(cur.id, msg), 'Message sent', () => { setMode('view'); setMsg(''); }); };
   const openBooking = (id: string) => { setSelId(id); setOpen(true); setMode('view'); setError(''); setNotice(''); };
   const openBlock = (id: string) => { setBlockId(id); setOpen(true); setMode('blockview'); setError(''); setNotice(''); };
-  const startCheckout = (id: string) => { setSelId(id); setOpen(true); setMode('checkout'); setCo({ method: 'card', tip: cfg.askTip ? cfg.tipDefault : 0, code: '', disc: NO_DISC }); setError(''); setNotice(''); };
+  const startCheckout = (id: string) => { setSelId(id); setOpen(true); setMode('checkout'); setCo({ method: 'card', tip: cfg.askTip ? cfg.tipDefault : 0, code: '', disc: NO_DISC, svc: null }); setError(''); setNotice(''); };
   const primary = (b: CalBooking) => {
     const k = kindOf(b.status);
     if (k === 'confirmed') { if (b.dayYmd > today) { setError('You can check someone in on the day of their appointment.'); return; } act(() => checkInBooking(b.id), first(b.client) + ' checked in'); }
@@ -173,7 +173,7 @@ export function useCalendar(props: Props) {
     const method = co.method as 'card' | 'cash' | 'gift_card';
     startT(async () => {
       setError('');
-      const r = await checkoutBooking(cur.id, method, cfg.askTip ? co.tip : 0, co.code, cfg.canDiscount ? co.disc : undefined);
+      const r = await checkoutBooking(cur.id, method, cfg.askTip ? co.tip : 0, co.code, cfg.canDiscount ? co.disc : undefined, co.svc ?? undefined);
       if (r.error) { setError(r.error); return; }
       if (method === 'card' && r.saleId) { router.push(`/sales?sale=${r.saleId}&pay=1`); return; }
       setMode('view'); setNotice(''); refresh();

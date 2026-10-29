@@ -22,18 +22,18 @@ export const ICONS = {
 export type StepAction = { label: string; onClick: () => void; secondary?: boolean; disabled?: boolean };
 
 /** Header with back, close and progress; a scrolling body; and a bottom bar pinned to the foot of the page. */
-export function StepShell({ step, titles, onBack, onClose, error, summary, actions, children }: {
-  step: number; titles: string[]; onBack: () => void; onClose: () => void; error?: string; summary?: React.ReactNode; actions: StepAction[]; children: React.ReactNode;
+export function StepShell({ step, titles, onBack, onClose, error, summary, actions, children, plain }: {
+  plain?: boolean; step: number; titles: string[]; onBack: () => void; onClose: () => void; error?: string; summary?: React.ReactNode; actions: StepAction[]; children: React.ReactNode;
 }) {
   return (
     <div style={S('display:flex;flex-direction:column;flex:1 1 auto;min-height:0;margin:0 -20px -40px')}>
       <div style={S('flex:0 0 auto;padding:0 20px 14px')}>
         <div style={S('display:flex;align-items:center;gap:12px;min-height:44px')}>
-          {step > 0 && <button onClick={onBack} aria-label="Back" style={S(CLOSE_BTN)}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 6l-6 6 6 6" /></svg></button>}
-          <div style={S('flex:1 1 auto;min-width:0;font-size:13px;color:#5E6673')}>{'Step ' + (step + 1) + ' of ' + titles.length}</div>
+          {(step > 0 || plain) && <button onClick={onBack} aria-label="Back" style={S(CLOSE_BTN)}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 6l-6 6 6 6" /></svg></button>}
+          <div style={S('flex:1 1 auto;min-width:0;font-size:13px;color:#5E6673')}>{plain ? '' : 'Step ' + (step + 1) + ' of ' + titles.length}</div>
           <button onClick={onClose} aria-label="Close" style={S(CLOSE_BTN)}><CloseX /></button>
         </div>
-        <div aria-hidden="true" style={S('display:flex;gap:6px;margin-top:12px')}>{titles.map((t, i) => <span key={t} style={S('flex:1 1 0;height:4px;border-radius:999px;background:' + (i <= step ? '#0E1116' : '#E6E8EC'))} />)}</div>
+        {!plain && <div aria-hidden="true" style={S('display:flex;gap:6px;margin-top:12px')}>{titles.map((t, i) => <span key={t} style={S('flex:1 1 0;height:4px;border-radius:999px;background:' + (i <= step ? '#0E1116' : '#E6E8EC'))} />)}</div>}
         <h2 style={S('margin:16px 0 0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>{titles[step]}</h2>
       </div>
       <div style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:4px 20px 16px;display:flex;flex-direction:column;gap:14px')}>
