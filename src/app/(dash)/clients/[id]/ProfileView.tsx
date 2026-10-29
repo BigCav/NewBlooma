@@ -18,6 +18,7 @@ export type ProfileData = {
   forms: { id: string; name: string; date: string; flagged: boolean; answers: { k: string; v: string }[] }[];
   history: { id: string; ref: string; date: string; service: string; staff: string; cents: number; when: string; paid: string }[]; historyTotal: number;
   today: string; channels: Channels;
+  messages: { id: string; mine: boolean; text: string; day: string; time: string }[];
   appts: { id: string; href: string; month: string; label: string; time: string; status: string; staff: string; services: string; cents: number; pay: string; upcoming: boolean }[];
 };
 const TONE: Record<string, [string, string]> = { Regular: ['#DDF3EA', '#14624A'], New: ['#DFEEFF', '#1B4A8A'], Lapsed: ['#FFEBD0', '#7A4204'] };
@@ -315,8 +316,8 @@ function Desktop({ c }: { c: C }) {
   );
 }
 
-type Sub = 'home' | 'overview' | 'appointments' | 'details' | 'notes' | 'alerts' | 'formula' | 'forms' | 'prefs';
-const SUB_TITLE: Record<Sub, string> = { home: '', overview: 'Overview', appointments: 'Appointments', details: 'Client details', notes: 'Notes', alerts: 'Allergies and patch tests', formula: 'Colour formula', forms: 'Client forms', prefs: 'Preferences' };
+type Sub = 'home' | 'overview' | 'appointments' | 'messages' | 'details' | 'notes' | 'alerts' | 'formula' | 'forms' | 'prefs';
+const SUB_TITLE: Record<Sub, string> = { home: '', overview: 'Overview', appointments: 'Appointments', messages: 'Messages', details: 'Client details', notes: 'Notes', alerts: 'Allergies and patch tests', formula: 'Colour formula', forms: 'Client forms', prefs: 'Preferences' };
 const CHEV = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')} aria-hidden="true"><path d="M9.5 6l6 6-6 6" /></svg>;
 const BACK = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 6l-6 6 6 6" /></svg>;
 const CLOSE = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>;
@@ -352,9 +353,13 @@ function BottomBar({ error, children }: { error?: string; children: React.ReactN
   );
 }
 
-function Mobile({ c }: { c: C }) {
+function Mobile({ c, initial }: { c: C; initial?: string }) {
   const { row, d } = c;
-  const [view, setView] = useState<Sub>('home');
+  const [view, setView] = useState<Sub>(initial === 'messages' ? 'messages' : 'home');
+  const [thread, setThread] = useState(d.messages);
+  const [draft, setDraft] = useState('');
+  const [sendErr, setSendErr] = useState('');
+  const [sending, startSend] = useTransition();
   const [rec, setRec] = useState(false);
   const [qa, setQa] = useState(false);
   const [apFilter, setApFilter] = useState<'all' | 'upcoming' | 'past'>('all');
@@ -362,7 +367,17 @@ function Mobile({ c }: { c: C }) {
   const [eqa, setEqa] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
   // Every page opens at its top, whatever the last one was scrolled to.
-  useEffect(() => { mainRef.current?.scrollTo({ top: 0 }); }, [view, c.mode, openForm]);
+  useEffect(() => { const el = mainRef.current; if (!el) return; if (view === 'messages') el.scrollTo({ top: el.scrollHeight }); else el.scrollTo({ top: 0 }); }, [view, c.mode, openForm, thread.length]);
+  const sendChat = () => {
+    const t = draft.trim();
+    if (!t) return;
+    startSend(async () => {
+      const r = await sendClientMessage(row.id, t);
+      if (r.error) { setSendErr(r.error); return; }
+      setSendErr(''); setDraft('');
+      setThread((m) => [...m, { id: 'me-' + Date.now(), mine: true, text: t, day: 'Today', time: new Date().toLocaleTimeString('en-NZ', { hour: 'numeric', minute: '2-digit' }).toLowerCase() }]);
+    });
+  };
   const s = Sections({ c, pad: 20, titles: false, usually: false });
   const tone = TONE[row.tag];
   const book = `/calendar?new=1&c=${encodeURIComponent(row.name)}`;
@@ -485,6 +500,7 @@ function Mobile({ c }: { c: C }) {
           <div style={S(card + ';display:flex;flex-direction:column')} className="sum-rows">
             {menu('overview', 'Overview')}
             {menu('appointments', 'Appointments', d.appts.length)}
+            {menu('messages', 'Messages', thread.length)}
             {menu('details', 'Client details')}
             <button onClick={() => setRec(!rec)} aria-expanded={rec} style={S(rowCss)}><span style={S('flex:1 1 auto')}>Records</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto;transform:rotate(' + (rec ? 180 : 0) + 'deg)')} aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg></button>
             {rec && <>
@@ -547,6 +563,22 @@ function Mobile({ c }: { c: C }) {
             </div>
           ))}
           {appts.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>{apFilter === 'upcoming' ? 'Nothing coming up.' : apFilter === 'past' ? 'No past appointments.' : 'No appointments yet.'}</p>}
+        </>)}
+
+        {view === 'messages' && (<>
+          {thread.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No messages yet. Say hello below.</p>}
+          {thread.map((m, i) => {
+            const newDay = i === 0 || thread[i - 1].day !== m.day;
+            return (
+              <div key={m.id} style={S('display:flex;flex-direction:column;gap:6px')}>
+                {newDay && <div style={S('align-self:center;margin:8px 0 2px;font-size:12.5px;color:#5E6673')}>{m.day}</div>}
+                <div style={S('display:flex;flex-direction:column;align-items:' + (m.mine ? 'flex-end' : 'flex-start') + ';gap:3px')}>
+                  <div style={S('max-width:82%;box-sizing:border-box;padding:11px 15px;border-radius:20px;font-size:15px;line-height:1.35;overflow-wrap:anywhere;white-space:pre-wrap;' + (m.mine ? 'background:#0E1116;color:#FFFFFF;border-bottom-right-radius:6px' : 'background:#FFFFFF;color:#0E1116;border:1px solid #E6E8EC;border-bottom-left-radius:6px'))}>{m.text}</div>
+                  <div style={S('font-size:11.5px;color:#8A93A0')}>{(m.mine ? 'You, ' : '') + m.time}</div>
+                </div>
+              </div>
+            );
+          })}
         </>)}
 
         {view === 'details' && (<>
@@ -636,7 +668,14 @@ function Mobile({ c }: { c: C }) {
         })()}
         {view === 'prefs' && s.prefs}
       </main>
-      <MobileTabs active="clients" />
+      {view === 'messages' ? (
+        <BottomBar error={sendErr}>
+          <div style={S('display:flex;align-items:flex-end;gap:10px')}>
+            <textarea value={draft} onChange={(e) => { setDraft(e.target.value); setSendErr(''); }} placeholder={'Message ' + c.first} rows={1} aria-label={'Message ' + c.first} style={{ ...S('flex:1 1 auto;min-width:0;box-sizing:border-box;max-height:120px;resize:none;padding:13px 16px;border:1px solid #E1E4E9;border-radius:24px;background:#FFFFFF;font:inherit;font-size:15px;color:#0E1116'), minHeight: 48 }} />
+            <button onClick={sendChat} disabled={sending || !draft.trim()} aria-label="Send" style={S('flex:0 0 48px;width:48px;height:48px;border:0;border-radius:999px;background:#0E1116;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:' + (sending || !draft.trim() ? 0.45 : 1))}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg></button>
+          </div>
+        </BottomBar>
+      ) : <MobileTabs active="clients" />}
       {qa && sheet('Quick actions', (
         <div style={S('display:flex;flex-direction:column')}>
           <button onClick={() => { setQa(false); c.setMode('message'); c.setError(''); c.setNotice(''); }} style={S(rowCss)}>{'Message ' + c.first}</button>
@@ -648,10 +687,10 @@ function Mobile({ c }: { c: C }) {
   );
 }
 
-export function ProfileView({ data }: { data: ProfileData }) {
+export function ProfileView({ data, initial }: { data: ProfileData; initial?: string }) {
   const c = useProfile(data);
   return (<>
-    {c.narrow !== false && <Mobile c={c} />}
+    {c.narrow !== false && <Mobile c={c} initial={initial} />}
     {c.narrow !== true && <Desktop c={c} />}
   </>);
 }

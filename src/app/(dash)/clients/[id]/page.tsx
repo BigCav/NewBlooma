@@ -14,8 +14,9 @@ export const dynamic = 'force-dynamic';
 const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const METHOD: Record<string, string> = { card: 'Card', cash: 'Cash', gift_card: 'Gift card' };
 
-export default async function ClientProfile({ params }: { params: Promise<{ id: string }> }) {
+export default async function ClientProfile({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ v?: string }> }) {
   const { id } = await params;
+  const sp = await searchParams;
   const ctx = await requireCtx();
   const { sb, salon } = ctx;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
@@ -43,6 +44,15 @@ export default async function ClientProfile({ params }: { params: Promise<{ id: 
       when: `${wd} ${D} ${MON[M - 1]}, ${fmtClock(b.starts_at, tz)}`, paid: sale ? `${METHOD[sale.method] ?? 'Paid'}, $${(sale.total_cents / 100).toFixed(sale.total_cents % 100 ? 2 : 0)}` : 'Not recorded',
     };
   });
+  // Every conversation with this client: the one about each booking and the general one, in time order.
+  const { data: threads } = await sb.from('inbox_items').select('id,body,created_at').eq('client_id', id).eq('type', 'message');
+  const tids = ((threads ?? []) as any[]).map((t) => t.id as string);
+  const { data: tmsgs } = tids.length ? await sb.from('inbox_messages').select('id,item_id,mine,body,created_at').in('item_id', tids) : { data: [] as any[] };
+  const msgRows = [
+    ...((threads ?? []) as any[]).filter((t) => t.body).map((t) => ({ id: 'first-' + t.id, mine: false, text: t.body as string, at: t.created_at as string })),
+    ...((tmsgs ?? []) as any[]).map((m) => ({ id: m.id as string, mine: !!m.mine, text: m.body as string, at: m.created_at as string })),
+  ].sort((a, b) => (a.at < b.at ? -1 : 1));
+  const messages: ProfileData['messages'] = msgRows.map((m) => ({ id: m.id, mine: m.mine, text: m.text, day: ymd(m.at, tz) === today ? 'Today' : dayInfo(ymd(m.at, tz)).short, time: fmtClock(m.at, tz) }));
   const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const nowIso = new Date().toISOString();
   const money0 = (c: number) => '$' + (c / 100).toFixed(c % 100 ? 2 : 0);
@@ -72,8 +82,8 @@ export default async function ClientProfile({ params }: { params: Promise<{ id: 
   const appts: ProfileData['appts'] = visits.map(({ at, ...rest }) => rest);
   const data: ProfileData = {
     row, since: sinceText(c.created_at), allergies: c.allergies ?? [], patchOn: c.patch_test_on, formula: c.colour_formula ?? '', reminders: c.reminders, marketing: c.marketing,
-    notes: (notes ?? []).map((n) => ({ id: n.id, text: n.body })), history, appts,
+    notes: (notes ?? []).map((n) => ({ id: n.id, text: n.body })), history, appts, messages,
     forms: ((subs ?? []) as any[]).map((s) => ({ id: s.id, name: s.form_templates?.name ?? 'Form', date: (s.performed_on ? `Applied ${niceDate(s.performed_on)} · recorded ` : '') + `${niceDate(ymd(s.completed_at, tz))}, ${time12(s.completed_at, tz)}` + (s.bookings?.ref_no ? ' · booking B-' + s.bookings.ref_no : ''), flagged: !!s.flagged, answers: ((s.answers ?? []) as { q: string; a: string }[]).map((a) => ({ k: a.q, v: a.a || 'No answer' })) })), historyTotal: row.visits, today, channels: { sms: smsConfigured(), email: emailConfigured() },
   };
-  return <ProfileView key={id} data={data} />;
+  return <ProfileView key={id} data={data} initial={sp.v} />;
 }

@@ -98,9 +98,9 @@ function MobileClientView({ c, sel }: { c: C; sel: ClientRow }) {
         <div style={S('font-size:19px;font-weight:600;letter-spacing:-0.02em;line-height:1.2;overflow-wrap:anywhere')}>{sel.name}</div>
         <div style={S('margin-top:2px;font-size:13.5px;color:#5E6673;overflow-wrap:anywhere')}>{sel.email || 'No email'}</div>
       </div>
-      <button onClick={() => { c.setMode('message'); c.setMsg(''); c.setError(''); c.setNotice(''); }} aria-label={'Message ' + c.first} style={S('flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer')}>
+      <Link href={`/clients/${sel.id}?v=messages`} aria-label={'Messages with ' + c.first} style={S('flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer;text-decoration:none')}>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3.5" y="5.5" width="17" height="13" rx="3" /><path d="m4.5 7.5 7.5 5.5 7.5-5.5" /></svg>
-      </button>
+      </Link>
     </div>
     <div className="sum-rows" style={S('padding:2px 16px;border:1px solid #E6E8EC;border-radius:22px')}>
       {rows.map(([l, v, icon]) => (
@@ -113,7 +113,6 @@ function MobileClientView({ c, sel }: { c: C; sel: ClientRow }) {
       {([['Visits', String(sel.visits)], ['Total spent', money(sel.spentCents)]] as [string, string][]).map(([l, v]) => <div key={l} style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:20px;padding:16px')}><div style={S('font-size:13px;color:#5E6673')}>{l}</div><div style={S('margin-top:4px;font-size:22px;font-weight:600;letter-spacing:-0.02em')}>{v}</div></div>)}
     </div>
     <div style={S('position:sticky;bottom:-40px;margin:auto -20px -40px;padding:14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3;display:flex;flex-direction:column;gap:12px')}>
-      {!!c.notice && <span role="status" style={S('align-self:flex-start;padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.notice}</span>}
       {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
       <div style={S('display:flex;gap:10px')}>
         <Link href={`/clients/${sel.id}`} style={S(BTN + ';border:1px solid #E1E4E9;background:#FFFFFF;color:#0E1116')}>View profile</Link>
