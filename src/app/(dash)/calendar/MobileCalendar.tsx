@@ -150,7 +150,7 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
             </section>
           )}
 
-          <section aria-label="Later today" style={S('flex-direction:column;gap:12px;display:' + (sq ? 'none' : 'flex'))}>
+          <section aria-label="Later today" style={S('flex-direction:column;gap:12px;display:' + (sq || (c.laterUp.length === 0 && cards.length > 0) ? 'none' : 'flex'))}>
             <div style={S('display:flex;align-items:baseline;justify-content:space-between;gap:12px')}>
               <h2 style={S('margin:0;font-size:17px;font-weight:600;letter-spacing:-0.01em')}>{day === today ? 'Later today' : 'Appointments'}</h2>
               <span style={S('color:#5E6673;font-size:13px')}>{c.laterUp.length === 0 ? '' : c.laterUp.length + (c.laterUp.length === 1 ? ' appointment' : ' appointments')}</span>
