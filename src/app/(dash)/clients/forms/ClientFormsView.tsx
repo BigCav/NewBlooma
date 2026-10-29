@@ -188,7 +188,6 @@ export function ClientFormsView(props: Props) {
     )}
     {c.narrow !== true && (
       <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 8px;display:flex;flex-direction:column;gap:24px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
-        <div>{back}</div>
         <PageHeader title="Client forms" subtitle="See which forms each client has done for their next appointment, send what is missing, and record patch tests." showSearch={false} showAction={false} />
         <Tabs c={c} />
         {c.tab === 'done' ? <div style={S('max-width:860px')}><Completed c={c} m={false} /></div> : <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}><List c={c} m={false} /><div style={S('flex:999 1 520px;min-width:0')}><Body c={c} m={false} /></div></div>}

@@ -141,7 +141,6 @@ export function SummaryView({ data, from, to, today, presets, dayLabel }: { data
     {narrow !== true && (
       <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 8px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
         <PageHeader title="Daily summary" subtitle={sub} showSearch={false} showAction={false} />
-        <div>{BACK}</div>
         {data ? <Body d={data} from={from} to={to} today={today} presets={presets} m={false} /> : fail}
       </div>
     )}
