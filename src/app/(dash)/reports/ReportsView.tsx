@@ -92,6 +92,10 @@ function Body({ c, m }: { c: C; m: boolean }) {
         ))}
       </ol></section>
   );
+  // Shade by how a slot compares with the quietest and busiest ones, so a quiet week still shows its peaks.
+  const used = c.heat.flatMap((r) => r.values).filter((v) => v > 0);
+  const lo = Math.min(...used), hi = Math.max(...used);
+  const shade = (v: number) => 0.06 + (hi > lo ? (v - lo) / (hi - lo) : 0.5) * 0.86;
   const heat = (
     <section style={S(CARD(pad))}><Head title="Busiest times" right="Typical week" />
       <div role="group" aria-label="Busiest times by day and time of day" style={S('display:flex;flex-direction:column;gap:8px')}>
@@ -99,10 +103,10 @@ function Body({ c, m }: { c: C; m: boolean }) {
         {c.heat.map((row) => (
           <div key={row.label} style={S('display:flex;align-items:center;gap:8px')}>
             <span style={S('flex:0 0 72px;font-size:12.5px;color:#5E6673')}>{row.label}</span>
-            {row.values.map((v, i) => <span key={i} role="img" aria-label={DAY_FULL[i] + ' ' + row.label.toLowerCase() + ', ' + (v ? v + ' percent busy' : 'closed')} style={S('flex:1 1 0;min-width:0;height:' + cellH + 'px;border-radius:8px;box-sizing:border-box;' + (v ? 'background:rgba(14,17,22,' + (0.07 + v / 100 * 0.78).toFixed(2) + ')' : 'border:1px dashed #D5D9E0'))} />)}
+            {row.values.map((v, i) => <span key={i} role="img" aria-label={DAY_FULL[i] + ' ' + row.label.toLowerCase() + ', ' + (v ? v + ' percent busy' : 'closed')} style={S('flex:1 1 0;min-width:0;height:' + cellH + 'px;border-radius:8px;box-sizing:border-box;' + (v ? 'background:rgba(14,17,22,' + shade(v).toFixed(2) + ')' : 'border:1px dashed #D5D9E0'))} />)}
           </div>
         ))}
-        <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:6px;font-size:12px;color:#5E6673')}><span>Quieter</span><span aria-hidden="true" style={S('flex:1 1 auto;max-width:140px;height:8px;border-radius:999px;background:linear-gradient(90deg, rgba(14,17,22,0.07), rgba(14,17,22,0.85))')} /><span>Busier</span></div>
+        <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:6px;font-size:12px;color:#5E6673')}><span>Quieter</span><span aria-hidden="true" style={S('flex:1 1 auto;max-width:140px;height:8px;border-radius:999px;background:linear-gradient(90deg, rgba(14,17,22,0.06), rgba(14,17,22,0.92))')} /><span>Busier</span></div>
       </div></section>
   );
   const retPct = p.hasClients ? 100 - p.fresh : 0;
