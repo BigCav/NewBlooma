@@ -221,9 +221,8 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
                   </button>}
               </div>
-              {(sel.b.paid || !!notice) && <div style={S('display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:-6px')}>
+              {sel.b.paid && <div style={S('display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:-6px')}>
                 {sel.b.paid && <span style={S('padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{sel.b.paidText}</span>}
-                {!!notice && <span role="status" style={S('padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{notice}</span>}
               </div>}
               <div style={S('display:flex;align-items:center;gap:14px;padding:16px;border:1px solid #E6E8EC;border-radius:22px')}>
                 <div style={S(sel.avatarStyle)}>{initials(sel.b.client)}</div>
@@ -489,7 +488,7 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
                 ];
                 const canNoShow = (cur === 'pending' || cur === 'confirmed') && c.started(sel.b);
                 return (<>
-                  <h2 style={S(H2S + ';margin-bottom:4px')}>Change status</h2>
+                  <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:4px')}><h2 style={S(H2S)}>Change status</h2><button onClick={() => setSt('')} aria-label="Close" style={S(CLOSE_BTN)}><CloseX /></button></div>
                   {cur === 'pending' && <div style={S(ITEM + ';cursor:default')}>{ico(<><rect x="3.5" y="5" width="17" height="15.5" rx="3" /><path d="M3.5 10h17M12 13v4M10 15h4" /></>)}Needs approval{tick}</div>}
                   {rows.map(([id, t, label, icon]) => <button key={id} onClick={() => pick(t, label)} aria-current={cur === id ? 'true' : undefined} style={S(ITEM)}>{icon}{label}{cur === id && tick}</button>)}
                   {canNoShow && <button onClick={() => { setSt(''); c.markNoShow(sel.b); }} style={S(ITEM + ';color:#B42318')}>{ico(<><path d="M3 12s3.5-6 9-6c1.7 0 3.2.6 4.5 1.4M21 12s-3.5 6-9 6c-1.7 0-3.2-.6-4.5-1.4M4 4l16 16" /></>)}No-show</button>}

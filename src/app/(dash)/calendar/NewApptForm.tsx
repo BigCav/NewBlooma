@@ -1,4 +1,6 @@
 'use client';
+import { useState } from 'react';
+import { NewApptWizard } from './NewApptWizard';
 import { fmtMin } from '@/lib/cal';
 import { ClientMatches } from './ClientMatches';
 import { S, ServicePicker, TeamPicker } from './pickers';
@@ -8,6 +10,9 @@ import type { Props } from './calUi';
 
 /** The "New appointment" form shared by the calendar's sheet and the global sheet opened from the + button on any page. */
 export function NewApptForm({ c, props, onCancel }: { c: ReturnType<typeof useCalendar>; props: Props; onCancel?: () => void }) {
+  // Phones get the step-by-step version; the desktop sheet keeps the single form.
+  const [narrow] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width:900px)').matches);
+  if (narrow) return <NewApptWizard c={c} props={props} onCancel={onCancel} />;
   const { nf, setNf, setError, error, hasError, busy, close, backToView, createNew, nLock, nFirstSvc, nPickSvc, nOffers, nSlots, nWhy, days14, offered, offers, staffName, services, team } = c;
   return (<>
               <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><div style={S('min-width:0')}><h2 style={S(H2S)}>New appointment</h2></div><button onClick={onCancel ?? close} aria-label="Close" style={S(CLOSE_BTN)}><CloseX /></button></div>
