@@ -359,6 +359,7 @@ function Mobile({ c }: { c: C }) {
   const [qa, setQa] = useState(false);
   const [apFilter, setApFilter] = useState<'all' | 'upcoming' | 'past'>('all');
   const [openForm, setOpenForm] = useState('');
+  const [eqa, setEqa] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
   // Every page opens at its top, whatever the last one was scrolled to.
   useEffect(() => { mainRef.current?.scrollTo({ top: 0 }); }, [view, c.mode, openForm]);
@@ -418,15 +419,25 @@ function Mobile({ c }: { c: C }) {
           <Field label="Full name"><input type="text" value={c.ed.name} onChange={(e) => { c.setEd({ ...c.ed, name: e.target.value }); c.setError(''); }} style={FIELD_IN} /></Field>
           <Field label="Email"><input type="email" inputMode="email" value={c.ed.email} onChange={(e) => { c.setEd({ ...c.ed, email: e.target.value }); c.setError(''); }} placeholder="name@example.com" style={FIELD_IN} /></Field>
           <Field label="Phone"><input type="tel" inputMode="tel" value={c.ed.phone} onChange={(e) => { c.setEd({ ...c.ed, phone: phoneInput(e.target.value) }); c.setError(''); }} placeholder="Optional" style={FIELD_IN} /></Field>
-          {!c.confirmDel
-            ? <button className="ghost" onClick={() => c.setConfirmDel(true)} style={S('margin-top:8px;height:48px;border:0;border-radius:999px;background:transparent;color:#B42318;font-size:14.5px;font-weight:500;cursor:pointer')}>Delete client</button>
-            : <div style={S('display:flex;flex-direction:column;gap:10px;padding:16px;border:1px solid #F3C6C3;border-radius:20px;background:#FEF3F2')}>
-                <span style={S('font-size:14.5px;font-weight:600')}>Delete {row.name} for good?</span>
-                <span style={S('font-size:13.5px;color:#5E6673')}>Only possible when they have no bookings or sales. Their notes go too.</span>
-                <div style={S('display:flex;gap:10px')}><button onClick={c.removeClient} disabled={c.busy} style={S('flex:1 1 0;height:48px;border:0;border-radius:999px;background:#C0261B;color:#FFFFFF;font-size:14px;font-weight:500')}>Delete client</button><button className="ghost" onClick={() => c.setConfirmDel(false)} style={S('flex:1 1 0;height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>Keep</button></div>
-              </div>}
         </main>
-        <BottomBar error={c.error}><button onClick={c.saveEdit} disabled={c.busy} style={S(BLACK + ';width:100%;height:52px')}>Save details</button></BottomBar>
+        <BottomBar error={c.error}>
+          <div style={S('display:flex;gap:10px')}>
+            <button onClick={() => setEqa(true)} aria-label="More actions" aria-haspopup="dialog" style={S(RING + ';flex:0 0 52px;width:52px;height:52px')}><svg width="20" height="20" viewBox="0 0 24 24" fill="#0E1116"><circle cx="12" cy="5.5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="18.5" r="1.6" /></svg></button>
+            <button onClick={c.saveEdit} disabled={c.busy} style={S(BLACK + ';flex:1 1 0;height:52px')}>Save details</button>
+          </div>
+        </BottomBar>
+        {eqa && sheet('More actions', !c.confirmDel ? (
+          <div style={S('display:flex;flex-direction:column')}>
+            <button onClick={() => c.setConfirmDel(true)} style={S(rowCss + ';color:#B42318')}>Delete client</button>
+          </div>
+        ) : (
+          <div style={S('display:flex;flex-direction:column;gap:12px;padding:16px;border:1px solid #F3C6C3;border-radius:20px;background:#FEF3F2')}>
+            <span style={S('font-size:14.5px;font-weight:600')}>Delete {row.name} for good?</span>
+            <span style={S('font-size:13.5px;color:#5E6673')}>Only possible when they have no bookings or sales. Their notes go too.</span>
+            {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
+            <div style={S('display:flex;gap:10px')}><button onClick={c.removeClient} disabled={c.busy} style={S('flex:1 1 0;height:48px;border:0;border-radius:999px;background:#C0261B;color:#FFFFFF;font-size:14px;font-weight:500')}>Delete client</button><button className="ghost" onClick={() => { c.setConfirmDel(false); setEqa(false); }} style={S('flex:1 1 0;height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>Keep</button></div>
+          </div>
+        ), () => { c.setConfirmDel(false); setEqa(false); })}
       </div>
     );
   }
