@@ -227,7 +227,6 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
               {sel.b.forms && <a href={'/clients/forms?c=' + sel.b.clientId} style={S('display:block;border-radius:16px;text-decoration:none;padding:12px 14px;font-size:13.5px;font-weight:500;background:' + (sel.b.forms.level === 'alert' ? '#FDECEA;color:#B42318' : '#FFF4E5;color:#8A4B00'))}>{sel.b.forms.text}<span style={S('display:block;margin-top:2px;font-size:12.5px;font-weight:600;text-decoration:underline')}>Open forms</span></a>}
               <div className="sum-rows" style={S('padding:2px 16px;border:1px solid #E6E8EC;border-radius:22px')}>
                 {([
-                  ['Date', dayInfo(sel.b.dayYmd).full, <><rect x="3.5" y="5" width="17" height="15.5" rx="3" /><path d="M3.5 10h17M8 3v4M16 3v4" /></>],
                   ['Time', sel.time, <><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></>],
                   ['With', staffName(sel.b.staffId), <><circle cx="12" cy="8.5" r="3.5" /><path d="M5 20c.6-3.4 3.3-5 7-5s6.4 1.6 7 5" /></>],
                 ] as const).map(([l, v, icon]) => (
