@@ -1,7 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { dayInfo, fmtMin, initials } from '@/lib/cal';
-import { ClientMatches } from './ClientMatches';
+import { findClients, type ClientHit } from './actions';
 import { S, ServicePicker, TeamPicker } from './pickers';
 import { first, usd, slotCss, dayCss, PRIMARY, CLOSE_BTN, ERR, CloseX } from './calUi';
 import type { useCalendar } from './useCalendar';
@@ -9,6 +9,34 @@ import type { Props } from './calUi';
 
 const STEPS = ['Client', 'Services', 'Team member', 'Time', 'Summary'] as const;
 const TITLES = ['Select client', 'Select services', 'Select team member', 'Select time', 'Summary'];
+
+const AV = 'flex:0 0 40px;width:40px;height:40px;border-radius:999px;background:#EEEAFE;color:#3A2BB5;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600';
+const ROW = 'display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:60px;padding:8px 0;border:0;border-bottom:1px solid #EEF0F3;background:transparent;font:inherit;text-align:left;color:#0E1116;cursor:pointer';
+
+/** Existing clients matching the search, in the same avatar rows as the recent list. */
+function Matches({ query, pickedId, onPick }: { query: string; pickedId: string | null; onPick: (h: ClientHit) => void }) {
+  const [hits, setHits] = useState<ClientHit[]>([]);
+  const [doneFor, setDoneFor] = useState('');
+  const q = query.trim();
+  useEffect(() => {
+    if (!q || pickedId) { setHits([]); return; }
+    let live = true;
+    const t = setTimeout(() => { findClients(q).then((r) => { if (live) { setHits(r); setDoneFor(q); } }).catch(() => { if (live) { setHits([]); setDoneFor(q); } }); }, 150);
+    return () => { live = false; clearTimeout(t); };
+  }, [q, pickedId]);
+  if (!q || pickedId) return null;
+  if (!hits.length) return doneFor !== q ? null : <div style={S('font-size:13px;color:#5E6673')}>No existing client with that name. Tap Continue to add {q} as a new client.</div>;
+  return (
+    <div role="listbox" aria-label="Matching clients" style={S('display:flex;flex-direction:column')}>
+      {hits.map((h) => (
+        <button key={h.id} role="option" aria-selected="false" onClick={() => onPick(h)} style={S(ROW)}>
+          <span style={S(AV)}>{initials(h.name)}</span>
+          <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{h.name}</span>{!!h.sub && <span style={S('display:block;font-size:13px;color:#5E6673;overflow:hidden;text-overflow:ellipsis;white-space:nowrap')}>{h.sub}</span>}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
 
 /** Phone version of "New appointment": client, services (and extras), team member, time, then a summary like the booking view. */
 export function NewApptWizard({ c, props, onCancel }: { c: ReturnType<typeof useCalendar>; props: Props; onCancel?: () => void }) {
@@ -44,20 +72,19 @@ export function NewApptWizard({ c, props, onCancel }: { c: ReturnType<typeof use
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A93A0" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={S('position:absolute;left:16px;top:15px')} aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m20 20-4-4" /></svg>
             <input id="ap-client" type="text" aria-label="Client" autoFocus value={nf.client} onChange={(e) => { setNf({ ...nf, client: e.target.value, clientId: null }); setError(''); }} placeholder="Search or type a client name" style={{ ...S('box-sizing:border-box;width:100%;height:48px;padding:0 14px 0 42px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF'), minHeight: 0 }} />
           </div>
-          <ClientMatches mobile query={nf.client} pickedId={nf.clientId} onPick={(h) => { setNf({ ...nf, client: h.name, clientId: h.id }); setError(''); go(1); }} />
+          <Matches query={nf.client} pickedId={nf.clientId} onPick={(h) => { setNf({ ...nf, client: h.name, clientId: h.id }); setError(''); go(1); }} />
           {nf.clientId && <div style={S('display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid #0E1116;border-radius:16px')}><span style={S('flex:0 0 40px;width:40px;height:40px;border-radius:999px;background:#EEEAFE;color:#3A2BB5;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600')}>{initials(nf.client)}</span><span style={S('flex:1 1 auto;min-width:0;font-weight:600;overflow-wrap:anywhere')}>{nf.client}</span><span style={S('font-size:12.5px;color:#5E6673')}>Existing client</span></div>}
           {!typed && recent.length > 0 && (<>
             <h3 style={S('margin:6px 0 0;font-size:15px;font-weight:600')}>Recent clients</h3>
             <div style={S('display:flex;flex-direction:column')}>
               {recent.slice(0, 8).map((r) => (
-                <button key={r.id} onClick={() => { setNf({ ...nf, client: r.name, clientId: r.id }); setError(''); go(1); }} style={S('display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:60px;padding:8px 0;border:0;border-bottom:1px solid #EEF0F3;background:transparent;font:inherit;text-align:left;color:#0E1116;cursor:pointer')}>
-                  <span style={S('flex:0 0 40px;width:40px;height:40px;border-radius:999px;background:#EEEAFE;color:#3A2BB5;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600')}>{initials(r.name)}</span>
+                <button key={r.id} onClick={() => { setNf({ ...nf, client: r.name, clientId: r.id }); setError(''); go(1); }} style={S(ROW)}>
+                  <span style={S(AV)}>{initials(r.name)}</span>
                   <span style={S('font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{r.name}</span>
                 </button>
               ))}
             </div>
           </>)}
-          {!!typed && !nf.clientId && <div style={S('font-size:13px;color:#5E6673')}>Not listed? Tap Continue to add {typed} as a new client.</div>}
         </>)}
 
         {step === 1 && (
