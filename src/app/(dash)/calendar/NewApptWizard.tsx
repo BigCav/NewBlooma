@@ -11,7 +11,8 @@ const STEPS = ['Client', 'Services', 'Team member', 'Time', 'Summary'] as const;
 const TITLES = ['Select client', 'Select services', 'Select team member', 'Select time', 'Summary'];
 
 const AV = 'flex:0 0 40px;width:40px;height:40px;border-radius:999px;background:#EEEAFE;color:#3A2BB5;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600';
-const ROW = 'display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:60px;padding:8px 0;border:0;border-bottom:1px solid #EEF0F3;background:transparent;font:inherit;text-align:left;color:#0E1116;cursor:pointer';
+const ROW = (on: boolean) => 'display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:64px;padding:8px 14px;margin-bottom:8px;border-radius:16px;font:inherit;text-align:left;color:#0E1116;cursor:pointer;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#F4F5F7' : '#FFFFFF') + (on ? ';box-shadow:inset 0 0 0 1px #0E1116' : '');
+const TICK = <span aria-hidden="true" style={S('flex:0 0 22px;width:22px;height:22px;border-radius:999px;background:#0E1116;display:flex;align-items:center;justify-content:center')}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5 10 17.5 19 7.5" /></svg></span>;
 
 /** Existing clients matching the search, in the same avatar rows as the recent list. */
 function Matches({ query, pickedId, onPick }: { query: string; pickedId: string | null; onPick: (h: ClientHit) => void }) {
@@ -29,7 +30,7 @@ function Matches({ query, pickedId, onPick }: { query: string; pickedId: string 
   return (
     <div role="listbox" aria-label="Matching clients" style={S('display:flex;flex-direction:column')}>
       {hits.map((h) => (
-        <button key={h.id} role="option" aria-selected="false" onClick={() => onPick(h)} style={S(ROW)}>
+        <button key={h.id} role="option" aria-selected="false" onClick={() => onPick(h)} style={S(ROW(false))}>
           <span style={S(AV)}>{initials(h.name)}</span>
           <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{h.name}</span>{!!h.sub && <span style={S('display:block;font-size:13px;color:#5E6673;overflow:hidden;text-overflow:ellipsis;white-space:nowrap')}>{h.sub}</span>}</span>
         </button>
@@ -55,7 +56,7 @@ export function NewApptWizard({ c, props, onCancel }: { c: ReturnType<typeof use
   const ico = (children: React.ReactNode) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')} aria-hidden="true">{children}</svg>;
 
   return (
-    <div style={S('display:flex;flex-direction:column;flex:1 1 auto;min-height:0;margin:0 -20px -28px')}>
+    <div style={S('display:flex;flex-direction:column;flex:1 1 auto;min-height:0;margin:-20px -20px -40px')}>
       <div style={S('flex:0 0 auto;padding:0 20px 14px')}>
         <div style={S('display:flex;align-items:center;gap:12px;min-height:44px')}>
           {step > 0 && <button onClick={back} aria-label="Back" style={S(CLOSE_BTN)}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 6l-6 6 6 6" /></svg></button>}
@@ -72,17 +73,21 @@ export function NewApptWizard({ c, props, onCancel }: { c: ReturnType<typeof use
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A93A0" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={S('position:absolute;left:16px;top:15px')} aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m20 20-4-4" /></svg>
             <input id="ap-client" type="text" aria-label="Client" autoFocus value={nf.client} onChange={(e) => { setNf({ ...nf, client: e.target.value, clientId: null }); setError(''); }} placeholder="Search or type a client name" style={{ ...S('box-sizing:border-box;width:100%;height:48px;padding:0 14px 0 42px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF'), minHeight: 0 }} />
           </div>
-          <Matches query={nf.client} pickedId={nf.clientId} onPick={(h) => { setNf({ ...nf, client: h.name, clientId: h.id }); setError(''); go(1); }} />
-          {nf.clientId && <div style={S('display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid #E6E8EC;border-radius:16px')}><span style={S('flex:0 0 40px;width:40px;height:40px;border-radius:999px;background:#EEEAFE;color:#3A2BB5;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600')}>{initials(nf.client)}</span><span style={S('flex:1 1 auto;min-width:0;font-weight:600;overflow-wrap:anywhere')}>{nf.client}</span><span style={S('font-size:12.5px;color:#5E6673')}>Existing client</span></div>}
-          {!typed && recent.length > 0 && (<>
+          <Matches query={nf.client} pickedId={nf.clientId} onPick={(h) => { setNf({ ...nf, client: h.name, clientId: h.id }); setError(''); }} />
+          {nf.clientId && !recent.some((r) => r.id === nf.clientId) && (
+            <button onClick={() => setNf({ ...nf, client: '', clientId: null })} aria-pressed="true" style={S(ROW(true))}>
+              <span style={S(AV)}>{initials(nf.client)}</span><span style={S('flex:1 1 auto;min-width:0;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{nf.client}</span>{TICK}
+            </button>
+          )}
+          {(!typed || !!nf.clientId) && recent.length > 0 && (<>
             <h3 style={S('margin:6px 0 0;font-size:15px;font-weight:600')}>Recent clients</h3>
             <div style={S('display:flex;flex-direction:column')}>
-              {recent.slice(0, 8).map((r) => (
-                <button key={r.id} onClick={() => { setNf({ ...nf, client: r.name, clientId: r.id }); setError(''); go(1); }} style={S(ROW)}>
+              {recent.slice(0, 8).map((r) => { const on = nf.clientId === r.id; return (
+                <button key={r.id} onClick={() => { setNf(on ? { ...nf, client: '', clientId: null } : { ...nf, client: r.name, clientId: r.id }); setError(''); }} aria-pressed={on} style={S(ROW(on))}>
                   <span style={S(AV)}>{initials(r.name)}</span>
-                  <span style={S('font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{r.name}</span>
+                  <span style={S('flex:1 1 auto;min-width:0;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{r.name}</span>{on && TICK}
                 </button>
-              ))}
+              ); })}
             </div>
           </>)}
         </>)}
