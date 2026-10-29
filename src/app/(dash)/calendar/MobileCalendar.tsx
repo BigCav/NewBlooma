@@ -259,7 +259,7 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
                 {sel.b.serviceIds.every((id) => !svcMap.has(id)) && <div style={S('font-size:14.5px;color:#4A525E')}>{sel.b.services}</div>}
               </div>
               {errP()}
-              <div style={S('position:sticky;bottom:-28px;margin:0 -20px -28px;padding:14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3;display:flex;flex-direction:column;gap:12px')}>
+              <div style={S('position:sticky;bottom:-40px;margin:auto -20px -40px;padding:14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3;display:flex;flex-direction:column;gap:12px')}>
                 <div style={S('display:flex;flex-direction:column;gap:2px')}>
                   <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px;color:#5E6673;font-size:14px')}><span>Total</span><span>{sel.priceText}</span></div>
                   <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-weight:600')}><span style={S('font-size:15px')}>{sel.b.paid ? 'Paid' : 'To pay'}</span><span style={S('font-size:20px;letter-spacing:-0.02em')}>{sel.priceText}</span></div>

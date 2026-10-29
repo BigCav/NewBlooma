@@ -177,7 +177,7 @@ function MobileSale({ c, s }: { c: C; s: SaleRow }) {
         {extra.map(([l, v]) => <div key={l} style={S('display:flex;justify-content:space-between;gap:12px;padding:13px 0;font-size:15px')}><span style={S('color:#5E6673;overflow-wrap:anywhere')}>{l}</span><span style={S('font-weight:500;white-space:nowrap')}>{v}</span></div>)}
       </div>
     )}
-    <div style={S('position:sticky;bottom:-40px;margin:0 -20px -40px;padding:14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3;display:flex;flex-direction:column;gap:12px')}>
+    <div style={S('position:sticky;bottom:-40px;margin:auto -20px -40px;padding:14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3;display:flex;flex-direction:column;gap:12px')}>
       {!!c.notice && <span role="status" style={S('align-self:flex-start;padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.notice}</span>}
       {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
       <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px')}><span style={S('color:#5E6673;font-size:14px')}>{pending ? 'To pay' : 'Total'}</span><span style={S('font-size:22px;font-weight:600;letter-spacing:-0.02em')}>{fmt(s.total)}</span></div>
