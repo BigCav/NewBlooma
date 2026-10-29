@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's Main.dc.html (+ PageHeader). Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
+import { useEffect, useRef } from 'react';
 import { ClientMatches } from './ClientMatches';
 import { MessageBox } from './MessageBox';
 import { DiscountPick } from './DiscountPick';
@@ -35,6 +36,14 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
     gHours, gStart, HOUR_PX, nowTop, setBlockId, vm, wkOpen: _wo, ws: _ws, nLock, edLock, lockFor,
     lf, setLf, openLate, lateList, saveLate,
   } = c;
+
+  // On a narrower window the details panel wraps below the calendar; bring it into view when something is opened so the click is not silent.
+  const asideRef = useRef<HTMLElement>(null), firstRun = useRef(true);
+  useEffect(() => {
+    if (firstRun.current) { firstRun.current = false; return; }
+    const el = asideRef.current;
+    if (el && el.getBoundingClientRect().top > window.innerHeight * 0.7) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [cur?.id, mode]);
 
   const sq = query.trim();
   const dayB = bookings.filter((b) => b.dayYmd === day);
@@ -73,7 +82,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
   const errP = () => hasError ? <p role="alert" style={S(ERRD)}>{error}</p> : null;
   const BackBtn = ({ label = 'Cancel' }: { label?: string }) => <button className="ghost" onClick={backToView} style={S(BTN2)}>{label}</button>;
   const stepDay = (dir: number) => go(addDaysYmd(day, dir * (view === 'week' ? 7 : 1)));
-  const openWalkin = () => { setMode('walkin'); setOpen(true); setWi({ name: '', clientId: null, svc: null, pro: 'any', cat: '' }); setError(''); setNotice(''); };
+  const openWalkin = () => { if (day !== today || view !== 'day') go(today, 'day'); /* a walk-in is always for today, so show today */ setMode('walkin'); setOpen(true); setWi({ name: '', clientId: null, svc: null, pro: 'any', cat: '' }); setError(''); setNotice(''); };
   const openBlockForm = () => { setMode('block'); setOpen(true); setBf({ s: team[0]?.id ?? '', kind: 'lunch', day: day < today ? today : day, dur: 60, start: null }); setError(''); setNotice(''); };
   const hits = sres;
 
@@ -109,7 +118,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
 
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
 
-        <section aria-label="Schedule" style={S('flex:999 1 620px;min-width:0;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;overflow:hidden')}>
+        <section aria-label="Schedule" style={S('flex:999 1 520px;min-width:0;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;overflow:hidden')}>
 
           <div style={S('border-bottom:1px solid #E6E8EC;padding:16px 20px;display:flex;flex-direction:column;gap:12px')}>
             <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:12px')}>
@@ -254,7 +263,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
           )}
         </section>
 
-        <aside aria-label="Appointment details" style={S('flex:1 1 440px;max-width:520px;min-width:0;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:22px')}>
+        <aside ref={asideRef} aria-label="Appointment details" style={S('flex:1 1 400px;max-width:520px;min-width:0;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:22px')}>
 
           {mode === 'view' && !sq && sel && selB && (<>
             <div style={S('display:flex;flex-direction:column;gap:16px')}>

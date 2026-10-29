@@ -143,7 +143,7 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
             <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
               <h2 style={S('margin:0;font-size:16px;font-weight:600')}>{day === today ? 'Later today' : 'Appointments'}</h2>
               <span style={S('display:flex;gap:8px')}>
-                <button onClick={() => { setOpen(true); setMode('walkin'); setWi({ name: '', clientId: null, svc: null, pro: 'any', cat: '' }); setError(''); setNotice(''); }} style={S('height:36px;padding:0 14px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:13px;font-weight:500;cursor:pointer')}>Walk-in</button>
+                <button onClick={() => { if (day !== today || view !== 'day') go(today, 'day'); setOpen(true); setMode('walkin'); setWi({ name: '', clientId: null, svc: null, pro: 'any', cat: '' }); setError(''); setNotice(''); }} style={S('height:36px;padding:0 14px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:13px;font-weight:500;cursor:pointer')}>Walk-in</button>
                 <button onClick={openLate} style={S('height:36px;padding:0 14px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:13px;font-weight:500;cursor:pointer')}>Late</button>
                 <button onClick={() => { setOpen(true); setMode('block'); setBf({ s: team[0]?.id ?? '', kind: 'lunch', day: day < today ? today : day, dur: 60, start: null }); setError(''); setNotice(''); }} style={S('height:36px;padding:0 14px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:13px;font-weight:500;cursor:pointer')}>Block time</button>
               </span>
