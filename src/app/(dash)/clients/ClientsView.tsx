@@ -211,7 +211,6 @@ function Mobile({ c }: { c: C }) {
           <div><div style={S('color:#5E6673;font-size:13px')}>Clients</div><div style={S('margin-top:2px;font-size:30px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{String(c.count)}</div></div>
           <div><div style={S('color:#5E6673;font-size:13px')}>New this month</div><div style={S('margin-top:2px;font-size:30px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{String(c.newThisMonth)}</div></div>
         </section>
-        <div><Link href="/clients/forms" className="ghost" style={S('display:inline-flex;align-items:center;min-height:44px;padding:0 18px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;text-decoration:none')}>Client forms</Link></div>
         <button onClick={c.openNew} style={S('display:flex;align-items:center;justify-content:center;gap:8px;height:48px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500')}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
           New client

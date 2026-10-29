@@ -9,6 +9,7 @@ const ITEMS: [string, string, React.ReactNode][] = [
   ['/products', 'Products', <><path d="M3.5 8 12 3.5 20.5 8v8L12 20.5 3.5 16z"/><path d="M3.5 8 12 12.5 20.5 8M12 12.5v8"/></>],
   ['/team', 'Team', <><rect x="4" y="3.5" width="16" height="17" rx="3"/><circle cx="12" cy="10" r="2.5"/><path d="M7.5 17c.6-2 2.4-3 4.5-3s3.9 1 4.5 3"/></>],
   ['/waitlist', 'Waitlist', <><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="8.5"/></>],
+  ['/clients/forms', 'Client forms', <><rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="M9 9h6M9 13h6M9 17h3"/></>],
   ['SLUG', 'Online booking page', <><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4M9 15l2 2 4-4"/></>],
   ['/reviews', 'Reviews', <><path d="M12 3.8l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/></>],
   ['/payroll', 'Payroll', <><circle cx="12" cy="12" r="8.5"/><path d="M14.5 9.2c-.5-.8-1.4-1.2-2.5-1.2-1.4 0-2.5.7-2.5 1.8 0 2.5 5 1.2 5 3.8 0 1.1-1.1 1.9-2.5 1.9-1.1 0-2.1-.5-2.6-1.4M12 6.5V8m0 8v1.5"/></>],
