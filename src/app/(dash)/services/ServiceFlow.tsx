@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { decimalInput, digitsInput } from '@/lib/numeric';
 import { S } from '../calendar/pickers';
-import { CLOSE_BTN as RING_BTN } from '../calendar/calUi';
+import { CLOSE_BTN as RING_BTN, CloseX } from '../calendar/calUi';
 import { AV, ROW, TICK, ICONS, StepShell, useSteps, Tiles, DetailRows } from '../calendar/wizardUi';
 import type { ServicesCtl } from './ServicesView';
 
@@ -88,9 +88,13 @@ export function ServiceFlow({ c }: { c: ServicesCtl }) {
             </div>
           )}
           {canEdit && !nc.open && !!d.catId && cats.some((x) => x.id === d.catId) && (ce.mode === '' ? (
-            <div style={S('display:flex;gap:16px')}>
-              <button type="button" className="ghost" onClick={() => setCe({ mode: 'rename', name: catName })} style={S('border:0;background:transparent;padding:0;color:#4A525E;font-size:13.5px;font-weight:500;text-decoration:underline;cursor:pointer')}>Rename category</button>
-              <button type="button" className="ghost" onClick={() => setCe({ mode: 'delete', name: '' })} style={S('border:0;background:transparent;padding:0;color:#B42318;font-size:13.5px;font-weight:500;text-decoration:underline;cursor:pointer')}>Delete category</button>
+            <div style={S('display:flex;gap:10px')}>
+              <button type="button" className="ghost" onClick={() => setCe({ mode: 'rename', name: catName })} style={S('flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:8px;height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;cursor:pointer')}>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-4-4L4 16z" /><path d="m13.5 6.5 4 4" /></svg>Rename
+              </button>
+              <button type="button" className="ghost" onClick={() => setCe({ mode: 'delete', name: '' })} style={S('flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:8px;height:48px;border:1px solid #F3C6C3;border-radius:999px;background:#FFFFFF;color:#B42318;font-size:14px;font-weight:500;cursor:pointer')}>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#B42318" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4.5 7h15M9.5 7V5h5v2M6.5 7l.8 12h9.4l.8-12M10 11v5M14 11v5" /></svg>Delete
+              </button>
             </div>
           ) : ce.mode === 'rename' ? (
             <div style={S('display:flex;gap:8px')}>
@@ -173,7 +177,7 @@ export function ServiceFlow({ c }: { c: ServicesCtl }) {
             ...(d.addon ? [] : [{ icon: ICONS.tag, text: catName || 'No category', step: canEdit ? at('category') : undefined }]),
             { icon: ICONS.time, text: durLabel(d.dur || 0), step: canEdit ? at('duration') : undefined },
             { icon: ICONS.tag, text: isNaN(priceNum) ? '$0' : money(Math.round(priceNum * 100)), step: canEdit ? at('price') : undefined },
-            { icon: ICONS.person, text: (d.addon ? 'With ' : '') + (people || 'No one chosen'), step: canEdit ? at(d.addon ? 'with' : 'who') : undefined },
+            { icon: d.addon ? ICONS.scissors : ICONS.person, text: d.addon ? (people ? 'Offered with ' + people : 'No services chosen') : (people || 'No one chosen'), step: canEdit ? at(d.addon ? 'with' : 'who') : undefined },
             { icon: ICONS.day, text: d.online ? 'Bookable online' : 'Hidden online', step: canEdit ? at('online') : undefined },
           ]} />
           {!canEdit && <p style={S('margin:0;color:#5E6673;font-size:13.5px')}>Only the owner can change services.</p>}
@@ -183,11 +187,13 @@ export function ServiceFlow({ c }: { c: ServicesCtl }) {
     {menu && (
       <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:6')}>
         <button onClick={() => { setMenu(false); setConfirm(false); }} aria-label="Close" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
-        <div role="dialog" aria-label="More actions" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column;gap:6px')}>
+        <div className="sheet" role="dialog" aria-label="More actions" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:92%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column')}>
           <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0;margin-bottom:12px')} />
-          <h2 style={S('margin:0 0 6px;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>More actions</h2>
+          <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px')}><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>More actions</h2><button onClick={() => { setMenu(false); setConfirm(false); }} aria-label="Close" style={S(RING_BTN)}><CloseX /></button></div>
           {!confirm ? (
-            <button type="button" onClick={() => setConfirm(true)} style={S('display:flex;align-items:center;width:100%;min-height:54px;padding:0 4px;border:0;background:transparent;font:inherit;font-size:16px;text-align:left;color:#B42318;cursor:pointer')}>Delete service</button>
+            <div style={S('display:flex;flex-direction:column;padding:4px 0;border-top:1px solid #EEF0F3')}>
+              <button type="button" onClick={() => setConfirm(true)} style={S('display:flex;align-items:center;width:100%;min-height:54px;box-sizing:border-box;padding:0;border:0;background:transparent;font:inherit;font-size:16px;text-align:left;color:#B42318;cursor:pointer')}>Delete service</button>
+            </div>
           ) : (
             <div role="alertdialog" aria-label="Confirm delete" style={S('display:flex;flex-direction:column;gap:12px;box-sizing:border-box;padding:16px;border:1px solid #F3C6C3;border-radius:20px;background:#FEF3F2')}>
               <div><div style={S('font-size:14.5px;font-weight:600')}>Delete this service?</div><div style={S('margin-top:2px;font-size:13px;color:#5E6673')}>It will no longer be available to book. This can&apos;t be undone.</div></div>
