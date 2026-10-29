@@ -102,7 +102,7 @@ export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCha
       </>)}
       {kind === 'cash' && (<>
         <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:16px;border:1px solid #E6E8EC;border-radius:22px')}><span style={S('color:#5E6673;font-size:14px')}>To pay</span><span style={S('font-size:24px;font-weight:600;letter-spacing:-0.02em')}>{m2(total)}</span></div>
-        <Tiles label="Cash received" options={[['partial', 'Partial'], ['exact', 'Exact']] as const} value={cashHow} onPick={(v) => setCashHow(v)} />
+        <Tiles label="Cash received" options={[['exact', 'Exact'], ['partial', 'Partial']] as const} value={cashHow} onPick={(v) => setCashHow(v)} />
         {cashHow === 'partial' && (<>
           <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="co-got" style={S('font-size:14px;font-weight:600')}>Amount received</label><input id="co-got" inputMode="decimal" value={got} onChange={(e) => setGot(decimalInput(e.target.value))} placeholder={'Cash received, ' + (total / 100).toFixed(2)} style={{ ...S(FIELD), minHeight: 0 }} /></div>
           <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:16px;border-radius:22px;background:' + (gotCents >= total ? '#DDF3EA' : '#FDECEA') + ';color:' + (gotCents >= total ? '#14624A' : '#B42318'))}><span style={S('font-size:14px;font-weight:500')}>{gotCents >= total ? 'Change to give back' : 'Still to receive'}</span><span style={S('font-size:22px;font-weight:600')}>{m2(Math.abs(gotCents - total))}</span></div>
