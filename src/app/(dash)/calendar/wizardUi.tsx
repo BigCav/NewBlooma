@@ -8,8 +8,8 @@ import { slotCss, dayCss, PRIMARY, CLOSE_BTN, ERR, CloseX } from './calUi';
 /* Pieces shared by the phone step-by-step flows (new appointment, walk-in, running late, block time, checkout). */
 
 /** Step state. Opening a step from the summary (`jump`) sends Continue and Back straight back to the summary. */
-export function useSteps(last: number, onNav: () => void) {
-  const [step, setStep] = useState(0);
+export function useSteps(last: number, onNav: () => void, start = 0) {
+  const [step, setStep] = useState(start);
   const [ret, setRet] = useState(false);
   const go = (n: number) => { onNav(); setStep(n); };
   const jump = (n: number) => { setRet(true); go(n); };
@@ -33,8 +33,8 @@ export const ICONS = {
 export type StepAction = { label: string; onClick: () => void; secondary?: boolean; disabled?: boolean };
 
 /** Header with back, close and progress; a scrolling body; and a bottom bar pinned to the foot of the page. */
-export function StepShell({ step, titles, onBack, onClose, error, summary, actions, children, plain }: {
-  plain?: boolean; step: number; titles: string[]; onBack: () => void; onClose: () => void; error?: string; summary?: React.ReactNode; actions: StepAction[]; children: React.ReactNode;
+export function StepShell({ step, titles, onBack, onClose, error, summary, actions, children, plain, bar }: {
+  bar?: React.ReactNode; plain?: boolean; step: number; titles: string[]; onBack: () => void; onClose: () => void; error?: string; summary?: React.ReactNode; actions: StepAction[]; children: React.ReactNode;
 }) {
   return (
     <div style={S('display:flex;flex-direction:column;flex:1 1 auto;min-height:0;margin:0 -20px -40px')}>
@@ -53,7 +53,8 @@ export function StepShell({ step, titles, onBack, onClose, error, summary, actio
       </div>
       <div style={S('flex:0 0 auto;padding:14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3;display:flex;flex-direction:column;gap:12px')}>
         {summary}
-        {actions.map((a) => <button key={a.label} onClick={a.onClick} disabled={a.disabled} style={S((a.secondary ? 'flex:0 0 auto;width:100%;height:52px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14.5px;font-weight:500;cursor:pointer' : PRIMARY + ';flex:0 0 auto;width:100%;height:52px') + ';opacity:' + (a.disabled ? 0.45 : 1))}>{a.label}</button>)}
+        {bar}
+        {!bar && actions.map((a) => <button key={a.label} onClick={a.onClick} disabled={a.disabled} style={S((a.secondary ? 'flex:0 0 auto;width:100%;height:52px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14.5px;font-weight:500;cursor:pointer' : PRIMARY + ';flex:0 0 auto;width:100%;height:52px') + ';opacity:' + (a.disabled ? 0.45 : 1))}>{a.label}</button>)}
       </div>
     </div>
   );

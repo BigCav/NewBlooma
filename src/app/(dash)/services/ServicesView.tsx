@@ -7,6 +7,7 @@ import { toneFor } from '@/lib/cal';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
 import { decimalInput, digitsInput } from '@/lib/numeric';
+import { ServiceFlow } from './ServiceFlow';
 import { addCategory, deleteCategory, deleteService, renameCategory, saveService } from './actions';
 
 export type SvcRow = { id: string; name: string; desc: string; catId: string; cat: string; catIdx: number; dur: number; priceCents: number; online: boolean; staffIds: string[]; addon: boolean; parentIds: string[] };
@@ -117,6 +118,7 @@ function useServices(props: Props) {
     select, startNew, cancelNew, save, remove, createCat, rows, durs, catName, setError };
 }
 type C = ReturnType<typeof useServices>;
+export type ServicesCtl = C;
 
 const chipMain = (on: boolean, m: boolean) => (m ? 'flex:0 0 auto;height:44px;padding:0 18px;border-radius:999px;font-size:14px;font-weight:500;' : 'height:40px;padding:0 16px;border-radius:999px;font-size:13.5px;font-weight:500;') + 'border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
 const formChip = (on: boolean, m: boolean) => 'flex:0 0 auto;white-space:nowrap;' + (m ? 'height:44px;padding:0 16px;font-size:14px;' : 'height:36px;padding:0 14px;font-size:13px;') + 'border-radius:999px;font-weight:500;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
@@ -394,15 +396,7 @@ function Mobile({ c }: { c: C }) {
         <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:5')}>
           <button onClick={() => c.setOpen(false)} aria-label="Close editor" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
           <div className="sheet" role="dialog" aria-label="Service editor" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:92%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column;gap:18px')}>
-            <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0')} />
-            <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
-              <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{mode === 'new' ? 'New service' : 'Edit service'}</h2>
-              {!!c.notice && <span role="status" style={S('flex:0 0 auto;padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.notice}</span>}
-              <button onClick={() => c.setOpen(false)} aria-label="Close" style={S('flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer')}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
-              </button>
-            </div>
-            <Editor c={c} m={true} />
+            <ServiceFlow key={mode + (c.selectedId ?? 'new')} c={c} />
           </div>
         </div>
       )}
