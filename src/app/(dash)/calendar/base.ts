@@ -7,6 +7,17 @@ export function buildHours(oh: any[] | null): CalHours[] {
   return Array.from({ length: 7 }, (_, wd) => { const r = (oh ?? []).find((h) => h.weekday === wd); return { wd, open: !!r?.is_open, from: r?.is_open ? mm(r.open_time) : 8 * 60, to: r?.is_open ? mm(r.close_time) : 18 * 60 }; });
 }
 
+/** Expand closed periods into a day-by-day map (date to reason), from yesterday to about 14 months ahead. */
+export function buildClosed(rows: { starts_on: string; ends_on: string; reason: string | null }[] | null, today: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  const start = Date.UTC(Number(today.slice(0, 4)), Number(today.slice(5, 7)) - 1, Number(today.slice(8, 10))) - 86400000, end = start + 430 * 86400000;
+  for (const r of rows ?? []) {
+    const a = Date.parse(r.starts_on + 'T00:00:00Z'), b = Date.parse(r.ends_on + 'T00:00:00Z');
+    for (let t = Math.max(a, start); t <= Math.min(b, end); t += 86400000) out[new Date(t).toISOString().slice(0, 10)] = r.reason ?? '';
+  }
+  return out;
+}
+
 export function buildServices(svc: any[] | null, sa: any[] | null): CalService[] {
   return (svc ?? []).map((s: any) => ({ id: s.id, name: s.name, dur: s.duration_min, priceCents: s.price_cents, cat: s.service_categories?.name ?? 'Services', addon: !!s.is_addon, parents: (sa ?? []).filter((l: any) => l.addon_id === s.id).map((l: any) => l.service_id) }));
 }

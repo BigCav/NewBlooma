@@ -5,8 +5,9 @@ import { dropEmptyThread, ensureThread, logStaffMessage, replyUrl } from '@/lib/
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireCtx, friendly } from '@/lib/session';
+import { CANCEL_REASONS } from '@/lib/cal';
 import { zonedToUtc, minutesOfDay, ymd as ymdOf, time12 } from '@/lib/format';
-import { buildCfg, buildHours, buildOffers, buildRecent, buildServices } from './base';
+import { buildCfg, buildClosed, buildHours, buildOffers, buildRecent, buildServices } from './base';
 
 const s = (fd: FormData, k: string) => String(fd.get(k) ?? '').trim();
 
@@ -65,9 +66,10 @@ export async function approveBooking(id: string): Promise<R> {
   if (error) return { error: friendly(error.message) };
   revalidatePath('/calendar'); return { ok: true };
 }
-export async function cancelBooking(id: string): Promise<R> {
+export async function cancelBooking(id: string, reason: string): Promise<R> {
   const { sb } = await requireCtx();
-  const { error } = await sb.from('bookings').update({ status: 'cancelled', cancelled_at: new Date().toISOString() }).eq('id', id);
+  if (!(CANCEL_REASONS as readonly string[]).includes(reason)) return { error: 'Choose why it is being cancelled.' };
+  const { error } = await sb.from('bookings').update({ status: 'cancelled', cancelled_at: new Date().toISOString(), cancel_reason: reason }).eq('id', id);
   if (error) return { error: friendly(error.message) };
   await flushOutbox();
   revalidatePath('/calendar'); return { ok: true };
@@ -87,18 +89,19 @@ export async function noShowBooking(id: string): Promise<R> {
 /** Everything the new-appointment sheet needs, for opening it from pages other than the calendar. */
 export async function loadNewAppt() {
   const { sb, salon, settings, staff } = await requireCtx();
-  const [{ data: team }, { data: oh }, { data: svc }, { data: ss }, { data: sa }, { data: rc }] = await Promise.all([
+  const [{ data: team }, { data: oh }, { data: svc }, { data: ss }, { data: sa }, { data: rc }, { data: cp }] = await Promise.all([
     sb.from('staff').select('id,name,role_title').eq('active', true).order('name'),
     sb.from('opening_hours').select('*'),
     sb.from('services').select('id,name,duration_min,price_cents,is_addon,service_categories(name)').eq('active', true).order('name'),
     sb.from('service_staff').select('service_id,staff_id'),
     sb.from('service_addons').select('addon_id,service_id'),
     sb.from('bookings').select('client_id,clients(name)').not('client_id', 'is', null).order('starts_at', { ascending: false }).limit(80),
+    sb.from('closed_periods').select('starts_on,ends_on,reason').gte('ends_on', ymdOf(new Date(Date.now() - 2 * 86400000), salon.timezone)),
   ]);
   return {
     today: ymdOf(new Date(), salon.timezone), nowMin: minutesOfDay(new Date(), salon.timezone), tz: salon.timezone, slug: salon.slug,
     team: (team ?? []).map((t) => ({ id: t.id, name: t.name, role: t.role_title ?? '' })),
-    hours: buildHours(oh), services: buildServices(svc, sa), offers: buildOffers(ss), cfg: buildCfg(settings, staff.app_role), recent: buildRecent(rc),
+    hours: buildHours(oh), closed: buildClosed(cp, ymdOf(new Date(), salon.timezone)), services: buildServices(svc, sa), offers: buildOffers(ss), cfg: buildCfg(settings, staff.app_role), recent: buildRecent(rc),
   };
 }
 
@@ -122,23 +125,26 @@ export async function dayAvailability(dayYmd: string, staffId: string, ignoreBoo
   const { sb, salon } = await requireCtx();
   const a = zonedToUtc(dayYmd, '00:00', salon.timezone), b = zonedToUtc(dayYmd, '23:59:59', salon.timezone);
   const wd = (new Date(`${dayYmd}T00:00:00Z`).getUTCDay() + 6) % 7;
-  const [{ data: bk }, { data: bl }, { data: oh }, { data: sh }] = await Promise.all([
+  const [{ data: bk }, { data: bl }, { data: oh }, { data: sh }, { data: cl }] = await Promise.all([
     sb.from('bookings').select('id,starts_at,ends_at').eq('staff_id', staffId).lt('starts_at', b.toISOString()).gt('ends_at', a.toISOString()).not('status', 'in', '(cancelled,no_show)'),
     sb.from('staff_blocks').select('starts_at,ends_at').eq('staff_id', staffId).lt('starts_at', b.toISOString()).gt('ends_at', a.toISOString()),
     sb.from('opening_hours').select('*').eq('weekday', wd).maybeSingle(),
     sb.from('staff_shifts').select('start_time,end_time').eq('staff_id', staffId).eq('weekday', wd).maybeSingle(),
+    sb.from('closed_periods').select('reason').lte('starts_on', dayYmd).gte('ends_on', dayYmd).limit(1),
   ]);
   const mm = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
   const busy = [...(bk ?? []).filter((x: any) => x.id !== ignoreBooking), ...(bl ?? [])].map((x) => ({ s: minutesOfDay(x.starts_at, salon.timezone), e: minutesOfDay(x.ends_at, salon.timezone) }));
-  const open = !!oh?.is_open && !!sh;
+  const closedWhy = cl?.length ? (cl[0].reason ?? '') : undefined;
+  const open = !!oh?.is_open && !!sh && closedWhy === undefined;
   let from = oh?.is_open ? mm(oh.open_time) : 0, to = oh?.is_open ? mm(oh.close_time) : 0;
   if (sh) { from = Math.max(from, mm(sh.start_time)); to = Math.min(to, mm(sh.end_time)); }
-  return { busy, open, from, to };
+  return { busy, open, from, to, closedWhy };
 }
 
 /** Why a staff member cannot take [startMin, startMin + dur) on a day, or '' if they can. */
 async function slotProblem(dayYmd: string, staffId: string, startMin: number, dur: number, ignoreBooking?: string) {
   const a = await dayAvailability(dayYmd, staffId, ignoreBooking);
+  if (a.closedWhy !== undefined) return 'The salon is closed that day' + (a.closedWhy ? ` (${a.closedWhy})` : '') + '.';
   if (!a.open) return 'That team member is not working that day.';
   if (startMin < a.from || startMin + dur > a.to) return 'That would run past closing time. Pick an earlier time.';
   if (a.busy.some((x) => startMin < x.e && x.s < startMin + dur)) return 'That time is already booked. Pick another time.';

@@ -4,6 +4,7 @@
 import { useEffect, useRef } from 'react';
 import { ClientMatches } from './ClientMatches';
 import { MessageBox } from './MessageBox';
+import { CancelPick } from './CancelPick';
 import { DiscountPick } from './DiscountPick';
 import { BLOCK_KINDS, dayInfo, fmtMin, initials, addDaysYmd } from '@/lib/cal';
 import { cancelBooking, deleteBlock } from './actions';
@@ -130,7 +131,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 6l6 6-6 6" /></svg>
               </button>
               <span style={S('margin-left:8px;font-size:16px;font-weight:600;letter-spacing:-0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{view === 'week' ? wkRange : di.short}</span>
-              {dayClosed && <span style={S('color:#5E6673;font-size:13.5px')}>Closed</span>}
+              {dayClosed && <span style={S('color:#5E6673;font-size:13.5px')}>{c.closedWhy(day) !== undefined ? 'Closed' + (c.closedWhy(day) ? ': ' + c.closedWhy(day) : '') : 'Closed'}</span>}
             </div>
               <div style={S('display:flex;align-items:center;gap:8px;flex:0 0 auto;margin-left:auto')}>
               <div role="group" aria-label="Calendar view" style={S('display:flex;gap:2px;padding:3px;border-radius:999px;background:#F4F5F7')}>
@@ -322,7 +323,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
           {mode === 'view' && !sq && !selB && (
             <div style={S('display:flex;flex-direction:column;gap:14px')}>
               <h2 style={S(H2D)}>Nothing booked</h2>
-              <p style={S('margin:0;color:#5E6673;font-size:14px')}>{view === 'day' && !dayHrs?.open ? 'The salon is closed on ' + di.weekday + 's.' : 'No appointments on ' + di.short + ' yet.'}</p>
+              <p style={S('margin:0;color:#5E6673;font-size:14px')}>{view === 'day' && !dayHrs?.open ? c.closedWhy(day) !== undefined ? 'The salon is closed on this day' + (c.closedWhy(day) ? ': ' + c.closedWhy(day) : '') + '.' : 'The salon is closed on ' + di.weekday + 's.' : 'No appointments on ' + di.short + ' yet.'}</p>
               {!!notice && <span role="status" style={S('align-self:flex-start;padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{notice}</span>}
               <button onClick={openNew} style={S('height:44px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500')}>New appointment</button>
             </div>
@@ -370,7 +371,9 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
                   <button onClick={saveEdit} disabled={busy} style={S(BTN)}>Save changes</button>
                   <BackBtn label="Back" />
                 </div>
-                {sel && sel.canEdit && sel.k !== 'live' && <button onClick={() => act(() => cancelBooking(cur.id), first(cur.client) + "'s booking cancelled", () => { setMode('view'); })} style={S('height:44px;border:0;border-radius:999px;background:transparent;color:#B42318;font-size:14px;font-weight:500')}>Cancel this booking</button>}
+                {sel && sel.canEdit && sel.k !== 'live' && (c.cancelAsk
+                  ? <CancelPick name={first(cur.client)} mobile={false} busy={busy} onBack={() => c.setCancelAsk(false)} onConfirm={(why) => act(() => cancelBooking(cur.id, why), first(cur.client) + "'s booking cancelled", () => { c.setCancelAsk(false); setMode('view'); })} />
+                  : <button onClick={() => c.setCancelAsk(true)} style={S('height:44px;border:0;border-radius:999px;background:transparent;color:#B42318;font-size:14px;font-weight:500')}>Cancel this booking</button>)}
               </div>
             );
           })()}

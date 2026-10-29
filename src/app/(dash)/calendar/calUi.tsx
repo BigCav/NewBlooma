@@ -32,6 +32,8 @@ export const Mag = ({ size, color }: { size: number; color: string }) => <svg wi
 export type Avail = { key: string; busy: { s: number; e: number }[]; open: boolean; from: number; to: number } | null;
 export type Props = {
   day: string; today: string; view: 'day' | 'week'; nowMin: number; team: CalStaff[]; bookings: CalBooking[]; blocks: CalBlock[]; hours: CalHours[]; services: CalService[];
+  /** Days the salon is closed (date to reason), on top of the weekly hours. */
+  closed?: Record<string, string>;
   offers: Record<string, string[]>; cfg: CalSettings; slug: string; tz: string; recent: { id: string; name: string }[]; initialNew?: boolean; initialClient?: string; initialSel?: string; staffFilter: string; remoteSearch?: boolean;
   /** Set when the new-appointment sheet is opened from another page: called instead of staying on the calendar. */
   onCreated?: (r: { id?: string; day: string }) => void;

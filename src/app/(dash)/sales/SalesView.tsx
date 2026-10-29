@@ -2,6 +2,7 @@
 // 1:1 conversion of the prototype's Sales.dc.html and MobileSales.dc.html. Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
 import { decimalInput } from '@/lib/numeric';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
@@ -246,6 +247,7 @@ function Desktop({ c }: { c: C }) {
     <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 8px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <PageHeader title="Sales" subtitle={c.subtitle} query={c.query} onQuery={c.setQuery} placeholder="Search sales" actionLabel="New sale" onAction={c.openNew} />
       <section aria-label="Sales at a glance" style={S('display:flex;flex-wrap:wrap;gap:20px 64px')}>{stat('Sales today', fmt(c.todayTotal))}{stat('Paid sales', String(c.paidCount))}{stat('Average sale', fmt(c.paidCount ? Math.round(c.todayTotal / c.paidCount) : 0))}</section>
+      {c.canDiscount && <div><Link href="/sales/summary" style={S('display:inline-flex;align-items:center;height:40px;padding:0 18px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:13.5px;font-weight:500;text-decoration:none')}>Daily summary and cash-up</Link></div>}
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
         <div style={S('flex:999 1 620px;min-width:0;display:flex;flex-direction:column;gap:20px')}>
           <section aria-label="Last 7 days" style={S('background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px')}>
@@ -306,6 +308,7 @@ function Mobile({ c }: { c: C }) {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
           New sale
         </button>
+        {c.canDiscount && <Link href="/sales/summary" style={S('display:inline-flex;align-items:center;height:44px;padding:0 18px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:13.5px;font-weight:500;text-decoration:none')}>Daily summary and cash-up</Link>}
         <section aria-label="Last 7 days" style={S('background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:20px')}>
           <div style={S('display:flex;align-items:baseline;justify-content:space-between;gap:8px')}><h2 style={S('margin:0;font-size:16px;font-weight:600')}>Last 7 days</h2><span style={S('color:#5E6673;font-size:13px')}>{fmt(c.bars.reduce((a, b) => a + b.cents, 0))}</span></div>
           <div role="group" aria-label="Daily sales for the last 7 days" style={S('margin-top:16px;display:flex;align-items:flex-end;gap:8px;height:128px')}>

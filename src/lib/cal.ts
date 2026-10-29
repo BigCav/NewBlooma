@@ -43,6 +43,8 @@ export type CalBlock = { id: string; staffId: string; dayYmd: string; start: num
 export type CalService = { id: string; name: string; dur: number; priceCents: number; cat: string; addon?: boolean; parents?: string[] };
 export type CalSettings = { taxRate: number; taxInclusive: boolean; askTip: boolean; tipDefault: number; acceptCard: boolean; acceptCash: boolean; acceptGift: boolean; canDiscount: boolean };
 export type CalHours = { wd: number; open: boolean; from: number; to: number };
+/** Why a booking is cancelled from the calendar. The first is the common case. */
+export const CANCEL_REASONS = ['Client cancelled', 'Client unwell', 'Stylist unavailable', 'Salon closed', 'Double booked', 'Other'] as const;
 export const BLOCK_KINDS: [string, string][] = [['lunch', 'Lunch'], ['break', 'Break'], ['time_off', 'Time off'], ['other', 'Other']];
 export const BLOCK_DURS: [number, string][] = [[30, '30 min'], [60, '1 hour'], [120, '2 hours'], [180, '3 hours']];
 export const STEP = 30;

@@ -6,6 +6,7 @@ export type Values = {
   card: boolean; cash: boolean; gift: boolean; tips: boolean; tipDefault: string; tax: string;
   confirmEmail: boolean; remind24: boolean; remind2: boolean; newBooking: boolean; cancelled: boolean;
 };
+export type Closed = { id: string; from: string; to: string; reason: string };
 export const DAY_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 export function validate(v: Values): { section: string; error: string } | null {
   if (!v.bizName.trim()) return { section: 'business', error: 'Add your business name.' };

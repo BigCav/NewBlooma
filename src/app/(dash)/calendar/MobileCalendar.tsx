@@ -8,6 +8,7 @@ import { DiscountPick } from './DiscountPick';
 import Link from 'next/link';
 import { dayInfo, fmtMin, initials, addDaysYmd, BLOCK_KINDS } from '@/lib/cal';
 import { cancelBooking, deleteBlock } from './actions';
+import { CancelPick } from './CancelPick';
 import { S, ServicePicker, TeamPicker } from './pickers';
 import { HATCH, first, usd, m2, BLOCK_DURS_M, METHODS, TIP_OPTS, chip, slotCss, dayCss, note, PRIMARY, SECOND, CLOSE_BTN, H2S, ERR, DLROW, CloseX, Mag } from './calUi';
 import type { useCalendar } from './useCalendar';
@@ -292,7 +293,9 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
                   <button onClick={saveEdit} disabled={busy} style={S(PRIMARY)}>Save changes</button>
                   <button onClick={backToView} style={S(SECOND)}>Back</button>
                 </div>
-                {sel && sel.canEdit && sel.k !== 'live' && <button onClick={() => act(() => cancelBooking(cur.id), first(cur.client) + "'s booking cancelled", () => { setOpen(false); setMode('view'); })} style={S('height:48px;border:0;border-radius:999px;background:transparent;color:#B42318;font-size:14.5px;font-weight:500;cursor:pointer')}>Cancel this booking</button>}
+                {sel && sel.canEdit && sel.k !== 'live' && (c.cancelAsk
+                  ? <CancelPick name={first(cur.client)} mobile busy={busy} onBack={() => c.setCancelAsk(false)} onConfirm={(why) => act(() => cancelBooking(cur.id, why), first(cur.client) + "'s booking cancelled", () => { c.setCancelAsk(false); setOpen(false); setMode('view'); })} />
+                  : <button onClick={() => c.setCancelAsk(true)} style={S('height:48px;border:0;border-radius:999px;background:transparent;color:#B42318;font-size:14.5px;font-weight:500;cursor:pointer')}>Cancel this booking</button>)}
               </>);
             })()}
 

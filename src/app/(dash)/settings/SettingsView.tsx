@@ -9,8 +9,8 @@ import { useEffect, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
 import { useNightMode } from '@/components/Theme';
-import { saveSettings } from './actions';
-import { DAY_FULL, validate, type Values } from './shared';
+import { addClosedPeriod, removeClosedPeriod, saveSettings } from './actions';
+import { DAY_FULL, validate, type Closed, type Values } from './shared';
 
 const SECTIONS = [
   { id: 'business', label: 'Business details', desc: 'Name, contact and address' },
@@ -33,7 +33,7 @@ const swStyle = (on: boolean) => 'position:relative;flex:0 0 52px;width:52px;hei
 const swKnob = (on: boolean) => 'position:absolute;top:3px;left:' + (on ? 23 : 3) + 'px;width:26px;height:26px;border-radius:999px;background:#FFFFFF';
 const noMin = { minHeight: 0 } as const;
 
-function useSettings(initial: Values, start?: string) {
+function useSettings(initial: Values, start?: string, closedInit: Closed[] = []) {
   const router = useRouter();
   const [busy, startT] = useTransition();
   const [narrow, setNarrow] = useState<boolean | null>(null);
@@ -44,6 +44,7 @@ function useSettings(initial: Values, start?: string) {
     return () => mq.removeEventListener('change', f);
   }, []);
   const [v, setV] = useState<Values>(initial);
+  const [closed, setClosed] = useState<Closed[]>(closedInit);
   const [saved, setSaved] = useState<Values>(initial);
   const [section, setSection] = useState(start ?? 'business');
   const [open, setOpen] = useState(false);
@@ -61,7 +62,7 @@ function useSettings(initial: Values, start?: string) {
       setSaved(clone(v)); setNotice('Settings saved'); setError(''); setOpen(false); router.refresh();
     });
   };
-  return { narrow, v, set, setHour, section, pick: (id: string) => { setSection(id); setOpen(true); setError(''); setNotice(''); }, open, close: () => { setOpen(false); setError(''); },
+  return { narrow, v, set, setHour, closed, setClosed, section, pick: (id: string) => { setSection(id); setOpen(true); setError(''); setNotice(''); }, open, close: () => { setOpen(false); setError(''); },
     error, notice, dirty, busy, save, discard: () => { setV(clone(saved)); setError(''); setNotice(''); } };
 }
 type C = ReturnType<typeof useSettings>;
@@ -92,6 +93,48 @@ function Field({ id, label, k, c, type, mode, ph }: { id: string; label: string;
   return (
     <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor={id} style={S('font-size:14px;font-weight:600')}>{label}</label>
       <input id={id} type={type} inputMode={mode as any} value={c.v[k]} onChange={(e) => c.set(k, k === 'bizPhone' ? phoneInput(e.target.value) : k === 'slug' ? e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') : k === 'tax' ? decimalInput(e.target.value) : e.target.value)} placeholder={ph} style={{ ...S(INPUT), ...noMin }} /></div>
+  );
+}
+
+const dayText = (d: string) => new Date(d + 'T00:00:00Z').toLocaleDateString('en-NZ', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+const DATE_INPUT = 'box-sizing:border-box;width:100%;height:44px;padding:0 10px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:14px;color:#0E1116;background:#FFFFFF';
+
+/** Holidays and other days the salon is shut. These save straight away, separately from the Save button. */
+function ClosedDates({ c, m }: { c: C; m: boolean }) {
+  const [from, setFrom] = useState(''), [to, setTo] = useState(''), [why, setWhy] = useState('');
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [busy, startT] = useTransition();
+  const add = () => startT(async () => {
+    const r = await addClosedPeriod(from, to, why);
+    if (r.error) { setMsg({ ok: false, text: r.error }); return; }
+    c.setClosed([...c.closed, { id: r.id!, from, to: to || from, reason: why.trim().slice(0, 80) }].sort((a, b) => a.from.localeCompare(b.from)));
+    setFrom(''); setTo(''); setWhy('');
+    setMsg({ ok: true, text: r.affected ? `Added. ${r.affected} appointment${r.affected === 1 ? ' is' : 's are'} already booked on those days and stay on your calendar. Move or cancel ${r.affected === 1 ? 'it' : 'them'}.` : 'Added. Clients can no longer book those days.' });
+  });
+  const remove = (id: string) => startT(async () => {
+    const r = await removeClosedPeriod(id);
+    if (r.error) { setMsg({ ok: false, text: r.error }); return; }
+    c.setClosed(c.closed.filter((x) => x.id !== id)); setMsg({ ok: true, text: 'Removed. Those days follow your weekly hours again.' });
+  });
+  return (
+    <div role="group" aria-labelledby="st-closed" style={S('display:flex;flex-direction:column;gap:12px;margin-top:26px;padding-top:20px;border-top:1px solid #EEF0F3')}>
+      <div><div id="st-closed" style={S('font-size:15px;font-weight:600')}>Closed dates</div>
+        <div style={S('margin-top:2px;font-size:13px;color:#5E6673')}>Holidays and other days you are shut, even though the weekly hours say open. Nothing is offered online on these days.</div></div>
+      {c.closed.length === 0 && <div style={S('font-size:13.5px;color:#5E6673')}>No closed dates coming up.</div>}
+      {c.closed.map((x) => (
+        <div key={x.id} style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid #EEF0F3')}>
+          <div style={S('min-width:0;font-size:14px')}><div style={S('font-weight:600')}>{x.from === x.to ? dayText(x.from) : dayText(x.from) + ' to ' + dayText(x.to)}</div>{x.reason && <div style={S('color:#5E6673;overflow-wrap:anywhere')}>{x.reason}</div>}</div>
+          <button onClick={() => remove(x.id)} disabled={busy} aria-label={'Remove closed dates ' + dayText(x.from)} style={S('flex:0 0 auto;height:' + (m ? 44 : 40) + 'px;padding:0 14px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#B42318;font-size:13.5px;font-weight:500;cursor:pointer')}>Remove</button>
+        </div>
+      ))}
+      <div style={S('display:flex;flex-wrap:wrap;gap:10px')}>
+        <label style={S('flex:1 1 150px;display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600')}>First day<input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setMsg(null); }} style={{ ...S(DATE_INPUT), ...noMin }} /></label>
+        <label style={S('flex:1 1 150px;display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600')}>Last day (optional)<input type="date" value={to} min={from || undefined} onChange={(e) => { setTo(e.target.value); setMsg(null); }} style={{ ...S(DATE_INPUT), ...noMin }} /></label>
+      </div>
+      <label style={S('display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600')}>Reason (optional)<input type="text" maxLength={80} value={why} onChange={(e) => { setWhy(e.target.value); setMsg(null); }} placeholder="For example, Christmas" style={{ ...S(DATE_INPUT), ...noMin }} /></label>
+      {msg && <p role={msg.ok ? 'status' : 'alert'} style={S('margin:0;font-size:13.5px;font-weight:500;color:' + (msg.ok ? '#14624A' : '#B42318'))}>{msg.text}</p>}
+      <button onClick={add} disabled={busy || !from} style={S('align-self:flex-start;height:' + (m ? 48 : 44) + 'px;padding:0 20px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500;cursor:pointer;opacity:' + (busy || !from ? 0.5 : 1))}>Add closed dates</button>
+    </div>
   );
 }
 
@@ -131,6 +174,7 @@ function Content({ c, m }: { c: C; m: boolean }) {
             </div>
           </div>
         ))}
+        <ClosedDates c={c} m={m} />
       </div>
     )}
     {s === 'booking' && (
@@ -248,8 +292,8 @@ function Mobile({ c }: { c: C }) {
   );
 }
 
-export function SettingsView({ initial, section }: { initial: Values; section?: string }) {
-  const c = useSettings(initial, SECTIONS.some((x) => x.id === section) ? section : undefined);
+export function SettingsView({ initial, section, closed }: { initial: Values; section?: string; closed?: Closed[] }) {
+  const c = useSettings(initial, SECTIONS.some((x) => x.id === section) ? section : undefined, closed);
   return (<>
     {c.narrow !== false && <Mobile c={c} />}
     {c.narrow !== true && <Desktop c={c} />}

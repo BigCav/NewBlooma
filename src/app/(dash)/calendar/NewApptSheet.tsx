@@ -5,7 +5,7 @@ import { S } from './pickers';
 import { useCalendar } from './useCalendar';
 import type { Props } from './calUi';
 
-export type NewApptData = Pick<Props, 'today' | 'nowMin' | 'tz' | 'slug' | 'team' | 'hours' | 'services' | 'offers' | 'cfg' | 'recent'>;
+export type NewApptData = Pick<Props, 'today' | 'nowMin' | 'tz' | 'slug' | 'team' | 'hours' | 'closed' | 'services' | 'offers' | 'cfg' | 'recent'>;
 
 /** The new-appointment sheet on its own, over whatever page the + button was pressed on. */
 export default function NewApptSheet({ data, onClose, onCreated }: { data: NewApptData; onClose: () => void; onCreated: (r: { id?: string; day: string }) => void }) {
