@@ -5,7 +5,7 @@ import { S, ServicePicker } from './pickers';
 import { BLOCK_DURS_M, METHODS, TIP_OPTS, m2, usd } from './calUi';
 import { DISC_PCTS, NO_DISC } from '../sales/shared';
 import { decimalInput } from '@/lib/numeric';
-import { StepShell, ClientStep, PeopleStep, Tiles, DayTimeStep, ClientCard, DetailRows, ICONS } from './wizardUi';
+import { useSteps, StepShell, ClientStep, PeopleStep, Tiles, DayTimeStep, ClientCard, DetailRows, ICONS } from './wizardUi';
 import type { useCalendar } from './useCalendar';
 import type { Props } from './calUi';
 
@@ -14,12 +14,11 @@ type C = ReturnType<typeof useCalendar>;
 /** Walk-in as steps: client, service, team member, then a summary with the two ways to add it. */
 export function WalkInWizard({ c, props }: { c: C; props: Props }) {
   const { wi, setWi, wiSvc, wiPlanText, wiPlanCss, addWalkin, offered, services, svcMap, lockFor, team, staffName, setError, error, hasError, busy, close } = c;
-  const [step, setStep] = useState(0);
-  const go = (n: number) => { setError(''); setStep(n); };
+  const { step, go, jump, forward, back } = useSteps(3, () => setError(''));
   const canNext = step === 0 ? !!wi.name.trim() : step === 1 ? !!wi.svc : step === 2 ? !!wi.pro : true;
-  const next = () => { if (!canNext) { setError(step === 0 ? "Add the client's name." : step === 1 ? 'Choose a service.' : 'Choose a team member.'); return; } go(step + 1); };
+  const next = () => { if (!canNext) { setError(step === 0 ? "Add the client's name." : step === 1 ? 'Choose a service.' : 'Choose a team member.'); return; } forward(); };
   return (
-    <StepShell step={step} titles={['Select client', 'Select service', 'Select team member', 'Summary']} onBack={() => go(step - 1)} onClose={close} error={hasError ? error : ''}
+    <StepShell step={step} titles={['Select client', 'Select service', 'Select team member', 'Summary']} onBack={back} onClose={close} error={hasError ? error : ''}
       actions={step === 3 ? [{ label: 'Add & check out', onClick: () => addWalkin(true), disabled: busy }, { label: 'Add to calendar', onClick: () => addWalkin(false), disabled: busy, secondary: true }] : [{ label: 'Continue', onClick: next, disabled: !canNext }]}>
       {step === 0 && <ClientStep name={wi.name} clientId={wi.clientId} recent={props.recent ?? []} onChange={(name, id) => { setWi({ ...wi, name, clientId: id }); setError(''); }} />}
       {step === 1 && (
@@ -28,8 +27,8 @@ export function WalkInWizard({ c, props }: { c: C; props: Props }) {
       )}
       {step === 2 && <PeopleStep any team={team} selected={wi.pro} offers={wi.svc ? (sid) => offered(wi.svc!, sid) : undefined} onPick={(id) => { setWi({ ...wi, pro: id || 'any' }); setError(''); }} />}
       {step === 3 && (<>
-        <ClientCard name={wi.name} existing={!!wi.clientId} onChange={() => go(0)} />
-        <DetailRows go={go} rows={[
+        <ClientCard name={wi.name} existing={!!wi.clientId} onChange={() => jump(0)} />
+        <DetailRows go={jump} rows={[
           { icon: ICONS.scissors, text: wiSvc ? wiSvc.name : '', step: 1 },
           { icon: ICONS.person, text: wi.pro === 'any' ? 'First available' : staffName(wi.pro), step: 2 },
         ]} />
@@ -44,19 +43,18 @@ const LATE_OPTS = [[15, '15 min'], [30, '30 min'], [45, '45 min'], [60, '1 hour'
 /** Running late as steps: who, how late, then what moves and whether to tell the clients. */
 export function LateWizard({ c }: { c: C }) {
   const { lf, setLf, lateList, saveLate, team, staffName, day, setError, error, hasError, busy, close } = c;
-  const [step, setStep] = useState(0);
-  const go = (n: number) => { setError(''); setStep(n); };
+  const { step, go, jump, forward, back } = useSteps(2, () => setError(''));
   const canNext = step === 0 ? !!lf.s : true;
   return (
-    <StepShell step={step} titles={['Select team member', 'How late?', 'Summary']} onBack={() => go(step - 1)} onClose={close} error={hasError ? error : ''}
-      actions={[step === 2 ? { label: 'Move ' + (lateList.length || ''), onClick: saveLate, disabled: busy || !lateList.length } : { label: 'Continue', onClick: () => { if (!canNext) { setError('Choose a team member.'); return; } go(step + 1); }, disabled: !canNext }]}>
+    <StepShell step={step} titles={['Select team member', 'How late?', 'Summary']} onBack={back} onClose={close} error={hasError ? error : ''}
+      actions={[step === 2 ? { label: 'Move ' + (lateList.length || ''), onClick: saveLate, disabled: busy || !lateList.length } : { label: 'Continue', onClick: () => { if (!canNext) { setError('Choose a team member.'); return; } forward(); }, disabled: !canNext }]}>
       {step === 0 && (<>
         <p style={S('margin:0;color:#5E6673;font-size:14px')}>Moves everything not started for one person on {dayInfo(day).short}.</p>
         <PeopleStep team={team} selected={lf.s} onPick={(id) => { setLf({ ...lf, s: id }); setError(''); }} />
       </>)}
       {step === 1 && <Tiles label="Running late by" options={LATE_OPTS} value={lf.mins} onPick={(m) => { setLf({ ...lf, mins: m }); setError(''); }} />}
       {step === 2 && (<>
-        <DetailRows go={go} rows={[
+        <DetailRows go={jump} rows={[
           { icon: ICONS.person, text: staffName(lf.s), step: 0 },
           { icon: ICONS.time, text: 'Running late by ' + (LATE_OPTS.find((o) => o[0] === lf.mins)?.[1] ?? lf.mins + ' min'), step: 1 },
         ]} />
@@ -72,14 +70,13 @@ export function LateWizard({ c }: { c: C }) {
 /** Block time as steps: who, reason, length, when, then a summary. */
 export function BlockWizard({ c }: { c: C }) {
   const { bf, setBf, bfDur, slotsFor, reason, saveBlock, team, staffName, days14, setError, error, hasError, busy, close } = c;
-  const [step, setStep] = useState(0);
-  const go = (n: number) => { setError(''); setStep(n); };
+  const { step, go, jump, forward, back } = useSteps(4, () => setError(''));
   const kindLabel = BLOCK_KINDS.find((k) => k[0] === bf.kind)?.[1] ?? '';
   const durLabel = BLOCK_DURS_M.find((d) => d[0] === bf.dur)?.[1] ?? '';
   const canNext = step === 0 ? !!bf.s : step === 3 ? bf.start !== null && !reason(bf.day, bf.start, bfDur) : true;
-  const next = () => { if (!canNext) { setError(step === 0 ? 'Choose a team member.' : 'Choose a start time.'); return; } go(step + 1); };
+  const next = () => { if (!canNext) { setError(step === 0 ? 'Choose a team member.' : 'Choose a start time.'); return; } forward(); };
   return (
-    <StepShell step={step} titles={['Select team member', 'Select reason', 'Select length', 'Select time', 'Summary']} onBack={() => go(step - 1)} onClose={close} error={hasError ? error : ''}
+    <StepShell step={step} titles={['Select team member', 'Select reason', 'Select length', 'Select time', 'Summary']} onBack={back} onClose={close} error={hasError ? error : ''}
       actions={[step === 4 ? { label: 'Block time', onClick: saveBlock, disabled: busy } : { label: 'Continue', onClick: next, disabled: !canNext }]}>
       {step === 0 && (<>
         <p style={S('margin:0;color:#5E6673;font-size:14px')}>Clients cannot book blocked time.</p>
@@ -89,7 +86,7 @@ export function BlockWizard({ c }: { c: C }) {
       {step === 2 && <Tiles label="Length" options={BLOCK_DURS_M} value={bf.dur} onPick={(m) => { setBf({ ...bf, dur: m, start: null }); setError(''); }} />}
       {step === 3 && <DayTimeStep days={days14} day={bf.day} onDay={(d) => { setBf({ ...bf, day: d, start: null }); setError(''); }} slots={slotsFor} why={(t) => reason(bf.day, t, bfDur)} time={bf.start} onTime={(t) => { setBf({ ...bf, start: t }); setError(''); }} />}
       {step === 4 && (
-        <DetailRows go={go} rows={[
+        <DetailRows go={jump} rows={[
           { icon: ICONS.person, text: staffName(bf.s), step: 0 },
           { icon: ICONS.tag, text: kindLabel, step: 1 },
           { icon: ICONS.time, text: durLabel + (bf.start !== null ? ', ' + fmtMin(bf.start) + (bfDur > 0 ? ' – ' + fmtMin(bf.start + bfDur) : '') : ''), step: 2 },
@@ -106,11 +103,10 @@ const FIELD = 'box-sizing:border-box;width:100%;height:48px;padding:0 14px;borde
 export function CheckoutWizard({ c }: { c: C }) {
   const { sel, co, setCo, coMath, cfg, charge, setError, error, hasError, busy, close, svcMap, lockFor, services } = c;
   const kinds = ['method', ...(cfg.canDiscount ? ['discount'] : []), ...(cfg.askTip ? ['tip'] : []), 'summary'] as const;
-  const [step, setStep] = useState(0);
+  const { step, go, jump, forward, back } = useSteps(kinds.length - 1, () => setError(''));
   const [editing, setEditing] = useState(false);
   if (!sel) return null;
   const kind = kinds[step];
-  const go = (n: number) => { setError(''); setStep(n); };
   // The services on the sale. Changing them here only changes what is charged, never the booking.
   const ids = co.svc ?? sel.b.serviceIds;
   const lines = ids.map((id) => svcMap.get(id)).filter(Boolean) as NonNullable<ReturnType<typeof svcMap.get>>[];
@@ -139,8 +135,8 @@ export function CheckoutWizard({ c }: { c: C }) {
     </StepShell>
   );
   return (
-    <StepShell step={step} titles={kinds.map((k) => titles[k])} onBack={() => go(step - 1)} onClose={close} error={hasError ? error : ''}
-      actions={[kind === 'summary' ? { label: 'Charge ' + m2(cm.total), onClick: charge, disabled: busy } : { label: 'Continue', onClick: () => { if (!canNext) { setError('Enter the gift card code.'); return; } go(step + 1); }, disabled: !canNext }]}>
+    <StepShell step={step} titles={kinds.map((k) => titles[k])} onBack={back} onClose={close} error={hasError ? error : ''}
+      actions={[kind === 'summary' ? { label: 'Charge ' + m2(cm.total), onClick: charge, disabled: busy } : { label: 'Continue', onClick: () => { if (!canNext) { setError('Enter the gift card code.'); return; } forward(); }, disabled: !canNext }]}>
       <p style={S('margin:0;color:#5E6673;font-size:14px;overflow-wrap:anywhere')}>{sel.b.client + ', ' + sel.b.services}</p>
       {kind === 'method' && (<>
         <Tiles label="Payment method" options={methods} value={co.method} onPick={(m) => setCo({ ...co, method: m })} />
@@ -154,7 +150,7 @@ export function CheckoutWizard({ c }: { c: C }) {
       </>)}
       {kind === 'tip' && <Tiles label="Tip" options={TIP_OPTS} value={co.tip} onPick={(p) => setCo({ ...co, tip: p })} />}
       {kind === 'summary' && (<>
-        <DetailRows go={go} rows={[
+        <DetailRows go={jump} rows={[
           { icon: ICONS.tag, text: methodLabel + (co.method === 'gift_card' && co.code ? ', ' + co.code : ''), step: 0 },
           ...(cfg.canDiscount ? [{ icon: ICONS.tag, text: discLabel, step: stepOf('discount') }] : []),
           ...(cfg.askTip ? [{ icon: ICONS.tag, text: cm.tip ? 'Tip ' + m2(cm.tip) : 'No tip', step: stepOf('tip') }] : []),
@@ -171,7 +167,7 @@ export function CheckoutWizard({ c }: { c: C }) {
           {!lines.length && <div style={S('font-size:14.5px;color:#4A525E')}>{sel.b.services}</div>}
         </div>
         <div className="sum-rows" style={S('padding:2px 16px;border:1px solid #E6E8EC;border-radius:22px')}>
-          {([['Service', m2(gross)], ...(cm.disc > 0 ? [['Discount', '-' + m2(cm.disc)]] : []), ['Tip', cm.tip ? m2(cm.tip) : 'None'], [gst, m2(cm.taxAmt)]] as [string, string][]).map(([l, v]) => (
+          {([...(cm.disc > 0 ? [['Discount', '-' + m2(cm.disc)]] : []), ...(cm.tip ? [['Tip', m2(cm.tip)]] : []), [gst, m2(cm.taxAmt)]] as [string, string][]).map(([l, v]) => (
             <div key={l} style={S('display:flex;justify-content:space-between;gap:12px;padding:13px 0;font-size:15px')}><span style={S('color:#5E6673')}>{l}</span><span style={S('font-weight:500;white-space:nowrap')}>{v}</span></div>
           ))}
           <div style={S('display:flex;justify-content:space-between;gap:12px;padding:15px 0;font-size:18px;font-weight:600')}><span>Total</span><span>{m2(cm.total)}</span></div>

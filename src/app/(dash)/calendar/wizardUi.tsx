@@ -5,7 +5,18 @@ import { findClients, type ClientHit } from './actions';
 import { S } from './pickers';
 import { slotCss, dayCss, PRIMARY, CLOSE_BTN, ERR, CloseX } from './calUi';
 
-/* Pieces shared by the phone step-by-step flows (new appointment, walk-in, running late, block time). */
+/* Pieces shared by the phone step-by-step flows (new appointment, walk-in, running late, block time, checkout). */
+
+/** Step state. Opening a step from the summary (`jump`) sends Continue and Back straight back to the summary. */
+export function useSteps(last: number, onNav: () => void) {
+  const [step, setStep] = useState(0);
+  const [ret, setRet] = useState(false);
+  const go = (n: number) => { onNav(); setStep(n); };
+  const jump = (n: number) => { setRet(true); go(n); };
+  const forward = () => { if (ret) { setRet(false); go(last); } else go(step + 1); };
+  const back = () => { if (ret) { setRet(false); go(last); } else go(step - 1); };
+  return { step, go, jump, forward, back };
+}
 
 export const AV = 'flex:0 0 40px;width:40px;height:40px;border-radius:999px;background:#EEEAFE;color:#3A2BB5;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600';
 export const ROW = (on: boolean) => 'display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:64px;padding:8px 14px;margin-bottom:8px;border-radius:16px;font:inherit;text-align:left;color:#0E1116;cursor:pointer;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#F4F5F7' : '#FFFFFF') + (on ? ';box-shadow:inset 0 0 0 1px #0E1116' : '');
