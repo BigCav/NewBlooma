@@ -21,7 +21,8 @@ export type ProfileData = {
   messages: { id: string; mine: boolean; text: string; day: string; time: string }[];
   appts: { id: string; href: string; month: string; label: string; time: string; status: string; staff: string; services: string; cents: number; pay: string; upcoming: boolean }[];
 };
-const TONE: Record<string, [string, string]> = { Regular: ['#DDF3EA', '#14624A'], New: ['#DFEEFF', '#1B4A8A'], Lapsed: ['#FFEBD0', '#7A4204'] };
+// The same colours as the tags in the Clients list: Regular purple, New green, Lapsed amber.
+const TONE: Record<string, [string, string]> = { Regular: ['#ECE8FF', '#3B2BB5'], New: ['#DDF3EA', '#14624A'], Lapsed: ['#FFEBD0', '#7A4204'] };
 
 function useProfile(d: ProfileData) {
   const router = useRouter();
