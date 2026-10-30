@@ -680,7 +680,6 @@ function Mobile({ c, initial }: { c: C; initial?: string }) {
       ) : <MobileTabs active="clients" />}
       {qa && sheet('Quick actions', (
         <div style={S('display:flex;flex-direction:column')}>
-          <button onClick={() => { setQa(false); c.setMode('message'); c.setError(''); c.setNotice(''); }} style={S(rowCss)}>{'Message ' + c.first}</button>
           <button onClick={() => { setQa(false); c.startEdit(); }} style={S(rowCss)}>Edit details</button>
           <Link href={'/clients/forms?c=' + row.id} style={S(rowCss + ';text-decoration:none')}>Client forms</Link>
         </div>

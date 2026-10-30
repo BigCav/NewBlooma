@@ -59,6 +59,9 @@ function useClients(props: Props) {
     });
   };
   const create = () => {
+    if (!nc.name.trim()) { setError("Add the client's name."); return; }
+    if (!nc.email.trim()) { setError("Add the client's email address."); return; }
+    if (!nc.phone.trim()) { setError("Add the client's phone number."); return; }
     startT(async () => {
       const r = await createClient(nc.name, nc.email, nc.phone);
       if (r.error || !r.row) { setError(r.error ?? 'Something went wrong'); return; }
@@ -187,8 +190,8 @@ function Panel({ c, m }: { c: C; m: boolean }) {
       <div style={S('display:flex;flex-direction:column;gap:18px')}>
         <div><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>New client</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>They start with the New tag.</p></div>
         <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="nc-name" style={S('font-size:14px;font-weight:600')}>Full name</label><input id="nc-name" type="text" value={c.nc.name} onChange={(e) => { c.setNc({ ...c.nc, name: e.target.value }); c.setError(''); }} placeholder="Client name" style={inp(INP)} /></div>
-        <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="nc-email" style={S('font-size:14px;font-weight:600')}>Email (optional)</label><input id="nc-email" type="email" value={c.nc.email} onChange={(e) => { c.setNc({ ...c.nc, email: e.target.value }); c.setError(''); }} placeholder="name@example.com" style={inp(INP)} /></div>
-        <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="nc-phone" style={S('font-size:14px;font-weight:600')}>Phone (optional)</label><input id="nc-phone" type="tel" inputMode="tel" value={c.nc.phone} onChange={(e) => { c.setNc({ ...c.nc, phone: phoneInput(e.target.value) }); c.setError(''); }} placeholder="Optional" style={inp(INP)} /></div>
+        <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="nc-email" style={S('font-size:14px;font-weight:600')}>Email</label><input id="nc-email" type="email" required value={c.nc.email} onChange={(e) => { c.setNc({ ...c.nc, email: e.target.value }); c.setError(''); }} placeholder="name@example.com" style={inp(INP)} /></div>
+        <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="nc-phone" style={S('font-size:14px;font-weight:600')}>Phone</label><input id="nc-phone" type="tel" required inputMode="tel" value={c.nc.phone} onChange={(e) => { c.setNc({ ...c.nc, phone: phoneInput(e.target.value) }); c.setError(''); }} placeholder="021 234 5678" style={inp(INP)} /></div>
         {err}
         <div style={S('display:flex;gap:10px')}><button onClick={c.create} disabled={c.busy} style={S(BTN)}>Add client</button><button className="ghost" onClick={c.cancel} style={S(BTN2)}>Cancel</button></div>
       </div>
@@ -284,7 +287,7 @@ function Mobile({ c }: { c: C }) {
         {rows.length === 0 && <p style={S('margin:0;text-align:center;color:#5E6673;font-size:14px')}>{c.items.length === 0 ? 'No clients yet.' : `Nothing matches "${c.query.trim()}".`}</p>}
       </main>
       <MobileTabs active="clients" />
-      {fopen && <FilterSheet title="Filter clients" options={FILTERS} value={c.filter} onPick={c.setFilter} onClose={() => setFopen(false)} />}
+      {fopen && <FilterSheet title="Filter clients" options={FILTERS.filter((f) => f.id !== 'Lapsed')} value={c.filter} onPick={c.setFilter} onClose={() => setFopen(false)} />}
       {c.open && (
         <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:5')}>
           <button onClick={() => { c.setOpen(false); c.setMode('view'); c.setError(''); }} aria-label="Close details" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />

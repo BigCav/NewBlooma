@@ -13,8 +13,10 @@ export async function createClient(name: string, email: string, phone: string): 
   const { sb, salon } = await requireCtx();
   name = name.trim(); email = email.trim(); phone = phone.trim();
   if (!name) return { error: "Add the client's name." };
+  if (!email) return { error: "Add the client's email address." };
+  if (!phone) return { error: "Add the client's phone number." };
   if (name.length > 80 || email.length > 254) return { error: 'That name or email is too long.' };
-  if (email && !/^\S+@\S+\.\S+$/.test(email)) return { error: 'Add a valid email address, or leave it blank.' };
+  if (!/^\S+@\S+\.\S+$/.test(email)) return { error: 'Add a valid email address.' };
   const ph = checkPhone(phone); if (ph.error) return { error: ph.error };
   phone = ph.value;
   const { data, error } = await sb.from('clients').insert({ salon_id: salon.id, name, email: email || null, phone: phone || null }).select('id').single();
