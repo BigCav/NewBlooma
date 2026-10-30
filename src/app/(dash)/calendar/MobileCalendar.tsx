@@ -35,10 +35,10 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
     ['Paid so far', usd(paidC)], ['Still to take', usd(Math.max(0, worth - paidC))],
   ];
   const SHEET_ROW = 'display:flex;align-items:center;width:100%;min-height:56px;box-sizing:border-box;padding:0;border:0;border-bottom:1px solid #EEF0F3;background:transparent;font:inherit;font-size:16px;text-align:left;color:#0E1116;cursor:pointer';
-  const fullSheet = (title: string, body: React.ReactNode, onClose: () => void) => (
+  const fullSheet = (title: string, body: React.ReactNode, onClose: () => void, bg = '#FFFFFF') => (
     <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:6')}>
       <button onClick={onClose} aria-label="Close" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
-      <div className="sheet" role="dialog" aria-label={title} style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:92%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column')}>
+      <div className="sheet" role="dialog" aria-label={title} style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:92%;overflow-y:auto;background:' + bg + ';border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column')}>
         <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0;margin-bottom:12px')} />
         <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px')}>
           <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{title}</h2>
@@ -88,7 +88,7 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
             </div>
           ))}
         </div>
-      ), () => setSum(false))}
+      ), () => setSum(false), '#F4F5F7')}
 
       {/* MobileHeader */}
       <header style={S("display:flex;flex-direction:column;gap:12px;padding:28px 20px 18px;margin-bottom:20px;border-bottom:1px solid #E6E8EC;font-family:'Geist',system-ui,sans-serif;color:#0E1116")}>

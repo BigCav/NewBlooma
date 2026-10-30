@@ -8,6 +8,7 @@ import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
 import { ActiveFilter, FilterButton, FilterSheet } from '@/components/FilterBits';
 import { adjustStock, createProduct, removeProduct, saveProduct } from './actions';
+import { ProductBody } from './ProductFlow';
 import { FILTERS, STATUS, initialsOf, money, toneOf, type ProductRow } from './shared';
 
 type Props = { rows: ProductRow[]; cats: string[] };
@@ -71,6 +72,7 @@ function useProducts(props: Props) {
     low: rows.filter((p) => p.status === 'Low stock').length, out: rows.filter((p) => p.status === 'Out of stock').length };
 }
 type C = ReturnType<typeof useProducts>;
+export type ProductsCtl = C;
 
 const GHOST = (h: number) => `flex:1 1 0;height:${h}px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500`;
 const DARK = (h: number) => `flex:1 1 0;height:${h}px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500`;
@@ -243,14 +245,8 @@ function Mobile({ c }: { c: C }) {
       {c.open && (
         <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:5')}>
           <button onClick={c.close} aria-label="Close details" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
-          <div className="sheet" role="dialog" aria-label="Product details" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:88%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column;gap:18px')}>
-            <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0')} />
-            <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
-              {c.sel && <span style={S(statusStyle(c.sel.status))}>{c.sel.status}</span>}
-              {!!c.notice && <span role="status" style={S('padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.notice}</span>}
-              <button onClick={c.close} aria-label="Close" style={S('flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer')}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
-            </div>
-            <Body c={c} m={true} />
+          <div className="sheet" role="dialog" aria-label="Product details" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:92%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column;gap:18px')}>
+            <ProductBody key={c.mode + (c.sel?.id ?? 'new')} c={c} />
           </div>
         </div>
       )}
