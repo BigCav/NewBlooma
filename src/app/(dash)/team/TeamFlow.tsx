@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { S } from '../calendar/pickers';
 import { CLOSE_BTN as RING_BTN, CloseX } from '../calendar/calUi';
 import { ROW, TICK, ICONS, StepShell, useSteps, Tiles, DetailRows } from '../calendar/wizardUi';
-import { Crown } from './Crown';
+import { OwnerStar } from './OwnerStar';
 import { DAYS, DAY_FULL, SHIFTS, clock24, initialsOf, photoCss } from './shared';
 import type { TeamCtl } from './TeamView';
 
@@ -125,7 +125,7 @@ export function TeamFlow({ c }: { c: TeamCtl }) {
           <div style={S('display:flex;align-items:center;gap:14px;box-sizing:border-box;padding:14px 16px;border:1px solid #E6E8EC;border-radius:20px;background:#FAFAFB')}>
             <span aria-hidden="true" style={S(AVATAR.replace(/72px/g, '56px') + photoCss(cur?.photo ?? null))}>{cur?.photo ? '' : initialsOf(d.name || '?')}</span>
             <div style={S('flex:1 1 auto;min-width:0')}>
-              <div style={S('font-size:16px;font-weight:600;overflow-wrap:anywhere')}>{d.name.trim() || 'Name'}{cur?.isOwner && <Crown />}</div>
+              <div style={S('font-size:16px;font-weight:600;overflow-wrap:anywhere')}>{d.name.trim() || 'Name'}{cur?.isOwner && <OwnerStar />}</div>
               <div style={S('font-size:13px;color:#5E6673;overflow-wrap:anywhere')}>{d.role.trim() || 'No role'}</div>
             </div>
           </div>

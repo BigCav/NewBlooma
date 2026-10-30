@@ -8,7 +8,7 @@ import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
 import { ActiveFilter, FilterButton, FilterSheet } from '@/components/FilterBits';
 import { TeamFlow } from './TeamFlow';
-import { Crown } from './Crown';
+import { OwnerStar } from './OwnerStar';
 import { inviteMember, removeMember, removePhoto, saveMember, uploadPhoto } from './actions';
 import { DAYS, DAY_FULL, FILTERS, SHIFTS, initialsOf, photoCss, squarePhoto, type TeamRow } from './shared';
 
@@ -293,7 +293,7 @@ function Mobile({ c }: { c: C }) {
               <button onClick={() => c.select(m.id)} aria-label={`${m.name}, ${m.role}, ${m.todayOn ? 'working today' : 'off today'}, ${m.online ? 'bookable online' : 'hidden online'}`}
                 style={S('display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:68px;padding:10px 16px;border:0;border-bottom:1px solid #EEF0F3;background:transparent;text-align:left;font:inherit;color:#0E1116;cursor:pointer')}>
                 <span style={S('flex:0 0 44px;width:44px;height:44px;border-radius:999px;background:#EEF0F3;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600' + photoCss(m.photo))}>{m.photo ? '' : initialsOf(m.name)}</span>
-                <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{m.name}{m.isOwner && <Crown />}</span><span style={S('display:block;font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{m.role}, {m.todayOn ? 'Today, ' + m.todayLabel : 'Off today'}</span></span>
+                <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{m.name}{m.isOwner && <OwnerStar />}</span><span style={S('display:block;font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{m.role}, {m.todayOn ? 'Today, ' + m.todayLabel : 'Off today'}</span></span>
                 <span style={S('flex:0 0 auto')}><span style={S(onlinePill(m.online))}>{m.online ? 'Online' : 'Hidden'}</span></span>
               </button>
             </li>

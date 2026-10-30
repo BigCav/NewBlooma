@@ -20,6 +20,36 @@ import type { Props } from './calUi';
 export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>; props: Props }) {
   const { HOUR_PX, act, activeCards, addWalkin, amap, av, avail, availKey, backToView, bf, bfDur, blank, blockId, blockRows, blocks, bookings, busy, bvB, cards, cfg, charge, chk, close, co, coMath, createNew, cur, day, dayB, dayHrs, days14, di, doneBk, ed, editPlan, error, firstOpenDay, gEnd, gHours, gStart, go, hasError, hours, hrsOf, later, laterBk, minutesFromIso, mode, moveBooking, nFirstSvc, nKeyStr, nKeys, nOffers, nPickSvc, nPlan, nSlots, nWhy, nf, notice, now, nowTop, offered, offers, open, openBlock, openBooking, openDays, openNew, pageSubtitle, pageTitle, pendingSel, plan, primary, query, reason, refresh, router, row, rs, saveBlock, saveEdit, searchOpen, seg, sel, selId, services, setAmap, setAvail, setBf, setBlockId, setCo, setEd, setError, setMode, setNf, setNotice, setNow, setOpen, setPendingSel, setPlan, setQuery, setRs, setSearchOpen, setSelId, setSres, setStaffSel, setWi, setWkOpen, slotsFor, sq, sres, staffName, staffSel, startCheckout, startResched, startT, statCount, statRevenue, statNext, strip, svcMap, team, today, todayList, tz, upcoming, view, viewEvents, vm, weekDays, wi, wiPlanText, wiPlanCss, wiSvc, wkCards, wkOpen, wkRange, wkStaff, wkTitle, ws, nLock, edLock, lockFor, lf, setLf, openLate, lateList, saveLate } = c;
   const [qa, setQa] = useState(false);
+  const [qk, setQk] = useState(false);
+  const [sum, setSum] = useState(false);
+  const done = dayB.filter((b) => b.status === 'completed').length;
+  const live = dayB.filter((b) => b.status === 'in_progress' || b.status === 'checked_in').length;
+  const toCome = dayB.filter((b) => b.status === 'pending' || b.status === 'confirmed').length;
+  const worth = dayB.reduce((a, b) => a + b.priceCents, 0);
+  const paidC = dayB.reduce((a, b) => a + (b.paid ? b.priceCents : 0), 0);
+  const sumTitle = day === today ? "Today's summary" : dayInfo(day).short + ' summary';
+  const stats: [string, string][] = [
+    ['Bookings', String(statCount)], ['Revenue', statRevenue],
+    ['Next free', statNext], ['Completed', String(done)],
+    ['In progress', String(live)], ['Still to come', String(toCome)],
+    ['Paid so far', usd(paidC)], ['Still to take', usd(Math.max(0, worth - paidC))],
+  ];
+  const SHEET_ROW = 'display:flex;align-items:center;width:100%;min-height:56px;box-sizing:border-box;padding:0;border:0;border-bottom:1px solid #EEF0F3;background:transparent;font:inherit;font-size:16px;text-align:left;color:#0E1116;cursor:pointer';
+  const fullSheet = (title: string, body: React.ReactNode, onClose: () => void) => (
+    <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:6')}>
+      <button onClick={onClose} aria-label="Close" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
+      <div className="sheet" role="dialog" aria-label={title} style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:92%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column')}>
+        <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0;margin-bottom:12px')} />
+        <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px')}>
+          <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{title}</h2>
+          <button onClick={onClose} aria-label="Close" style={S(CLOSE_BTN)}><CloseX /></button>
+        </div>
+        {body}
+      </div>
+    </div>
+  );
+  const startWalkin = () => { if (day !== today || view !== 'day') go(today, 'day'); setOpen(true); setMode('walkin'); setWi({ name: '', clientId: null, svc: null, pro: 'any', cat: '' }); setError(''); setNotice(''); };
+  const startBlock = () => { setOpen(true); setMode('block'); setBf({ s: team[0]?.id ?? '', kind: 'lunch', day: day < today ? today : day, dur: 60, start: null }); setError(''); setNotice(''); };
   const [st, setSt] = useState<'' | 'list' | 'cancel'>('');
   const renderLater = (b: (typeof later)[number]) => (
               <div key={b.id} style={S('display:flex;align-items:center;gap:12px')}>
@@ -41,6 +71,24 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
 
   return (
     <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
+
+      {qk && fullSheet('Quick actions', (
+        <div style={S('display:flex;flex-direction:column;border-top:1px solid #EEF0F3')}>
+          <button onClick={() => { setQk(false); startWalkin(); }} style={S(SHEET_ROW)}>Walk-in</button>
+          <button onClick={() => { setQk(false); openLate(); }} style={S(SHEET_ROW)}>Late</button>
+          <button onClick={() => { setQk(false); startBlock(); }} style={S(SHEET_ROW)}>Block time</button>
+        </div>
+      ), () => setQk(false))}
+      {sum && fullSheet(sumTitle, (
+        <div style={S('display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px')}>
+          {stats.map(([l, v]) => (
+            <div key={l} style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:20px;padding:16px')}>
+              <div style={S('color:#5E6673;font-size:13px')}>{l}</div>
+              <div style={S('margin-top:4px;font-size:24px;line-height:1.15;font-weight:600;letter-spacing:-0.02em;overflow-wrap:anywhere')}>{v}</div>
+            </div>
+          ))}
+        </div>
+      ), () => setSum(false))}
 
       {/* MobileHeader */}
       <header style={S("display:flex;flex-direction:column;gap:12px;padding:28px 20px 18px;margin-bottom:20px;border-bottom:1px solid #E6E8EC;font-family:'Geist',system-ui,sans-serif;color:#0E1116")}>
@@ -100,18 +148,9 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
 
         {view === 'day' && (<>
           <div style={S('display:flex;flex-direction:column;gap:12px')}>
-            <section aria-label="Today at a glance" style={S('display:flex;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:16px 0')}>
-              {([['Bookings', statCount], ['Revenue', statRevenue], ['Next free', statNext]] as const).map(([l, v], i) => (
-                <div key={l} style={S('flex:1 1 0;min-width:0;padding:0 12px 0 14px;' + (i ? 'border-left:1px solid #EEF0F3' : ''))}>
-                  <div style={S('color:#5E6673;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{l}</div>
-                  <div style={S('margin-top:4px;font-size:20px;line-height:1.2;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{v}</div>
-                </div>
-              ))}
-            </section>
-            <div style={S('display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px')}>
-              <button onClick={() => { if (day !== today || view !== 'day') go(today, 'day'); setOpen(true); setMode('walkin'); setWi({ name: '', clientId: null, svc: null, pro: 'any', cat: '' }); setError(''); setNotice(''); }} style={S('height:46px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap')}>Walk-in</button>
-              <button onClick={openLate} style={S('height:46px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap')}>Late</button>
-              <button onClick={() => { setOpen(true); setMode('block'); setBf({ s: team[0]?.id ?? '', kind: 'lunch', day: day < today ? today : day, dur: 60, start: null }); setError(''); setNotice(''); }} style={S('height:46px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap')}>Block time</button>
+            <div style={S('display:flex;gap:10px')}>
+              <button onClick={() => setQk(true)} aria-label="Quick actions" aria-haspopup="dialog" style={S(CLOSE_BTN + ';flex:0 0 52px;width:52px;height:52px')}><svg width="20" height="20" viewBox="0 0 24 24" fill="#0E1116"><circle cx="12" cy="5.5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="18.5" r="1.6" /></svg></button>
+              <button onClick={() => setSum(true)} aria-haspopup="dialog" style={S('flex:1 1 0;height:52px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;cursor:pointer')}>{sumTitle}</button>
             </div>
           </div>
 
