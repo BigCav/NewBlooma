@@ -65,7 +65,7 @@ export function ServiceFlow({ c }: { c: ServicesCtl }) {
       <fieldset disabled={!canEdit} style={{ border: 0, padding: 0, margin: 0, minWidth: 0, ...S('display:flex;flex-direction:column;gap:14px') }}>
         {kind === 'details' && (<>
           <Tiles label="Type" options={[['service', 'Service'], ['addon', 'Add-on']] as const} value={d.addon ? 'addon' : 'service'} onPick={(v) => set('addon', v === 'addon')} />
-          <p style={S('margin:0;font-size:13px;color:#5E6673')}>{d.addon ? 'An extra offered with other services, such as a gloss or a scalp treatment.' : 'Something clients book on its own.'}</p>
+          <p style={S('margin:0;font-size:13px;color:#5E6673')}>{d.addon ? 'An extra offered with other services.' : 'Something clients book on its own.'}</p>
           <Field label="Name" htmlFor="sv-name"><input id="sv-name" type="text" value={d.name} onChange={(e) => set('name', e.target.value)} placeholder="For example, Cut & finish" style={FIELD_IN} /></Field>
           <Field label="Description (optional)" htmlFor="sv-desc"><textarea id="sv-desc" value={d.desc} onChange={(e) => set('desc', e.target.value)} placeholder="What is included, in a sentence or two" rows={4} style={{ ...FIELD_IN, resize: 'none' }} /></Field>
         </>)}
