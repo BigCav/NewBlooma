@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { S } from '@/app/(dash)/calendar/pickers';
-import { openNewAppt } from '@/components/NewApptHost';
+import { openNewMenu } from '@/components/NewMenu';
 
 export const Mag = ({ size, color }: { size: number; color: string }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></svg>;
 
@@ -77,7 +77,7 @@ export function MobileTabs({ active }: { active: 'calendar' | 'services' | 'clie
     <nav aria-label="Main" style={S("box-sizing:border-box;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center;justify-items:center;padding:10px 8px 22px;background:#FFFFFF;border-top:1px solid #E6E8EC;font-family:'Geist',system-ui,sans-serif")}>
       {tab('calendar', '/calendar', 'Calendar', () => <><rect x="3.5" y="5" width="17" height="15.5" rx="3" /><path d="M3.5 10h17M8 3v4M16 3v4" /></>)}
       {tab('services', '/services', 'Services', () => <><circle cx="6" cy="7" r="2.5" /><circle cx="6" cy="17" r="2.5" /><path d="M8 8.5 20 18M8 15.5 20 6" /></>)}
-      <button type="button" onClick={openNewAppt} aria-label="New appointment" style={S('width:48px;height:48px;padding:0;border:0;border-radius:999px;background:#0E1116;display:flex;align-items:center;justify-content:center;cursor:pointer')}>
+      <button type="button" onClick={() => openNewMenu()} aria-label="Create new" aria-haspopup="dialog" style={S('width:48px;height:48px;padding:0;border:0;border-radius:999px;background:#0E1116;display:flex;align-items:center;justify-content:center;cursor:pointer')}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
       </button>
       {tab('clients', '/clients', 'Clients', () => <><circle cx="9" cy="8.5" r="3.5" /><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5" /><path d="M16 5.2a3.4 3.4 0 0 1 0 6.6M18.5 14.8c1.6.8 2.6 2.4 3 5.2" /></>)}

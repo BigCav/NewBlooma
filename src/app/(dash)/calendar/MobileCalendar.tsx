@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's Mobile.dc.html (+ MobileHeader, MobileTabs). Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
+import { openNewMenu } from '@/components/NewMenu';
 import { useState } from 'react';
 import { ClientMatches } from './ClientMatches';
 import { NewApptForm } from './NewApptForm';
@@ -235,7 +236,7 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
       <nav aria-label="Main" style={S("box-sizing:border-box;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center;justify-items:center;padding:10px 8px 22px;background:#FFFFFF;border-top:1px solid #E6E8EC;font-family:'Geist',system-ui,sans-serif")}>
         {tabsA('calendar', '/calendar', 'Calendar', true, ic('#0E1116', <><rect x="3.5" y="5" width="17" height="15.5" rx="3" /><path d="M3.5 10h17M8 3v4M16 3v4" /></>))}
         {tabsA('services', '/services', 'Services', false, ic('#5E6673', <><circle cx="6" cy="7" r="2.5" /><circle cx="6" cy="17" r="2.5" /><path d="M8 8.5 20 18M8 15.5 20 6" /></>))}
-        <button onClick={openNew} aria-label="New appointment" style={S('width:48px;height:48px;padding:0;border:0;border-radius:999px;background:#0E1116;display:flex;align-items:center;justify-content:center;text-decoration:none;cursor:pointer')}>
+        <button onClick={() => openNewMenu(openNew)} aria-label="Create new" aria-haspopup="dialog" style={S('width:48px;height:48px;padding:0;border:0;border-radius:999px;background:#0E1116;display:flex;align-items:center;justify-content:center;text-decoration:none;cursor:pointer')}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
         </button>
         {tabsA('clients', '/clients', 'Clients', false, ic('#5E6673', <><circle cx="9" cy="8.5" r="3.5" /><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5" /><path d="M16 5.2a3.4 3.4 0 0 1 0 6.6M18.5 14.8c1.6.8 2.6 2.4 3 5.2" /></>))}

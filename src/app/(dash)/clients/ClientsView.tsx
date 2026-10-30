@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's Clients.dc.html and MobileClients.dc.html. Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
+import { useNewParam } from '@/components/useNewParam';
 import { phoneInput } from '@/lib/phone';
 import Link from 'next/link';
 import { useEffect, useMemo, useState, useTransition } from 'react';
@@ -311,6 +312,7 @@ function Mobile({ c }: { c: C }) {
 
 export function ClientsView(props: Props) {
   const c = useClients(props);
+  useNewParam(() => c.openNew());
   return (<>
     {c.narrow !== false && <Mobile c={c} />}
     {c.narrow !== true && <Desktop c={c} />}

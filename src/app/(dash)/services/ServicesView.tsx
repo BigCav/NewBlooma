@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's Services.dc.html and MobileServices.dc.html. Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions. Added for production: who performs a service, new categories.
+import { useNewParam } from '@/components/useNewParam';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { toneFor } from '@/lib/cal';
@@ -409,6 +410,7 @@ function Mobile({ c }: { c: C }) {
 
 export function ServicesView(props: Props) {
   const c = useServices(props);
+  useNewParam(() => c.startNew());
   return (<>
     {c.narrow !== false && <Mobile c={c} />}
     {c.narrow !== true && <Desktop c={c} />}

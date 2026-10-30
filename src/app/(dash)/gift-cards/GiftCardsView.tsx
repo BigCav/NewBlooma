@@ -1,4 +1,5 @@
 'use client';
+import { useNewParam } from '@/components/useNewParam';
 import { decimalInput } from '@/lib/numeric';
 // Converted from the prototype's GiftCards.dc.html and MobileGiftCards.dc.html. Markup and style strings follow the prototype;
 // data comes from the server and the actions are real server actions.
@@ -263,6 +264,7 @@ function Mobile({ c }: { c: C }) {
 
 export function GiftCardsView(props: Props) {
   const c = useGifts(props);
+  useNewParam(() => c.openNew());
   return (<>
     {c.narrow !== false && <Mobile c={c} />}
     {c.narrow !== true && <Desktop c={c} />}

@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's Team.dc.html and MobileTeam.dc.html. Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
+import { useNewParam } from '@/components/useNewParam';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
@@ -317,6 +318,7 @@ function Mobile({ c }: { c: C }) {
 
 export function TeamView(props: Props) {
   const c = useTeam(props);
+  useNewParam(() => c.startNew());
   return (<>
     {c.narrow !== false && <Mobile c={c} />}
     {c.narrow !== true && <Desktop c={c} />}

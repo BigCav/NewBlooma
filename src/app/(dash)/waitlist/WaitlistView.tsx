@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's Waitlist.dc.html and MobileWaitlist.dc.html. Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
+import { useNewParam } from '@/components/useNewParam';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import type { CalService, CalStaff } from '@/lib/cal';
@@ -205,6 +206,7 @@ function Mobile({ c }: { c: C }) {
 
 export function WaitlistView(props: Props) {
   const c = useWaitlist(props);
+  useNewParam(() => { c.setMode('add'); c.setError(''); c.setNotice(''); });
   return (<>
     {c.narrow !== false && <Mobile c={c} />}
     {c.narrow !== true && <Desktop c={c} />}

@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's Products.dc.html and MobileProducts.dc.html. Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
+import { useNewParam } from '@/components/useNewParam';
 import { decimalInput } from '@/lib/numeric';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
@@ -258,6 +259,7 @@ function Mobile({ c }: { c: C }) {
 
 export function ProductsView(props: Props) {
   const c = useProducts(props);
+  useNewParam(() => c.openNew());
   return (<>
     {c.narrow !== false && <Mobile c={c} />}
     {c.narrow !== true && <Desktop c={c} />}

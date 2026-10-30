@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { requireCtx } from '@/lib/session';
 import { SideNav, TabBar } from '@/components/Nav';
 import { NewApptHost } from '@/components/NewApptHost';
+import { NewMenuHost } from '@/components/NewMenu';
 import { ThemeApply } from '@/components/Theme';
 
 export default async function DashLayout({ children }: { children: React.ReactNode }) {
@@ -15,6 +16,7 @@ export default async function DashLayout({ children }: { children: React.ReactNo
       <main className="main">{children}</main>
       <TabBar />
       <NewApptHost />
+      <NewMenuHost />
     </div>
   );
 }
