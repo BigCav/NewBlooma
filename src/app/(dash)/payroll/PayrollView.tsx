@@ -3,10 +3,11 @@
 // only the {{ }} holes are real data and handlers are real server actions.
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
-import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
+import { PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
 import { clockToggle, deleteTimesheet, loadTimesheets, markPaid, saveTimesheet, setRate, type SheetRow } from './actions';
 import { dollars0, type PayRow } from './shared';
+import { PayrollMobile } from './PayrollMobile';
 
 type Props = { rows: PayRow[]; w: number; from: string; to: string; over: boolean; days: number; owner: boolean; title: string; range: string };
 
@@ -46,6 +47,7 @@ function usePayroll(props: Props) {
     clock: (r: PayRow) => run(() => clockToggle(r.id)), pay1: (r: PayRow) => run(() => markPaid(r.id, props.from, props.to)) };
 }
 type C = ReturnType<typeof usePayroll>;
+export type PayrollCtl = C;
 
 const pct = (n: number) => (Math.round(n * 10) / 10) + '%';
 const CELL = { done: 'background:#EEF0F3;color:#0E1116;font-weight:500', today: 'background:#ECE8FF;color:#3B2BB5;font-weight:600', plan: 'background:#F4F5F7;color:#8A93A0' };
@@ -159,19 +161,10 @@ function Desktop({ c }: { c: C }) {
     </div>
   );
 }
-function Mobile({ c }: { c: C }) {
-  return (
-    <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
-      <MobileHeader title="Payroll" subtitle="Timesheets and commission" showSearch={false} />
-      <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:20px')}><Controls c={c} m={true} /><Cards c={c} m={true} /></main>
-      <MobileTabs active="more" />
-    </div>
-  );
-}
 export function PayrollView(props: Props) {
   const c = usePayroll(props);
   return (<>
-    {c.narrow !== false && <Mobile c={c} />}
+    {c.narrow !== false && <PayrollMobile c={c} />}
     {c.narrow !== true && <Desktop c={c} />}
   </>);
 }
