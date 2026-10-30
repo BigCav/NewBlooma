@@ -114,11 +114,13 @@ export function FormPage({ c }: { c: FormsCtl }) {
         {d.qs.map((q, i) => (
           <section key={q.id} style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:22px;padding:14px;display:flex;flex-direction:column;gap:10px')}>
             <Field label={'Question ' + (i + 1)}><input type="text" maxLength={200} value={q.label} onChange={(e) => c.patch((x) => { x.qs[i].label = e.target.value; })} style={FIELD_IN} /></Field>
-            <div className="hscroll" style={S('display:flex;align-items:center;gap:8px;overflow-x:auto')}>
-              <select aria-label={'Answer type for question ' + (i + 1)} value={q.type} onChange={(e) => c.patch((x) => { x.qs[i].type = e.target.value as QType; })} style={MINI}>
+            <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:8px')}>
+              <select aria-label={'Answer type for question ' + (i + 1)} value={q.type} onChange={(e) => c.patch((x) => { x.qs[i].type = e.target.value as QType; })} style={{ ...MINI, flex: '1 1 0', minWidth: 0 }}>
                 {QTYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
               <button type="button" aria-pressed={q.required} onClick={() => c.patch((x) => { x.qs[i].required = !x.qs[i].required; })} style={S('flex:0 0 auto;height:36px;padding:0 14px;border-radius:999px;font:inherit;font-size:13px;font-weight:500;cursor:pointer;border:1px solid ' + (q.required ? '#14624A' : '#E1E4E9') + ';background:' + (q.required ? '#DDF3EA' : '#FFFFFF') + ';color:' + (q.required ? '#14624A' : '#5E6673'))}>{q.required ? 'Required' : 'Optional'}</button>
+              <span style={S('flex:1 1 100%;height:0')} />
+              <span style={S('flex:1 1 auto')} />
               <button type="button" onClick={() => mv(i, -1)} disabled={i === 0} aria-label="Move up" style={S(ICON_BTN + 'opacity:' + (i > 0 ? 1 : 0.35))}>{UP}</button>
               <button type="button" onClick={() => mv(i, 1)} disabled={i === d.qs.length - 1} aria-label="Move down" style={S(ICON_BTN + 'opacity:' + (i < d.qs.length - 1 ? 1 : 0.35))}>{DOWN}</button>
               <button type="button" onClick={() => c.patch((x) => { x.qs.splice(i, 1); })} aria-label="Remove question" style={S(ICON_BTN + 'color:#B42318')}>{TRASH}</button>
