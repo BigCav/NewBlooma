@@ -8,6 +8,7 @@ import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
 import { ActiveFilter, FilterButton, FilterSheet } from '@/components/FilterBits';
 import { issueGiftCard, voidGiftCard } from './actions';
+import { IssueFlow } from './IssueFlow';
 
 export type GiftRow = { id: string; code: string; name: string; issued: string; original: number; balance: number; voided: boolean; hist: { d: string; label: string; a: number }[] };
 type Props = { rows: GiftRow[]; salonName: string; month: string; today: string; canIssue: boolean };
@@ -76,6 +77,7 @@ function useGifts(props: Props) {
     owed, active, issuedM, redeemedM, pick, openNew, closeNew, issue, doVoid, copy };
 }
 type C = ReturnType<typeof useGifts>;
+export type GiftCtl = C;
 
 const field = 'box-sizing:border-box;width:100%;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;color:#0E1116;background:#FFFFFF';
 
@@ -251,7 +253,7 @@ function Mobile({ c }: { c: C }) {
           <button onClick={() => c.setOpen(false)} aria-label="Close" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
           <div className="sheet" role="dialog" aria-label="Gift card" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:90%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column;gap:18px')}>
             <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0')} />
-            <Panel c={c} m={true} />
+            {c.mode === 'new' ? <IssueFlow c={c} genCode={genCode} /> : <Panel c={c} m={true} />}
           </div>
         </div>
       )}
