@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import type { CalService, CalStaff } from '@/lib/cal';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
+import { ActiveFilter, FilterButton, FilterSheet } from '@/components/FilterBits';
 import { ClientMatches } from '../calendar/ClientMatches';
 import { S, ServicePicker, TeamPicker } from '../calendar/pickers';
 import { addToWaitlist, bookEntry, findTimes, offerTime, removeEntry } from './actions';
 import { DAY_PREFS, STATUS, WINDOWS, type WlRow, type WlSlot } from './shared';
+import { AddFlow, EntryPage } from './WaitlistFlow';
 
 type Props = { rows: WlRow[]; services: CalService[]; offers: Record<string, string[]>; team: CalStaff[] };
 const chip = (on: boolean) => 'flex:0 0 auto;height:40px;padding:0 14px;border-radius:999px;font-size:13.5px;font-weight:500;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
@@ -65,6 +67,7 @@ function useWaitlist(props: Props) {
   return { ...props, busy, rows, waiting, narrow, openId, mode, setMode, query, setQuery, notice, setNotice, error, setError, add, setAdd, picked, setPicked, slots, toggle, offerNow, bookNow, remove, submitAdd, pickSvc };
 }
 type C = ReturnType<typeof useWaitlist>;
+export type WaitlistCtl = C;
 
 const GHOST = 'height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;padding:0 20px;';
 const DARK = 'height:44px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500;padding:0 20px;';
@@ -153,15 +156,49 @@ function Desktop({ c }: { c: C }) {
   );
 }
 
+const WL_FILTERS = [{ id: 'all', label: 'All' }, { id: 'Waiting', label: 'Waiting' }, { id: 'Offered', label: 'Offered' }, { id: 'Booked', label: 'Booked' }];
+
 function Mobile({ c }: { c: C }) {
+  const [fopen, setFopen] = useState(false);
+  const [filter, setFilter] = useState('all');
+  const list = c.rows.filter((r) => filter === 'all' || r.status === filter);
+  const open = c.openId ? c.rows.find((r) => r.id === c.openId) ?? null : null;
+  const fl = WL_FILTERS.find((f) => f.id === filter)?.label ?? 'All';
   return (
     <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <MobileHeader title="Waitlist" subtitle={c.waiting + (c.waiting === 1 ? ' client is waiting' : ' clients are waiting')} query={c.query} onQuery={c.setQuery} placeholder="Search waitlist" />
-      <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:20px')}>
-        {c.mode === 'list' && <button onClick={() => { c.setMode('add'); c.setError(''); c.setNotice(''); }} style={S(DARK + 'height:48px;font-size:14.5px')}>Add to waitlist</button>}
-        {c.mode === 'list' ? <Cards c={c} m={true} /> : <AddForm c={c} m={true} />}
+      <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:14px')}>
+        <div style={S('display:flex;gap:12px')}>
+          <FilterButton onClick={() => setFopen(true)} active={filter !== 'all'} label="Filter waitlist" />
+          <button onClick={() => { c.setMode('add'); c.setError(''); c.setNotice(''); }} style={S(DARK + 'flex:1 1 0;height:52px;font-size:14.5px')}>Add to waitlist</button>
+        </div>
+        {filter !== 'all' && <ActiveFilter label={fl} onClear={() => setFilter('all')} />}
+        {!!c.notice && <span role="status" style={S('align-self:flex-start;padding:6px 14px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:13px;font-weight:500')}>{c.notice}</span>}
+        {!!c.error && !open && c.mode === 'list' && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
+        {list.map((r) => {
+          const tone = STATUS[r.status];
+          return (
+            <button key={r.id} onClick={() => c.toggle(r)} aria-label={`${r.name}, ${r.service.split(',')[0]}, ${r.status}`} style={S('display:flex;align-items:flex-start;gap:14px;width:100%;box-sizing:border-box;padding:16px;border-radius:22px;border:1px solid #E6E8EC;background:#FFFFFF;text-align:left;font:inherit;color:#0E1116;cursor:pointer')}>
+              <span style={S('flex:0 0 48px;width:48px;height:48px;border-radius:999px;background:#EEEAFE;color:#3A2BB5;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600')}>{r.initials}</span>
+              <span style={S('flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:3px')}>
+                <span style={S('display:flex;align-items:center;justify-content:space-between;gap:10px')}><span style={S('min-width:0;font-size:16px;font-weight:600;letter-spacing:-0.01em;overflow-wrap:anywhere')}>{r.name}</span><span style={S('flex:0 0 auto;display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:500;background:' + tone[0] + ';color:' + tone[1])}>{r.status}</span></span>
+                <span style={S('font-size:14px;color:#4A525E;overflow-wrap:anywhere')}>{r.service}</span>
+                <span style={S('font-size:13px;color:#5E6673;overflow-wrap:anywhere')}>{r.prefs}</span>
+                <span style={S('font-size:12.5px;color:#8A93A0')}>{r.meta}</span>
+              </span>
+            </button>
+          );
+        })}
+        {list.length === 0 && <p style={S('margin:0;text-align:center;color:#5E6673;font-size:14px')}>{c.query.trim() ? `Nothing matches "${c.query.trim()}".` : filter !== 'all' ? `Nobody is ${fl.toLowerCase()}.` : 'Nobody is on the waitlist yet.'}</p>}
       </main>
       <MobileTabs active="more" />
+      {fopen && <FilterSheet title="Filter waitlist" options={WL_FILTERS} value={filter} onPick={setFilter} onClose={() => setFopen(false)} />}
+      {open && <EntryPage key={open.id} c={c} r={open} />}
+      {c.mode === 'add' && (
+        <div role="dialog" aria-label="Add to waitlist" style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;display:flex;flex-direction:column;overflow:hidden;background:#FFFFFF;padding:12px 20px 40px;box-sizing:border-box')}>
+          <AddFlow c={c} />
+        </div>
+      )}
     </div>
   );
 }
