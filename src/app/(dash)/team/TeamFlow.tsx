@@ -7,7 +7,7 @@ import { OwnerStar } from './OwnerStar';
 import { DAYS, DAY_FULL, SHIFTS, clock24, initialsOf, photoCss } from './shared';
 import type { TeamCtl } from './TeamView';
 
-const FIELD_IN = { ...S('box-sizing:border-box;width:100%;margin-top:2px;padding:0;border:0;outline:none;background:transparent;font:inherit;font-size:16px;color:#0E1116'), minHeight: 0 } as const;
+const FIELD_IN = { ...S('box-sizing:border-box;width:100%;margin-top:2px;padding:0;border:0;outline:none;background:transparent;font:inherit;font-size:16px;color:#0E1116'), minHeight: 0, borderRadius: 0 } as const;
 const TIME_IN = { ...S('box-sizing:border-box;flex:1 1 0;min-width:0;max-width:150px;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF'), minHeight: 0 } as const;
 
 function Field({ label, children, htmlFor }: { label: string; children: React.ReactNode; htmlFor?: string }) {
