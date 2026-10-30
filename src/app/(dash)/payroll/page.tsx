@@ -21,12 +21,13 @@ export default async function Payroll({ searchParams }: { searchParams: Promise<
 
   const [pw, { data: team }, { data: shifts }, { data: sheets }] = await Promise.all([
     owner ? sb.rpc('payroll_week', { p_from: from, p_to: to }) : Promise.resolve({ data: null as any[] | null }),
-    sb.from('staff').select('id,name,role_title,commission_pct').eq('active', true).order('name'),
+    sb.from('staff').select('id,name,role_title,commission_pct,photo_url').eq('active', true).order('name'),
     sb.from('staff_shifts').select('staff_id,weekday,start_time,end_time'),
     sb.from('timesheets').select('staff_id,clock_in,clock_out').lt('clock_in', new Date(edges[7]).toISOString()).or(`clock_out.is.null,clock_out.gt.${new Date(edges[0]).toISOString()}`),
   ]);
   const money = new Map<string, any>((pw.data ?? []).map((r: any) => [r.staff_id, r]));
   const people: { id: string; name: string; role: string }[] = owner ? (pw.data ?? []).map((r: any) => ({ id: r.staff_id as string, name: r.staff_name as string, role: r.role_title as string })) : (team ?? []).filter((t) => t.id === staff.id).map((t) => ({ id: t.id, name: t.name, role: t.role_title }));
+  const photoOf = new Map<string, string | null>((team ?? []).map((t) => [t.id, t.photo_url ?? null]));
   const mins = (t: string) => { const [h, m] = t.split(':').map(Number); return h + m / 60; };
 
   let anySun = false;
@@ -51,7 +52,7 @@ export default async function Payroll({ searchParams }: { searchParams: Promise<
     const m = money.get(p.id);
     const since = open ? (() => { const x = new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', hour: 'numeric', minute: '2-digit' }).formatToParts(new Date(open.clock_in)); return `${x.find((y) => y.type === 'hour')!.value}:${x.find((y) => y.type === 'minute')!.value}`; })() : null;
     return {
-      id: p.id, name: p.name, role: p.role, cells, total: hrs(total), planned: w === 0 ? 'of ' + hrs(planned) + ' planned' : 'worked', inSince: since,
+      id: p.id, name: p.name, role: p.role, photo: photoOf.get(p.id) ?? null, cells, total: hrs(total), planned: w === 0 ? 'of ' + hrs(planned) + ' planned' : 'worked', inSince: since,
       canClock: owner || p.id === staff.id,
       svc: Number(m?.service_cents ?? 0), prod: Number(m?.product_cents ?? 0), tips: Number(m?.tips_cents ?? 0), rate: Number(m?.commission_pct ?? 0), prodPct: Number(m?.product_pct ?? 10),
       commission: Number(m?.service_commission_cents ?? 0) + Number(m?.product_commission_cents ?? 0), paid: !!m?.paid_at,

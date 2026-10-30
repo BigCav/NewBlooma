@@ -5,6 +5,7 @@ import { MobileHeader, MobileTabs } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
 import { deleteTimesheet, loadTimesheets, saveTimesheet, type SheetRow } from './actions';
 import { dollars0, type PayRow } from './shared';
+import { photoCss } from '../team/shared';
 import type { PayrollCtl } from './PayrollView';
 
 const RING = 'flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0';
@@ -21,11 +22,11 @@ const initials = (n: string) => n.split(' ').filter((w) => /[A-Za-z0-9]/.test(w[
 const AV = (px: number, fs: number) => 'flex:0 0 ' + px + 'px;width:' + px + 'px;height:' + px + 'px;border-radius:999px;background:#EEEAFE;color:#3A2BB5;display:flex;align-items:center;justify-content:center;font-size:' + fs + 'px;font-weight:600';
 const pct = (n: number) => (Math.round(n * 10) / 10) + '%';
 
-function Header({ title, onBack, avatar }: { title: string; onBack: () => void; avatar?: string }) {
+function Header({ title, onBack, p }: { title: string; onBack: () => void; p?: PayRow }) {
   return (
     <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px;border-bottom:1px solid #E6E8EC')}>
       <button onClick={onBack} aria-label="Back" style={S(RING)}>{BACK}</button>
-      {avatar && <div style={S(AV(36, 13))}>{avatar}</div>}
+      {p && <div style={S(AV(36, 13) + photoCss(p.photo))}>{p.photo ? '' : initials(p.name)}</div>}
       <div style={S('flex:1 1 auto;min-width:0;font-size:18px;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{title}</div>
     </header>
   );
@@ -80,7 +81,7 @@ export function PayrollMobile({ c }: { c: PayrollCtl }) {
         {c.tab === 'time' && c.rows.map((p) => (
           <button key={p.id} onClick={() => setOpenId(p.id)} aria-label={`${p.name}, ${p.total} ${p.planned}`} style={S(CARD + ';display:flex;flex-direction:column;gap:14px;width:100%;text-align:left;font:inherit;color:#0E1116;cursor:pointer;border-radius:22px;padding:16px')}>
             <span style={S('display:flex;align-items:center;gap:14px')}>
-              <span style={S(AV(48, 15))}>{initials(p.name)}</span>
+              <span style={S(AV(48, 15) + photoCss(p.photo))}>{p.photo ? '' : initials(p.name)}</span>
               <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:16px;font-weight:600;letter-spacing:-0.01em;overflow-wrap:anywhere')}>{p.name}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{p.role}</span></span>
               <span style={S('flex:0 0 auto;text-align:right')}><span style={S('display:block;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{p.total}</span><span style={S('display:block;font-size:12px;color:#5E6673')}>{p.planned}</span></span>
               {CHEV}
@@ -94,7 +95,7 @@ export function PayrollMobile({ c }: { c: PayrollCtl }) {
           const t = payTone(c, p);
           return (
             <button key={p.id} onClick={() => setOpenId(p.id)} aria-label={`${p.name}, ${dollars0(p.commission + p.tips)}, ${t.t}`} style={S(CARD + ';display:flex;align-items:center;gap:14px;width:100%;text-align:left;font:inherit;color:#0E1116;cursor:pointer;border-radius:22px;padding:16px')}>
-              <span style={S(AV(48, 15))}>{initials(p.name)}</span>
+              <span style={S(AV(48, 15) + photoCss(p.photo))}>{p.photo ? '' : initials(p.name)}</span>
               <span style={S('flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px')}>
                 <span style={S('font-size:16px;font-weight:600;letter-spacing:-0.01em;overflow-wrap:anywhere')}>{p.name}</span>
                 <span style={S('font-size:13px;color:#5E6673')}>{p.role}</span>
@@ -118,7 +119,7 @@ function TimePage({ c, p, onBack, onEdit }: { c: PayrollCtl; p: PayRow; onBack: 
   const clock = c.w === 0 && p.canClock;
   return (
     <div role="dialog" aria-label="Timesheet" style={S(PAGE)}>
-      <Header title={p.name} avatar={initials(p.name)} onBack={onBack} />
+      <Header title={p.name} p={p} onBack={onBack} />
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:16px 20px 24px;display:flex;flex-direction:column;gap:16px')}>
         <div>
           <h2 style={S('margin:0;font-size:40px;line-height:1.1;font-weight:600;letter-spacing:-0.03em')}>{p.total}</h2>
@@ -150,7 +151,7 @@ function CommPage({ c, p, onBack }: { c: PayrollCtl; p: PayRow; onBack: () => vo
   const stat = (l: string, v: number) => <div key={l} style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:20px;padding:16px')}><div style={S('font-size:13px;color:#5E6673')}>{l}</div><div style={S('margin-top:2px;font-size:22px;font-weight:600;letter-spacing:-0.02em')}>{dollars0(v)}</div></div>;
   return (
     <div role="dialog" aria-label="Commission" style={S(PAGE)}>
-      <Header title={p.name} avatar={initials(p.name)} onBack={onBack} />
+      <Header title={p.name} p={p} onBack={onBack} />
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:16px 20px 24px;display:flex;flex-direction:column;gap:16px')}>
         <div>
           <h2 style={S('margin:0;font-size:40px;line-height:1.1;font-weight:600;letter-spacing:-0.03em')}>{dollars0(p.commission + p.tips)}</h2>

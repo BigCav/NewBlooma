@@ -15,7 +15,7 @@ export default async function Sales({ searchParams }: { searchParams: Promise<{ 
   const tz = salon.timezone, today = ymd(new Date(), tz);
   const since = new Date(Date.now() - 15 * 86400e3).toISOString();
   const [{ data: sales }, { data: svcs }, { data: pay }, { data: flagged }] = await Promise.all([
-    sb.from('sales').select('id,status,method,subtotal_cents,discount_cents,discount_note,tax_rate,tip_cents,tax_cents,tax_inclusive,total_cents,created_at,paid_at,clients(name),staff(name),bookings(ref_no,starts_at,ends_at),sale_items(label,qty,price_cents,service_id)')
+    sb.from('sales').select('id,status,method,subtotal_cents,discount_cents,discount_note,tax_rate,tip_cents,tax_cents,tax_inclusive,total_cents,created_at,paid_at,clients(name),staff(name,photo_url),bookings(ref_no,starts_at,ends_at),sale_items(label,qty,price_cents,service_id)')
       .or(`created_at.gte.${since},status.eq.pending`).order('created_at', { ascending: false }).limit(300),
     sb.from('services').select('id,name,price_cents,duration_min,service_categories(name,sort)').eq('active', true).order('name'),
     sb.from('salon_payment_settings').select('online_cards_enabled,terminal_enabled').eq('salon_id', salon.id).maybeSingle(),
@@ -32,7 +32,7 @@ export default async function Sales({ searchParams }: { searchParams: Promise<{ 
     const when = s.paid_at ?? s.created_at, day = ymd(when, tz);
     const name = s.clients?.name ?? 'Walk-in';
     const row: SaleRow = {
-      id: s.id, ref: s.bookings?.ref_no ? 'B-' + s.bookings.ref_no : '', client: name, initials: initialsOf(name), staffName: s.staff?.name ?? 'Unassigned', firstName: String(s.staff?.name ?? 'Unassigned').split(' ')[0],
+      id: s.id, ref: s.bookings?.ref_no ? 'B-' + s.bookings.ref_no : '', client: name, initials: initialsOf(name), staffName: s.staff?.name ?? 'Unassigned', staffPhoto: s.staff?.photo_url ?? null, firstName: String(s.staff?.name ?? 'Unassigned').split(' ')[0],
       service: first ? `${first.label}${first.qty > 1 ? ` x${first.qty}` : ''}${extra > 0 ? ` +${extra} more` : ''}` : 'Sale',
       time: status === 'Pending' ? 'In progress' : day === today ? hm(when, tz) : dayInfo(day).short,
       method: status === 'Pending' ? 'Not taken yet' : METHOD[s.method] ?? '', status,

@@ -6,10 +6,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
+import { ActiveFilter, FilterButton, FilterSheet } from '@/components/FilterBits';
 import { ClientMatches } from '../calendar/ClientMatches';
 import { S } from '../calendar/pickers';
 import { CloseX, CLOSE_BTN } from '../calendar/calUi';
 import { CheckoutFlow } from '../calendar/CheckoutFlow';
+import { NewSaleFlow } from './NewSaleFlow';
 import { createWalkin, payFlow, refundSale, sendReceipt, setPrice, terminalCancel, terminalPoll } from './actions';
 import { DISC_PCTS, FILTERS, NO_DISC, STATUS, TIP_OPTS, discOf, discountCents, fmt, type DiscPick, type PayMethod, type SaleRow, type SvcOpt } from './shared';
 
@@ -123,6 +125,7 @@ function useSales(props: Props) {
     paidTotal: props.todayTotal, pendingCount: rows.filter((r) => r.status === 'Pending').length };
 }
 type C = ReturnType<typeof useSales>;
+export type SalesCtl = C;
 
 const GHOST = (h: number) => `flex:1 1 0;height:${h}px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500`;
 const DARK = (h: number) => `flex:1 1 0;height:${h}px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500`;
@@ -178,8 +181,8 @@ function MobileSale({ c, s }: { c: C; s: SaleRow }) {
         <div style={S('margin-top:2px;font-size:13.5px;color:#5E6673')}>{s.ref ? 'Booking ' + s.ref : 'Sale'}</div>
       </div>
     </div>
-    <div className="sum-rows" style={S('padding:2px 16px;border:1px solid #E6E8EC;border-radius:22px')}>
-      {detail.map(([l, v, icon]) => <div key={l} style={S('display:flex;align-items:center;gap:12px;padding:14px 0;font-size:15px')}>{ic(icon)}<span style={S('min-width:0;overflow-wrap:anywhere')} aria-label={l}>{v}</span></div>)}
+    <div className="sum-rows" style={S('padding:2px 16px;border:1px solid #E6E8EC;border-radius:22px;background:#FFFFFF')}>
+      {detail.map(([l, v, icon]) => <div key={l} style={S('display:flex;align-items:center;gap:12px;padding:14px 0;font-size:15px')}>{l === 'With' && s.staffPhoto ? <span aria-hidden="true" style={S('flex:0 0 28px;width:28px;height:28px;margin:-4px 0;border-radius:999px;background-size:cover;background-position:center;background-image:url(' + s.staffPhoto + ')')} /> : ic(icon)}<span style={S('min-width:0;overflow-wrap:anywhere')} aria-label={l}>{v}</span></div>)}
     </div>
     <div style={S('display:flex;flex-direction:column;gap:10px')}>
       <h3 style={S('margin:0;font-size:17px;font-weight:600;letter-spacing:-0.01em')}>Services</h3>
@@ -398,18 +401,28 @@ function Desktop({ c }: { c: C }) {
 }
 
 function Mobile({ c }: { c: C }) {
-  const stat = (label: string, v: string) => <div><div style={S('color:#5E6673;font-size:13px')}>{label}</div><div style={S('margin-top:2px;font-size:30px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{v}</div></div>;
+  const [fopen, setFopen] = useState(false);
+  const stat = (label: string, v: string, tint?: boolean) => <div key={label} style={S('flex:1 1 0;min-width:0;box-sizing:border-box;padding:16px;border-radius:20px;border:1px solid ' + (tint ? '#F6D9A8' : '#E6E8EC') + ';background:' + (tint ? '#FFF4E5' : '#FFFFFF'))}><div style={S('color:#5E6673;font-size:13px')}>{label}</div><div style={S('margin-top:2px;font-size:30px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{v}</div></div>;
   const max = Math.max(1, ...c.bars.map((b) => b.cents));
+  const fl = FILTERS.find((f) => f.id === c.filter)?.label ?? 'All sales';
   return (
     <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <MobileHeader title="Sales" subtitle={c.subtitle} query={c.query} onQuery={c.setQuery} placeholder="Search sales" />
-      <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:20px')}>
-        <section aria-label="Sales at a glance" style={S('display:flex;gap:40px')}>{stat('Sales today', fmt(c.todayTotal))}{stat('Pending', String(c.pendingCount))}</section>
-        <button onClick={c.openNew} style={S('display:flex;align-items:center;justify-content:center;gap:8px;height:48px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500')}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
-          New sale
-        </button>
-        {c.canDiscount && <Link href="/sales/summary" style={S('display:inline-flex;align-items:center;height:44px;padding:0 18px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:13.5px;font-weight:500;text-decoration:none')}>Daily summary and cash-up</Link>}
+      <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:14px')}>
+        <section aria-label="Sales at a glance" style={S('display:flex;gap:12px')}>{stat('Sales today', fmt(c.todayTotal))}{stat('Pending', String(c.pendingCount), c.pendingCount > 0)}</section>
+        <div style={S('display:flex;gap:12px')}>
+          <FilterButton onClick={() => setFopen(true)} active={c.filter !== 'all'} label="Filter sales" />
+          <button onClick={c.openNew} style={S('flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:8px;height:52px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;cursor:pointer')}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+            New sale
+          </button>
+        </div>
+        {c.canDiscount && (
+          <Link href="/sales/summary" style={S('display:flex;align-items:center;gap:12px;box-sizing:border-box;min-height:56px;padding:0 18px;border:1px solid #E6E8EC;border-radius:20px;background:#FFFFFF;color:#0E1116;font-size:15px;font-weight:500;text-decoration:none')}>
+            <span style={S('flex:1 1 auto')}>Daily summary and cash-up</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9.5 6l6 6-6 6" /></svg>
+          </Link>
+        )}
         <section aria-label="Last 7 days" style={S('background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:20px')}>
           <div style={S('display:flex;align-items:baseline;justify-content:space-between;gap:8px')}><h2 style={S('margin:0;font-size:16px;font-weight:600')}>Last 7 days</h2><span style={S('color:#5E6673;font-size:13px')}>{fmt(c.bars.reduce((a, b) => a + b.cents, 0))}</span></div>
           <div role="group" aria-label="Daily sales for the last 7 days" style={S('margin-top:16px;display:flex;align-items:flex-end;gap:8px;height:128px')}>
@@ -421,28 +434,31 @@ function Mobile({ c }: { c: C }) {
             ))}
           </div>
         </section>
-        <div role="group" className="hscroll" aria-label="Filter sales" style={S('display:flex;gap:8px;overflow-x:auto')}>{FILTERS.map((f) => <button key={f.id} onClick={() => c.setFilter(f.id)} aria-pressed={c.filter === f.id} style={S('flex:0 0 auto;height:44px;padding:0 18px;border-radius:999px;font-size:14px;font-weight:500;border:1px solid ' + (c.filter === f.id ? '#0E1116' : '#E1E4E9') + ';background:' + (c.filter === f.id ? '#0E1116' : '#FFFFFF') + ';color:' + (c.filter === f.id ? '#FFFFFF' : '#0E1116'))}>{f.label}</button>)}</div>
-        <ul style={S('margin:0;padding:4px 0;list-style:none;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px')}>
-          {c.list.map((t) => (
-            <li key={t.id}>
-              <button onClick={() => c.pick(t.id)} aria-label={`${t.client}, ${t.service}, ${fmt(t.total)}, ${t.status}`} style={S('display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:68px;padding:10px 16px;border:0;border-bottom:1px solid #EEF0F3;background:transparent;text-align:left;font:inherit;color:#0E1116;cursor:pointer')}>
-                <span style={S('flex:0 0 44px;width:44px;height:44px;border-radius:999px;background:#EEF0F3;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600')}>{t.initials}</span>
-                <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.client}</span><span style={S('display:block;font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.ref ? t.ref + ' · ' : ''}{t.service}, {t.time}</span></span>
-                <span style={S('flex:0 0 auto;text-align:right')}><span style={S('display:block;font-size:14.5px;font-weight:600')}>{fmt(t.total)}</span><span style={S('display:block;margin-top:2px')}><span style={S(statusStyle(t.status))}>{t.status}</span></span></span>
-              </button>
-            </li>
-          ))}
-        </ul>
-        {c.list.length === 0 && <p style={S('margin:0;text-align:center;color:#5E6673;font-size:14px')}>{c.query.trim() ? `Nothing matches "${c.query.trim()}".` : 'No sales yet.'}</p>}
+        {c.filter !== 'all' && <ActiveFilter label={fl} onClear={() => c.setFilter('all')} />}
+        {c.list.map((t) => (
+          <button key={t.id} onClick={() => c.pick(t.id)} aria-label={`${t.client}, ${t.service}, ${fmt(t.total)}, ${t.status}`} style={S('display:flex;align-items:flex-start;gap:14px;width:100%;box-sizing:border-box;padding:16px;border-radius:22px;text-align:left;font:inherit;color:#0E1116;cursor:pointer;border:1px solid ' + (t.status === 'Pending' ? '#F6D9A8' : '#E6E8EC') + ';background:' + (t.status === 'Pending' ? '#FFF4E5' : '#FFFFFF'))}>
+            <span style={S('flex:0 0 48px;width:48px;height:48px;border-radius:999px;background:#EEEAFE;color:#3A2BB5;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600')}>{t.initials}</span>
+            <span style={S('flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px')}>
+              <span style={S('display:flex;align-items:center;justify-content:space-between;gap:10px')}><span style={S('min-width:0;font-size:16px;font-weight:600;letter-spacing:-0.01em;overflow-wrap:anywhere')}>{t.client}</span><span style={S('flex:0 0 auto;font-size:16px;font-weight:600')}>{fmt(t.total)}</span></span>
+              <span style={S('font-size:14px;color:#4A525E;overflow-wrap:anywhere')}>{t.service}</span>
+              <span style={S('font-size:12.5px;color:#8A93A0')}>{t.ref ? t.ref + ' · ' : ''}{t.time}</span>
+              <span style={S('align-self:flex-start;margin-top:6px;' + statusStyle(t.status) + ';padding:3px 10px;font-size:12px;font-weight:600')}>{t.status}</span>
+            </span>
+          </button>
+        ))}
+        {c.list.length === 0 && <p style={S('margin:0;text-align:center;color:#5E6673;font-size:14px')}>{c.query.trim() ? `Nothing matches "${c.query.trim()}".` : c.filter !== 'all' ? `No ${fl.toLowerCase().replace('all sales', 'sales')} sales.` : 'No sales yet.'}</p>}
       </main>
       <MobileTabs active="more" />
+      {fopen && <FilterSheet title="Filter sales" options={FILTERS} value={c.filter} onPick={c.setFilter} onClose={() => setFopen(false)} />}
       {c.open && (
         <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:5')}>
           <button onClick={c.close} aria-label="Close details" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
           <div className="sheet" role="dialog" aria-label="Sale details" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:86%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column;gap:16px')}>
             <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0')} />
-            {((c.mode !== 'view' && c.mode !== 'pay') || !c.sel) && <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Sale</h2><button onClick={c.close} aria-label="Close" style={S('flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer')}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg></button></div>}
-            <Panel c={c} m={true} />
+            {c.mode === 'new' ? <NewSaleFlow c={c} /> : (<>
+              {((c.mode !== 'view' && c.mode !== 'pay') || !c.sel) && <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Sale</h2><button onClick={c.close} aria-label="Close" style={S('flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer')}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg></button></div>}
+              <Panel c={c} m={true} />
+            </>)}
           </div>
         </div>
       )}
