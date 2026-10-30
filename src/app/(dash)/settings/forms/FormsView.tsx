@@ -7,6 +7,7 @@ import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../../calendar/pickers';
 import { HOW_OPTS, QTYPES, STARTERS, VALID_OPTS, type How, type Miss, type QType, type Tpl } from '@/lib/forms-shared';
 import { addStarter, deleteForm, saveForm } from './actions';
+import { FormPage } from './FormPage';
 
 type DQ = { id: string; label: string; type: QType; required: boolean; options: string; detail: string };
 type Draft = { id: string; isNew: boolean; name: string; catIds: string[]; validMonths: number; how: How; miss: Miss; consentText: string; askPhotos: boolean; isPatch: boolean; qs: DQ[] };
@@ -62,6 +63,7 @@ function useForms(props: Props) {
   return { ...props, busy, narrow, forms, cur, sel, pick, addForm, patch, save, remove, starter, unused, error, setError, notice, nq, setNq, addQ, isDirty, confirmDel, setConfirmDel, open, setOpen };
 }
 type C = ReturnType<typeof useForms>;
+export type FormsCtl = C;
 
 const SCROLL = 'display:flex;flex-wrap:nowrap;align-items:center;gap:8px;overflow-x:auto;margin:0 -20px;padding:0 20px 2px;scrollbar-width:none;-webkit-overflow-scrolling:touch';
 const Section = ({ id, label, children, help, m }: { id: string; label: string; children: React.ReactNode; help?: string; m?: boolean }) => (
@@ -202,35 +204,33 @@ function DeskList({ c }: { c: C }) {
 const Chevron = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')}><path d="M9 6l6 6-6 6" /></svg>;
 
 /** Phone: a list of forms like Settings, and each one opens as a full-page sheet. */
+const FORM_ICON = <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3A2BB5" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="2.5" /><path d="M9 9h6M9 13h6M9 17h3" /></svg>;
+const TILE = 'flex:0 0 44px;width:44px;height:44px;border-radius:14px;background:#EEEAFE;display:flex;align-items:center;justify-content:center';
+
+/** Phone: a card per form, then ready-made ones. A form opens as its own page. */
 function MobileList({ c }: { c: C }) {
   const sub = (d: C['forms'][number]) => (d.catIds.length ? c.cats.filter((x) => d.catIds.includes(x.id)).map((x) => x.name).join(', ') : 'Not needed for any service yet') + ' · ' + d.qs.length + (d.qs.length === 1 ? ' question' : ' questions');
   return (<>
-    {c.forms.length > 0 && (
-      <ul style={S('margin:0;padding:4px 0;list-style:none;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px')}>
-        {c.forms.map((d, i) => (
-          <li key={d.id}>
-            <button onClick={() => c.pick(d.id)} aria-label={(d.name || 'Untitled form') + ', ' + sub(d)} style={S('display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:68px;padding:10px 16px;border:0;border-bottom:' + (i === c.forms.length - 1 ? '0' : '1px solid #EEF0F3') + ';background:transparent;text-align:left;font:inherit;color:#0E1116;cursor:pointer')}>
-              <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{d.name || 'Untitled form'}</span><span style={S('display:block;margin-top:2px;font-size:13px;color:#5E6673')}>{sub(d)}</span></span><Chevron />
-            </button>
-          </li>
-        ))}
-      </ul>
-    )}
-    {c.forms.length === 0 && <section style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:20px;display:flex;flex-direction:column;gap:6px')}><h2 style={S('margin:0;font-size:17px;font-weight:600')}>No forms yet</h2><p style={S('margin:0;color:#5E6673;font-size:14px')}>Forms are what clients fill in before a visit. Add a ready-made one below, or make your own.</p></section>}
-    <button onClick={c.addForm} style={S('height:52px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font:inherit;font-size:15px;font-weight:500;cursor:pointer')}>New form</button>
+    <button onClick={c.addForm} style={S('height:52px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font:inherit;font-size:14.5px;font-weight:500;cursor:pointer')}>New form</button>
     {!!c.error && !c.open && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
     {!!c.notice && !c.open && <span role="status" style={S('align-self:flex-start;padding:6px 14px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:13px;font-weight:500')}>{c.notice}</span>}
+    {c.forms.map((d) => (
+      <button key={d.id} onClick={() => c.pick(d.id)} aria-label={(d.name || 'Untitled form') + ', ' + sub(d)} style={S('display:flex;align-items:center;gap:14px;width:100%;box-sizing:border-box;padding:16px;border:1px solid #E6E8EC;border-radius:22px;background:#FFFFFF;text-align:left;font:inherit;color:#0E1116;cursor:pointer')}>
+        <span style={S(TILE)}>{FORM_ICON}</span>
+        <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:16px;font-weight:600;letter-spacing:-0.01em;overflow-wrap:anywhere')}>{d.name || 'Untitled form'}</span><span style={S('display:block;margin-top:2px;font-size:13px;color:#5E6673;overflow-wrap:anywhere')}>{sub(d)}</span></span><Chevron />
+      </button>
+    ))}
+    {c.forms.length === 0 && <section style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:20px;display:flex;flex-direction:column;gap:6px')}><h2 style={S('margin:0;font-size:17px;font-weight:600')}>No forms yet</h2><p style={S('margin:0;color:#5E6673;font-size:14px')}>Forms are what clients fill in before a visit. Add a ready-made one below, or make your own.</p></section>}
     {c.unused.length > 0 && (
-      <section aria-label="Ready-made forms" style={S('display:flex;flex-direction:column;gap:8px')}>
-        <h2 style={S('margin:6px 0 0;font-size:16px;font-weight:600')}>Ready-made forms</h2>
-        <ul style={S('margin:0;padding:4px 0;list-style:none;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px')}>
-          {c.unused.map((s, i) => (
-            <li key={s.key} style={S('display:flex;align-items:center;gap:12px;min-height:60px;padding:8px 16px;border-bottom:' + (i === c.unused.length - 1 ? '0' : '1px solid #EEF0F3'))}>
-              <span style={S('flex:1 1 auto;min-width:0;font-size:14.5px;font-weight:500;overflow-wrap:anywhere')}>{s.name}</span>
-              <button onClick={() => c.starter(s.key)} disabled={c.busy} className="ghost" aria-label={'Add ' + s.name} style={S('flex:0 0 auto;height:40px;padding:0 18px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font:inherit;font-size:14px;font-weight:500;cursor:pointer')}>Add</button>
-            </li>
-          ))}
-        </ul>
+      <section aria-label="Ready-made forms" style={S('display:flex;flex-direction:column;gap:10px')}>
+        <h2 style={S('margin:6px 0 0;font-size:17px;font-weight:600;letter-spacing:-0.01em')}>Ready-made forms</h2>
+        {c.unused.map((s) => (
+          <div key={s.key} style={S('display:flex;align-items:center;gap:14px;box-sizing:border-box;padding:14px 16px;border:1px solid #E6E8EC;border-radius:22px;background:#FFFFFF')}>
+            <span style={S(TILE)}>{FORM_ICON}</span>
+            <span style={S('flex:1 1 auto;min-width:0;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{s.name}</span>
+            <button onClick={() => c.starter(s.key)} disabled={c.busy} className="ghost" aria-label={'Add ' + s.name} style={S('flex:0 0 auto;height:40px;padding:0 18px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font:inherit;font-size:14px;font-weight:500;cursor:pointer')}>Add</button>
+          </div>
+        ))}
       </section>
     )}
   </>);
@@ -243,21 +243,9 @@ export function FormsView(props: Props) {
     {c.narrow !== false && (
       <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
         <MobileHeader title="Forms" subtitle="What clients fill in before a visit" showSearch={false} />
-        <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:20px')}>{back}<MobileList c={c} /></main>
+        <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:14px')}><MobileList c={c} /></main>
         <MobileTabs active="more" />
-        {c.open && c.cur && (
-          <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:5')}>
-            <button onClick={() => c.setOpen(false)} aria-label="Close form" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
-            <div className="sheet" role="dialog" aria-label="Edit form" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:92%;overflow-y:auto;background:#F4F5F7;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column;gap:18px')}>
-              <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0')} />
-              <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
-                <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em;overflow-wrap:anywhere')}>{c.cur.name || 'Untitled form'}</h2>
-                <button onClick={() => c.setOpen(false)} aria-label="Close" style={S('flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer')}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
-              </div>
-              <Editor c={c} m={true} />
-            </div>
-          </div>
-        )}
+        {c.open && c.cur && <FormPage key={c.cur.id} c={c} />}
       </div>
     )}
     {c.narrow !== true && (
