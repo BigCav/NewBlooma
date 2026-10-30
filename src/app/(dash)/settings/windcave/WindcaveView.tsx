@@ -69,13 +69,12 @@ function Chip({ on, label, pick, m }: { on: boolean; label: string; pick: () => 
 
 function Body({ c, m }: { c: C; m: boolean }) {
   const { v, set, saved } = c;
-  const sub = 'margin:0;font-size:13px;color:#5E6673';
   return (<>
     <div style={S('display:flex;flex-direction:column;gap:8px')}>
       <span id="wc-tax" style={S('font-size:14px;font-weight:600')}>Prices are</span>
       <div role="group" aria-labelledby="wc-tax" style={S('display:flex;gap:8px;flex-wrap:wrap')}>
         <Chip m={m} on={v.inclusive} label="Tax inclusive" pick={() => set('inclusive', true)} />
-        <Chip m={m} on={!v.inclusive} label="Tax added at checkout" pick={() => set('inclusive', false)} />
+        <Chip m={m} on={!v.inclusive} label="Tax exclusive" pick={() => set('inclusive', false)} />
       </div>
     </div>
 
@@ -96,7 +95,6 @@ function Body({ c, m }: { c: C; m: boolean }) {
       </div>
     </div>
 
-    <p style={S(sub)}>Credentials are encrypted and only ever used on the server. Leave a field blank to keep what is saved.</p>
     {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
     {!!c.notice && <p role="status" style={S('margin:0;color:#14624A;font-size:13.5px;font-weight:500')}>{c.notice}</p>}
     <button onClick={c.save} disabled={c.busy} style={S('height:' + (m ? 48 : 44) + 'px;border:0;border-radius:999px;font-size:14px;font-weight:500;font-family:inherit;background:#0E1116;color:#FFFFFF;cursor:pointer;opacity:' + (c.busy ? 0.6 : 1))}>{c.busy ? 'Saving' : 'Save payment settings'}</button>
@@ -173,7 +171,7 @@ function Mobile({ c }: { c: C }) {
         <div><h3 style={S(H3)}>Prices are</h3></div>
         <div role="group" aria-label="Prices are" style={S('display:flex;gap:10px')}>
           <button onClick={() => set('inclusive', true)} aria-pressed={v.inclusive} style={S(tile(v.inclusive))}>Tax inclusive</button>
-          <button onClick={() => set('inclusive', false)} aria-pressed={!v.inclusive} style={S(tile(!v.inclusive))}>Tax added at checkout</button>
+          <button onClick={() => set('inclusive', false)} aria-pressed={!v.inclusive} style={S(tile(!v.inclusive))}>Tax exclusive</button>
         </div>
 
         <div><h3 style={S(H3)}>Card payments on screen</h3><p style={S(NOTE)}>Opens Windcave's secure payment page for the client to enter their card.</p></div>
@@ -186,7 +184,6 @@ function Mobile({ c }: { c: C }) {
         <Key id="wc-st" label="Terminal station ID" value={v.station} set={(x) => set('station', x)} />
         <Key id="wc-hu" label="HIT user" value={v.hit_user} set={(x) => set('hit_user', x)} saved={saved.hit_user} />
         <Key id="wc-hk" label="HIT key" value={v.hit_key} set={(x) => set('hit_key', x)} saved={saved.hit_key} secret />
-        <p style={S('margin:0;font-size:13px;color:#5E6673')}>Credentials are encrypted and only ever used on the server. Leave a field blank to keep what is saved.</p>
       </main>
       <div style={S(BAR)}>
         {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
