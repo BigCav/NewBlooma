@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { cache } from 'react';
 import { supabaseServer } from '@/lib/supabase/server';
 
 export type Ctx = {
@@ -14,8 +15,8 @@ export function clientHome(meta: Record<string, any> | null | undefined): string
   return meta?.client && meta.salon ? `/b/${meta.salon}` : null;
 }
 
-/** Signed-in staff member with a salon. Redirects otherwise. */
-export async function requireCtx(): Promise<Ctx> {
+/** Signed-in staff member with a salon. Redirects otherwise. Cached per request, so the layout and the page share one lookup. */
+export const requireCtx = cache(async (): Promise<Ctx> => {
   const sb = await supabaseServer();
   // The middleware already verified the session with Supabase; getClaims checks the JWT locally (no extra network trip).
   const { data: claims } = await sb.auth.getClaims();
@@ -27,7 +28,7 @@ export async function requireCtx(): Promise<Ctx> {
   const { data: settings } = await sb.from('salon_settings').select('*').eq('salon_id', row.salon_id).single();
   const { salons: salon, ...staff } = row as any;
   return { sb, userId: uid, staff: staff as Ctx['staff'], salon: salon, settings: settings ?? {} };
-}
+});
 
 export async function requireOwner() {
   const c = await requireCtx();

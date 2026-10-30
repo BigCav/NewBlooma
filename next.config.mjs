@@ -6,6 +6,8 @@ const root = path.dirname(fileURLToPath(import.meta.url));
 export default {
   reactStrictMode: true,
   poweredByHeader: false,
+  // Keep visited pages for a short while so tapping back to one is instant. Saving anything refreshes them.
+  experimental: { staleTimes: { dynamic: 30, static: 180 } },
   webpack(config) {
     config.resolve.alias = { ...config.resolve.alias, '@': path.join(root, 'src') };
     return config;

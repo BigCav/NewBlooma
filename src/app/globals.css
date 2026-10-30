@@ -119,3 +119,10 @@ html::-webkit-scrollbar,body::-webkit-scrollbar{display:none;width:0;height:0}
 html[data-theme=dark]{filter:invert(.93) hue-rotate(180deg);background:#fff}
 html[data-theme=dark] img,html[data-theme=dark] video,html[data-theme=dark] iframe,html[data-theme=dark] [data-keep]{filter:hue-rotate(180deg) invert(.93)}
 #ap-client:focus,#ap-client:focus-visible{outline:none;box-shadow:none}
+.sk{background:linear-gradient(90deg,#E9ECF0 25%,#F4F5F7 50%,#E9ECF0 75%);background-size:200% 100%;animation:skm 1.2s ease-in-out infinite;border-radius:16px}
+@keyframes skm{from{background-position:200% 0}to{background-position:-200% 0}}
+.sk-page{display:flex;flex-direction:column;gap:14px;max-width:720px}
+.sk-title{height:34px;width:180px}.sk-sub{height:16px;width:240px;margin-bottom:10px}
+.sk-row{display:flex;gap:12px}.sk-stat{flex:1 1 0;height:64px}.sk-pill{height:52px;border-radius:999px}.sk-card{height:84px;border-radius:24px}
+@media (max-width:900px){.sk-page{margin:-18px -16px 0;padding:28px 20px 0;max-width:none}}
+@media (prefers-reduced-motion:reduce){.sk{animation:none}}
