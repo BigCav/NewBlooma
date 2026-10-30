@@ -98,7 +98,7 @@ export function PayrollMobile({ c }: { c: PayrollCtl }) {
               <span style={S('flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px')}>
                 <span style={S('font-size:16px;font-weight:600;letter-spacing:-0.01em;overflow-wrap:anywhere')}>{p.name}</span>
                 <span style={S('font-size:13px;color:#5E6673')}>{p.role}</span>
-                <span style={S('align-self:flex-start;margin-top:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;background:' + t.bg + ';color:' + t.fg)}>{t.t}</span>
+                <span style={S('align-self:flex-start;margin-top:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;background:' + t.bg + ';color:' + t.fg)}>{t.t === 'Pending until Sunday' ? 'Pending' : t.t}</span>
               </span>
               <span style={S('flex:0 0 auto;text-align:right')}><span style={S('display:block;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{dollars0(p.commission + p.tips)}</span><span style={S('display:block;font-size:12px;color:#5E6673')}>commission + tips</span></span>
               {CHEV}
