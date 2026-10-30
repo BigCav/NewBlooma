@@ -50,7 +50,7 @@ table{width:100%;border-collapse:collapse}th{font-size:12px;text-transform:upper
  .rail{display:none}.only-d{display:none !important}.only-m{display:flex}.main{padding:18px 16px 110px}h1{font-size:22px}
  .subpanel{display:none}
  .g2,.g3,.g4{grid-template-columns:1fr}.card{padding:18px;border-radius:20px}
- .tabs-bar{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center;justify-items:center;position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #E6E8EC;padding:10px 8px calc(14px + env(safe-area-inset-bottom));z-index:20}
+ .tabs-bar{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center;justify-items:center;position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #E6E8EC;box-sizing:border-box;padding:10px 8px 22px;z-index:20}
  table.stack-m thead{display:none}table.stack-m tr{display:block;padding:10px 0;border-bottom:1px solid var(--line)}table.stack-m td{display:flex;justify-content:space-between;border:0;padding:4px 0}
 }
 
