@@ -5,7 +5,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
+import { ActiveFilter, FilterButton, FilterSheet } from '@/components/FilterBits';
 import { S } from '../calendar/pickers';
+import { MobileItem } from './MobileItem';
 import { acceptRequest, declineRequest, markDone, markRead, replyToItem } from './actions';
 import { FILTERS, REASONS, STATUS, TYPES, initialsOf, isAction, isInfo, type InboxItem } from './shared';
 
@@ -82,6 +84,7 @@ function useInbox(props: { items: InboxItem[] }) {
   return { items, narrow, selectedId, filter, setFilter: setFilterP, query, setQuery: setQueryP, pageRows, pageNo, pages, goPage, compose, mode, setMode, reason, setReason, draft, setDraft, notice, setNotice, error, setError, open, setOpen, sel, rows, needs, unread, handled, select, accept, sendDecline, sendReply, finish, cancel, busy };
 }
 type C = ReturnType<typeof useInbox>;
+export type InboxCtl = C;
 
 function Panel({ c, m }: { c: C; m: boolean }) {
   const sel = c.sel;
@@ -195,6 +198,24 @@ function Row({ c, i, m }: { c: C; i: InboxItem; m: boolean }) {
   );
 }
 
+/** A phone list row: its own card, so each request or message reads on its own. Needs-action items are tinted. */
+function MRow({ c, i }: { c: C; i: InboxItem }) {
+  const need = isAction(i.type) && i.status === 'new' && !i.cancelled;
+  return (
+    <button className="s-row" onClick={() => c.select(i.id)} aria-label={`${i.client}, ${TYPES[i.type].label}, ${i.summary}${i.unread ? ', unread' : ''}`} style={S('display:flex;align-items:flex-start;gap:14px;width:100%;box-sizing:border-box;padding:16px;border-radius:22px;text-align:left;font:inherit;color:#0E1116;cursor:pointer;' + (need ? 'background:#FFF4E5;border:1px solid #F6D9A8' : 'background:#FFFFFF;border:1px solid #E6E8EC'))}>
+      <span style={S('flex:0 0 48px;width:48px;height:48px;border-radius:999px;background:#EEEAFE;color:#3A2BB5;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600')}>{initialsOf(i.client)}</span>
+      <span style={S('flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:3px')}>
+        <span style={S('display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0')}>
+          <span style={S('display:flex;align-items:center;gap:8px;min-width:0')}><span style={S('min-width:0;font-size:16px;font-weight:600;letter-spacing:-0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{i.client}</span>{i.unread && <span aria-hidden="true" style={S('flex:0 0 9px;width:9px;height:9px;border-radius:999px;background:#5B3DF5')} />}</span>
+          <span style={S('flex:0 0 auto;font-size:12.5px;color:#5E6673')}>{i.time}</span>
+        </span>
+        <span style={S('display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;font-size:14px;color:#4A525E;font-weight:' + (i.unread ? 500 : 400))}>{i.summary}</span>
+        <span style={S('display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap')}><span style={S(typeStyle(i.type))}>{TYPES[i.type].label}</span>{hasChip(i) && <span style={S(chipStyle(i))}>{statusText(i)}</span>}</span>
+      </span>
+    </button>
+  );
+}
+
 function Desktop({ c }: { c: C }) {
   const chipS = (on: boolean) => 'height:40px;padding:0 16px;border-radius:999px;font-size:13.5px;font-weight:500;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
   const big = (l: string, v: number) => <div key={l}><div style={S('color:#5E6673;font-size:13.5px')}>{l}</div><div style={S('margin-top:4px;font-size:38px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{String(v)}</div></div>;
@@ -223,35 +244,27 @@ function Desktop({ c }: { c: C }) {
 }
 
 function Mobile({ c }: { c: C }) {
-  const chipS = (on: boolean) => 'flex:0 0 auto;height:44px;padding:0 18px;border-radius:999px;font-size:14px;font-weight:500;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
-  const big = (l: string, v: number) => <div key={l}><div style={S('color:#5E6673;font-size:13px')}>{l}</div><div style={S('margin-top:2px;font-size:30px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{String(v)}</div></div>;
+  const [fopen, setFopen] = useState(false);
+  const card = (l: string, v: number, tint?: string) => <div key={l} style={S('flex:1 1 0;min-width:0;box-sizing:border-box;padding:16px;border-radius:20px;border:1px solid ' + (tint ? '#F6D9A8' : '#E6E8EC') + ';background:' + (tint ?? '#FFFFFF'))}><div style={S('color:#5E6673;font-size:13px')}>{l}</div><div style={S('margin-top:2px;font-size:30px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{String(v)}</div></div>;
   const close = () => { c.setOpen(false); c.setMode('view'); c.setError(''); };
+  const fl = FILTERS.find((f) => f.id === c.filter)?.label ?? 'All';
   return (
     <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <MobileHeader title="Inbox" subtitle="Requests, cancellations and messages" query={c.query} onQuery={c.setQuery} placeholder="Search inbox" />
-      <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:20px')}>
-        <section aria-label="Inbox at a glance" style={S('display:flex;gap:40px')}>{big('Needs action', c.needs)}{big('Unread', c.unread)}</section>
-        <div role="group" className="hscroll" aria-label="Filter inbox" style={S('display:flex;gap:8px;overflow-x:auto')}>
-          {FILTERS.map((f) => <button key={f.id} onClick={() => c.setFilter(f.id)} aria-pressed={c.filter === f.id} style={S(chipS(c.filter === f.id))}>{f.label}</button>)}
+      <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:14px')}>
+        <section aria-label="Inbox at a glance" style={S('display:flex;gap:12px')}>{card('Needs action', c.needs, c.needs > 0 ? '#FFF4E5' : undefined)}{card('Unread', c.unread)}</section>
+        <div style={S('display:flex;align-items:center;gap:12px')}>
+          <FilterButton onClick={() => setFopen(true)} active={c.filter !== 'all'} label="Filter inbox" />
+          <span style={S('flex:1 1 auto;min-width:0;color:#5E6673;font-size:14px')}>{c.rows.length === c.items.length ? `${c.items.length} in total` : `${c.rows.length} of ${c.items.length}`}</span>
         </div>
-        <ul style={S('margin:0;padding:4px 0;list-style:none;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px')}>
-          {c.pageRows.map((i) => <li key={i.id}><Row c={c} i={i} m={true} /></li>)}
-        </ul>
-        {c.rows.length === 0 && <p style={S('margin:0;text-align:center;color:#5E6673;font-size:14px')}>{c.query.trim() ? `Nothing matches "${c.query.trim()}".` : 'Nothing here right now.'}</p>}
+        {c.filter !== 'all' && <ActiveFilter label={fl} onClear={() => c.setFilter('all')} />}
+        {c.pageRows.map((i) => <MRow key={i.id} c={c} i={i} />)}
+        {c.rows.length === 0 && <p style={S('margin:0;text-align:center;color:#5E6673;font-size:14px')}>{c.query.trim() ? `Nothing matches "${c.query.trim()}".` : c.filter !== 'all' ? `Nothing under ${fl.toLowerCase()}.` : 'Nothing here right now.'}</p>}
         <Pager c={c} m={true} />
       </main>
       <MobileTabs active="more" />
-      {c.open && (
-        <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:5')}>
-          <button onClick={close} aria-label="Close details" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
-          <div className="sheet" role="dialog" aria-label="Inbox item" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:92%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column;gap:16px')}>
-            <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0')} />
-            <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Inbox</h2>
-              <button onClick={close} aria-label="Close" style={S('flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer')}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg></button></div>
-            <Panel c={c} m={true} />
-          </div>
-        </div>
-      )}
+      {fopen && <FilterSheet title="Filter inbox" options={FILTERS} value={c.filter} onPick={c.setFilter} onClose={() => setFopen(false)} />}
+      {c.open && c.sel && <MobileItem key={c.sel.id} c={c} onClose={close} />}
     </div>
   );
 }
