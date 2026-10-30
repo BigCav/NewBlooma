@@ -15,9 +15,7 @@ const NEW_ITEMS: [string, string, React.ReactNode][] = [
   ['New team member', '/team?new=1', <><circle cx="12" cy="8" r="3.5" /><path d="M5 20c.6-3.6 3.4-5.5 7-5.5s6.4 1.9 7 5.5" /></>],
   ['New service', '/services?new=1', <><circle cx="6" cy="7" r="2.5" /><circle cx="6" cy="17" r="2.5" /><path d="M8 8.5 20 18M8 15.5 20 6" /></>],
   ['New product', '/products?new=1', <><path d="M4 8l8-4 8 4-8 4-8-4Z" /><path d="M4 8v8l8 4 8-4V8M12 12v8" /></>],
-  ['New sale', '/sales?new=1', <><path d="M4 7h16l-1.5 11a2 2 0 0 1-2 1.7H7.5a2 2 0 0 1-2-1.7L4 7Z" /><path d="M8.5 7a3.5 3.5 0 0 1 7 0" /></>],
   ['New gift card', '/gift-cards?new=1', <><rect x="3.5" y="8" width="17" height="12" rx="2.5" /><path d="M3.5 12.5h17M12 8v12M12 8c-1-3-4.5-3.5-4.5-1.2S10.5 8 12 8Zm0 0c1-3 4.5-3.5 4.5-1.2S13.5 8 12 8Z" /></>],
-  ['Add to waitlist', '/waitlist?new=1', <><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></>],
 ];
 
 /** The + button's sheet: new appointment first in black, then everything else you can create. */
