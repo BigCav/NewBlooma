@@ -3,10 +3,12 @@
 // the {{ }} holes are real figures from the report_dashboard function.
 import { useEffect, useState } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
+import { FilterSheet } from '@/components/FilterBits';
 import { S } from '../calendar/pickers';
+import { photoCss } from '../team/shared';
 import type { Heat, Period } from './shared';
 
-type Props = { periods: Period[]; heat: Heat; currency: string; error?: string };
+type Props = { periods: Period[]; heat: Heat; currency: string; error?: string; photos?: Record<string, string> };
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const DAY_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const initialsOf = (n: string) => n.split(' ').map((w) => w[0]).join('');
@@ -34,6 +36,7 @@ function useReports(props: Props) {
 type C = ReturnType<typeof useReports>;
 
 function Body({ c, m }: { c: C; m: boolean }) {
+  const [fopen, setFopen] = useState(false);
   const p = c.p, money = c.money;
   const chipStyle = (on: boolean) => (m ? 'flex:0 0 auto;height:44px;padding:0 18px;font-size:14px;' : 'height:40px;padding:0 16px;font-size:13.5px;') + 'border-radius:999px;font-weight:500;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
   const barMax = m ? 96 : 140, cellH = m ? 36 : 44, pad = m ? 20 : 24;
@@ -82,7 +85,7 @@ function Body({ c, m }: { c: C; m: boolean }) {
       <ol style={S('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:16px')}>
         {p.team.map((t) => (
           <li key={t[0]} style={S('display:flex;align-items:center;gap:12px')}>
-            <span style={S('flex:0 0 40px;width:40px;height:40px;border-radius:999px;background:#EEF0F3;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600')}>{initialsOf(t[0])}</span>
+            <span style={S('flex:0 0 40px;width:40px;height:40px;border-radius:999px;background:#EEF0F3;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600' + photoCss(c.photos?.[t[0]] ?? null))}>{c.photos?.[t[0]] ? '' : initialsOf(t[0])}</span>
             <div style={S('flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:6px')}>
               <div style={S('display:flex;align-items:baseline;justify-content:space-between;gap:12px')}><span style={S('min-width:0;font-size:14.5px;font-weight:600;overflow-wrap:anywhere')}>{t[0]}</span><span style={S('flex:0 0 auto;font-size:14.5px;font-weight:600')}>{money(t[1])}</span></div>
               <div style={S('height:8px;border-radius:999px;background:#EEF0F3;overflow:hidden')}><div style={S('height:100%;border-radius:999px;background:#0E1116;width:' + t[2] + '%')} /></div>
@@ -122,10 +125,22 @@ function Body({ c, m }: { c: C; m: boolean }) {
         </div></div></section>
   );
   if (m) return (<>
-    <section aria-label="Key numbers" style={S('display:flex;gap:40px')}>
-      {[['Booked revenue', money(p.revenue)], ['Appointments', p.appts.toLocaleString('en-US')]].map(([l, v]) => <div key={l}><div style={S('color:#5E6673;font-size:13px')}>{l}</div><div style={S('margin-top:2px;font-size:30px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{v}</div></div>)}
+    <button onClick={() => setFopen(true)} aria-haspopup="dialog" aria-label={'Report period: ' + p.label} style={S('display:flex;align-items:center;gap:10px;height:52px;padding:0 18px;border:1px solid #E6E8EC;border-radius:999px;background:#FFFFFF;font:inherit;font-size:15px;font-weight:500;color:#0E1116;cursor:pointer;text-align:left')}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg>
+      <span style={S('flex:1 1 auto;min-width:0')}>{p.label}</span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+    </button>
+    <section aria-label="Key numbers" style={S('display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px')}>
+      {kpis.map(([l, v, d]) => (
+        <div key={l} style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:20px;padding:16px')}>
+          <div style={S('color:#5E6673;font-size:13px')}>{l}</div>
+          <div style={S('margin-top:2px;font-size:28px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{v}</div>
+          <div style={S('margin-top:6px;font-size:12.5px;color:#8A93A0')}><span style={S(dstyle(d[1]).replace('font-size:13px', 'font-size:12.5px'))}>{d[0]}</span> vs before</div>
+        </div>
+      ))}
     </section>
-    {chips}{revenue}{services}{team}{heat}{mix}
+    {revenue}{services}{team}{heat}{mix}
+    {fopen && <FilterSheet title="Report period" options={c.periods.map((x) => ({ id: x.id, label: x.label }))} value={p.id} onPick={(id) => c.setPid(id)} onClose={() => setFopen(false)} />}
   </>);
   return (<>
     {chips}
@@ -162,7 +177,7 @@ function Mobile({ c }: { c: C }) {
   return (
     <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <MobileHeader title="Reports" subtitle="How the business is doing" showSearch={false} />
-      <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:20px')}>
+      <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:14px')}>
         {c.error || !c.p ? <Err text={c.error ?? 'Could not load the report.'} /> : <Body c={c} m={true} />}
       </main>
       <MobileTabs active="more" />
