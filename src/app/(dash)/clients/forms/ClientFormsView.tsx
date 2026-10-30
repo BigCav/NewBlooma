@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../../calendar/pickers';
+import { FormsMain, FormsOverlay } from './FormsMobile';
 import { addMonthsYmd, niceDate, type FormState, type How } from '@/lib/forms-shared';
 import { recordPatchTest, sendFormLinks } from './actions';
 
@@ -36,6 +37,7 @@ function useClientForms(props: Props) {
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [rec, setRec] = useState<{ tplId: string; date: string; reaction: boolean; note: string } | null>(null);
+  const [ans, setAns] = useState<{ name: string; sub: string; flagged: boolean; answers: { k: string; v: string }[]; clientId: string } | null>(null);
   const cur = props.cards.find((x) => x.id === sel) ?? props.cards[0] ?? null;
   const pick = (id: string) => { setSel(id); setOpen(''); setRec(null); setError(''); setNotice(''); };
   const send = () => { if (!cur) return; const k = cur.bookingId; startT(async () => { const r = await sendFormLinks(k); if (r.error) { setError(r.error); setNotice(''); return; } setError(''); setNotice(r.notice ?? 'Link sent'); setSent((s) => ({ ...s, [k]: true })); }); };
@@ -43,9 +45,10 @@ function useClientForms(props: Props) {
     if (!cur || !rec) return;
     startT(async () => { const r = await recordPatchTest(cur.clientId, rec.tplId, rec.date, rec.reaction, rec.note); if (r.error) { setError(r.error); return; } setError(''); setRec(null); setNotice(r.notice ?? 'Saved'); router.refresh(); });
   };
-  return { ...props, tab, setTab, busy, narrow, cur, sel, pick, open, setOpen, sent, notice, error, setError, rec, setRec, send, saveRec };
+  return { ...props, tab, setTab, busy, narrow, cur, sel, pick, open, setOpen, sent, notice, error, setError, rec, setRec, send, saveRec, ans, setAns, stat: STAT };
 }
 type C = ReturnType<typeof useClientForms>;
+export type FormsCtl = C;
 
 function Body({ c, m }: { c: C; m: boolean }) {
   const k = c.cur;
@@ -177,13 +180,13 @@ function List({ c, m }: { c: C; m: boolean }) {
 
 export function ClientFormsView(props: Props) {
   const c = useClientForms(props);
-  const back = <Link href="/clients" style={S('display:inline-flex;align-items:center;min-height:44px;color:#4A525E;font-size:14px;font-weight:500;text-decoration:none')}>&larr; Clients</Link>;
   return (<>
     {c.narrow !== false && (
       <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
         <MobileHeader title="Client forms" subtitle="Forms for upcoming appointments" showSearch={false} />
-        <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:16px')}>{back}<Tabs c={c} />{c.tab === 'done' ? <Completed c={c} m={true} /> : <><List c={c} m={true} /><Body c={c} m={true} /></>}</main>
+        <FormsMain c={c} />
         <MobileTabs active="clients" />
+        <FormsOverlay c={c} />
       </div>
     )}
     {c.narrow !== true && (

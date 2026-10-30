@@ -182,7 +182,7 @@ export function ClientCard({ name, existing, onChange }: { name: string; existin
 export function DetailRows({ rows, go }: { rows: { icon: React.ReactNode; text: string; step?: number }[]; go: (n: number) => void }) {
   const row = 'display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;padding:14px 0;border:0;background:transparent;font:inherit;font-size:15px;text-align:left;color:#0E1116';
   return (
-    <div className="sum-rows" style={S('padding:2px 16px;border:1px solid #E6E8EC;border-radius:22px')}>
+    <div className="sum-rows" style={S('padding:2px 16px;border:1px solid #E6E8EC;border-radius:22px;background:#FFFFFF')}>
       {rows.map((r) => {
         const inner = <>{ico(r.icon)}<span style={S('min-width:0;overflow-wrap:anywhere')}>{r.text}</span>{r.step !== undefined && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A93A0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto;margin-left:auto')}><path d="M9.5 6l6 6-6 6" /></svg>}</>;
         return r.step !== undefined ? <button key={r.text + r.step} onClick={() => go(r.step!)} style={S(row + ';cursor:pointer')}>{inner}</button> : <div key={r.text} style={S(row)}>{inner}</div>;
