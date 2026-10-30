@@ -5,6 +5,7 @@ import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../../calendar/pickers';
+import { BACK as BACK_ICON, BAR, CARD, Field as CardField, FIELD_IN, PAGE, RING } from '../forms/FormPage';
 import { savePayments } from './actions';
 
 type Props = { taxInclusive: boolean; online: boolean; terminal: boolean; station: string; saved: { online_user: boolean; online_key: boolean; hit_user: boolean; hit_key: boolean } };
@@ -136,17 +137,62 @@ function Desktop({ c }: { c: C }) {
   );
 }
 
-function Mobile({ c }: { c: C }) {
+function SwLine({ id, title, sub, on, toggle, last }: { id: string; title: string; sub?: string; on: boolean; toggle: () => void; last?: boolean }) {
   return (
-    <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
-      <MobileHeader title="Card payments" subtitle="Windcave setup and tax mode" showSearch={false} />
-      <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:20px;align-items:flex-start')}>
-        {BACK}
-        <section aria-label="Card payments" style={S('align-self:stretch;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:20px;display:flex;flex-direction:column;gap:20px')}>
-          <Body c={c} m={true} />
-        </section>
+    <div style={S('display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:' + (last ? '0' : '1px solid #EEF0F3'))}>
+      <div style={S('min-width:0')}><div id={id} style={S('font-size:15px;font-weight:500')}>{title}</div>{sub && <div style={S('margin-top:2px;font-size:13px;color:#5E6673')}>{sub}</div>}</div>
+      <button role="switch" aria-checked={on} aria-labelledby={id} onClick={toggle} style={S(swStyle(on))}><span style={S(swKnob(on))} /></button>
+    </div>
+  );
+}
+
+function Key({ id, label, value, set, secret, saved, ph }: { id: string; label: string; value: string; set: (v: string) => void; secret?: boolean; saved?: boolean; ph?: string }) {
+  return (
+    <CardField label={label + (saved ? ' (saved)' : '')} htmlFor={id}>
+      <input id={id} type={secret ? 'password' : 'text'} value={value} onChange={(e) => set(e.target.value)} autoComplete={secret ? 'new-password' : 'off'} placeholder={saved ? 'Leave blank to keep what is saved' : ph ?? ''} style={FIELD_IN} />
+    </CardField>
+  );
+}
+
+/** Phone: a page with its own back arrow, a card per area, and a Save bar. */
+function Mobile({ c }: { c: C }) {
+  const { v, set, saved } = c;
+  const H3 = 'margin:6px 0 0;font-size:17px;font-weight:600;letter-spacing:-0.01em';
+  const NOTE = 'margin:2px 0 0;font-size:13px;color:#5E6673';
+  const tile = (on: boolean) => 'flex:1 1 0;min-height:56px;padding:10px 12px;border-radius:16px;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-align:center;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
+  return (
+    <div className="only-m m-cal cal-root" style={S(PAGE.replace('position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;display:flex;', 'position:relative;width:100%;height:100dvh;box-sizing:border-box;'))}>
+      <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px;border-bottom:1px solid #E6E8EC')}>
+        <Link href="/settings?section=payments" aria-label="Back to payments" style={S(RING + ';text-decoration:none')}>{BACK_ICON}</Link>
+        <div style={S('flex:1 1 auto;min-width:0')}>
+          <div style={S('font-size:18px;font-weight:600;letter-spacing:-0.02em')}>Card payments</div>
+          <div style={S('font-size:13px;color:#5E6673')}>Windcave setup and tax mode</div>
+        </div>
+      </header>
+      <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:16px 20px 24px;display:flex;flex-direction:column;gap:14px')}>
+        <div><h3 style={S(H3)}>Prices are</h3></div>
+        <div role="group" aria-label="Prices are" style={S('display:flex;gap:10px')}>
+          <button onClick={() => set('inclusive', true)} aria-pressed={v.inclusive} style={S(tile(v.inclusive))}>Tax inclusive</button>
+          <button onClick={() => set('inclusive', false)} aria-pressed={!v.inclusive} style={S(tile(!v.inclusive))}>Tax added at checkout</button>
+        </div>
+
+        <div><h3 style={S(H3)}>Card payments on screen</h3><p style={S(NOTE)}>Opens Windcave's secure payment page for the client to enter their card.</p></div>
+        <section style={S(CARD)}><SwLine id="wc-online" title="Take card payments on screen" on={v.online} toggle={() => set('online', !v.online)} last /></section>
+        <Key id="wc-ou" label="Windcave REST user" value={v.online_user} set={(x) => set('online_user', x)} saved={saved.online_user} />
+        <Key id="wc-ok" label="Windcave REST key" value={v.online_key} set={(x) => set('online_key', x)} saved={saved.online_key} secret />
+
+        <div><h3 style={S(H3)}>Card terminal</h3><p style={S(NOTE)}>Windcave HIT. Sends the amount to your terminal.</p></div>
+        <section style={S(CARD)}><SwLine id="wc-term" title="Use a card terminal" on={v.terminal} toggle={() => set('terminal', !v.terminal)} last /></section>
+        <Key id="wc-st" label="Terminal station ID" value={v.station} set={(x) => set('station', x)} />
+        <Key id="wc-hu" label="HIT user" value={v.hit_user} set={(x) => set('hit_user', x)} saved={saved.hit_user} />
+        <Key id="wc-hk" label="HIT key" value={v.hit_key} set={(x) => set('hit_key', x)} saved={saved.hit_key} secret />
+        <p style={S('margin:0;font-size:13px;color:#5E6673')}>Credentials are encrypted and only ever used on the server. Leave a field blank to keep what is saved.</p>
       </main>
-      <MobileTabs active="more" />
+      <div style={S(BAR)}>
+        {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
+        {!!c.notice && <p role="status" style={S('margin:0;color:#14624A;font-size:13.5px;font-weight:500')}>{c.notice}</p>}
+        <button onClick={c.save} disabled={c.busy} style={S('height:52px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font:inherit;font-size:14.5px;font-weight:500;cursor:pointer;opacity:' + (c.busy ? 0.6 : 1))}>{c.busy ? 'Saving' : 'Save payment settings'}</button>
+      </div>
     </div>
   );
 }

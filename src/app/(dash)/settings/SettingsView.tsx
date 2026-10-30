@@ -10,23 +10,9 @@ import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
 import { useNightMode } from '@/components/Theme';
 import { addClosedPeriod, removeClosedPeriod, saveSettings } from './actions';
-import { DAY_FULL, validate, type Closed, type Values } from './shared';
+import { DAY_FULL, GROUPS, SECTIONS, validate, type Closed, type Values } from './shared';
+import { SectionPage } from './SectionPage';
 
-const SECTIONS = [
-  { id: 'business', label: 'Business details', desc: 'Name, contact and address' },
-  { id: 'hours', label: 'Opening hours', desc: 'When the salon is open' },
-  { id: 'booking', label: 'Online booking', desc: 'Booking rules for clients' },
-  { id: 'payments', label: 'Payments', desc: 'Methods, tips and tax' },
-  { id: 'notifications', label: 'Notifications', desc: 'Emails and reminders' },
-  { id: 'appearance', label: 'Appearance', desc: 'Light or night mode' },
-];
-const GROUPS: Record<string, [string, string][]> = {
-  window: [['1w', '1 week'], ['2w', '2 weeks'], ['4w', '4 weeks'], ['8w', '8 weeks']],
-  notice: [['none', 'None'], ['1h', '1 hour'], ['2h', '2 hours'], ['24h', '24 hours']],
-  confirm: [['auto', 'Instant'], ['manual', 'Manual approval']],
-  cancel: [['2h', '2 hours before'], ['24h', '24 hours before'], ['48h', '48 hours before']],
-  tipDefault: [['0', 'No default'], ['10', '10%'], ['15', '15%'], ['20', '20%']],
-};
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
 const INPUT = 'box-sizing:border-box;width:100%;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;color:#0E1116;background:#FFFFFF';
 const swStyle = (on: boolean) => 'position:relative;flex:0 0 52px;width:52px;height:32px;padding:0;border:0;border-radius:999px;background:' + (on ? '#0E1116' : '#D5D9E0');
@@ -66,6 +52,7 @@ function useSettings(initial: Values, start?: string, closedInit: Closed[] = [])
     error, notice, dirty, busy, save, discard: () => { setV(clone(saved)); setError(''); setNotice(''); } };
 }
 type C = ReturnType<typeof useSettings>;
+export type SettingsCtl = C;
 
 function Switch({ id, on, toggle, label }: { id: string; on: boolean; toggle: () => void; label: string }) {
   return <button role="switch" aria-checked={on} aria-labelledby={id} onClick={toggle} style={S(swStyle(on))}><span style={S(swKnob(on))} /></button>;
@@ -258,7 +245,8 @@ function Mobile({ c }: { c: C }) {
   return (
     <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <MobileHeader title="Settings" subtitle="Business details and booking rules" showSearch={false} />
-      <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:20px')}>
+      <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:14px')}>
+        {!!c.notice && <span role="status" style={S('align-self:flex-start;padding:6px 14px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:13px;font-weight:500')}>{c.notice}</span>}
         <section aria-label="Your business" style={S('display:flex;align-items:center;gap:14px;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:20px')}>
           <div style={S('flex:0 0 48px;width:48px;height:48px;border-radius:16px;background:#0E1116;display:flex;align-items:center;justify-content:center')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="7.5" /><path d="M8.5 13.5c1 1.6 2.2 2.3 3.5 2.3s2.5-.7 3.5-2.3" /></svg></div>
           <div style={S('min-width:0')}><div style={S('font-size:17px;font-weight:600;letter-spacing:-0.01em;overflow-wrap:anywhere')}>{c.v.bizName.trim() || 'Your business'}</div><div style={S('font-size:13px;color:#5E6673;overflow-wrap:anywhere')}>{c.v.bizAddress.trim() || 'No address yet'}</div></div>
@@ -275,19 +263,7 @@ function Mobile({ c }: { c: C }) {
         <div style={S('background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;overflow:hidden')}><Link href="/settings/forms" aria-label="Forms and consultations, what clients fill in before a visit" style={S('display:flex;align-items:center;gap:12px;box-sizing:border-box;min-height:68px;padding:10px 16px;text-decoration:none;color:#0E1116')}><span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600')}>Forms and consultations</span><span style={S('display:block;margin-top:2px;font-size:13px;color:#5E6673')}>What clients fill in before a visit</span></span><Chevron /></Link></div>
       </main>
       <MobileTabs active="more" />
-      {c.open && (
-        <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:5')}>
-          <button onClick={c.close} aria-label="Close settings" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
-          <div className="sheet" role="dialog" aria-label="Settings" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:92%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column;gap:18px')}>
-            <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0')} />
-            <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
-              <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{cur.label}</h2>
-              <button onClick={c.close} aria-label="Close" style={S('flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer')}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
-            </div>
-            <Content c={c} m={true} />
-          </div>
-        </div>
-      )}
+      {c.open && <SectionPage c={c} />}
     </div>
   );
 }

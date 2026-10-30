@@ -20,3 +20,18 @@ export function validate(v: Values): { section: string; error: string } | null {
   for (let i = 0; i < 7; i++) if (!v.hours[i].from || !v.hours[i].to || v.hours[i].to <= v.hours[i].from) return { section: 'hours', error: `${DAY_FULL[i]}: closing time must be after opening time.` };
   return null;
 }
+export const SECTIONS = [
+  { id: 'business', label: 'Business details', desc: 'Name, contact and address' },
+  { id: 'hours', label: 'Opening hours', desc: 'When the salon is open' },
+  { id: 'booking', label: 'Online booking', desc: 'Booking rules for clients' },
+  { id: 'payments', label: 'Payments', desc: 'Methods, tips and tax' },
+  { id: 'notifications', label: 'Notifications', desc: 'Emails and reminders' },
+  { id: 'appearance', label: 'Appearance', desc: 'Light or night mode' },
+];
+export const GROUPS: Record<string, [string, string][]> = {
+  window: [['1w', '1 week'], ['2w', '2 weeks'], ['4w', '4 weeks'], ['8w', '8 weeks']],
+  notice: [['none', 'None'], ['1h', '1 hour'], ['2h', '2 hours'], ['24h', '24 hours']],
+  confirm: [['auto', 'Instant'], ['manual', 'Manual approval']],
+  cancel: [['2h', '2 hours before'], ['24h', '24 hours before'], ['48h', '48 hours before']],
+  tipDefault: [['0', 'No default'], ['10', '10%'], ['15', '15%'], ['20', '20%']],
+};
