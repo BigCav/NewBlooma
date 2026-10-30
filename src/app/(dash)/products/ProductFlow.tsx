@@ -85,12 +85,20 @@ function ProductView({ c }: { c: ProductsCtl }) {
 
 function Restock({ c }: { c: ProductsCtl }) {
   const s = c.sel!;
+  const [custom, setCustom] = useState(false);
+  const [ctext, setCtext] = useState('');
+  const isCustom = custom || !QTYS.includes(c.qty);
+  const add = () => { if (!(c.qty > 0)) { c.setError('Enter how many units to add.'); return; } c.restock(); };
   return (
     <StepShell step={0} plain titles={['Restock']} onBack={c.cancel} onClose={c.cancel} error={c.error}
-      actions={[{ label: 'Add stock', onClick: c.restock, disabled: c.busy }]}>
+      actions={[{ label: 'Add stock', onClick: add, disabled: c.busy }]}>
       <p style={S('margin:0;font-size:13px;color:#5E6673;overflow-wrap:anywhere')}>{s.name}{s.brand ? ', ' + s.brand : ''}</p>
-      <Tiles label="Units to add" options={QTYS.map((q) => [q, '+' + q] as const)} value={c.qty} onPick={c.setQty} />
-      <p style={S('margin:0;color:#5E6673;font-size:14px')}>{`In stock now ${s.stock}, ${s.stock + c.qty} after adding ${c.qty}.`}</p>
+      <Tiles label="Units to add" options={[...QTYS.map((q) => [q, '+' + q] as const), ['custom', 'Custom'] as const]} value={isCustom ? 'custom' : c.qty}
+        onPick={(v) => { c.setError(''); if (v === 'custom') { setCustom(true); setCtext(QTYS.includes(c.qty) ? '' : String(c.qty || '')); if (QTYS.includes(c.qty)) c.setQty(0); } else { setCustom(false); c.setQty(v as number); } }} />
+      {isCustom && (
+        <Field label="Units to add" htmlFor="rs-custom"><input id="rs-custom" type="text" inputMode="numeric" value={ctext} onChange={(e) => { const t = digitsInput(e.target.value).slice(0, 4); c.setError(''); setCustom(true); setCtext(t); c.setQty(parseInt(t, 10) || 0); }} placeholder="For example, 15" style={FIELD_IN} /></Field>
+      )}
+      <p style={S('margin:0;color:#5E6673;font-size:14px')}>{c.qty > 0 ? `${s.stock} in stock, ${s.stock + c.qty} after adding ${c.qty}.` : `${s.stock} in stock.`}</p>
     </StepShell>
   );
 }

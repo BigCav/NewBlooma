@@ -227,18 +227,20 @@ function Mobile({ c }: { c: C }) {
           </button>
         </div>
         {c.filter !== 'all' && <ActiveFilter label={FILTERS.find((f) => f.id === c.filter)?.label ?? ''} onClear={() => c.setFilter('all')} />}
-        <ul style={S('margin:0;padding:4px 0;list-style:none;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px')}>
-          {c.list.map((p) => (
-            <li key={p.id}>
-              <button onClick={() => c.pick(p.id)} aria-label={`${p.name}, ${p.brand}, ${p.stock} in stock, ${p.status}`} style={S('display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:68px;padding:10px 16px;border:0;border-bottom:1px solid #EEF0F3;background:transparent;text-align:left;font:inherit;color:#0E1116;cursor:pointer')}>
-                <span style={S(tile(c, p.cat, 40, 12, 13))}>{initialsOf(p.name)}</span>
-                <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{p.name}</span><span style={S('display:block;font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{p.brand}, {money(p.priceCents)}</span></span>
-                <span style={S('flex:0 0 auto;text-align:right')}><span style={S('display:block;font-size:14.5px;font-weight:600')}>{p.stock}</span><span style={S('display:block;margin-top:2px')}><span style={S(statusStyle(p.status))}>{p.status}</span></span></span>
-              </button>
-            </li>
-          ))}
-        </ul>
-        {c.list.length === 0 && <p style={S('margin:0;text-align:center;color:#5E6673;font-size:14px')}>{c.query.trim() ? `Nothing matches "${c.query.trim()}".` : 'No products yet.'}</p>}
+        {c.list.length > 0 && (
+          <ul style={S('margin:0;padding:4px 0;list-style:none;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px')}>
+            {c.list.map((p) => (
+              <li key={p.id}>
+                <button onClick={() => c.pick(p.id)} aria-label={`${p.name}, ${p.brand}, ${p.stock} in stock, ${p.status}`} style={S('display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:68px;padding:10px 16px;border:0;border-bottom:1px solid #EEF0F3;background:transparent;text-align:left;font:inherit;color:#0E1116;cursor:pointer')}>
+                  <span style={S(tile(c, p.cat, 40, 12, 13))}>{initialsOf(p.name)}</span>
+                  <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{p.name}</span><span style={S('display:block;font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{p.brand}, {money(p.priceCents)}</span></span>
+                  <span style={S('flex:0 0 auto;text-align:right')}><span style={S('display:block;font-size:14.5px;font-weight:600')}>{p.stock}</span><span style={S('display:block;margin-top:2px')}><span style={S(statusStyle(p.status))}>{p.status}</span></span></span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {c.list.length === 0 && <p style={S('margin:0;text-align:center;color:#5E6673;font-size:14px')}>{c.query.trim() ? `Nothing matches "${c.query.trim()}".` : c.filter !== 'all' ? `No products are ${c.filter.toLowerCase()}.` : 'No products yet.'}</p>}
       </main>
       <MobileTabs active="more" />
       {fopen && <FilterSheet title="Filter products" options={FILTERS} value={c.filter} onPick={c.setFilter} onClose={() => setFopen(false)} />}
