@@ -7,6 +7,7 @@ import { useEffect, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
 import { ActiveFilter, FilterButton, FilterSheet } from '@/components/FilterBits';
+import { TeamFlow } from './TeamFlow';
 import { inviteMember, removeMember, removePhoto, saveMember, uploadPhoto } from './actions';
 import { DAYS, DAY_FULL, FILTERS, SHIFTS, initialsOf, photoCss, squarePhoto, type TeamRow } from './shared';
 
@@ -95,10 +96,11 @@ function useTeam(props: Props) {
 
   const sq = query.trim().toLowerCase();
   const list = items.filter((m) => (filter === 'all' || (filter === 'today' && m.todayOn) || (filter === 'online' && m.online)) && (!sq || (m.name + ' ' + m.role).toLowerCase().includes(sq)));
-  return { ...props, pickShift, setTime, invite, makeInvite, items, photoBusy, pickPhoto, dropPhoto, busy, narrow, selectedId, mode, draft, setDraft, flip, filter, setFilter, query, setQuery, confirm, setConfirm, error, notice, open, setOpen, select, startNew, cancelNew, save, remove, list,
+  return { ...props, pickShift, setTime, invite, makeInvite, items, photoBusy, pickPhoto, dropPhoto, busy, narrow, selectedId, mode, draft, setDraft, flip, filter, setFilter, query, setQuery, confirm, setConfirm, error, setError, notice, open, setOpen, select, startNew, cancelNew, save, remove, list,
     close: () => { setOpen(false); setConfirm(false); setError(''); } };
 }
 type C = ReturnType<typeof useTeam>;
+export type TeamCtl = C;
 
 const chipD = (on: boolean) => 'height:40px;padding:0 16px;border-radius:999px;font-size:13.5px;font-weight:500;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
 const chipM = (on: boolean) => 'flex:0 0 auto;height:44px;padding:0 18px;border-radius:999px;font-size:14px;font-weight:500;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
@@ -304,14 +306,7 @@ function Mobile({ c }: { c: C }) {
         <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:5')}>
           <button onClick={c.close} aria-label="Close editor" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
           <div className="sheet" role="dialog" aria-label="Team member editor" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:92%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column;gap:18px')}>
-            <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0')} />
-            <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
-              <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{c.mode === 'new' ? 'New team member' : 'Edit team member'}</h2>
-              <button onClick={c.close} aria-label="Close" style={S('flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer')}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
-              </button>
-            </div>
-            <Form c={c} m={true} />
+            <TeamFlow key={c.mode + (c.selectedId ?? 'new')} c={c} />
           </div>
         </div>
       )}
