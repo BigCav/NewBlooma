@@ -9,7 +9,7 @@ import type { ProductsCtl } from './ProductsView';
 
 const FIELD_IN = { ...S('box-sizing:border-box;width:100%;margin-top:2px;padding:0;border:0;outline:none;background:transparent;font:inherit;font-size:16px;color:#0E1116'), minHeight: 0, borderRadius: 0 } as const;
 const BARE = { ...S('flex:1 1 auto;min-width:0;border:0;outline:none;background:transparent;font:inherit;font-size:16px;color:#0E1116'), padding: 0, minHeight: 0, width: 'auto', borderRadius: 0 } as const;
-const QTYS = [6, 12, 24, 48];
+const QTYS = [6, 12, 24];
 
 const I_BOX = <><path d="M4 8l8-4 8 4v8l-8 4-8-4z" /><path d="M4 8l8 4 8-4M12 12v8" /></>;
 const I_HASH = <path d="M9 4 7 20M17 4l-2 16M4 9h16M3 15h16" />;
