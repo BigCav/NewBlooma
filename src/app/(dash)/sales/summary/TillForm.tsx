@@ -25,6 +25,21 @@ export function TillForm({ day, expected, till, mobile }: { day: string; expecte
     router.refresh();
   });
   const input = 'box-sizing:border-box;width:100%;height:' + h + 'px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;color:#0E1116;background:#FFFFFF';
+  if (mobile) {
+    const card = 'display:block;box-sizing:border-box;padding:10px 16px 12px;border:1px solid #E1E4E9;border-radius:16px;background:#FFFFFF';
+    const bare = { ...S('box-sizing:border-box;width:100%;margin-top:2px;padding:0;border:0;outline:none;background:transparent;font:inherit;font-size:16px;color:#0E1116'), minHeight: 0, borderRadius: 0 } as const;
+    return (
+      <div style={S('display:flex;flex-direction:column;gap:12px')}>
+        {till && <p style={S('margin:0;font-size:13.5px;color:#5E6673')}>Closed with {fmt(till.counted_cents)} counted against {fmt(till.expected_cents)} expected. {verdict(till.counted_cents - till.expected_cents)} Count again to update it.</p>}
+        <label style={S(card)}><span style={S('display:block;font-size:12.5px;color:#5E6673')}>Cash counted in the drawer</span>
+          <input inputMode="decimal" value={amount} onChange={(e) => { setAmount(decimalInput(e.target.value)); setMsg(null); }} placeholder={String(expected / 100)} style={bare} /></label>
+        <label style={S(card)}><span style={S('display:block;font-size:12.5px;color:#5E6673')}>Note (optional)</span>
+          <input type="text" maxLength={300} value={note} onChange={(e) => { setNote(e.target.value); setMsg(null); }} placeholder="For example, paid the florist from the till" style={bare} /></label>
+        {msg && <p role={msg.ok ? 'status' : 'alert'} style={S('margin:0;font-size:13.5px;font-weight:500;color:' + (msg.ok ? '#14624A' : '#B42318'))}>{msg.text}</p>}
+        <button onClick={save} disabled={busy || !amount} style={S('width:100%;height:52px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;cursor:pointer;opacity:' + (busy || !amount ? 0.5 : 1))}>{till ? 'Update the count' : 'Close the till'}</button>
+      </div>
+    );
+  }
   return (
     <div style={S('display:flex;flex-direction:column;gap:12px')}>
       {till && <p style={S('margin:0;font-size:13.5px;color:#5E6673')}>Closed with {fmt(till.counted_cents)} counted against {fmt(till.expected_cents)} expected. {verdict(till.counted_cents - till.expected_cents)} Count again to update it.</p>}
