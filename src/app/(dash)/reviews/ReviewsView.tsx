@@ -3,13 +3,14 @@
 // only the {{ }} holes are real data and handlers are real server actions.
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
-import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
+import { PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
 import { deleteReply, requestReviews, saveReply } from './actions';
+import { ReviewsMobile } from './ReviewsMobile';
 
 export type ReviewRow = { id: string; name: string; stars: number; text: string; svc: string; pro: string; date: string; reply: string };
 type Props = { rows: ReviewRow[]; salonName: string };
-const FILTERS: [string, string][] = [['all', 'All'], ['reply', 'Needs reply'], ['5', '5 stars'], ['4', '4 stars'], ['low', '3 or fewer']];
+export const FILTERS: [string, string][] = [['all', 'All'], ['reply', 'Needs reply'], ['5', '5 stars'], ['4', '4 stars'], ['low', '3 or fewer']];
 const chip = (on: boolean) => 'flex:0 0 auto;height:40px;padding:0 14px;border-radius:999px;font-size:13.5px;font-weight:500;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
 const STARS = '★★★★★';
 
@@ -24,6 +25,7 @@ function useReviews(props: Props) {
     return () => mq.removeEventListener('change', f);
   }, []);
   const [filter, setFilter] = useState('all');
+  const [query, setQuery] = useState('');
   const [replyId, setReplyId] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [notice, setNotice] = useState('');
@@ -34,10 +36,11 @@ function useReviews(props: Props) {
   const save = (id: string) => startT(async () => { const r = await saveReply(id, text); if (r.error) { setError(r.error); return; } setError(''); setNotice(r.notice ?? ''); setReplyId(null); setText(''); router.refresh(); });
   const removeReply = (id: string) => startT(async () => { const r = await deleteReply(id); if (r.error) { setError(r.error); return; } setError(''); setNotice(r.notice ?? ''); setReplyId(null); setText(''); router.refresh(); });
   const request = () => startT(async () => { const r = await requestReviews(); if (r.error) { setError(r.error); setNotice(''); return; } setError(''); setNotice(r.notice ?? ''); router.refresh(); });
-  return { ...props, busy, narrow, filter, pickFilter: (f: string) => { setFilter(f); setReplyId(null); setError(''); }, replyId, text, setText, notice, error, n, avg, shown, save, removeReply, request,
+  return { ...props, busy, narrow, query, setQuery, filter, pickFilter: (f: string) => { setFilter(f); setReplyId(null); setError(''); }, replyId, text, setText, notice, error, n, avg, shown, save, removeReply, request,
     openReply: (r: ReviewRow) => { setReplyId(r.id); setText(r.reply); setError(''); }, closeReply: () => { setReplyId(null); setText(''); setError(''); } };
 }
 type C = ReturnType<typeof useReviews>;
+export type ReviewsCtl = C;
 
 function Summary({ c, m }: { c: C; m: boolean }) {
   const rounded = Math.round(c.avg);
@@ -103,19 +106,10 @@ function Desktop({ c }: { c: C }) {
     </div>
   );
 }
-function Mobile({ c }: { c: C }) {
-  return (
-    <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
-      <MobileHeader title="Reviews" subtitle="What clients say" showSearch={false} />
-      <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:20px')}><Summary c={c} m={true} /><Filters c={c} /><List c={c} m={true} /></main>
-      <MobileTabs active="more" />
-    </div>
-  );
-}
 export function ReviewsView(props: Props) {
   const c = useReviews(props);
   return (<>
-    {c.narrow !== false && <Mobile c={c} />}
+    {c.narrow !== false && <ReviewsMobile c={c} filters={FILTERS} />}
     {c.narrow !== true && <Desktop c={c} />}
   </>);
 }
