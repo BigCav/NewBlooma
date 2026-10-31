@@ -38,6 +38,9 @@ const MENUS: Record<string, { title: string; items: { href: string; label: strin
 const itemsOf = (id: string, role: string) => (MENUS[id]?.items ?? []).filter((x) => !MENUS[id].hide?.(role).includes(x.href));
 const hasMenu = (id: string, role: string) => itemsOf(id, role).length > 1;
 
+/** The desktop menu is kept open. Set this to false to bring back the collapse button and the remembered choice. */
+const RAIL_LOCKED_OPEN = true;
+
 export function SideNav({ slug, unread, role }: { slug: string; unread: number; role: string }) {
   const p = usePathname();
   const here = RAIL.find(([, href]) => p.startsWith(href))?.[0];
@@ -46,9 +49,10 @@ export function SideNav({ slug, unread, role }: { slug: string; unread: number; 
   if (open) lastOpen.current = open;
   // Going to a page that has no menu of its own closes the menu.
   useEffect(() => { if (!(here && hasMenu(here, role))) setOpen(null); }, [here, role]);
-  const [wide, setWide] = useState(false);
+  const [wideSaved, setWide] = useState(false);
+  const wide = RAIL_LOCKED_OPEN || wideSaved;
   useEffect(() => { try { setWide(localStorage.getItem('aster_rail') === '1'); } catch { /* storage blocked */ } }, []);
-  const toggle = () => setWide((w) => { try { localStorage.setItem('aster_rail', w ? '0' : '1'); } catch { /* storage blocked */ } return !w; });
+  const toggle = () => RAIL_LOCKED_OPEN ? undefined : setWide((w) => { try { localStorage.setItem('aster_rail', w ? '0' : '1'); } catch { /* storage blocked */ } return !w; });
   const item = (id: string, href: string, label: string, extra?: React.CSSProperties, ext = false) => {
     const on = !ext && p.startsWith(href);
     if (hasMenu(id, role)) {
@@ -75,7 +79,7 @@ export function SideNav({ slug, unread, role }: { slug: string; unread: number; 
   return (<>
     <nav className={'rail' + (wide ? ' wide' : '')} aria-label="Main">
       <div className="rail-head">
-      <button type="button" onClick={toggle} aria-expanded={wide} aria-label={wide ? 'Collapse menu' : 'Expand menu'} title={wide ? 'Collapse menu' : 'Expand menu'} className="rail-logo" style={{ width: 40, height: 40, flex: '0 0 auto', border: 0, padding: 0, cursor: 'pointer', borderRadius: 14, background: '#0E1116', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+      <button type="button" onClick={toggle} disabled={RAIL_LOCKED_OPEN} aria-expanded={RAIL_LOCKED_OPEN ? undefined : wide} aria-label={RAIL_LOCKED_OPEN ? 'Aster' : wide ? 'Collapse menu' : 'Expand menu'} title={RAIL_LOCKED_OPEN ? undefined : wide ? 'Collapse menu' : 'Expand menu'} className="rail-logo" style={{ width: 40, height: 40, flex: '0 0 auto', border: 0, padding: 0, cursor: RAIL_LOCKED_OPEN ? 'default' : 'pointer', opacity: 1, borderRadius: 14, background: '#0E1116', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="7.5" /><path d="M8.5 13.5c1 1.6 2.2 2.3 3.5 2.3s2.5-.7 3.5-2.3" /></svg>
       </button>
       <span className="rail-name" aria-hidden="true">Aster</span>
