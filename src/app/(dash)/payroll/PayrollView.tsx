@@ -77,7 +77,7 @@ function Desktop({ c }: { c: C }) {
   return (
     <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 8px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <PageHeader title="Payroll" subtitle="Timesheets and commission" showSearch={false} showAction={false} />
-      <div style={S('display:flex;flex-direction:column;gap:16px;max-width:760px')}><Controls c={c} m={false} /></div>
+      <div style={S('display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;align-items:stretch')}><Controls c={c} m={false} /></div>
       <section aria-label="Team" style={S('display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:16px;align-items:start')}><PayRows c={c} onOpen={setSel} /></section>
       {sel && <PayrollMobile key={sel + c.tab} c={c} drawer startId={sel} onClose={() => setSel(null)} />}
     </div>
