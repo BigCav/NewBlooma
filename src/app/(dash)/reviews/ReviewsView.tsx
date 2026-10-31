@@ -54,7 +54,7 @@ function Summary({ c, m }: { c: C; m: boolean }) {
       </div>
     </section>
     <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:10px')}>
-      <button onClick={c.request} disabled={c.busy} style={S('height:44px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500;padding:0 20px;' + 'flex:1 1 100%')}>Ask recent clients for a review</button>
+      <button onClick={c.request} disabled={c.busy} style={S('height:44px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500;padding:0 20px;' + (m ? 'flex:1 1 100%' : 'flex:0 0 auto'))}>Ask recent clients for a review</button>
     </div>
     {!!c.notice && <span role="status" style={S('align-self:flex-start;padding:6px 14px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:13px;font-weight:500')}>{c.notice}</span>}
     {!!c.error && !c.replyId && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
