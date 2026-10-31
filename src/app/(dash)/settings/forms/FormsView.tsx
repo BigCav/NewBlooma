@@ -74,133 +74,6 @@ const Section = ({ id, label, children, help, m }: { id: string; label: string; 
   </div>
 );
 
-function Editor({ c, m }: { c: C; m: boolean }) {
-  const d = c.cur;
-  if (!d) return (
-    <section style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:14px')}>
-      <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>No forms yet</h2>
-      <p style={S('margin:0;color:#5E6673;font-size:14.5px')}>Forms are what clients fill in before a visit, like a consultation or a consent. Start from a ready-made one and change it, or make your own with New form.</p>
-      {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
-      <div style={S('display:flex;flex-wrap:wrap;gap:8px')}>{c.unused.map((s) => <button key={s.key} onClick={() => c.starter(s.key)} disabled={c.busy} style={S(chip(false))}>{s.name}</button>)}</div>
-    </section>
-  );
-  const staff = d.how === 'staff';
-  const missOn: Miss = staff && d.miss === 'ask' ? 'warn' : d.miss;
-  const validName = VALID_OPTS.find((v) => v[0] === d.validMonths)?.[1] ?? '';
-  const reqText = d.catIds.length ? 'Needed for ' + c.cats.filter((x) => d.catIds.includes(x.id)).map((x) => x.name.toLowerCase()).join(', ') + ' services' : 'Not needed for any service yet';
-  const mv = (i: number, dir: number) => c.patch((x) => { const t = x.qs[i + dir]; x.qs[i + dir] = x.qs[i]; x.qs[i] = t; });
-  return (
-    <section aria-label="Edit form" style={S('display:flex;flex-direction:column;gap:20px;min-width:0')}>
-      <div style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:' + (m ? 20 : 28) + 'px;display:flex;flex-direction:column;gap:22px')}>
-        <div><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em;overflow-wrap:anywhere')}>{d.name || 'Untitled form'}</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>{reqText}</p></div>
-        <div style={S('display:flex;flex-direction:column;gap:8px')}>
-          <label htmlFor="fm-name" style={S('font-size:14px;font-weight:600')}>Form name</label>
-          <input id="fm-name" className="field" type="text" maxLength={80} value={d.name} onChange={(e) => c.patch((x) => { x.name = e.target.value; })} style={{ ...S(INPUT), ...noMin }} />
-        </div>
-        <Section m={m} id="g-cats" label="Needed for" help={c.cats.length ? undefined : 'Add a service category under Services first.'}>
-          {c.cats.map((o) => { const on = d.catIds.includes(o.id); return <button key={o.id} type="button" aria-pressed={on} onClick={() => c.patch((x) => { x.catIds = on ? x.catIds.filter((y) => y !== o.id) : x.catIds.concat(o.id); })} style={S(tick(on))}>
-            <span aria-hidden="true" style={S('flex:0 0 20px;width:20px;height:20px;border-radius:6px;border:1.5px solid ' + (on ? '#5B3DF5' : '#B9BFC9') + ';background:#FFFFFF;display:flex;align-items:center;justify-content:center')}>{on && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5B3DF5" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>}</span>{o.name}</button>; })}
-        </Section>
-        <Section m={m} id="g-valids" label="Valid for" help={d.validMonths === 0 ? 'Clients complete this form again at every visit.' : 'After it is completed, it stays valid for ' + validName + '. Then clients are asked again.'}>
-          {VALID_OPTS.map(([v, l]) => <button key={v} type="button" aria-pressed={d.validMonths === v} onClick={() => c.patch((x) => { x.validMonths = v; })} style={S(chip(d.validMonths === v))}>{l}</button>)}
-        </Section>
-        <Section m={m} id="g-hows" label="Who completes it">
-          {HOW_OPTS.map(([v, l]) => <button key={v} type="button" aria-pressed={d.how === v} onClick={() => c.patch((x) => { x.how = v; if (v === 'staff' && x.miss === 'ask') x.miss = 'warn'; })} style={S(chip(d.how === v))}>{l}</button>)}
-        </Section>
-        <Section m={m} id="g-miss" label="If it is missing at the appointment" help={staff ? 'Staff-recorded forms cannot be asked for online, so staff are warned on the calendar.' : missOn === 'ask' ? 'Clients are asked to complete it as soon as they book online. Staff still see a warning.' : 'Staff see a warning on the appointment in the calendar. Booking still goes through.'}>
-          <button type="button" aria-pressed={missOn === 'warn'} onClick={() => c.patch((x) => { x.miss = 'warn'; })} style={S(chip(missOn === 'warn'))}>Warn staff</button>
-          <button type="button" aria-pressed={missOn === 'ask'} disabled={staff} onClick={() => c.patch((x) => { x.miss = 'ask'; })} style={S(chip(missOn === 'ask') + (staff ? ';opacity:0.45;cursor:not-allowed' : ''))}>Ask client when booking</button>
-        </Section>
-        {staff && (
-          <Section m={m} id="g-patch" label="Patch test" help="A patch test is recorded with a date and a result. A reaction puts a warning on the appointment and on the client.">
-            <button type="button" aria-pressed={d.isPatch} onClick={() => c.patch((x) => { x.isPatch = !x.isPatch; })} style={S(chip(d.isPatch))}>{d.isPatch ? 'This is a patch test' : 'Treat as a patch test'}</button>
-          </Section>
-        )}
-        {!staff && (<>
-          <div style={S('display:flex;flex-direction:column;gap:8px')}>
-            <label htmlFor="fm-consent" style={S('font-size:14px;font-weight:600')}>Consent statement (optional)</label>
-            <textarea id="fm-consent" className="field" rows={4} maxLength={1000} value={d.consentText} onChange={(e) => c.patch((x) => { x.consentText = e.target.value; })} placeholder="Clients tick to agree and type their name to sign" style={{ ...S('box-sizing:border-box;width:100%;padding:12px 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF;resize:vertical'), ...noMin }} />
-          </div>
-          <Section m={m} id="g-photos" label="Photos">
-            <button type="button" aria-pressed={d.askPhotos} onClick={() => c.patch((x) => { x.askPhotos = !x.askPhotos; })} style={S(chip(d.askPhotos))}>{d.askPhotos ? 'Asking permission for photos' : 'Ask permission for photos'}</button>
-          </Section>
-        </>)}
-      </div>
-
-      <div style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:' + (m ? 20 : 28) + 'px;display:flex;flex-direction:column;gap:16px')}>
-        <div><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Questions</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>{staff && d.isPatch ? 'A patch test is recorded as a date, a result and notes. These questions are shown with the answers.' : 'Clients see these in this order.'}</p></div>
-        {d.qs.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>{d.consentText.trim() ? 'No questions. Clients only see the consent statement.' : 'No questions yet. Add the first one below.'}</p>}
-        <ul style={S('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:' + (m ? 16 : 12) + 'px')}>
-          {d.qs.map((q, i) => (
-            <li key={q.id} style={S(m ? 'display:flex;flex-direction:column;gap:10px;padding:' + (i === 0 ? '0' : '16px') + ' 0 0;border-top:' + (i === 0 ? '0' : '1px solid #EEF0F3') : 'display:flex;flex-direction:column;gap:10px;padding:14px;border:1px solid #EEF0F3;border-radius:18px;background:#FAFAFB')}>
-              <input aria-label={'Question ' + (i + 1)} className="field" type="text" maxLength={200} value={q.label} onChange={(e) => c.patch((x) => { x.qs[i].label = e.target.value; })} style={{ ...S(INPUT), ...noMin }} />
-              <div style={S(m ? SCROLL : 'display:flex;flex-wrap:wrap;align-items:center;gap:8px')}>
-                <select aria-label={'Answer type for question ' + (i + 1)} value={q.type} onChange={(e) => c.patch((x) => { x.qs[i].type = e.target.value as QType; })} style={{ ...S('flex:0 0 auto;box-sizing:border-box;height:36px;padding:0 10px;border:1px solid #E1E4E9;border-radius:999px;font:inherit;font-size:13px;color:#0E1116;background:#FFFFFF'), ...noMin, width: 'auto' }}>
-                  {QTYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                </select>
-                <button type="button" aria-pressed={q.required} onClick={() => c.patch((x) => { x.qs[i].required = !x.qs[i].required; })} style={S('flex:0 0 auto;height:36px;padding:0 14px;border-radius:999px;font:inherit;font-size:13px;font-weight:500;cursor:pointer;border:1px solid ' + (q.required ? '#14624A' : '#E1E4E9') + ';background:' + (q.required ? '#DDF3EA' : '#FFFFFF') + ';color:' + (q.required ? '#14624A' : '#5E6673'))}>{q.required ? 'Required' : 'Optional'}</button>
-                {!m && <span style={S('flex:1 1 auto')} />}
-                <button type="button" onClick={() => mv(i, -1)} disabled={i === 0} aria-label="Move up" style={S(ICON + 'opacity:' + (i > 0 ? 1 : 0.35))}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 14l6-6 6 6" /></svg></button>
-                <button type="button" onClick={() => mv(i, 1)} disabled={i === d.qs.length - 1} aria-label="Move down" style={S(ICON + 'opacity:' + (i < d.qs.length - 1 ? 1 : 0.35))}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 10l6 6 6-6" /></svg></button>
-                <button type="button" onClick={() => c.patch((x) => { x.qs.splice(i, 1); })} aria-label="Remove question" style={S(ICON + 'color:#B42318')}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12" /></svg></button>
-              </div>
-              {(q.type === 'one' || q.type === 'many') && <input aria-label={'Options for question ' + (i + 1)} className="field" type="text" value={q.options} onChange={(e) => c.patch((x) => { x.qs[i].options = e.target.value; })} placeholder="Options, separated by commas" style={{ ...S(INPUT + ';height:44px'), ...noMin }} />}
-              {q.type === 'yesno' && <input aria-label={'Follow-up for question ' + (i + 1)} className="field" type="text" maxLength={120} value={q.detail} onChange={(e) => c.patch((x) => { x.qs[i].detail = e.target.value; })} placeholder="If they say yes, ask (optional), for example What are you allergic to?" style={{ ...S(INPUT + ';height:44px'), ...noMin }} />}
-            </li>
-          ))}
-        </ul>
-        <div style={S('display:flex;flex-direction:column;gap:8px')}>
-          <label htmlFor="fm-new" style={S('font-size:14px;font-weight:600')}>Add a question</label>
-          <div style={S('display:flex;flex-wrap:wrap;gap:8px')}>
-            <input id="fm-new" className="field" type="text" maxLength={200} value={c.nq.label} onChange={(e) => { c.setNq({ ...c.nq, label: e.target.value }); c.setError(''); }} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); c.addQ(); } }} placeholder="For example, Are you pregnant or breastfeeding?" style={{ ...S(INPUT), ...noMin, flex: '1 1 240px', width: 'auto' }} />
-            <select aria-label="Answer type" value={c.nq.type} onChange={(e) => c.setNq({ ...c.nq, type: e.target.value as QType })} style={{ ...S('box-sizing:border-box;height:48px;padding:0 12px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:14px;color:#0E1116;background:#FFFFFF'), ...noMin, width: 'auto' }}>
-              {QTYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
-            <button type="button" onClick={c.addQ} className="ghost" style={S('height:48px;padding:0 20px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font:inherit;font-size:14px;font-weight:500;cursor:pointer')}>Add</button>
-          </div>
-        </div>
-      </div>
-
-      <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:12px')}>
-        <button type="button" onClick={c.save} disabled={c.busy || !c.isDirty} style={S('height:48px;padding:0 28px;border:0;border-radius:999px;font:inherit;font-size:15px;font-weight:500;cursor:pointer;background:' + (c.isDirty ? '#0E1116' : '#E9ECF0') + ';color:' + (c.isDirty ? '#FFFFFF' : '#5E6673'))}>{c.busy ? 'Saving' : c.isDirty ? 'Save changes' : 'Saved'}</button>
-        {!d.isNew && !c.isDirty && <Link href={`/settings/forms/preview?f=${d.id}`} className="ghost" style={S('display:flex;align-items:center;height:48px;box-sizing:border-box;padding:0 22px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14.5px;font-weight:500;text-decoration:none')}>See what clients see</Link>}
-        {!c.confirmDel && <button type="button" className="ghost" onClick={() => (d.isNew ? c.remove() : c.setConfirmDel(true))} style={S('height:48px;padding:0 16px;border:0;border-radius:999px;background:transparent;color:#B42318;font:inherit;font-size:14px;font-weight:500;cursor:pointer')}>{d.isNew ? 'Discard' : 'Delete form'}</button>}
-        {!!c.error && <span role="alert" style={S('color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</span>}
-        {!!c.notice && <span role="status" style={S('color:#14624A;font-size:13.5px;font-weight:500')}>{c.notice}</span>}
-      </div>
-      {c.confirmDel && (
-        <div style={S('display:flex;flex-direction:column;gap:10px;padding:14px;border:1px solid #F3C6C3;border-radius:16px;background:#FEF3F2')}>
-          <span style={S('font-size:14px;font-weight:600')}>Delete {d.name}?</span>
-          <span style={S('font-size:13.5px;color:#5E6673')}>Clients stop being asked for it. Answers already given stay on their record.</span>
-          <div style={S('display:flex;gap:10px')}>
-            <button type="button" onClick={c.remove} disabled={c.busy} style={S('flex:1 1 0;height:44px;border:0;border-radius:999px;background:#C0261B;color:#FFFFFF;font:inherit;font-size:14px;font-weight:500;cursor:pointer')}>Delete form</button>
-            <button type="button" className="ghost" onClick={() => c.setConfirmDel(false)} style={S('flex:1 1 0;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font:inherit;font-size:14px;font-weight:500;cursor:pointer')}>Keep</button>
-          </div>
-        </div>
-      )}
-    </section>
-  );
-}
-
-function DeskList({ c }: { c: C }) {
-  const sub = (d: C['forms'][number]) => (d.catIds.length ? c.cats.filter((x) => d.catIds.includes(x.id)).map((x) => x.name).join(', ') : 'No services') + ' · ' + d.qs.length + (d.qs.length === 1 ? ' question' : ' questions');
-  return (
-    <nav aria-label="Forms" style={S('flex:0 0 300px;display:flex;flex-direction:column;gap:10px')}>
-      <div style={S('display:flex;flex-direction:column;gap:8px')}>
-        {c.forms.map((d) => { const on = d.id === c.cur?.id; return (
-          <button key={d.id} type="button" onClick={() => c.pick(d.id)} aria-current={on} style={S('width:100%;box-sizing:border-box;text-align:left;font:inherit;cursor:pointer;padding:14px 16px;border-radius:16px;display:flex;flex-direction:column;gap:2px;border:1px solid ' + (on ? '#0E1116' : '#E6E8EC') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116'))}><span style={S('font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{d.name || 'Untitled form'}</span><span style={S('font-size:12.5px;color:' + (on ? '#C9CDD5' : '#5E6673'))}>{sub(d)}</span></button>); })}
-      </div>
-      <button type="button" onClick={c.addForm} className="ghost" style={S('height:44px;border:1px dashed #C9CDD5;border-radius:16px;background:transparent;color:#0E1116;font:inherit;font-size:14px;font-weight:500;cursor:pointer')}>+ New form</button>
-      {c.forms.length > 0 && c.unused.length > 0 && (
-        <div style={S('display:flex;flex-direction:column;gap:8px;padding-top:6px')}>
-          <span style={S('font-size:13px;color:#5E6673')}>Add a ready-made form</span>
-          <div style={S('display:flex;flex-wrap:wrap;gap:8px')}>{c.unused.map((s) => <button key={s.key} type="button" onClick={() => c.starter(s.key)} disabled={c.busy} className="ghost" style={S('height:36px;padding:0 14px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font:inherit;font-size:13px;font-weight:500;cursor:pointer')}>{s.name}</button>)}</div>
-        </div>
-      )}
-    </nav>
-  );
-}
-
 const Chevron = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')}><path d="M9 6l6 6-6 6" /></svg>;
 
 /** Phone: a list of forms like Settings, and each one opens as a full-page sheet. */
@@ -252,7 +125,8 @@ export function FormsView(props: Props) {
       <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 8px;display:flex;flex-direction:column;gap:24px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
         <div>{back}</div>
         <PageHeader title="Forms and consultations" subtitle="What clients fill in before an appointment. Set which services need which form, how long it stays valid, and what happens when one is missing." showSearch={false} showAction={false} />
-        <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}><DeskList c={c} /><div style={S('flex:999 1 520px;min-width:0')}><Editor c={c} m={false} /></div></div>
+        <div style={S('width:100%;max-width:760px;display:flex;flex-direction:column;gap:14px')}><MobileList c={c} /></div>
+        {c.open && c.cur && <div className="m-cal cal-root m-drawer"><FormPage key={c.cur.id} c={c} /></div>}
       </div>
     )}
   </>);
