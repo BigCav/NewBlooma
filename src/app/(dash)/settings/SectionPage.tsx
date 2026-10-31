@@ -81,7 +81,7 @@ const PICK_TITLE: Record<string, string> = { window: 'Clients can book up to', n
 const nameOf = (k: string, v: string) => GROUPS[k].find((o) => o[0] === v)?.[1] ?? '';
 
 /** One settings section on the phone as its own page: cards of fields, rows and switches, and a Save bar. */
-export function SectionPage({ c }: { c: SettingsCtl }) {
+export function SectionPage({ c, inline }: { c: SettingsCtl; inline?: boolean }) {
   const cur = SECTIONS.find((x) => x.id === c.section)!;
   const v: Values = c.v, s = c.section;
   const [night, setNight] = useNightMode();
@@ -89,9 +89,9 @@ export function SectionPage({ c }: { c: SettingsCtl }) {
   const key = pick as keyof Values;
   const showBar = s !== 'appearance';
   return (
-    <div role="dialog" aria-label={cur.label} style={S(PAGE)}>
+    <div role={inline ? 'region' : 'dialog'} aria-label={cur.label} style={S(inline ? PAGE.replace('position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;', 'position:relative;height:calc(100dvh - 170px);min-height:520px;border:1px solid #E6E8EC;border-radius:24px;') : PAGE)}>
       <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px;border-bottom:1px solid #E6E8EC')}>
-        <button onClick={c.close} aria-label="Back" style={S(RING)}>{BACK}</button>
+        {!inline && <button onClick={c.close} aria-label="Back" style={S(RING)}>{BACK}</button>}
         <div style={S('flex:1 1 auto;min-width:0')}>
           <div style={S('font-size:18px;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{cur.label}</div>
           <div style={S('font-size:13px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{cur.desc}</div>
