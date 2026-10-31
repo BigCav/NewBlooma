@@ -141,3 +141,5 @@ html[data-theme=dark] img,html[data-theme=dark] video,html[data-theme=dark] ifra
 @keyframes drIn{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
 @keyframes drFade{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){.m-drawer .sheet,.m-drawer>div>button{animation:none !important}}
+
+.d-cal .s-card:hover{background:#FAFAFB !important;border-color:#D5D9E0 !important}

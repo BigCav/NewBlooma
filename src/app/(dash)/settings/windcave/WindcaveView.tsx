@@ -56,17 +56,6 @@ function Desktop({ c }: { c: C }) {
     <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 8px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <PageHeader title="Settings" subtitle="Business details and booking rules" showSearch={false} showAction={false} />
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
-        <nav aria-label="Settings sections" style={S('box-sizing:content-box;flex:1 1 300px;max-width:360px;min-width:0;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;overflow:hidden')}>
-          <ul style={S('margin:0;padding:0;list-style:none')}>
-            {SECTIONS.map(([id, label, desc], i) => (
-              <li key={id}>
-                <Link href={'/settings?section=' + id} aria-label={label + ', ' + desc} style={S('display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:68px;padding:10px 20px;border-bottom:' + (i === SECTIONS.length - 1 ? '0' : '1px solid #EEF0F3') + ';text-align:left;color:#0E1116;text-decoration:none;background:' + (id === 'payments' ? '#F4F5F7' : 'transparent'))}>
-                  <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600')}>{label}</span><span style={S('display:block;margin-top:2px;font-size:13px;color:#5E6673')}>{desc}</span></span><Chevron />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
         <div style={S('flex:999 1 520px;min-width:0;max-width:760px')}><Mobile c={c} inline /></div>
       </div>
     </div>

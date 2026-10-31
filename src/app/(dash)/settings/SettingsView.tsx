@@ -3,7 +3,7 @@
 // the {{ }} holes are real salon settings and Save writes them through a server action.
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
 import { saveSettings } from './actions';
@@ -49,28 +49,37 @@ export type SettingsCtl = C;
 
 const Chevron = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')}><path d="M9.5 6l6 6-6 6" /></svg>;
 
+const ICO = (d: React.ReactNode) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3A2BB5" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>;
+const SEC_ICON: Record<string, React.ReactNode> = {
+  business: ICO(<><path d="M4 9.5 5.2 4.5h13.6L20 9.5" /><path d="M5 12.5V20h14v-7.5" /><path d="M10 20v-4.5h4V20" /></>),
+  hours: ICO(<><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></>),
+  booking: ICO(<><rect x="3.5" y="5" width="17" height="15.5" rx="3" /><path d="M3.5 10h17M8 3v4M16 3v4" /></>),
+  payments: ICO(<><rect x="3" y="6" width="18" height="12.5" rx="3" /><path d="M3 10.5h18M7 15h3" /></>),
+  notifications: ICO(<><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15z" /><path d="M10 20.5a2 2 0 0 0 4 0" /></>),
+  appearance: ICO(<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" />),
+  forms: ICO(<><rect x="5" y="3.5" width="14" height="17" rx="2.5" /><path d="M9 9h6M9 13h6M9 17h3" /></>),
+};
+const TILE_D = 'flex:0 0 48px;width:48px;height:48px;border-radius:16px;background:#EEEAFE;display:flex;align-items:center;justify-content:center';
+const CARD_D = 'display:flex;align-items:center;gap:16px;box-sizing:border-box;min-height:92px;padding:18px 20px;border:1px solid #E6E8EC;border-radius:24px;background:#FFFFFF;text-align:left;text-decoration:none;font:inherit;color:#0E1116;cursor:pointer';
+
+/** Desktop: every settings area as a card in a grid. An area opens in the right-hand drawer. */
 function Desktop({ c }: { c: C }) {
+  const body = (id: string, label: string, desc: string) => (<>
+    <span style={S(TILE_D)}>{SEC_ICON[id]}</span>
+    <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:16px;font-weight:600;letter-spacing:-0.01em')}>{label}</span><span style={S('display:block;margin-top:2px;font-size:13.5px;color:#5E6673')}>{desc}</span></span>
+    <Chevron />
+  </>);
   return (
     <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 8px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <PageHeader title="Settings" subtitle="Business details and booking rules" showSearch={false} showAction={false} />
-      <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
-        <nav aria-label="Settings sections" style={S('box-sizing:content-box;flex:1 1 300px;max-width:360px;min-width:0;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;overflow:hidden')}>
-          <ul style={S('margin:0;padding:0;list-style:none')}>
-            {SECTIONS.map((x, i) => (
-              <li key={x.id}>
-                <button onClick={() => c.pick(x.id)} aria-label={x.label + ', ' + x.desc} style={S('display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:68px;padding:10px 20px;border:0;border-bottom:' + (i === SECTIONS.length - 1 ? '0' : '1px solid #EEF0F3') + ';text-align:left;font:inherit;color:#0E1116;background:' + (c.section === x.id ? '#F4F5F7' : 'transparent'))}>
-                  <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600')}>{x.label}</span><span style={S('display:block;margin-top:2px;font-size:13px;color:#5E6673')}>{x.desc}</span></span><Chevron />
-                </button>
-              </li>
-            ))}
-          </ul>
-          <Link href="/settings/forms" aria-label="Forms and consultations, what clients fill in before a visit" style={S('display:flex;align-items:center;gap:12px;box-sizing:border-box;min-height:68px;padding:10px 20px;border-top:1px solid #EEF0F3;text-decoration:none;color:#0E1116')}><span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600')}>Forms and consultations</span><span style={S('display:block;margin-top:2px;font-size:13px;color:#5E6673')}>What clients fill in before a visit</span></span><Chevron /></Link>
-        </nav>
-        <div style={S('flex:999 1 520px;min-width:0;max-width:760px;display:flex;flex-direction:column;gap:12px')}>
-          {!!c.notice && <span role="status" style={S('align-self:flex-start;padding:6px 14px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:13px;font-weight:500')}>{c.notice}</span>}
-          <SectionPage c={c} inline />
-        </div>
-      </div>
+      {!!c.notice && <span role="status" style={S('align-self:flex-start;padding:6px 14px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:13px;font-weight:500')}>{c.notice}</span>}
+      <section aria-label="Settings sections" style={S('display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px')}>
+        {SECTIONS.map((x) => (
+          <button key={x.id} onClick={() => c.pick(x.id)} aria-label={x.label + ', ' + x.desc} className="s-card" style={S(CARD_D)}>{body(x.id, x.label, x.desc)}</button>
+        ))}
+        <Link href="/settings/forms" aria-label="Forms and consultations, what clients fill in before a visit" className="s-card" style={S(CARD_D)}>{body('forms', 'Forms and consultations', 'What clients fill in before a visit')}</Link>
+      </section>
+      {c.open && <div className="m-cal cal-root m-drawer"><SectionPage c={c} /></div>}
     </div>
   );
 }
@@ -104,6 +113,8 @@ function Mobile({ c }: { c: C }) {
 
 export function SettingsView({ initial, section, closed }: { initial: Values; section?: string; closed?: Closed[] }) {
   const c = useSettings(initial, SECTIONS.some((x) => x.id === section) ? section : undefined, closed);
+  const deep = useRef(section);
+  useEffect(() => { if (c.narrow === false && deep.current && SECTIONS.some((x) => x.id === deep.current)) { c.pick(deep.current); deep.current = undefined; } }, [c.narrow]); // eslint-disable-line react-hooks/exhaustive-deps
   return (<>
     {c.narrow !== false && <Mobile c={c} />}
     {c.narrow !== true && <Desktop c={c} />}
