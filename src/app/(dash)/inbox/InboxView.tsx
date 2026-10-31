@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's Inbox.dc.html and MobileInbox.dc.html. Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
+import { rootCls } from '@/components/drawer';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
@@ -73,7 +74,7 @@ function useInbox(props: { items: InboxItem[] }) {
     && (!q || (i.client + ' ' + i.summary + ' ' + TYPES[i.type].label).toLowerCase().includes(q)));
   const pages = Math.max(1, Math.ceil(rows.length / PER_PAGE)), pageNo = Math.min(page, pages - 1);
   const pageRows = rows.slice(pageNo * PER_PAGE, (pageNo + 1) * PER_PAGE);
-  const sel = items.find((i) => i.id === selectedId) ?? (narrow === false ? pageRows[0] ?? null : null);
+  const sel = items.find((i) => i.id === selectedId) ?? null;
   const goPage = (n: number) => { setPage(Math.max(0, Math.min(pages - 1, n))); window.scrollTo({ top: 0, behavior: 'smooth' }); document.querySelector('.m-cal .page')?.scrollTo({ top: 0 }); };
   const setFilterP = (f: string) => { setFilter(f); setPage(0); };
   const setQueryP = (v: string) => { setQuery(v); setPage(0); };
@@ -235,21 +236,19 @@ function Desktop({ c }: { c: C }) {
           {c.rows.length === 0 && <p style={S('margin:0;padding:24px 20px;color:#5E6673;font-size:14px')}>{c.query.trim() ? `Nothing matches "${c.query.trim()}".` : 'Nothing here right now.'}</p>}
           <Pager c={c} m={false} />
         </section>
-        <aside aria-label="Details" style={S('flex:1 1 440px;max-width:520px;min-width:0;box-sizing:border-box;position:sticky;top:20px;max-height:calc(100dvh - 40px);overflow-y:auto;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:18px')}>
-          <Panel c={c} m={false} />
-        </aside>
       </div>
+      {c.open && <Mobile c={c} drawer />}
     </div>
   );
 }
 
-function Mobile({ c }: { c: C }) {
+function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
   const [fopen, setFopen] = useState(false);
   const card = (l: string, v: number, tint?: string) => <div key={l} style={S('flex:1 1 0;min-width:0;box-sizing:border-box;padding:16px;border-radius:20px;border:1px solid ' + (tint ? '#F6D9A8' : '#E6E8EC') + ';background:' + (tint ?? '#FFFFFF'))}><div style={S('color:#5E6673;font-size:13px')}>{l}</div><div style={S('margin-top:2px;font-size:30px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{String(v)}</div></div>;
   const close = () => { c.setOpen(false); c.setMode('view'); c.setError(''); };
   const fl = FILTERS.find((f) => f.id === c.filter)?.label ?? 'All';
   return (
-    <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
+    <div className={rootCls(drawer)} style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <MobileHeader title="Inbox" subtitle="Requests, cancellations and messages" query={c.query} onQuery={c.setQuery} placeholder="Search inbox" />
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:14px')}>
         <section aria-label="Inbox at a glance" style={S('display:flex;gap:12px')}>{card('Needs action', c.needs, c.needs > 0 ? '#FFF4E5' : undefined)}{card('Unread', c.unread)}</section>

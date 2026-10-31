@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's Clients.dc.html and MobileClients.dc.html. Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
+import { rootCls } from '@/components/drawer';
 import { useNewParam } from '@/components/useNewParam';
 import { phoneInput } from '@/lib/phone';
 import Link from 'next/link';
@@ -49,7 +50,7 @@ function useClients(props: Props) {
   const first = sel ? sel.name.split(' ')[0] : '';
 
   const select = (id: string) => { setSelectedId(id); setMode('view'); setNotice(''); setError(''); setOpen(true); };
-  const cancel = () => { if (narrow && mode === 'new') { setOpen(false); setMode('view'); setError(''); return; } setMode('view'); setError(''); };
+  const cancel = () => { if (mode === 'new') { setOpen(false); setMode('view'); setError(''); return; } setMode('view'); setError(''); };
   const openNew = () => { setMode('new'); setNc({ name: '', email: '', phone: '' }); setError(''); setNotice(''); setOpen(true); };
   const send = () => {
     if (!sel) return;
@@ -67,7 +68,7 @@ function useClients(props: Props) {
     startT(async () => {
       const r = await createClient(nc.name, nc.email, nc.phone);
       if (r.error || !r.row) { setError(r.error ?? 'Something went wrong'); return; }
-      setAdded((a) => [r.row!, ...a]); setSelectedId(r.row.id); setMode('view'); setFilter('all'); setNc({ name: '', email: '', phone: '' }); setError(''); setNotice('Client added'); setOpen(!!narrow);
+      setAdded((a) => [r.row!, ...a]); setSelectedId(r.row.id); setMode('view'); setFilter('all'); setNc({ name: '', email: '', phone: '' }); setError(''); setNotice('Client added'); setOpen(true);
       router.refresh();
     });
   };
@@ -229,7 +230,7 @@ function Desktop({ c }: { c: C }) {
                 <div style={S('flex:0.7 1 0;min-width:0')}>Visits</div><div style={S('flex:0.9 1 0;min-width:0')}>Spent</div><div style={S('flex:1 1 0;min-width:0')}>Status</div>
               </div>
               {rows.map((r) => (
-                <button key={r.id} className="s-row" onClick={() => c.select(r.id)} onDoubleClick={() => router.push(`/clients/${r.id}`)} title="Double-click to open the profile" aria-label={`${r.name}, ${r.tag}, last visit ${r.last}`} style={S(rowS(r.id === c.sel?.id && c.mode !== 'new'))}>
+                <button key={r.id} className="s-row" onClick={() => c.select(r.id)} onDoubleClick={() => router.push(`/clients/${r.id}`)} title="Double-click to open the profile" aria-label={`${r.name}, ${r.tag}, last visit ${r.last}`} style={S(rowS(c.open && r.id === c.sel?.id && c.mode !== 'new'))}>
                   <span style={S('flex:2.4 1 0;min-width:0;display:flex;align-items:center;gap:12px')}>
                     <span style={S('flex:0 0 40px;width:40px;height:40px;border-radius:999px;background:#EEF0F3;color:#0E1116;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600')}>{initialsOf(r.name)}</span>
                     <span style={S('min-width:0')}><span style={S('display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{r.name}</span><span style={S('display:block;font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{r.email || 'No email'}</span></span>
@@ -246,22 +247,20 @@ function Desktop({ c }: { c: C }) {
           {rows.length === 0 && <p style={S('margin:0;padding:24px 20px;color:#5E6673;font-size:14px;border-top:1px solid #EEF0F3')}>{c.items.length === 0 ? 'No clients yet.' : `Nothing matches "${c.query.trim()}".`}</p>}
           {c.filtered.length > SHOW_MAX && <p style={S('margin:0;padding:16px 20px;color:#5E6673;font-size:13px;border-top:1px solid #EEF0F3')}>Showing the first {SHOW_MAX}. Search to narrow the list.</p>}
         </section>
-        <aside aria-label="Client details" style={S('flex:1 1 440px;max-width:520px;min-width:0;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:16px')}>
-          <Panel c={c} m={false} />
-        </aside>
       </div>
+      {c.open && <Mobile c={c} drawer />}
     </div>
   );
 }
 
-function Mobile({ c }: { c: C }) {
+function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
   const [fopen, setFopen] = useState(false);
   const rows = c.filtered.slice(0, SHOW_MAX);
   const chipS = (on: boolean) => 'flex:0 0 auto;height:44px;padding:0 18px;border-radius:999px;font-size:14px;font-weight:500;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
   const rowS = 'display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:68px;padding:10px 16px;border:0;border-bottom:1px solid #EEF0F3;background:transparent;text-align:left;font:inherit;color:#0E1116;cursor:pointer';
   const sub = (r: ClientRow) => r.next === 'In progress' ? 'In progress' : r.next.startsWith('Today') ? 'Next ' + r.next.toLowerCase() : r.next === 'Not booked' ? 'Last visit ' + r.last.toLowerCase() : 'Next ' + r.next;
   return (
-    <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
+    <div className={rootCls(drawer)} style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <MobileHeader title="Clients" subtitle={`${c.count} client${c.count === 1 ? '' : 's'}`} query={c.query} onQuery={c.setQuery} placeholder="Search clients" />
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:20px')}>
         <section aria-label="Clients at a glance" style={S('display:flex;gap:40px')}>

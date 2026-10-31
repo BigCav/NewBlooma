@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's Services.dc.html and MobileServices.dc.html. Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions. Added for production: who performs a service, new categories.
+import { rootCls } from '@/components/drawer';
 import { useNewParam } from '@/components/useNewParam';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
@@ -49,7 +50,7 @@ function useServices(props: Props) {
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => { setDraft((d) => ({ ...d, [k]: v })); setError(''); setNotice(''); };
   const select = (id: string) => { const s = services.find((x) => x.id === id); if (!s) return; setSelectedId(id); setMode('edit'); setDraft(draftOf(s)); setConfirm(false); setError(''); setNotice(''); setOpen(true); setNc({ open: false, name: '' }); };
   const startNew = () => { setSelectedId(null); setMode('new'); setDraft(blank()); setConfirm(false); setError(''); setNotice(''); setOpen(true); setNc({ open: false, name: '' }); };
-  const cancelNew = () => { const f = services[0]; if (narrow || !f) { setOpen(false); setError(''); return; } select(f.id); };
+  const cancelNew = () => { const f = services[0]; if (true || !f) { setOpen(false); setError(''); return; } select(f.id); };
   const catName = (id: string) => cats.find((c) => c.id === id)?.name ?? '';
 
   const save = () => {
@@ -66,7 +67,7 @@ function useServices(props: Props) {
       setError(''); setConfirm(false); setFilter('all');
       if (r.created) { setSelectedId(r.id!); setMode('edit'); setNotice('Service created'); } else setNotice('Changes saved');
       setDraft((d) => ({ ...d, name, price: String(Math.round(price * 100) / 100) }));
-      if (narrow) setOpen(false);
+      setOpen(false);
       router.refresh();
     });
   };
@@ -78,9 +79,7 @@ function useServices(props: Props) {
       if (r.error) { setError(r.error); setConfirm(false); return; }
       const rest = services.filter((s) => s.id !== id);
       setConfirm(false); setError('');
-      if (narrow) { setSelectedId(null); setOpen(false); setNotice(''); }
-      else if (rest.length) { setSelectedId(rest[0].id); setMode('edit'); setDraft(draftOf(rest[0])); setNotice('Service deleted'); }
-      else { setSelectedId(null); setMode('new'); setDraft(blank()); setNotice('Service deleted'); }
+      setSelectedId(null); setOpen(false); setNotice('');
       router.refresh();
     });
   };
@@ -341,25 +340,19 @@ function Desktop({ c }: { c: C }) {
           {rows.length === 0 && <p style={S('margin:0;padding:24px 20px;color:#5E6673;font-size:14px;border-top:1px solid #EEF0F3')}>{services.length === 0 ? (c.canEdit ? 'No services yet. Add a category, then your first service.' : 'No services yet.') : 'Nothing matches "' + c.query.trim() + '".'}</p>}
         </section>
 
-        <aside aria-label="Service editor" style={S('flex:1 1 440px;max-width:520px;min-width:0;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:20px')}>
-          <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
-            <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{mode === 'new' ? 'New service' : 'Edit service'}</h2>
-            {!!notice && <span role="status" style={S('flex:0 0 auto;padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{notice}</span>}
-          </div>
-          <Editor c={c} m={false} />
-        </aside>
       </div>
+      {c.open && <Mobile c={c} drawer />}
     </div>
   );
 }
 
-function Mobile({ c }: { c: C }) {
+function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
   const { services, rows, cats, open, filter, setFilter, mode } = c;
   const [fopen, setFopen] = useState(false);
   const online = services.filter((s) => s.online).length;
   const chips = [{ id: 'all', label: 'All services' }, ...cats.map((x) => ({ id: x.id, label: x.name }))];
   return (
-    <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
+    <div className={rootCls(drawer)} style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <MobileHeader title="Services" subtitle="What clients can book" query={c.query} onQuery={c.setQuery} placeholder="Search services" />
 
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:20px')}>
