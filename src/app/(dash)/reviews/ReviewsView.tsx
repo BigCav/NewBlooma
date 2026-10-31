@@ -6,7 +6,7 @@ import { useEffect, useState, useTransition } from 'react';
 import { PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
 import { deleteReply, requestReviews, saveReply } from './actions';
-import { ReviewsMobile } from './ReviewsMobile';
+import { ReviewCard, ReviewsMobile } from './ReviewsMobile';
 
 export type ReviewRow = { id: string; name: string; stars: number; text: string; svc: string; pro: string; date: string; reply: string };
 type Props = { rows: ReviewRow[]; salonName: string };
@@ -69,40 +69,20 @@ function Filters({ c }: { c: C }) {
   </>);
 }
 
-function List({ c, m }: { c: C; m: boolean }) {
-  return (<>
-    {c.shown.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>{c.n === 0 ? 'No reviews yet. Ask recent clients to leave one.' : 'No reviews match this filter.'}</p>}
-    {c.shown.map((r) => {
-      const open = c.replyId === r.id;
-      return (
-        <article key={r.id} style={S(`box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:${m ? 18 : 24}px;display:flex;flex-direction:column;gap:12px`)}>
-          <div style={S('display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 12px')}><span style={S('font-size:16px;font-weight:600')}>{r.name}</span><span role="img" aria-label={r.stars + ' out of 5 stars'} style={S('font-size:16px;letter-spacing:1px')}><span style={S('color:#E8A317')}>{STARS.slice(0, r.stars)}</span><span style={S('color:#D5D9E0')}>{STARS.slice(r.stars)}</span></span></div>
-          <p style={S('margin:0;font-size:15px;overflow-wrap:anywhere')}>{r.text}</p>
-          <div style={S('font-size:13px;color:#5E6673')}>{r.svc + ' with ' + r.pro + ', ' + r.date}</div>
-          {!!r.reply && <div style={S('border-radius:16px;background:#F4F5F7;padding:12px 14px;font-size:14px;overflow-wrap:anywhere')}><div style={S('font-size:12.5px;font-weight:600;color:#5E6673;margin-bottom:2px')}>Reply from {c.salonName}</div>{r.reply}</div>}
-          {open && (
-            <div style={S('display:flex;flex-direction:column;gap:10px')}><label htmlFor={'rp-' + r.id} style={S('font-size:14px;font-weight:600')}>Your reply</label>
-              <textarea id={'rp-' + r.id} rows={3} value={c.text} onChange={(e) => c.setText(e.target.value)} placeholder="Thank them or make it right" style={{ ...S('box-sizing:border-box;width:100%;padding:12px 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF;resize:vertical'), minHeight: 0 }} />
-              {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
-              <div style={S('display:flex;gap:10px')}><button onClick={() => c.save(r.id)} disabled={c.busy} style={S('height:44px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500;padding:0 20px;flex:1 1 0')}>Post reply</button>{!!r.reply && <button className="ghost" onClick={() => c.removeReply(r.id)} disabled={c.busy} style={S('height:44px;border:0;border-radius:999px;background:transparent;color:#B42318;font-size:14px;font-weight:500;padding:0 12px')}>Delete reply</button>}<button className="ghost" onClick={c.closeReply} style={S('height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;padding:0 20px;flex:1 1 0')}>Cancel</button></div></div>
-          )}
-          <div><button className="ghost" onClick={() => c.openReply(r)} style={S('height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;padding:0 20px')}>{r.reply ? 'Edit reply' : 'Reply'}</button></div>
-        </article>
-      );
-    })}
-  </>);
-}
-
-
 function Desktop({ c }: { c: C }) {
+  const [sel, setSel] = useState<string | null>(null);
+  const q = c.query.trim().toLowerCase();
+  const list = c.shown.filter((r) => !q || (r.name + ' ' + r.text + ' ' + r.svc + ' ' + r.pro).toLowerCase().includes(q));
   return (
     <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 8px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
-      <PageHeader title="Reviews" subtitle={`What clients say about ${c.salonName}`} showSearch={false} showAction={false} />
+      <PageHeader title="Reviews" subtitle={`What clients say about ${c.salonName}`} query={c.query} onQuery={c.setQuery} placeholder="Search reviews" showAction={false} />
+      <div style={S('display:flex;flex-direction:column;gap:16px;max-width:760px')}><Summary c={c} m={false} /></div>
       <Filters c={c} />
-      <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
-        <section aria-label="Reviews" style={S('flex:999 1 520px;min-width:0;display:flex;flex-direction:column;gap:16px')}><List c={c} m={false} /></section>
-        <aside aria-label="Summary" style={S('flex:1 1 440px;max-width:520px;min-width:0;display:flex;flex-direction:column;gap:16px')}><Summary c={c} m={false} /></aside>
-      </div>
+      {list.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>{c.n === 0 ? 'No reviews yet. Ask recent clients to leave one.' : 'No reviews match this filter.'}</p>}
+      <section aria-label="Reviews" style={S('display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:16px;align-items:start')}>
+        {list.map((r) => <ReviewCard key={r.id} r={r} onOpen={() => setSel(r.id)} />)}
+      </section>
+      {sel && <ReviewsMobile key={sel} c={c} filters={FILTERS} drawer startId={sel} onClose={() => setSel(null)} />}
     </div>
   );
 }

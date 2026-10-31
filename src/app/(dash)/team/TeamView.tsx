@@ -243,7 +243,7 @@ function Desktop({ c }: { c: C }) {
               </div>
               {c.list.map((m) => (
                 <button key={m.id} className="s-row" onClick={() => c.select(m.id)} aria-label={`${m.name}, ${m.role}, ${m.todayOn ? 'working today' : 'off today'}, ${m.online ? 'bookable online' : 'hidden online'}`}
-                  style={S('display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:64px;padding:8px 20px;border:0;border-bottom:1px solid #EEF0F3;text-align:left;font:inherit;font-size:14px;color:#0E1116;background:' + (c.mode === 'edit' && c.selectedId === m.id ? '#F4F5F7' : 'transparent'))}>
+                  style={S('display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:64px;padding:8px 20px;border:0;border-bottom:1px solid #EEF0F3;text-align:left;font:inherit;font-size:14px;color:#0E1116;background:' + (c.open && c.mode === 'edit' && c.selectedId === m.id ? '#F4F5F7' : 'transparent'))}>
                   <span style={S('flex:2.6 1 0;min-width:0;display:flex;align-items:center;gap:12px')}>
                     <span style={S('flex:0 0 40px;width:40px;height:40px;border-radius:999px;background:#EEF0F3;color:#0E1116;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600' + photoCss(m.photo))}>{m.photo ? '' : initialsOf(m.name)}</span>
                     <span style={S('min-width:0')}>

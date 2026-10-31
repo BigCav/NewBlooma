@@ -1,5 +1,6 @@
 'use client';
-import { useState } from 'react';
+import { rootCls } from '@/components/drawer';
+import { useEffect, useState } from 'react';
 import { MobileHeader, MobileTabs } from '@/components/Chrome';
 import { ActiveFilter, FilterButton, FilterSheet } from '@/components/FilterBits';
 import { S } from '../calendar/pickers';
@@ -31,9 +32,25 @@ function Header({ title, onBack, avatar }: { title: string; onBack: () => void; 
   );
 }
 
-export function ReviewsMobile({ c, filters }: { c: ReviewsCtl; filters: [string, string][] }) {
+export function ReviewCard({ r, onOpen }: { r: ReviewRow; onOpen: () => void }) {
+  return (
+          <button onClick={onOpen} aria-label={`${r.name}, ${r.stars} stars, ${r.reply ? 'replied' : 'needs a reply'}`} style={S('display:flex;align-items:flex-start;gap:14px;width:100%;box-sizing:border-box;padding:16px;border-radius:22px;border:1px solid ' + (r.reply ? '#E6E8EC' : '#F3D9AE') + ';background:#FFFFFF;text-align:left;font:inherit;color:#0E1116;cursor:pointer')}>
+            <span style={S(AV(48, 15))}>{initials(r.name)}</span>
+            <span style={S('flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:4px')}>
+              <span style={S('display:flex;align-items:center;justify-content:space-between;gap:10px')}><span style={S('min-width:0;font-size:16px;font-weight:600;letter-spacing:-0.01em;overflow-wrap:anywhere')}>{r.name}</span><span style={S('flex:0 0 auto;font-size:12.5px;color:#5E6673')}>{r.date}</span></span>
+              <Stars n={r.stars} size={15} />
+              <span style={S('display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;font-size:14.5px;color:#0E1116')}>{r.text}</span>
+              <span style={S('font-size:12.5px;color:#8A93A0;overflow-wrap:anywhere')}>{r.svc} with {r.pro}</span>
+              <span style={S('align-self:flex-start;margin-top:4px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;background:' + (r.reply ? '#DDF3EA' : '#FFF4E5') + ';color:' + (r.reply ? '#14624A' : '#8A4B00'))}>{r.reply ? 'Replied' : 'Needs reply'}</span>
+            </span>
+          </button>
+  );
+}
+
+export function ReviewsMobile({ c, filters, drawer, startId, onClose }: { c: ReviewsCtl; filters: [string, string][]; drawer?: boolean; startId?: string; onClose?: () => void }) {
   const [fopen, setFopen] = useState(false);
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(startId ?? null);
+  useEffect(() => { if (drawer && openId === null && !c.replyId) onClose?.(); }, [openId, c.replyId]); // eslint-disable-line react-hooks/exhaustive-deps
   const q = c.query.trim().toLowerCase();
   const list = c.shown.filter((r) => !q || (r.name + ' ' + r.text + ' ' + r.svc + ' ' + r.pro).toLowerCase().includes(q));
   const open = openId ? c.rows.find((r) => r.id === openId) ?? null : null;
@@ -43,7 +60,7 @@ export function ReviewsMobile({ c, filters }: { c: ReviewsCtl; filters: [string,
   const err = c.error ? <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p> : null;
 
   return (
-    <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
+    <div className={rootCls(drawer)} style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <MobileHeader title="Reviews" subtitle="What clients say" query={c.query} onQuery={c.setQuery} placeholder="Search reviews" />
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:14px')}>
         <section aria-label="Rating summary" style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:20px;display:flex;align-items:center;gap:20px')}>
@@ -66,18 +83,7 @@ export function ReviewsMobile({ c, filters }: { c: ReviewsCtl; filters: [string,
         {!!c.notice && <span role="status" style={S('align-self:flex-start;padding:6px 14px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:13px;font-weight:500')}>{c.notice}</span>}
         {!open && !replying && err}
         {list.length === 0 && <p style={S('margin:0;text-align:center;color:#5E6673;font-size:14px')}>{c.n === 0 ? 'No reviews yet. Ask recent clients to leave one.' : q ? `Nothing matches "${c.query.trim()}".` : 'No reviews match this filter.'}</p>}
-        {list.map((r) => (
-          <button key={r.id} onClick={() => { c.pickFilter(c.filter); setOpenId(r.id); }} aria-label={`${r.name}, ${r.stars} stars, ${r.reply ? 'replied' : 'needs a reply'}`} style={S('display:flex;align-items:flex-start;gap:14px;width:100%;box-sizing:border-box;padding:16px;border-radius:22px;border:1px solid ' + (r.reply ? '#E6E8EC' : '#F3D9AE') + ';background:#FFFFFF;text-align:left;font:inherit;color:#0E1116;cursor:pointer')}>
-            <span style={S(AV(48, 15))}>{initials(r.name)}</span>
-            <span style={S('flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:4px')}>
-              <span style={S('display:flex;align-items:center;justify-content:space-between;gap:10px')}><span style={S('min-width:0;font-size:16px;font-weight:600;letter-spacing:-0.01em;overflow-wrap:anywhere')}>{r.name}</span><span style={S('flex:0 0 auto;font-size:12.5px;color:#5E6673')}>{r.date}</span></span>
-              <Stars n={r.stars} size={15} />
-              <span style={S('display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;font-size:14.5px;color:#0E1116')}>{r.text}</span>
-              <span style={S('font-size:12.5px;color:#8A93A0;overflow-wrap:anywhere')}>{r.svc} with {r.pro}</span>
-              <span style={S('align-self:flex-start;margin-top:4px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;background:' + (r.reply ? '#DDF3EA' : '#FFF4E5') + ';color:' + (r.reply ? '#14624A' : '#8A4B00'))}>{r.reply ? 'Replied' : 'Needs reply'}</span>
-            </span>
-          </button>
-        ))}
+        {list.map((r) => <ReviewCard key={r.id} r={r} onOpen={() => { c.pickFilter(c.filter); setOpenId(r.id); }} />)}
       </main>
       <MobileTabs active="more" />
       {fopen && <FilterSheet title="Filter reviews" options={filters.map(([id, label]) => ({ id, label }))} value={c.filter} onPick={c.pickFilter} onClose={() => setFopen(false)} />}

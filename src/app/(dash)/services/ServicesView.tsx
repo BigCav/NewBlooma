@@ -321,7 +321,7 @@ function Desktop({ c }: { c: C }) {
                 <div style={S('flex:3 1 0;min-width:0')}>Service</div><div style={S('flex:1 1 0;min-width:0')}>Category</div><div style={S('flex:0.9 1 0;min-width:0')}>Duration</div><div style={S('flex:0.8 1 0;min-width:0')}>Price</div><div style={S('flex:1 1 0;min-width:0')}>Online</div>
               </div>
               {rows.map((s) => (
-                <button key={s.id} className="s-row" onClick={() => c.select(s.id)} aria-label={rowLabel(s)} style={S('display:flex;align-items:center;gap:16px;width:100%;box-sizing:border-box;min-height:64px;padding:8px 20px;border:0;border-bottom:1px solid #EEF0F3;text-align:left;font:inherit;font-size:14px;color:#0E1116;background:' + (mode === 'edit' && selectedId === s.id ? '#F4F5F7' : 'transparent'))}>
+                <button key={s.id} className="s-row" onClick={() => c.select(s.id)} aria-label={rowLabel(s)} style={S('display:flex;align-items:center;gap:16px;width:100%;box-sizing:border-box;min-height:64px;padding:8px 20px;border:0;border-bottom:1px solid #EEF0F3;text-align:left;font:inherit;font-size:14px;color:#0E1116;background:' + (c.open && mode === 'edit' && selectedId === s.id ? '#F4F5F7' : 'transparent'))}>
                   <span style={S('flex:3 1 0;min-width:0;display:flex;align-items:center;gap:12px')}>
                     <span style={S(tile(s.catIdx, s.cat))}>{ini(s.name)}</span>
                     <span style={S('min-width:0')}>

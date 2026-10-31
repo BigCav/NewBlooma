@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
-import { clockToggle, deleteTimesheet, loadTimesheets, markPaid, saveTimesheet, setRate, type SheetRow } from './actions';
+import { clockToggle, markPaid, setRate } from './actions';
 import { dollars0, type PayRow } from './shared';
-import { PayrollMobile } from './PayrollMobile';
+import { PayrollMobile, PayRows } from './PayrollMobile';
 
 type Props = { rows: PayRow[]; w: number; from: string; to: string; over: boolean; days: number; owner: boolean; title: string; range: string };
 
@@ -49,8 +49,6 @@ function usePayroll(props: Props) {
 type C = ReturnType<typeof usePayroll>;
 export type PayrollCtl = C;
 
-const pct = (n: number) => (Math.round(n * 10) / 10) + '%';
-const CELL = { done: 'background:#EEF0F3;color:#0E1116;font-weight:500', today: 'background:#ECE8FF;color:#3B2BB5;font-weight:600', plan: 'background:#F4F5F7;color:#8A93A0' };
 
 function Controls({ c, m }: { c: C; m: boolean }) {
   const tabs: [('time' | 'comm'), string][] = c.owner ? [['time', 'Timesheets'], ['comm', 'Commission']] : [['time', 'Timesheets']];
@@ -74,90 +72,14 @@ function Controls({ c, m }: { c: C; m: boolean }) {
   </>);
 }
 
-const TIN = 'box-sizing:border-box;flex:1 1 170px;min-width:0;height:44px;padding:0 10px;border:1px solid #E1E4E9;border-radius:12px;font:inherit;font-size:14px;color:#0E1116;background:#FFFFFF';
-function TimesheetEditor({ staffId, from, to, onDone }: { staffId: string; from: string; to: string; onDone: () => void }) {
-  const router = useRouter();
-  const [busy, startT] = useTransition();
-  const [rows, setRows] = useState<(SheetRow & { fresh?: boolean })[] | null>(null);
-  const [error, setError] = useState('');
-  const [note, setNote] = useState('');
-  const reload = () => loadTimesheets(staffId, from, to).then((r) => { if (r.error) setError(r.error); else setRows(r.rows ?? []); });
-  useEffect(() => { reload(); }, [staffId, from, to]); // eslint-disable-line react-hooks/exhaustive-deps
-  const patch = (id: string, k: 'inAt' | 'outAt', v: string) => { setRows((rs) => (rs ?? []).map((r) => (r.id === id ? { ...r, [k]: v } : r))); setError(''); setNote(''); };
-  const save = (r: SheetRow & { fresh?: boolean }) => startT(async () => { const res = await saveTimesheet(r.fresh ? null : r.id, staffId, r.inAt, r.outAt); if (res.error) { setError(res.error); setNote(''); return; } setError(''); setNote(res.notice ?? ''); await reload(); router.refresh(); });
-  const del = (r: SheetRow & { fresh?: boolean }) => { if (r.fresh) { setRows((rs) => (rs ?? []).filter((x) => x.id !== r.id)); return; } startT(async () => { const res = await deleteTimesheet(r.id); if (res.error) { setError(res.error); setNote(''); return; } setError(''); setNote(res.notice ?? ''); await reload(); router.refresh(); }); };
-  const add = () => setRows((rs) => [...(rs ?? []), { id: 'new-' + Date.now(), inAt: from + 'T09:00', outAt: from + 'T17:00', fresh: true }]);
-  return (
-    <div style={S('display:flex;flex-direction:column;gap:12px;padding:14px;border-radius:16px;background:#F4F5F7')}>
-      <div style={S('font-size:14px;font-weight:600')}>Edit clock-in and clock-out times</div>
-      {rows === null && !error && <span style={S('font-size:13.5px;color:#5E6673')}>Loading</span>}
-      {rows !== null && rows.length === 0 && <span style={S('font-size:13.5px;color:#5E6673')}>No clocked times this week.</span>}
-      {(rows ?? []).map((r) => (
-        <div key={r.id} style={S('display:flex;flex-direction:column;gap:8px;padding-bottom:12px;border-bottom:1px solid #E6E8EC')}>
-          <div style={S('display:flex;flex-wrap:wrap;gap:8px')}>
-            <label style={S('flex:1 1 170px;display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:#5E6673')}>In<input type="datetime-local" value={r.inAt} onChange={(e) => patch(r.id, 'inAt', e.target.value)} style={{ ...S(TIN), minHeight: 0, width: '100%' }} /></label>
-            <label style={S('flex:1 1 170px;display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:#5E6673')}>Out (blank if still working)<input type="datetime-local" value={r.outAt} onChange={(e) => patch(r.id, 'outAt', e.target.value)} style={{ ...S(TIN), minHeight: 0, width: '100%' }} /></label>
-          </div>
-          <div style={S('display:flex;gap:8px')}>
-            <button onClick={() => save(r)} disabled={busy} style={S('height:40px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:13.5px;font-weight:500;padding:0 18px')}>{r.fresh ? 'Add entry' : 'Save'}</button>
-            <button className="ghost" onClick={() => del(r)} disabled={busy} style={S('height:40px;border:0;border-radius:999px;background:transparent;color:#B42318;font-size:13.5px;font-weight:500;padding:0 12px')}>{r.fresh ? 'Discard' : 'Delete'}</button>
-          </div>
-        </div>
-      ))}
-      {!!error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{error}</p>}
-      {!!note && <span role="status" style={S('font-size:13px;color:#14624A;font-weight:500')}>{note}</span>}
-      <div style={S('display:flex;gap:8px')}>
-        <button className="ghost" onClick={add} style={S('height:40px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:13.5px;font-weight:500;padding:0 16px')}>Add a shift</button>
-        <button className="ghost" onClick={onDone} style={S('height:40px;border:0;border-radius:999px;background:transparent;color:#4A525E;font-size:13.5px;font-weight:500;padding:0 12px')}>Done</button>
-      </div>
-    </div>
-  );
-}
-
-function Cards({ c, m }: { c: C; m: boolean }) {
-  const pad = m ? 18 : 24;
-  return (<>
-    {c.rows.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No team members yet.</p>}
-    {c.tab === 'time' && c.rows.map((p) => (
-      <article key={p.id} style={S(`box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:${pad}px;display:flex;flex-direction:column;gap:14px`)}>
-        <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px')}><div style={S('flex:1 1 160px;min-width:0')}><div style={S('font-size:16px;font-weight:600')}>{p.name}</div><div style={S('font-size:13px;color:#5E6673')}>{p.role}</div></div><div style={S('text-align:right')}><div style={S('font-size:22px;font-weight:600;letter-spacing:-0.02em')}>{p.total}</div><div style={S('font-size:12.5px;color:#5E6673')}>{p.planned}</div></div></div>
-        <div style={S(`display:grid;grid-template-columns:repeat(${c.days},1fr);gap:${m ? 5 : 8}px`)}>{p.cells.map((x) => <div key={x.day} style={S('min-width:0;text-align:center')}><div style={S('font-size:11.5px;color:#8A93A0;margin-bottom:4px')}>{x.day}</div><div style={S(`padding:10px 0;border-radius:12px;font-size:${m ? 12.5 : 14}px;` + CELL[x.kind])}>{x.txt}</div></div>)}</div>
-        {c.owner && (c.editing === p.id
-          ? <TimesheetEditor staffId={p.id} from={c.from} to={c.to} onDone={() => c.setEditing(null)} />
-          : <div><button className="ghost" onClick={() => c.setEditing(p.id)} style={S('height:40px;border:0;border-radius:999px;background:transparent;color:#4A525E;font-size:13.5px;font-weight:500;padding:0;text-decoration:underline')}>Edit times</button></div>)}
-        {c.w === 0 && p.canClock && (
-          <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:10px')}>
-            <span style={S('flex:1 1 150px;display:flex;align-items:center;gap:8px;font-size:13.5px;color:#5E6673')}><span style={S('width:8px;height:8px;border-radius:999px;background:' + (p.inSince ? '#14A06A' : '#C3C8D0'))} />{p.inSince ? 'In since ' + p.inSince : 'Not clocked in'}</span>
-            <button className="ghost" onClick={() => c.clock(p)} disabled={c.busy} style={S('height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;padding:0 20px')}>{p.inSince ? 'Clock out' : 'Clock in'}</button>
-          </div>
-        )}
-      </article>
-    ))}
-    {c.tab === 'comm' && c.owner && c.rows.map((p) => {
-      const pending = !c.over, tone = pending ? ['#FFEBD0', '#7A4204'] : p.paid ? ['#DDF3EA', '#14624A'] : ['#ECE8FF', '#3B2BB5'];
-      return (
-        <article key={p.id} style={S(`box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:${pad}px;display:flex;flex-direction:column;gap:14px`)}>
-          <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px')}><div style={S('flex:1 1 150px;min-width:0')}><div style={S('font-size:16px;font-weight:600')}>{p.name}</div><div style={S('font-size:13px;color:#5E6673')}>{p.role}</div></div><span style={S('display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;background:' + tone[0] + ';color:' + tone[1])}>{pending ? 'Pending until Sunday' : p.paid ? 'Paid' : 'Ready to pay'}</span></div>
-          <div style={S('display:grid;grid-template-columns:repeat(3,1fr);gap:10px')}>
-            {([['Services', p.svc], ['Products', p.prod], ['Tips', p.tips]] as [string, number][]).map(([l, v]) => <div key={l}><div style={S('font-size:12.5px;color:#5E6673')}>{l}</div><div style={S('font-size:16px;font-weight:600')}>{dollars0(v)}</div></div>)}
-          </div>
-          <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:12px 14px;border-radius:16px;background:#F4F5F7')}><span style={S('flex:1 1 120px;font-size:14px;font-weight:500')}>Service commission</span><div style={S('display:flex;align-items:center;gap:8px')}><button onClick={() => c.bump(p, -5)} aria-label="Lower commission rate" style={S('width:40px;height:40px;border-radius:999px;border:1px solid #E1E4E9;background:#FFFFFF;font-size:18px;color:#0E1116')}>−</button><span style={S('min-width:48px;text-align:center;font-weight:600')}>{pct(p.rate)}</span><button onClick={() => c.bump(p, 5)} aria-label="Raise commission rate" style={S('width:40px;height:40px;border-radius:999px;border:1px solid #E1E4E9;background:#FFFFFF;font-size:18px;color:#0E1116')}>+</button></div></div>
-          <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:10px')}><div style={S('flex:1 1 150px')}><div style={S('font-size:12.5px;color:#5E6673')}>Commission + tips</div><div style={S('font-size:22px;font-weight:600;letter-spacing:-0.03em')}>{dollars0(p.commission + p.tips)}</div></div>{c.over && !p.paid && <button onClick={() => c.pay1(p)} disabled={c.busy} style={S('height:44px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500;padding:0 20px')}>Mark as paid</button>}</div>
-          <div style={S('font-size:12.5px;color:#8A93A0')}>Includes {pct(p.prodPct)} on product sales ({dollars0(p.commission)} commission before tips)</div>
-        </article>
-      );
-    })}
-  </>);
-}
-
 function Desktop({ c }: { c: C }) {
+  const [sel, setSel] = useState<string | null>(null);
   return (
     <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 8px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <PageHeader title="Payroll" subtitle="Timesheets and commission" showSearch={false} showAction={false} />
-      <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
-        <section aria-label="Team" style={S('flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:16px')}><Cards c={c} m={false} /></section>
-        <aside aria-label="Pay period" style={S('flex:1 1 440px;max-width:520px;min-width:0;display:flex;flex-direction:column;gap:16px')}><Controls c={c} m={false} /></aside>
-      </div>
+      <div style={S('display:flex;flex-direction:column;gap:16px;max-width:760px')}><Controls c={c} m={false} /></div>
+      <section aria-label="Team" style={S('display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:16px;align-items:start')}><PayRows c={c} onOpen={setSel} /></section>
+      {sel && <PayrollMobile key={sel + c.tab} c={c} drawer startId={sel} onClose={() => setSel(null)} />}
     </div>
   );
 }

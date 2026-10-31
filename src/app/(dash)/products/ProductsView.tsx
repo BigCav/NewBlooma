@@ -192,7 +192,7 @@ function Desktop({ c }: { c: C }) {
             </div>
             {c.list.map((p) => (
               <button key={p.id} className="s-row" onClick={() => c.pick(p.id)} aria-label={`${p.name}, ${p.brand}, ${p.stock} in stock, ${p.status}`}
-                style={S('display:flex;align-items:center;gap:16px;width:100%;box-sizing:border-box;min-height:64px;padding:8px 20px;border:0;border-bottom:1px solid #EEF0F3;text-align:left;font:inherit;font-size:14px;color:#0E1116;background:' + (c.sel?.id === p.id ? '#F4F5F7' : 'transparent'))}>
+                style={S('display:flex;align-items:center;gap:16px;width:100%;box-sizing:border-box;min-height:64px;padding:8px 20px;border:0;border-bottom:1px solid #EEF0F3;text-align:left;font:inherit;font-size:14px;color:#0E1116;background:' + (c.open && c.sel?.id === p.id ? '#F4F5F7' : 'transparent'))}>
                 <span style={S('flex:2.6 1 0;min-width:0;display:flex;align-items:center;gap:12px')}>
                   <span style={S(tile(c, p.cat, 40, 12, 13))}>{initialsOf(p.name)}</span>
                   <span style={S('min-width:0')}><span style={S('display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{p.name}</span><span style={S('display:block;font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{p.brand}</span></span>

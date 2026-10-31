@@ -187,7 +187,7 @@ function Desktop({ c }: { c: C }) {
               </div>
               <ul style={S('margin:0;padding:0;list-style:none')}>
                 {c.shown.map((g) => {
-                  const s = statusOf(g), on = c.mode === 'view' && c.sel?.id === g.id, pct = g.original ? Math.round(g.balance / g.original * 100) : 0;
+                  const s = statusOf(g), on = c.open && c.mode === 'view' && c.sel?.id === g.id, pct = g.original ? Math.round(g.balance / g.original * 100) : 0;
                   return (
                     <li key={g.id}><button className="row" onClick={() => c.pick(g.id)} aria-pressed={on} aria-label={`${g.code}, ${money(g.balance)} left, ${s}`} style={S('display:flex;align-items:center;gap:16px;width:100%;box-sizing:border-box;min-height:68px;padding:10px 20px;border:0;border-bottom:1px solid #EEF0F3;text-align:left;font:inherit;color:#0E1116;cursor:pointer;background:' + (on ? '#F4F5F7' : 'transparent'))}>
                       <span style={S('flex:1.5 1 0;min-width:0;font-size:13.5px;font-weight:500;letter-spacing:0.02em;' + MONO)}>{g.code}</span>

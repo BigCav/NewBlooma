@@ -1,5 +1,6 @@
 'use client';
 import { useRouter } from 'next/navigation';
+import { rootCls } from '@/components/drawer';
 import { useEffect, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
@@ -50,8 +51,42 @@ function Week({ p, days, big }: { p: PayRow; days: number; big?: boolean }) {
   );
 }
 
-export function PayrollMobile({ c }: { c: PayrollCtl }) {
-  const [openId, setOpenId] = useState<string | null>(null);
+export function PayRows({ c, onOpen }: { c: PayrollCtl; onOpen: (id: string) => void }) {
+  return (<>
+        {c.tab === 'time' && c.rows.map((p) => (
+          <button key={p.id} onClick={() => onOpen(p.id)} aria-label={`${p.name}, ${p.total} ${p.planned}`} style={S(CARD + ';display:flex;flex-direction:column;gap:14px;width:100%;text-align:left;font:inherit;color:#0E1116;cursor:pointer;border-radius:22px;padding:16px')}>
+            <span style={S('display:flex;align-items:center;gap:14px')}>
+              <span style={S(AV(48, 15) + photoCss(p.photo))}>{p.photo ? '' : initials(p.name)}</span>
+              <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:16px;font-weight:600;letter-spacing:-0.01em;overflow-wrap:anywhere')}>{p.name}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{p.role}</span></span>
+              <span style={S('flex:0 0 auto;text-align:right')}><span style={S('display:block;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{p.total}</span><span style={S('display:block;font-size:12px;color:#5E6673')}>{p.planned}</span></span>
+              {CHEV}
+            </span>
+            <Week p={p} days={c.days} />
+            {c.w === 0 && p.canClock && <span style={S('display:flex;align-items:center;gap:8px;font-size:13px;color:#5E6673')}><span style={S('width:8px;height:8px;border-radius:999px;background:' + (p.inSince ? '#14A06A' : '#C3C8D0'))} />{p.inSince ? 'In since ' + p.inSince : 'Not clocked in'}</span>}
+          </button>
+        ))}
+
+        {c.tab === 'comm' && c.owner && c.rows.map((p) => {
+          const t = payTone(c, p);
+          return (
+            <button key={p.id} onClick={() => onOpen(p.id)} aria-label={`${p.name}, ${dollars0(p.commission + p.tips)}, ${t.t}`} style={S(CARD + ';display:flex;align-items:center;gap:14px;width:100%;text-align:left;font:inherit;color:#0E1116;cursor:pointer;border-radius:22px;padding:16px')}>
+              <span style={S(AV(48, 15) + photoCss(p.photo))}>{p.photo ? '' : initials(p.name)}</span>
+              <span style={S('flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px')}>
+                <span style={S('font-size:16px;font-weight:600;letter-spacing:-0.01em;overflow-wrap:anywhere')}>{p.name}</span>
+                <span style={S('font-size:13px;color:#5E6673')}>{p.role}</span>
+                <span style={S('align-self:flex-start;margin-top:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;background:' + t.bg + ';color:' + t.fg)}>{t.t === 'Pending until Sunday' ? 'Pending' : t.t}</span>
+              </span>
+              <span style={S('flex:0 0 auto;text-align:right')}><span style={S('display:block;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{dollars0(p.commission + p.tips)}</span><span style={S('display:block;font-size:12px;color:#5E6673')}>commission + tips</span></span>
+              {CHEV}
+            </button>
+          );
+        })}
+  </>);
+}
+
+export function PayrollMobile({ c, drawer, startId, onClose }: { c: PayrollCtl; drawer?: boolean; startId?: string; onClose?: () => void }) {
+  const [openId, setOpenId] = useState<string | null>(startId ?? null);
+  useEffect(() => { if (drawer && openId === null) onClose?.(); }, [openId]); // eslint-disable-line react-hooks/exhaustive-deps
   const [editId, setEditId] = useState<string | null>(null);
   const tabs: [('time' | 'comm'), string][] = c.owner ? [['time', 'Timesheets'], ['comm', 'Commission']] : [['time', 'Timesheets']];
   const hoursText = (Math.round(c.hoursTotal * 10) / 10) + 'h';
@@ -60,7 +95,7 @@ export function PayrollMobile({ c }: { c: PayrollCtl }) {
   const stat = (l: string, v: string) => <div key={l} style={S('flex:1 1 0;min-width:0;' + CARD + ';padding:16px;border-radius:20px')}><div style={S('color:#5E6673;font-size:13px')}>{l}</div><div style={S('margin-top:2px;font-size:28px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{v}</div></div>;
 
   return (
-    <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
+    <div className={rootCls(drawer)} style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <MobileHeader title="Payroll" subtitle="Timesheets and commission" showSearch={false} />
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:14px')}>
         {tabs.length > 1 && (
@@ -78,34 +113,7 @@ export function PayrollMobile({ c }: { c: PayrollCtl }) {
         {!!c.error && !open && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
         {c.rows.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No team members yet.</p>}
 
-        {c.tab === 'time' && c.rows.map((p) => (
-          <button key={p.id} onClick={() => setOpenId(p.id)} aria-label={`${p.name}, ${p.total} ${p.planned}`} style={S(CARD + ';display:flex;flex-direction:column;gap:14px;width:100%;text-align:left;font:inherit;color:#0E1116;cursor:pointer;border-radius:22px;padding:16px')}>
-            <span style={S('display:flex;align-items:center;gap:14px')}>
-              <span style={S(AV(48, 15) + photoCss(p.photo))}>{p.photo ? '' : initials(p.name)}</span>
-              <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:16px;font-weight:600;letter-spacing:-0.01em;overflow-wrap:anywhere')}>{p.name}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{p.role}</span></span>
-              <span style={S('flex:0 0 auto;text-align:right')}><span style={S('display:block;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{p.total}</span><span style={S('display:block;font-size:12px;color:#5E6673')}>{p.planned}</span></span>
-              {CHEV}
-            </span>
-            <Week p={p} days={c.days} />
-            {c.w === 0 && p.canClock && <span style={S('display:flex;align-items:center;gap:8px;font-size:13px;color:#5E6673')}><span style={S('width:8px;height:8px;border-radius:999px;background:' + (p.inSince ? '#14A06A' : '#C3C8D0'))} />{p.inSince ? 'In since ' + p.inSince : 'Not clocked in'}</span>}
-          </button>
-        ))}
-
-        {c.tab === 'comm' && c.owner && c.rows.map((p) => {
-          const t = payTone(c, p);
-          return (
-            <button key={p.id} onClick={() => setOpenId(p.id)} aria-label={`${p.name}, ${dollars0(p.commission + p.tips)}, ${t.t}`} style={S(CARD + ';display:flex;align-items:center;gap:14px;width:100%;text-align:left;font:inherit;color:#0E1116;cursor:pointer;border-radius:22px;padding:16px')}>
-              <span style={S(AV(48, 15) + photoCss(p.photo))}>{p.photo ? '' : initials(p.name)}</span>
-              <span style={S('flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px')}>
-                <span style={S('font-size:16px;font-weight:600;letter-spacing:-0.01em;overflow-wrap:anywhere')}>{p.name}</span>
-                <span style={S('font-size:13px;color:#5E6673')}>{p.role}</span>
-                <span style={S('align-self:flex-start;margin-top:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;background:' + t.bg + ';color:' + t.fg)}>{t.t === 'Pending until Sunday' ? 'Pending' : t.t}</span>
-              </span>
-              <span style={S('flex:0 0 auto;text-align:right')}><span style={S('display:block;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{dollars0(p.commission + p.tips)}</span><span style={S('display:block;font-size:12px;color:#5E6673')}>commission + tips</span></span>
-              {CHEV}
-            </button>
-          );
-        })}
+        <PayRows c={c} onOpen={setOpenId} />
       </main>
       <MobileTabs active="more" />
       {open && c.tab === 'time' && <TimePage c={c} p={open} onBack={() => setOpenId(null)} onEdit={() => setEditId(open.id)} />}

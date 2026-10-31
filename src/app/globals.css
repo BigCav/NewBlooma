@@ -134,6 +134,8 @@ html[data-theme=dark] img,html[data-theme=dark] video,html[data-theme=dark] ifra
 .m-drawer>header,.m-drawer>main,.m-drawer>nav{display:none !important}
 .m-drawer>div{pointer-events:auto;z-index:50 !important}
 .m-drawer>div>button[aria-label^="Close"]{background:rgba(14,17,22,.22) !important;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);animation:drFade .2s ease-out}
+.m-drawer>[role="dialog"]{left:auto !important;right:0 !important;width:min(520px,100vw) !important;box-shadow:-16px 0 48px rgba(14,17,22,.16);animation:drIn .26s cubic-bezier(.2,.8,.2,1);pointer-events:auto}
+.m-drawer:has(>[role="dialog"]){pointer-events:auto;background:rgba(14,17,22,.22) !important;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);animation:drFade .2s ease-out}
 .m-drawer .sheet{left:auto !important;right:0 !important;width:min(520px,100vw) !important;box-shadow:-16px 0 48px rgba(14,17,22,.16);animation:drIn .26s cubic-bezier(.2,.8,.2,1) !important}
 }
 @keyframes drIn{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}

@@ -379,7 +379,7 @@ function Desktop({ c }: { c: C }) {
               </div>
               {c.list.map((t) => (
                 <button key={t.id} className="s-row" onClick={() => c.pick(t.id)} aria-label={`${t.client}, ${t.service}, ${fmt(t.total)}, ${t.status}`}
-                  style={S('display:flex;align-items:center;gap:16px;width:100%;box-sizing:border-box;min-height:64px;padding:8px 20px;border:0;border-bottom:1px solid #EEF0F3;text-align:left;font:inherit;font-size:14px;color:#0E1116;background:' + (c.selectedId === t.id ? '#F4F5F7' : 'transparent'))}>
+                  style={S('display:flex;align-items:center;gap:16px;width:100%;box-sizing:border-box;min-height:64px;padding:8px 20px;border:0;border-bottom:1px solid #EEF0F3;text-align:left;font:inherit;font-size:14px;color:#0E1116;background:' + (c.open && c.selectedId === t.id ? '#F4F5F7' : 'transparent'))}>
                   <span style={S('flex:2.2 1 0;min-width:0;display:flex;align-items:center;gap:12px')}>
                     <span style={S('flex:0 0 40px;width:40px;height:40px;border-radius:999px;background:#EEF0F3;color:#0E1116;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600')}>{t.initials}</span>
                     <span style={S('min-width:0;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.client}</span>
