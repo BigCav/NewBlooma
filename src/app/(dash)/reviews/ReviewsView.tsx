@@ -53,9 +53,6 @@ function Summary({ c, m }: { c: C; m: boolean }) {
         ); })}
       </div>
     </section>
-    <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:10px')}>
-      <button onClick={c.request} disabled={c.busy} style={S('height:44px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500;padding:0 20px;' + (m ? 'flex:1 1 100%' : 'flex:0 0 auto'))}>Ask recent clients for a review</button>
-    </div>
     {!!c.notice && <span role="status" style={S('align-self:flex-start;padding:6px 14px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:13px;font-weight:500')}>{c.notice}</span>}
     {!!c.error && !c.replyId && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
   </>);
@@ -69,19 +66,31 @@ function Filters({ c }: { c: C }) {
   </>);
 }
 
+const big = (l: string, v: string) => <div key={l}><div style={S('color:#5E6673;font-size:13.5px')}>{l}</div><div style={S('margin-top:4px;font-size:38px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{v}</div></div>;
+
 function Desktop({ c }: { c: C }) {
   const [sel, setSel] = useState<string | null>(null);
   const q = c.query.trim().toLowerCase();
   const list = c.shown.filter((r) => !q || (r.name + ' ' + r.text + ' ' + r.svc + ' ' + r.pro).toLowerCase().includes(q));
+  const needs = c.rows.filter((r) => !r.reply).length;
   return (
     <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 8px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
-      <PageHeader title="Reviews" subtitle={`What clients say about ${c.salonName}`} query={c.query} onQuery={c.setQuery} placeholder="Search reviews" showAction={false} />
-      <div style={S('display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:16px;align-items:start')}><Summary c={c} m={false} /></div>
-      <Filters c={c} />
-      {list.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>{c.n === 0 ? 'No reviews yet. Ask recent clients to leave one.' : 'No reviews match this filter.'}</p>}
-      <section aria-label="Reviews" style={S('display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:16px;align-items:start')}>
-        {list.map((r) => <ReviewCard key={r.id} r={r} onOpen={() => setSel(r.id)} />)}
+      <PageHeader title="Reviews" subtitle={`What clients say about ${c.salonName}`} query={c.query} onQuery={c.setQuery} placeholder="Search reviews" actionLabel="Ask for reviews" onAction={c.request} />
+      <section aria-label="Reviews at a glance" style={S('display:flex;flex-wrap:wrap;align-items:flex-end;gap:20px 64px')}>
+        {big('Average rating', c.n ? c.avg.toFixed(1) : '0.0')}{big('Reviews', String(c.n))}{big('Needs a reply', String(needs))}
       </section>
+      {!!c.notice && <span role="status" style={S('align-self:flex-start;padding:6px 14px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:13px;font-weight:500')}>{c.notice}</span>}
+      {!!c.error && !c.replyId && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
+      <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
+        <div style={S('flex:0 1 380px;min-width:300px;display:flex;flex-direction:column;gap:16px')}><Summary c={c} m={false} /></div>
+        <div style={S('flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:16px')}>
+          <Filters c={c} />
+          {list.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>{c.n === 0 ? 'No reviews yet. Ask recent clients to leave one.' : 'No reviews match this filter.'}</p>}
+          <section aria-label="Reviews" style={S('display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;align-items:start')}>
+            {list.map((r) => <ReviewCard key={r.id} r={r} onOpen={() => setSel(r.id)} />)}
+          </section>
+        </div>
+      </div>
       {sel && <ReviewsMobile key={sel} c={c} filters={FILTERS} drawer startId={sel} onClose={() => setSel(null)} />}
     </div>
   );
