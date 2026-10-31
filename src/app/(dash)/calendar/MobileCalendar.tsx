@@ -2,6 +2,7 @@
 // 1:1 conversion of the prototype's Mobile.dc.html (+ MobileHeader, MobileTabs). Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
 import { openNewMenu } from '@/components/NewMenu';
+import { rootCls } from '@/components/drawer';
 import { useState } from 'react';
 import { ClientMatches } from './ClientMatches';
 import { NewApptForm } from './NewApptForm';
@@ -18,7 +19,7 @@ import { chipTone, HATCH, first, usd, m2, BLOCK_DURS_M, METHODS, TIP_OPTS, chip,
 import type { useCalendar } from './useCalendar';
 import type { Props } from './calUi';
 
-export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>; props: Props }) {
+export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useCalendar>; props: Props; drawer?: boolean }) {
   const { HOUR_PX, act, activeCards, addWalkin, amap, av, avail, availKey, backToView, bf, bfDur, blank, blockId, blockRows, blocks, bookings, busy, bvB, cards, cfg, charge, chk, close, co, coMath, createNew, cur, day, dayB, dayHrs, days14, di, doneBk, ed, editPlan, error, firstOpenDay, gEnd, gHours, gStart, go, hasError, hours, hrsOf, later, laterBk, minutesFromIso, mode, moveBooking, nFirstSvc, nKeyStr, nKeys, nOffers, nPickSvc, nPlan, nSlots, nWhy, nf, notice, now, nowTop, offered, offers, open, openBlock, openBooking, openDays, openNew, pageSubtitle, pageTitle, pendingSel, plan, primary, query, reason, refresh, router, row, rs, saveBlock, saveEdit, searchOpen, seg, sel, selId, services, setAmap, setAvail, setBf, setBlockId, setCo, setEd, setError, setMode, setNf, setNotice, setNow, setOpen, setPendingSel, setPlan, setQuery, setRs, setSearchOpen, setSelId, setSres, setStaffSel, setWi, setWkOpen, slotsFor, sq, sres, staffName, staffSel, startCheckout, startResched, startT, statCount, statRevenue, statNext, strip, svcMap, team, today, todayList, tz, upcoming, view, viewEvents, vm, weekDays, wi, wiPlanText, wiPlanCss, wiSvc, wkCards, wkOpen, wkRange, wkStaff, wkTitle, ws, nLock, edLock, lockFor, lf, setLf, openLate, lateList, saveLate } = c;
   const [qa, setQa] = useState(false);
   const [qk, setQk] = useState(false);
@@ -71,7 +72,7 @@ export function MobileCalendar({ c, props }: { c: ReturnType<typeof useCalendar>
   const ic = (color: string, children: React.ReactNode) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{children}</svg>;
 
   return (
-    <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
+    <div className={rootCls(drawer)} style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
 
       {qk && fullSheet('Quick actions', (
         <div style={S('display:flex;flex-direction:column;border-top:1px solid #EEF0F3')}>

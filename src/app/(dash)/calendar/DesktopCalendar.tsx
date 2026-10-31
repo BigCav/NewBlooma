@@ -1,7 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's Main.dc.html (+ PageHeader). Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
-import { useEffect, useRef } from 'react';
+import { MobileCalendar } from './MobileCalendar';
 import { ClientMatches } from './ClientMatches';
 import { MessageBox } from './MessageBox';
 import { CancelPick } from './CancelPick';
@@ -38,14 +38,6 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
     lf, setLf, openLate, lateList, saveLate,
   } = c;
 
-  // On a narrower window the details panel wraps below the calendar; bring it into view when something is opened so the click is not silent.
-  const asideRef = useRef<HTMLElement>(null), firstRun = useRef(true);
-  useEffect(() => {
-    if (firstRun.current) { firstRun.current = false; return; }
-    const el = asideRef.current;
-    if (el && el.getBoundingClientRect().top > window.innerHeight * 0.7) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [cur?.id, mode]);
-
   const sq = query.trim();
   const dayB = bookings.filter((b) => b.dayYmd === day);
   const events = (view === 'week' ? bookings.filter((b) => b.staffId === wkStaff) : dayB).slice().sort((a, b) => a.dayYmd.localeCompare(b.dayYmd) || a.start - b.start);
@@ -70,7 +62,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
 
   const topOf = (start: number, px = 2) => (start / 60 - gStart) * HOUR_PX + px;
   const evStyle = (b: (typeof bookings)[number], weekCol: boolean) => {
-    const v = vm(b), tone = v.tone, compact = b.end - b.start <= 30, selected = mode === 'view' && selB?.id === b.id;
+    const v = vm(b), tone = v.tone, compact = b.end - b.start <= 30, selected = c.open && mode === 'view' && cur?.id === b.id;
     const h = (b.end - b.start) / 60 * HOUR_PX - 4;
     const accent = tone.fg.toUpperCase() === '#FFFFFF' ? '#5B3DF5' : tone.fg;
     const out = selected ? 'box-shadow:inset 4px 0 0 ' + accent + ',0 8px 18px -8px ' + accent + ';z-index:2;' : '';
@@ -264,260 +256,8 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
           )}
         </section>
 
-        <aside ref={asideRef} aria-label="Appointment details" style={S('flex:1 1 400px;max-width:520px;min-width:0;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:22px')}>
-
-          {mode === 'view' && !sq && sel && selB && (<>
-            <div style={S('display:flex;flex-direction:column;gap:16px')}>
-              <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
-                <span style={S(sel.chipStyle)}>{sel.chipText}</span>
-                {selB.paid && <span style={S('padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{selB.paidText}</span>}
-                {!!notice && <span role="status" style={S('padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{notice}</span>}
-              </div>
-              <div style={S('display:flex;align-items:center;gap:14px')}>
-                <div style={S('flex:0 0 48px;width:48px;height:48px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;background:' + sel.tone.bg + ';color:' + sel.tone.fg)}>{initials(selB.client)}</div>
-                <div style={S('min-width:0')}>
-                  <div style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em;line-height:1.2;overflow-wrap:anywhere')}>{selB.client}</div>
-                  <div style={S('font-size:14px;color:#5E6673;overflow-wrap:anywhere')}>{selB.services}</div>
-                </div>
-              </div>
-              {selB.forms && <a href={'/clients/forms?c=' + selB.clientId} style={S('display:block;border-radius:16px;text-decoration:none;padding:12px 14px;font-size:13.5px;font-weight:500;background:' + (selB.forms.level === 'alert' ? '#FDECEA;color:#B42318' : '#FFF4E5;color:#8A4B00'))}>{selB.forms.text}<span style={S('display:block;margin-top:2px;font-size:12.5px;font-weight:600;text-decoration:underline')}>Open forms</span></a>}
-              <dl style={S('margin:0;display:flex;flex-direction:column')}>
-                <div style={S(DL)}><dt style={S('color:#5E6673')}>Booking</dt><dd style={S('margin:0;font-weight:500;text-align:right;white-space:nowrap')}>{'B-' + selB.ref}</dd></div>
-                <div style={S(DL)}><dt style={S('color:#5E6673')}>Time</dt><dd style={S('margin:0;font-weight:500;text-align:right;white-space:nowrap')}>{sel.time}</dd></div>
-                <div style={S(DL)}><dt style={S('color:#5E6673')}>With</dt><dd style={S('margin:0;font-weight:500;text-align:right;overflow-wrap:anywhere')}>{staffName(selB.staffId)}</dd></div>
-                <div style={S(DL + ';border-bottom:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>Price</dt><dd style={S('margin:0;font-weight:500')}>{sel.priceText}</dd></div>
-              </dl>
-              {errP()}
-              <div style={S('display:flex;gap:10px')}>
-                <button onClick={() => primary(selB)} style={S(BTN)}>{sel.primaryLabel}</button>
-                <button className="ghost" onClick={() => startResched(selB, sel.k === 'done')} style={S(BTN2)}>{sel.secondaryLabel}</button>
-              </div>
-              {sel.canEdit && <button className="ghost" onClick={() => { setSelId(selB.id); setEd({ ids: selB.serviceIds.slice(), start: null }); setMode('edit'); setError(''); setNotice(''); }} style={S('height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>Edit booking</button>}
-              <button className="ghost" onClick={c.startMessage} style={S('height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>{'Message ' + first(selB.client)}</button>
-              {(sel.k === 'confirmed' || sel.k === 'pending') && c.started(selB) && <button className="ghost" onClick={() => c.markNoShow(selB)} style={S('height:44px;border:0;border-radius:999px;background:transparent;color:#B42318;font-size:14px;font-weight:500')}>Mark as no-show</button>}
-            </div>
-
-            <div style={S('display:flex;flex-direction:column;gap:12px;padding-top:20px;border-top:1px solid #EEF0F3')}>
-              <div style={S('display:flex;align-items:baseline;justify-content:space-between;gap:12px')}><h2 style={S('margin:0;font-size:16px;font-weight:600')}>Up next</h2>{upNext.length > 0 && <span style={S('font-size:13px;color:#5E6673')}>{upNext.length === 1 ? '1 more' : upNext.length + ' more'}</span>}</div>
-              {upNext.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>Nothing else booked after this.</p>}
-              {upNext.map((b) => {
-                const v = vm(b);
-                const when = b.dayYmd === today ? 'Today' : dayInfo(b.dayYmd).short;
-                return (
-                  <button key={b.id} className="ghost" onClick={() => { if (b.dayYmd !== day) { setSelId(b.id); go(b.dayYmd, view); } else openBooking(b.id); }} style={S('display:flex;align-items:stretch;gap:14px;width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #E6E8EC;border-radius:16px;background:#FFFFFF;text-align:left;color:#0E1116;font:inherit')}>
-                    <span style={S('flex:0 0 76px;display:flex;flex-direction:column;justify-content:center;gap:2px')}>
-                      <span style={S('font-size:14.5px;font-weight:600;letter-spacing:-0.01em;white-space:nowrap')}>{fmtMin(b.start)}</span>
-                      <span style={S('font-size:12.5px;color:#5E6673;white-space:nowrap')}>{when}</span>
-                    </span>
-                    <span aria-hidden="true" style={S('flex:0 0 3px;border-radius:999px;background:' + v.tone.dot)} />
-                    <span style={S('flex:1 1 auto;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:2px')}>
-                      <span style={S('font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{b.client}</span>
-                      <span style={S('font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{b.services + ' with ' + v.f}</span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </>)}
-
-          {mode === 'view' && !sq && !selB && (
-            <div style={S('display:flex;flex-direction:column;gap:14px')}>
-              <h2 style={S(H2D)}>Nothing booked</h2>
-              <p style={S('margin:0;color:#5E6673;font-size:14px')}>{view === 'day' && !dayHrs?.open ? c.closedWhy(day) !== undefined ? 'The salon is closed on this day' + (c.closedWhy(day) ? ': ' + c.closedWhy(day) : '') + '.' : 'The salon is closed on ' + di.weekday + 's.' : 'No appointments on ' + di.short + ' yet.'}</p>
-              {!!notice && <span role="status" style={S('align-self:flex-start;padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{notice}</span>}
-              <button onClick={openNew} style={S('height:44px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500')}>New appointment</button>
-            </div>
-          )}
-
-          {mode === 'edit' && cur && (() => {
-            const pl = editPlan()!;
-            const homeCat = svcMap.get(cur.serviceIds[0])?.cat;
-            const summary = cur.client + ' with ' + pl.f + ', ' + dayInfo(cur.dayYmd).short + ' at ' + fmtMin(cur.start) + '.';
-            const oldDur = cur.end - cur.start;
-            const dur = pl.dur === oldDur ? pl.dur + ' min' : oldDur + ' min to ' + pl.dur + ' min';
-            const end = fmtMin(pl.mainEnd) + (pl.dur !== oldDur || pl.start !== cur.start ? ' (was ' + fmtMin(cur.end) + ')' : '');
-            const price = pl.priceC === cur.priceCents ? usd(pl.priceC) : usd(cur.priceCents) + ' to ' + usd(pl.priceC);
-            let blockText = '';
-            if (pl.problem) {
-              blockText = pl.problem.kind === 'late' ? 'That would run past closing at ' + fmtMin(hrsOf(cur.dayYmd)?.to ?? 1080) + '.' : pl.f + ' is booked with ' + pl.problem.with.who + ' from ' + fmtMin(pl.problem.with.s) + ', so ' + pl.dur + ' min from ' + fmtMin(pl.start) + ' does not fit.';
-              if (!pl.alts.length) blockText += ' ' + pl.f + ' has no gap long enough today. Remove a service or reschedule to another day.';
-            }
-            return (
-              <div style={S('display:flex;flex-direction:column;gap:18px')}>
-                <div><h2 style={S(H2D)}>Edit booking</h2><p style={S(SUBD)}>{summary}</p></div>
-                <div style={S('display:flex;flex-direction:column;gap:14px')}>
-                  <ServicePicker services={services} selected={ed.ids} initialCat={homeCat} chipHeight={40}
-                    lock={edLock} onPick={(id) => { let ids = ed.ids.includes(id) ? ed.ids.filter((i) => i !== id) : [...ed.ids, id]; ids = ids.filter((i) => { const sv = svcMap.get(i); return !sv?.addon || (sv.parents ?? []).some((p) => ids.includes(p)); }); setEd({ ids, start: null }); }}
-                    note={(x) => (cur.serviceIds.includes(x.id) || offered(x.id, cur.staffId) ? '' : (offers[x.id] ?? [])[0] ? 'separate booking with ' + first(staffName(offers[x.id][0])) : 'no one offers this')} />
-                </div>
-                <div style={S('display:flex;flex-direction:column;border:1px solid #E6E8EC;border-radius:16px;padding:4px 16px')}>
-                  <div style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #EEF0F3')}><span style={S('color:#5E6673')}>Length</span><span style={S('font-weight:500;text-align:right')}>{dur}</span></div>
-                  <div style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #EEF0F3')}><span style={S('color:#5E6673')}>Finishes</span><span style={S('font-weight:500;text-align:right')}>{end}</span></div>
-                  <div style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 0')}><span style={S('color:#5E6673')}>Price</span><span style={S('font-weight:500;text-align:right')}>{price}</span></div>
-                </div>
-                {!!pl.problem && <div role="alert" style={S('border-radius:16px;background:#FDECEA;color:#B42318;padding:12px 14px;font-size:13.5px;font-weight:500')}>{blockText}</div>}
-                {pl.alts.length > 0 && (
-                  <div style={S('display:flex;flex-direction:column;gap:8px')}>
-                    <span style={S(LBL)}>Start earlier or later so it fits</span>
-                    <div className="hscroll" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>{pl.alts.map((t) => <button key={t} onClick={() => { setEd({ ids: ed.ids, start: t }); setError(''); }} aria-pressed={pl.start === t} style={S(chipD(pl.start === t))}>{fmtMin(t) + ' to ' + fmtMin(t + pl.dur)}</button>)}</div>
-                  </div>
-                )}
-                {!pl.problem && (pl.dur > cur.end - cur.start || pl.start !== cur.start) && <div style={S(note('#DDF3EA', '#14624A'))}>{pl.f + ' is free for the full ' + pl.dur + ' min' + (pl.start !== cur.start ? ' from ' + fmtMin(pl.start) : '') + '.'}</div>}
-                {pl.extras.map((x) => x.at !== undefined
-                  ? <div key={x.svc.id} style={S(note('#ECE8FF', '#3B2BB5'))}>{x.svc.name + ' is a ' + x.svc.cat.toLowerCase() + ' service. It will be booked as a separate appointment with ' + x.f + ' at ' + fmtMin(x.at) + ', ' + x.svc.dur + ' min.'}</div>
-                  : <div key={x.svc.id} style={S(note('#FDECEA', '#B42318'))}>{x.sid ? x.f + ' has no free time for ' + x.svc.name + ' on this day.' : 'No one offers ' + x.svc.name + ' yet, so it cannot be added.'}</div>)}
-                {errP()}
-                <div style={S('display:flex;gap:10px')}>
-                  <button onClick={saveEdit} disabled={busy} style={S(BTN)}>Save changes</button>
-                  <BackBtn label="Back" />
-                </div>
-                {sel && sel.canEdit && sel.k !== 'live' && (c.cancelAsk
-                  ? <CancelPick name={first(cur.client)} mobile={false} busy={busy} onBack={() => c.setCancelAsk(false)} onConfirm={(why) => act(() => cancelBooking(cur.id, why), first(cur.client) + "'s booking cancelled", () => { c.setCancelAsk(false); setMode('view'); })} />
-                  : <button onClick={() => c.setCancelAsk(true)} style={S('height:44px;border:0;border-radius:999px;background:transparent;color:#B42318;font-size:14px;font-weight:500')}>Cancel this booking</button>)}
-              </div>
-            );
-          })()}
-
-          {mode === 'message' && cur && (
-            <div style={S('display:flex;flex-direction:column;gap:16px')}>
-              <MessageBox name={first(cur.client)} context={cur.services + ', ' + dayInfo(cur.dayYmd).short + ' at ' + fmtMin(cur.start)} value={c.msg} onChange={(v) => { c.setMsg(v); setError(''); }} onSend={c.sendMessage} onBack={backToView} busy={busy} error={hasError ? error : ''} />
-            </div>
-          )}
-
-          {mode === 'blockview' && bvB && (
-            <div style={S('display:flex;flex-direction:column;gap:16px')}>
-              <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><span style={S('display:inline-block;padding:4px 12px;border-radius:999px;background:#EEF0F3;color:#4A525E;font-size:12.5px;font-weight:500')}>Blocked</span></div>
-              <div>
-                <div style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em;line-height:1.2')}>{kindName(bvB.kind)}</div>
-                <div style={S('font-size:14px;color:#5E6673')}>{staffName(bvB.staffId)}</div>
-              </div>
-              <dl style={S('margin:0;display:flex;flex-direction:column')}>
-                <div style={S(DL)}><dt style={S('color:#5E6673')}>Day</dt><dd style={S('margin:0;font-weight:500;text-align:right')}>{dayInfo(bvB.dayYmd).full}</dd></div>
-                <div style={S(DL + ';border-bottom:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>Time</dt><dd style={S('margin:0;font-weight:500;text-align:right;white-space:nowrap')}>{fmtMin(bvB.start) + ' – ' + fmtMin(bvB.end)}</dd></div>
-              </dl>
-              <p style={S('margin:0;color:#5E6673;font-size:13.5px')}>{'Clients cannot book ' + first(staffName(bvB.staffId)) + ' during this time.'}</p>
-              {errP()}
-              <div style={S('display:flex;gap:10px')}>
-                <button onClick={() => act(() => deleteBlock(bvB.id), 'Block removed', () => { setBlockId(null); setMode('view'); })} style={S(BTN)}>Remove block</button>
-                <BackBtn label="Close" />
-              </div>
-            </div>
-          )}
-
-          {mode === 'walkin' && (
-            <div style={S('display:flex;flex-direction:column;gap:18px')}>
-              <div><h2 style={S(H2D)}>Walk-in</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>We will find the first free time today.</p></div>
-              <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="wi-name" style={S(LBL)}>Client name</label><input id="wi-name" type="text" value={wi.name} onChange={(e) => { setWi({ ...wi, name: e.target.value, clientId: null }); setError(''); }} placeholder="Search or type a client name" autoComplete="off" style={inp(INPUT)} /><ClientMatches query={wi.name} pickedId={wi.clientId} onPick={(h) => { setWi({ ...wi, name: h.name, clientId: h.id }); setError(''); }} /></div>
-              <div style={S('display:flex;flex-direction:column;gap:10px')}><span id="wi-svc" style={S(LBL)}>Service</span>
-                <ServicePicker extras={false} lock={lockFor([])} services={services} selected={wi.svc ? [wi.svc] : []} initialCat={wiSvc?.cat || wi.cat || undefined} chipHeight={40} onCat={(ct) => setWi({ ...wi, cat: ct })}
-                  onPick={(id) => { const sv = svcMap.get(id)!; const pro = wi.pro !== 'any' && !offered(id, wi.pro) ? 'any' : wi.pro; setWi(wi.svc === id ? { ...wi, svc: null } : { ...wi, svc: id, cat: sv.cat, pro }); setError(''); }} /></div>
-              <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="wi-pro" style={S(LBL)}>Team member</span>
-                <TeamPicker team={team} selected={wi.pro} anyLabel="First available" offers={wi.svc ? (sid) => offered(wi.svc!, sid) : undefined} onPick={(id) => { setWi({ ...wi, pro: id || 'any' }); setError(''); }} /></div>
-              <div role="status" style={S(wiPlanCss)}>{wiPlanText}</div>
-              {errP()}
-              <div style={S('display:flex;gap:10px')}>
-                <button onClick={() => addWalkin(true)} disabled={busy} style={S(BTN)}>Add &amp; check out</button>
-                <button className="ghost" onClick={() => addWalkin(false)} disabled={busy} style={S(BTN2)}>Add to calendar</button>
-              </div>
-              <button className="ghost" onClick={backToView} style={S('height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>Cancel</button>
-            </div>
-          )}
-
-          {mode === 'late' && (
-            <div style={S('display:flex;flex-direction:column;gap:18px')}>
-              <div><h2 style={S(H2D)}>Running late</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>Pushes back everything that has not started for one team member on {dayInfo(day).short}.</p></div>
-              <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="lt-who" style={S(LBL)}>Team member</span><TeamPicker team={team} selected={lf.s} onPick={(id) => { setLf({ ...lf, s: id }); setError(''); }} /></div>
-              <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="lt-mins" style={S(LBL)}>Running late by</span><div role="group" aria-labelledby="lt-mins" className="hscroll" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto')}>
-                {([[15, '15 min'], [30, '30 min'], [45, '45 min'], [60, '1 hour'], [90, '1.5 hours']] as const).map(([m, l]) => <button key={m} onClick={() => { setLf({ ...lf, mins: m }); setError(''); }} aria-pressed={lf.mins === m} style={S(chipD(lf.mins === m))}>{l}</button>)}</div></div>
-              <div style={S('display:flex;flex-direction:column;gap:6px')}><span style={S(LBL)}>{lateList.length ? lateList.length + (lateList.length === 1 ? ' appointment moves' : ' appointments move') : 'Nothing left to move'}</span>
-                {lateList.map((b) => <div key={b.id} style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 14px;border-radius:14px;background:#F4F5F7;font-size:14px')}><span style={S('min-width:0;overflow-wrap:anywhere')}>{b.client}</span><span style={S('flex:0 0 auto;color:#5E6673')}>{fmtMin(b.start)} to {fmtMin(b.start + lf.mins)}</span></div>)}</div>
-              <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="lt-tell" style={S(LBL)}>Tell the clients</span><div role="group" aria-labelledby="lt-tell" style={S('display:flex;gap:8px')}>
-                <button onClick={() => setLf({ ...lf, tell: true })} aria-pressed={lf.tell} style={S(chipD(lf.tell))}>Message them</button>
-                <button onClick={() => setLf({ ...lf, tell: false })} aria-pressed={!lf.tell} style={S(chipD(!lf.tell))}>Do not message</button></div></div>
-              {errP()}
-              <div style={S('display:flex;gap:10px')}>
-                <button onClick={saveLate} disabled={busy || !lateList.length} style={S(BTN)}>Move {lateList.length || ''} {lateList.length === 1 ? 'appointment' : 'appointments'}</button>
-                <BackBtn />
-              </div>
-            </div>
-          )}
-
-          {mode === 'block' && (
-            <div style={S('display:flex;flex-direction:column;gap:18px')}>
-              <div><h2 style={S(H2D)}>Block time</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>Lunch, breaks or time off. Clients cannot book blocked time.</p></div>
-              <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="bk-who" style={S(LBL)}>Team member</span><TeamPicker team={team} selected={bf.s} onPick={(id) => { setBf({ ...bf, s: id, start: null }); setError(''); }} /></div>
-              <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="bk-kind" style={S(LBL)}>Reason</span><div role="group" aria-labelledby="bk-kind" className="hscroll" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto')}>
-                {BLOCK_KINDS.map(([k, l]) => <button key={k} onClick={() => setBf({ ...bf, kind: k })} aria-pressed={bf.kind === k} style={S(chipD(bf.kind === k))}>{l}</button>)}</div></div>
-              <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="bk-dur" style={S(LBL)}>Length</span><div role="group" aria-labelledby="bk-dur" className="hscroll" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto')}>
-                {BLOCK_DURS_M.map(([m, l]) => <button key={m} onClick={() => { setBf({ ...bf, dur: m, start: null }); setError(''); }} aria-pressed={bf.dur === m} style={S(chipD(bf.dur === m))}>{l}</button>)}</div></div>
-              <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="bk-day" style={S(LBL)}>Day</span>
-                <div role="group" className="hscroll" aria-labelledby="bk-day" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
-                  {days14.map((d) => <button key={d.ymd} onClick={() => { if (!d.closed) { setBf({ ...bf, day: d.ymd, start: null }); setError(''); } }} disabled={d.closed} aria-pressed={bf.day === d.ymd} aria-label={d.full + (d.closed ? ', closed' : '')} style={S(dayD(bf.day === d.ymd, d.closed))}><span style={S('font-size:12.5px')}>{d.abbr}</span><span style={S('font-size:17px;font-weight:600')}>{d.num}</span></button>)}</div></div>
-              <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="bk-time" style={S(LBL)}>Starts at</span>
-                <div role="group" aria-labelledby="bk-time" style={S('display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px')}>
-                  {slotsFor.map((t) => { const why = reason(bf.day, t, bfDur); const on = bf.start === t && !why; return <button key={t} onClick={() => { if (!why) { setBf({ ...bf, start: t }); setError(''); } }} disabled={!!why} aria-pressed={on} aria-label={fmtMin(t) + (why ? ', unavailable' : '')} style={S(slotCss(on, !!why))}>{fmtMin(t)}</button>; })}</div></div>
-              {errP()}
-              <div style={S('display:flex;gap:10px')}>
-                <button onClick={saveBlock} disabled={busy} style={S(BTN)}>Block time</button>
-                <BackBtn />
-              </div>
-            </div>
-          )}
-
-          {mode === 'resched' && cur && (
-            <div style={S('display:flex;flex-direction:column;gap:18px')}>
-              <div>
-                <h2 style={S(H2D)}>{rs.rebook ? 'Rebook' : 'Reschedule'}</h2>
-                <p style={S(SUBD)}>{rs.rebook ? cur.client + ', ' + cur.services + ' with ' + first(staffName(cur.staffId)) + ', ' + (cur.end - cur.start) + ' min, ' + usd(cur.priceCents) + '.' : cur.client + ', ' + cur.services + ' with ' + first(staffName(cur.staffId)) + '. Now ' + dayInfo(cur.dayYmd).short + ', ' + fmtMin(cur.start) + '.'}</p>
-              </div>
-              <div style={S('display:flex;flex-direction:column;gap:8px')}>
-                <span id="rs-day-label" style={S(LBL)}>{rs.rebook ? 'Day' : 'New day'}</span>
-                <div role="group" className="hscroll" aria-labelledby="rs-day-label" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
-                  {days14.map((d) => <button key={d.ymd} onClick={() => { if (!d.closed) setRs({ ...rs, day: d.ymd, time: null }); setError(''); }} disabled={d.closed} aria-pressed={rs.day === d.ymd} aria-label={d.full + (d.closed ? ', closed' : '')} style={S(dayD(rs.day === d.ymd, d.closed))}><span style={S('font-size:12.5px')}>{d.abbr}</span><span style={S('font-size:17px;font-weight:600')}>{d.num}</span></button>)}
-                </div>
-              </div>
-              <div style={S('display:flex;flex-direction:column;gap:8px')}>
-                <span id="rs-time-label" style={S(LBL)}>{rs.rebook ? 'Time' : 'New time'}</span>
-                <div role="group" aria-labelledby="rs-time-label" style={S('display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px')}>
-                  {slotsFor.map((t) => { const why = reason(rs.day, t, cur.end - cur.start); const on = rs.time === t && !why; return <button key={t} onClick={() => { if (!why) { setRs({ ...rs, time: t }); setError(''); } }} disabled={!!why} aria-pressed={on} aria-label={fmtMin(t) + (why ? ', unavailable' : '')} style={S(slotCss(on, !!why))}>{fmtMin(t)}</button>; })}
-                </div>
-              </div>
-              {errP()}
-              <div style={S('display:flex;gap:10px')}>
-                <button onClick={moveBooking} disabled={busy} style={S(BTN)}>{rs.rebook ? 'Book again' : 'Move appointment'}</button>
-                <BackBtn />
-              </div>
-            </div>
-          )}
-
-          {mode === 'checkout' && cur && (() => {
-            const cm = coMath(cur.priceCents);
-            return (
-              <div style={S('display:flex;flex-direction:column;gap:18px')}>
-                <div><h2 style={S(H2D)}>Checkout</h2><p style={S(SUBD)}>{cur.client + ', ' + cur.services}</p></div>
-                <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="co-method-label" style={S(LBL)}>Payment method</span><div role="group" className="hscroll" aria-labelledby="co-method-label" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
-                  {METHODS.filter(([m]) => (m === 'card' ? cfg.acceptCard : m === 'cash' ? cfg.acceptCash : cfg.acceptGift)).map(([m, l]) => <button key={m} onClick={() => setCo({ ...co, method: m })} aria-pressed={co.method === m} style={S(chipD(co.method === m))}>{l}</button>)}</div></div>
-                {co.method === 'gift_card' && <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="co-code" style={S(LBL)}>Gift card code</label><input id="co-code" type="text" value={co.code} onChange={(e) => setCo({ ...co, code: e.target.value })} placeholder="Code" style={inp(INPUT)} /></div>}
-                {cfg.canDiscount && <DiscountPick value={co.disc} onChange={(d) => setCo({ ...co, disc: d })} />}
-                {cfg.askTip && <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="co-tip-label" style={S(LBL)}>Tip</span><div role="group" className="hscroll" aria-labelledby="co-tip-label" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
-                  {TIP_OPTS.map(([p, l]) => <button key={p} onClick={() => setCo({ ...co, tip: p })} aria-pressed={co.tip === p} style={S(chipD(co.tip === p))}>{l}</button>)}</div></div>}
-                <dl style={S('margin:0;display:flex;flex-direction:column')}>
-                  <div style={S(DL)}><dt style={S('color:#5E6673')}>Service</dt><dd style={S('margin:0;text-align:right;font-weight:500;white-space:nowrap')}>{m2(cur.priceCents)}</dd></div>
-                  {cm.disc > 0 && <div style={S(DL)}><dt style={S('color:#5E6673')}>Discount</dt><dd style={S('margin:0;text-align:right;font-weight:500;white-space:nowrap')}>{'-' + m2(cm.disc)}</dd></div>}
-                  <div style={S(DL)}><dt style={S('color:#5E6673')}>Tip</dt><dd style={S('margin:0;text-align:right;font-weight:500;white-space:nowrap')}>{cm.tip ? m2(cm.tip) : 'None'}</dd></div>
-                  <div style={S(DL)}><dt style={S('color:#5E6673')}>{cm.taxLabel}</dt><dd style={S('margin:0;text-align:right;font-weight:500;white-space:nowrap')}>{m2(cm.taxAmt)}</dd></div>
-                  <div style={S(DL + ';border-bottom:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>Total</dt><dd style={S('margin:0;text-align:right;font-weight:600;white-space:nowrap')}>{m2(cm.total)}</dd></div>
-                </dl>
-                {errP()}
-                <div style={S('display:flex;gap:10px')}>
-                  <button onClick={charge} disabled={busy} style={S(BTN)}>{'Charge ' + m2(cm.total)}</button>
-                  <BackBtn />
-                </div>
-              </div>
-            );
-          })()}
-
-          {mode === 'view' && !!sq && (
+        {!!sq && <aside aria-label="Search results" style={S('flex:1 1 400px;max-width:520px;min-width:0;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:22px')}>
+          {!!sq && (
             <div style={S('display:flex;flex-direction:column;gap:14px')}>
               <div><h2 style={S(H2D)}>Search results</h2><p style={S(SUBD)}>{(hits ? hits.length + (hits.length === 1 ? ' appointment' : ' appointments') : 'Searching') + ' for "' + sq + '"'}</p></div>
               {hits && hits.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>Nothing matches that yet. Try a client name, phone number, service or booking number.</p>}
@@ -526,7 +266,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
                   const tone = vmTone(h.cat);
                   const f = first(h.staff), when = dayInfo(h.dayYmd).short + ', ' + fmtMin(h.start);
                   return (
-                    <li key={h.id}><button className="ghost" onClick={() => { setSelId(h.id); setQuery(''); setMode('view'); setNotice(''); setError(''); if (h.dayYmd !== day || view === 'week') go(h.dayYmd, 'day'); }} aria-label={h.client + ', ' + h.services + ', ' + when} style={S('display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:56px;padding:8px 10px;border:0;border-radius:14px;background:transparent;text-align:left;color:#0E1116')}>
+                    <li key={h.id}><button className="ghost" onClick={() => { setQuery(''); if (h.dayYmd !== day || view === 'week') go(h.dayYmd, 'day'); openBooking(h.id); }} aria-label={h.client + ', ' + h.services + ', ' + when} style={S('display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:56px;padding:8px 10px;border:0;border-radius:14px;background:transparent;text-align:left;color:#0E1116')}>
                       <span style={S('flex:0 0 40px;width:40px;height:40px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;background:' + tone.bg + ';color:' + tone.fg)}>{initials(h.client)}</span>
                       <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{h.client}</span><span style={S('display:block;font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{h.services + ' with ' + f}</span></span>
                       <span style={S('flex:0 0 auto;font-size:12.5px;color:#5E6673')}>{when}</span>
@@ -537,43 +277,9 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
             </div>
           )}
 
-          {mode === 'new' && (
-            <div style={S('display:flex;flex-direction:column;gap:18px')}>
-              <h2 style={S(H2D)}>New appointment</h2>
-              <div style={S('display:flex;flex-direction:column;gap:8px')}>
-                <label htmlFor="ap-client" style={S(LBL)}>Client</label>
-                <input id="ap-client" type="text" value={nf.client} onChange={(e) => { setNf({ ...nf, client: e.target.value, clientId: null }); setError(''); }} placeholder="Search or type a client name" style={inp(INPUT)} autoComplete="off" />
-                <ClientMatches query={nf.client} pickedId={nf.clientId} onPick={(h) => { setNf({ ...nf, client: h.name, clientId: h.id }); setError(''); }} />
-              </div>
-              <div style={S('display:flex;flex-direction:column;gap:8px')}>
-                <span id="ap-service-label" style={S(LBL)}>Service</span>
-                <ServicePicker lock={nLock} services={services} selected={nf.services} initialCat={nFirstSvc?.cat} chipHeight={40} onPick={nPickSvc} note={(x) => (nf.staff && !offered(x.id, nf.staff) ? ((offers[x.id] ?? [])[0] ? 'separate booking with ' + first(staffName(offers[x.id][0])) : 'no one offers this') : '')} />
-              </div>
-              <div style={S('display:flex;flex-direction:column;gap:8px')}>
-                <span id="ap-staff-label" style={S(LBL)}>Team member</span>
-                <TeamPicker team={team} selected={nf.staff} offers={nOffers} onPick={(id) => { setNf({ ...nf, staff: id, time: null }); setError(''); }} />
-              </div>
-              <div style={S('display:flex;flex-direction:column;gap:8px')}>
-                <span id="ap-day-label" style={S(LBL)}>Day</span>
-                <div role="group" className="hscroll" aria-labelledby="ap-day-label" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
-                  {days14.map((d) => <button key={d.ymd} onClick={() => { if (!d.closed) { setNf({ ...nf, day: d.ymd, time: null }); setError(''); } }} disabled={d.closed} aria-pressed={nf.day === d.ymd} aria-label={d.full + (d.closed ? ', closed' : '')} style={S(dayD(nf.day === d.ymd, d.closed))}><span style={S('font-size:12.5px')}>{d.abbr}</span><span style={S('font-size:17px;font-weight:600')}>{d.num}</span></button>)}
-                </div>
-              </div>
-              <div style={S('display:flex;flex-direction:column;gap:8px')}>
-                <span id="ap-time-label" style={S(LBL)}>Time</span>
-                <div role="group" aria-labelledby="ap-time-label" style={S('display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px')}>
-                  {nSlots.map((t) => { const why = nWhy(t); const on = nf.time === t && !why; return <button key={t} onClick={() => { if (!why) { setNf({ ...nf, time: t }); setError(''); } }} disabled={!!why} aria-pressed={on} aria-label={fmtMin(t) + (why ? ', unavailable' : '')} style={S(slotCss(on, !!why))}>{fmtMin(t)}</button>; })}
-                </div>
-              </div>
-              {errP()}
-              <div style={S('display:flex;gap:10px')}>
-                <button onClick={createNew} disabled={busy} style={S(BTN)}>Create appointment</button>
-                <BackBtn />
-              </div>
-            </div>
-          )}
-        </aside>
+        </aside>}
       </div>
+      {c.open && <MobileCalendar c={c} props={props} drawer />}
     </div>
   );
 }

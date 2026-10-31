@@ -4,6 +4,7 @@ import { requireCtx } from '@/lib/session';
 import { SideNav, TabBar } from '@/components/Nav';
 import { NewApptHost } from '@/components/NewApptHost';
 import { NewMenuHost } from '@/components/NewMenu';
+import { DrawerKeys } from '@/components/DrawerKeys';
 import { ThemeApply } from '@/components/Theme';
 
 type Ctx = Awaited<ReturnType<typeof requireCtx>>;
@@ -25,6 +26,7 @@ export default async function DashLayout({ children }: { children: React.ReactNo
       <TabBar />
       <NewApptHost />
       <NewMenuHost />
+      <DrawerKeys />
     </div>
   );
 }
