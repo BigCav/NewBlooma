@@ -159,3 +159,10 @@ button.sheet-out,.sheet-out>button[aria-label^="Close"]{animation:drFadeOut .2s 
 .d-cal{transition:padding-left .22s cubic-bezier(.4,0,.2,1)}
 .shell:has(.subpanel.open) .d-cal{padding-left:8px !important}
 @media (prefers-reduced-motion:reduce){.d-cal{transition:none}}
+
+/* Desktop loading placeholder sits exactly where the page will: same padding, same gap beside a submenu. */
+@media (min-width:901px){
+.main:has(.sk-desk){padding:0}
+.sk-desk{transition:padding-left .22s cubic-bezier(.4,0,.2,1)}
+.shell:has(.subpanel.open) .sk-desk{padding-left:8px !important}
+}
