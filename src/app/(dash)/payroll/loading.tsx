@@ -1,5 +1,5 @@
 import { PageSkeleton } from '@/components/Skeleton';
 
 export default function Loading() {
-  return <PageSkeleton kind="grid" />;
+  return <PageSkeleton kind="grid" search={false} />;
 }

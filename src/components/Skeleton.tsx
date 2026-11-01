@@ -5,11 +5,11 @@ type Kind = 'list' | 'grid' | 'tiles' | 'calendar' | 'report';
 const B = ({ w, h, r = 12, s }: { w: number | string; h: number; r?: number; s?: CSSProperties }) => <div className="sk" style={{ width: w, height: h, borderRadius: r, flex: '0 0 auto', maxWidth: '100%', ...s }} />;
 const CARD: CSSProperties = { background: '#FFFFFF', border: '1px solid #E6E8EC', borderRadius: 24, overflow: 'hidden', boxSizing: 'border-box' };
 
-function Head({ action }: { action: boolean }) {
+function Head({ action, search }: { action: boolean; search: boolean }) {
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16 }}>
       <div><B w={190} h={34} /><B w={270} h={16} s={{ marginTop: 10 }} /></div>
-      <div style={{ display: 'flex', gap: 10 }}><B w={280} h={44} r={999} />{action && <B w={170} h={44} r={999} />}</div>
+      <div style={{ display: 'flex', gap: 10 }}>{search && <B w={280} h={44} r={999} />}{action && <B w={170} h={44} r={999} />}</div>
     </div>
   );
 }
@@ -80,10 +80,10 @@ function Body({ kind }: { kind: Kind }): ReactNode {
 }
 
 /** What a page looks like while it loads: the same header, numbers and cards as the real page, in grey. Phones keep the simple stack. */
-export function PageSkeleton({ kind = 'list', stats = 3, action = false }: { kind?: Kind; stats?: number; action?: boolean }) {
+export function PageSkeleton({ kind = 'list', stats = 3, action = false, search = true }: { kind?: Kind; stats?: number; action?: boolean; search?: boolean }) {
   return (<>
     <div className="only-d sk-desk" role="status" aria-busy="true" aria-label="Loading" style={{ boxSizing: 'border-box', padding: '28px 32px 40px 32px', display: 'flex', flexDirection: 'column', gap: 28 }}>
-      <Head action={action} />
+      <Head action={action} search={search} />
       {stats > 0 && kind !== 'tiles' && <Stats n={stats} />}
       <Body kind={kind} />
     </div>
