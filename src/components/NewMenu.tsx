@@ -23,7 +23,7 @@ function NewSheet({ onClose, onAppt }: { onClose: () => void; onAppt: () => void
   const router = useRouter();
   const go = (href: string) => { onClose(); router.push(href); };
   return (
-    <div style={S('position:fixed;left:0;right:0;top:0;bottom:0;z-index:60')}>
+    <div className="m-drawer"><div style={S('position:fixed;left:0;right:0;top:0;bottom:0;z-index:60')}>
       <button onClick={onClose} aria-label="Close" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
       <div className="sheet" role="dialog" aria-label="Create new" style={S("position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:92%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column;gap:10px;font-family:'Geist',system-ui,sans-serif;color:#0E1116")}>
         <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0;margin-bottom:4px')} />
@@ -42,7 +42,7 @@ function NewSheet({ onClose, onAppt }: { onClose: () => void; onAppt: () => void
           </button>
         ))}
       </div>
-    </div>
+    </div></div>
   );
 }
 
