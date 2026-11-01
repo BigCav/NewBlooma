@@ -6,7 +6,7 @@ import { useEffect, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
 import { CLOSE_BTN, CloseX } from '../calendar/calUi';
-import { ClientCard, ClientStep, DetailRows, ICONS, ROW, StepShell, TICK, useSteps } from '../calendar/wizardUi';
+import { ClientCard, ClientStep, DetailRows, ICONS, ROW, StepShell, TICK, Tiles, useSteps } from '../calendar/wizardUi';
 import { savePackage, sellPackage, setPackageActive } from './actions';
 
 export type PkgType = { id: string; name: string; serviceId: string; service: string; servicePriceCents: number; uses: number; priceCents: number; validDays: number | null; active: boolean; sold: number };
@@ -23,7 +23,6 @@ const validText = (d: number | null) => VALID.find((v) => v[0] === d)?.[1] ?? d 
 const chip = (on: boolean, m: boolean) => `flex:0 0 auto;height:${m ? 44 : 40}px;padding:0 14px;border-radius:999px;font:inherit;font-size:13.5px;font-weight:500;cursor:pointer;border:1px solid ` + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
 const PILL: Record<string, [string, string]> = { Active: ['#DDF3EA', '#14624A'], Unpaid: ['#FFEBD0', '#7A4204'], 'Used up': ['#EEF0F3', '#4A525E'], Expired: ['#EEF0F3', '#4A525E'], Refunded: ['#FDECEA', '#B42318'], Archived: ['#EEF0F3', '#4A525E'] };
 const pill = (s: string) => 'display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;background:' + PILL[s][0] + ';color:' + PILL[s][1];
-const FIELD = 'box-sizing:border-box;width:100%;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF';
 const BLANK: Form = { name: '', serviceId: '', uses: '5', price: '', validDays: null };
 
 function usePackages(props: Props) {
@@ -90,44 +89,73 @@ function Field({ label, children, htmlFor }: { label: string; children: React.Re
 }
 const FIELD_IN = { ...S('box-sizing:border-box;width:100%;margin-top:2px;padding:0;border:0;outline:none;background:transparent;font:inherit;font-size:16px;color:#0E1116'), minHeight: 0, borderRadius: 0 } as const;
 
-/** Create or change a package. */
+/** Create or change a package, one question at a time, ending in a summary. A package being changed opens on the summary. */
 function PackageForm({ c }: { c: C }) {
   const { pf, setPf } = c;
-  const edit = c.mode === 'edit' ? c.allTypes.find((t) => t.id === c.typeId) : undefined;
+  const editing = c.mode === 'edit';
+  const edit = editing ? c.allTypes.find((t) => t.id === c.typeId) : undefined;
+  const kinds = ['service', 'visits', 'price', 'valid', 'name', 'summary'] as const;
+  const last = kinds.length - 1;
+  const { step, jump, forward, back } = useSteps(last, () => c.setError(''), editing ? last : 0);
+  const kind = kinds[step];
+  const at = (k: string) => (kinds as readonly string[]).indexOf(k);
+  const titles: Record<string, string> = { service: 'Which service?', visits: 'Number of visits', price: 'Price', valid: 'Valid for', name: 'Name', summary: 'Summary' };
   const svc = c.services.find((x) => x.id === pf.serviceId);
   const uses = parseInt(pf.uses, 10) || 0;
   const price = Math.round(parseFloat(pf.price.replace(/[^0-9.]/g, '')) * 100) || 0;
   const normal = svc && uses ? svc.priceCents * uses : 0;
-  const save = normal > price && price > 0 ? normal - price : 0;
+  const saves = normal > price && price > 0 ? normal - price : 0;
+  const autoName = svc && uses ? uses + ' x ' + svc.name : '';
+  const [custom, setCustom] = useState(() => !['3', '5', '10'].includes(pf.uses));
   const set = (p: Partial<Form>) => { setPf({ ...pf, ...p }); c.setError(''); };
+  const next = () => {
+    const e = kind === 'service' && !pf.serviceId ? 'Choose a service.' : kind === 'visits' && (uses < 2 || uses > 100) ? 'Choose between 2 and 100 visits.' : kind === 'price' && price < 1 ? 'Enter a price above zero, like 200 or 199.50.' : '';
+    if (e) { c.setError(e); return; }
+    forward();
+  };
+  const validKey = pf.validDays === null ? 'none' : String(pf.validDays);
   return (
-    <StepShell plain step={0} titles={[c.mode === 'new' ? 'New package' : 'Edit package']} onBack={c.close} onClose={c.close} error={c.error}
-      actions={[{ label: 'Save package', onClick: c.save, disabled: c.busy }]}>
-      <Field label="Name" htmlFor="pk-name"><input id="pk-name" maxLength={80} value={pf.name} onChange={(e) => set({ name: e.target.value })} placeholder={svc && uses ? uses + ' x ' + svc.name : 'For example, 5 blow dries'} style={FIELD_IN} /></Field>
-      <div role="group" aria-label="Service" style={S('display:flex;flex-direction:column;gap:2px')}>
-        <span style={S('font-size:14px;font-weight:600;margin-bottom:8px')}>Service</span>
-        {c.services.map((x) => { const on = pf.serviceId === x.id; return (
-          <button key={x.id} onClick={() => set({ serviceId: x.id })} aria-pressed={on} style={S(ROW(on))}>
-            <span style={S('flex:1 1 auto;min-width:0;font-size:15px;font-weight:600;overflow-wrap:anywhere;text-align:left')}>{x.name}</span>
-            <span style={S('flex:0 0 auto;font-size:14px;color:#5E6673')}>{money(x.priceCents)}</span>
-            {on && TICK}
-          </button>
-        ); })}
-      </div>
-      <div role="group" aria-label="Visits" style={S('display:flex;flex-direction:column;gap:10px')}>
-        <span style={S('font-size:14px;font-weight:600')}>Number of visits</span>
-        <div style={S('display:flex;flex-wrap:wrap;gap:8px')}>{[3, 5, 10].map((n) => <button key={n} onClick={() => set({ uses: String(n) })} aria-pressed={uses === n} style={S(chip(uses === n, true))}>{n}</button>)}</div>
-        <input aria-label="Custom number of visits" inputMode="numeric" value={pf.uses} onChange={(e) => set({ uses: e.target.value.replace(/[^0-9]/g, '').slice(0, 3) })} placeholder="Or enter a number" style={{ ...S(FIELD), minHeight: 0 }} />
-      </div>
-      <Field label="Price for the whole package" htmlFor="pk-price"><input id="pk-price" inputMode="decimal" value={pf.price} onChange={(e) => set({ price: decimalInput(e.target.value) })} placeholder="For example, 200" style={FIELD_IN} /></Field>
-      {normal > 0 && <p style={S('margin:-6px 0 0;font-size:13px;color:#5E6673')}>{uses} visits at the usual price come to {money(normal)}.{save > 0 ? ' Clients save ' + money(save) + '.' : ''}</p>}
-      <div role="group" aria-label="Valid for" style={S('display:flex;flex-direction:column;gap:10px')}>
-        <span style={S('font-size:14px;font-weight:600')}>Valid for</span>
-        <div style={S('display:flex;flex-wrap:wrap;gap:8px')}>{VALID.map(([d, l]) => <button key={l} onClick={() => set({ validDays: d })} aria-pressed={pf.validDays === d} style={S(chip(pf.validDays === d, true))}>{l}</button>)}</div>
-        <span style={S('font-size:13px;color:#5E6673')}>Counted from the day the package is paid for.</span>
-      </div>
-      {edit && <button className="ghost" onClick={() => c.archive(edit)} disabled={c.busy} style={S('height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font:inherit;font-size:14.5px;font-weight:500;cursor:pointer')}>{edit.active ? 'Stop offering this package' : 'Offer this package again'}</button>}
-      {edit && edit.sold > 0 && <p style={S('margin:0;font-size:13px;color:#5E6673')}>{edit.sold} {edit.sold === 1 ? 'client has' : 'clients have'} bought this. Changes only affect new sales.</p>}
+    <StepShell step={step} titles={kinds.map((k) => titles[k])} onBack={step === 0 || (editing && step === last) ? c.close : back} onClose={c.close} error={c.error}
+      actions={kind === 'summary' ? [{ label: 'Save package', onClick: c.save, disabled: c.busy }] : [{ label: 'Continue', onClick: next }]}>
+      {kind === 'service' && (
+        <div role="group" aria-label="Service" style={S('display:flex;flex-direction:column')}>
+          {c.services.map((x) => { const on = pf.serviceId === x.id; return (
+            <button key={x.id} onClick={() => set({ serviceId: on ? '' : x.id })} aria-pressed={on} style={S(ROW(on))}>
+              <span style={S('flex:1 1 auto;min-width:0;font-size:15px;font-weight:600;overflow-wrap:anywhere;text-align:left')}>{x.name}</span>
+              <span style={S('flex:0 0 auto;font-size:14px;color:#5E6673')}>{money(x.priceCents)}</span>
+              {on && TICK}
+            </button>
+          ); })}
+        </div>
+      )}
+      {kind === 'visits' && (<>
+        <Tiles label="Number of visits" options={[['3', '3 visits'], ['5', '5 visits'], ['10', '10 visits'], ['custom', 'Custom']] as const} value={custom ? 'custom' : pf.uses}
+          onPick={(v) => { if (v === 'custom') { setCustom(true); set({ uses: '' }); } else { setCustom(false); set({ uses: v }); } }} />
+        {custom && <Field label="Number of visits" htmlFor="pk-uses"><input id="pk-uses" inputMode="numeric" value={pf.uses} onChange={(e) => set({ uses: e.target.value.replace(/[^0-9]/g, '').slice(0, 3) })} placeholder="Between 2 and 100" style={FIELD_IN} /></Field>}
+      </>)}
+      {kind === 'price' && (<>
+        <Field label="Price for the whole package" htmlFor="pk-price"><input id="pk-price" inputMode="decimal" value={pf.price} onChange={(e) => set({ price: decimalInput(e.target.value) })} placeholder="For example, 200" style={FIELD_IN} /></Field>
+        {normal > 0 && <p style={S('margin:0;font-size:13.5px;color:#5E6673')}>{uses} visits at the usual price come to {money(normal)}.{saves > 0 ? ' Clients save ' + money(saves) + '.' : ''}</p>}
+      </>)}
+      {kind === 'valid' && (<>
+        <Tiles label="Valid for" options={VALID.map(([d, l]) => [d === null ? 'none' : String(d), l] as const)} value={validKey} onPick={(v) => set({ validDays: v === 'none' ? null : parseInt(v, 10) })} />
+        <p style={S('margin:0;font-size:13.5px;color:#5E6673')}>Counted from the day the package is paid for.</p>
+      </>)}
+      {kind === 'name' && (<>
+        <Field label="Name" htmlFor="pk-name"><input id="pk-name" maxLength={80} value={pf.name} onChange={(e) => set({ name: e.target.value })} placeholder={autoName || 'For example, 5 blow dries'} style={FIELD_IN} /></Field>
+        <p style={S('margin:0;font-size:13.5px;color:#5E6673')}>Leave it empty to call it {autoName ? '"' + autoName + '"' : 'by its visits and service'}.</p>
+      </>)}
+      {kind === 'summary' && (<>
+        <DetailRows go={jump} rows={[
+          { icon: ICONS.scissors, text: svc ? svc.name : 'No service', step: at('service') },
+          { icon: ICONS.tag, text: uses + ' visits', step: at('visits') },
+          { icon: ICONS.tag, text: price ? money(price) : 'No price', step: at('price') },
+          { icon: ICONS.time, text: pf.validDays === null ? 'No expiry' : 'Valid ' + validText(pf.validDays), step: at('valid') },
+          { icon: ICONS.person, text: pf.name.trim() || autoName || 'No name', step: at('name') },
+        ]} />
+        {edit && edit.sold > 0 && <p style={S('margin:0;font-size:13.5px;color:#5E6673')}>{edit.sold} {edit.sold === 1 ? 'client has' : 'clients have'} bought this. Changes only affect new sales.</p>}
+        {edit && <button className="ghost" onClick={() => c.archive(edit)} disabled={c.busy} style={S('height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font:inherit;font-size:14.5px;font-weight:500;cursor:pointer')}>{edit.active ? 'Stop offering this package' : 'Offer this package again'}</button>}
+      </>)}
     </StepShell>
   );
 }
@@ -223,41 +251,61 @@ const noneSold = (c: C) => (c.allSold.length === 0 ? 'No packages sold yet.' : '
 
 function Desktop({ c }: { c: C }) {
   const stat = (l: string, v: string) => <div key={l}><div style={S('color:#5E6673;font-size:13.5px')}>{l}</div><div style={S('margin-top:4px;font-size:38px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{v}</div></div>;
+  const th = (l: string, f: string) => <div key={l} style={S('flex:' + f + ' 1 0;min-width:0')}>{l}</div>;
+  const rowCss = 'display:flex;align-items:center;gap:16px;width:100%;box-sizing:border-box;min-height:68px;padding:10px 20px;border:0;border-bottom:1px solid #EEF0F3;text-align:left;font:inherit;color:#0E1116;background:transparent';
+  const count = c.tab === 'sold' ? c.sold.length + (c.sold.length === 1 ? ' package' : ' packages') : c.types.length + (c.types.length === 1 ? ' type' : ' types');
   return (
     <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <PageHeader title="Packages" subtitle="Prepaid bundles of a service" query={c.query} onQuery={c.setQuery} placeholder="Search client or package" actionLabel="Sell package" onAction={c.openSell} />
       <section aria-label="Packages at a glance" style={S('display:flex;flex-wrap:wrap;gap:20px 64px')}>
         {stat('Active packages', String(c.live.length))}{stat('Visits left', String(c.visitsLeft))}{stat('Prepaid value left', money(c.owed))}{stat('Sold this month', money(c.soldM))}
       </section>
-      <div style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px')}>
-        <div role="tablist" aria-label="Packages view" style={S('display:flex;gap:8px')}>{([['sold', 'Sold to clients'], ['types', 'Your packages']] as const).map(([id, l]) => <button key={id} role="tab" aria-selected={c.tab === id} onClick={() => c.setTab(id)} style={S(chip(c.tab === id, false))}>{l}</button>)}</div>
-        {c.canEdit && c.tab === 'types' && <button onClick={c.openNew} style={S('height:44px;padding:0 22px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font:inherit;font-size:14px;font-weight:500;cursor:pointer')}>New package</button>}
-      </div>
-      {c.tab === 'sold' ? (
-        <section aria-label="Packages sold" style={S('background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;overflow:hidden')}>
-          <div style={S('display:flex;align-items:center;gap:16px;padding:12px 20px;border-bottom:1px solid #EEF0F3;color:#5E6673;font-size:12.5px;font-weight:500')}>
-            <div style={S('flex:1.6 1 0;min-width:0')}>Client</div><div style={S('flex:1.6 1 0;min-width:0')}>Package</div><div style={S('flex:1.4 1 0;min-width:0')}>Visits left</div><div style={S('flex:1 1 0;min-width:0')}>Bought</div><div style={S('flex:1.2 1 0;min-width:0')}>Expires</div><div style={S('flex:0.9 1 0;min-width:0')}>Status</div>
+      <section aria-label="Packages" style={S('background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;overflow:hidden')}>
+        <div style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid #E6E8EC')}>
+          <div role="tablist" aria-label="Packages view" style={S('display:flex;flex-wrap:wrap;gap:8px')}>{([['sold', 'Sold to clients'], ['types', 'Your packages']] as const).map(([id, l]) => <button key={id} role="tab" aria-selected={c.tab === id} onClick={() => c.setTab(id)} style={S(chip(c.tab === id, false))}>{l}</button>)}</div>
+          <div style={S('display:flex;align-items:center;gap:16px')}>
+            <span style={S('color:#5E6673;font-size:13.5px')}>{count}</span>
+            {c.canEdit && c.tab === 'types' && <button onClick={c.openNew} style={S('height:40px;padding:0 20px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font:inherit;font-size:13.5px;font-weight:500;cursor:pointer')}>New package</button>}
           </div>
-          <ul style={S('margin:0;padding:0;list-style:none')}>
-            {c.sold.map((s) => (
-              <li key={s.id}><button className="row" onClick={() => c.pick(s.id)} aria-label={`${s.client}, ${s.name}, ${s.left} of ${s.uses} left, ${s.status}`} style={S('display:flex;align-items:center;gap:16px;width:100%;box-sizing:border-box;min-height:68px;padding:10px 20px;border:0;border-bottom:1px solid #EEF0F3;text-align:left;font:inherit;color:#0E1116;background:transparent;cursor:pointer')}>
-                <span style={S('flex:1.6 1 0;min-width:0;font-weight:500;overflow-wrap:anywhere')}>{s.client}</span>
-                <span style={S('flex:1.6 1 0;min-width:0;overflow-wrap:anywhere')}>{s.name}</span>
-                <span style={S('flex:1.4 1 0;min-width:0')}><span style={S('display:block;font-weight:600')}>{s.left} of {s.uses}</span>{barOf(s.left, s.uses)}</span>
-                <span style={S('flex:1 1 0;min-width:0;color:#5E6673')}>{dShort(s.bought)}</span>
-                <span style={S('flex:1.2 1 0;min-width:0;color:#5E6673')}>{expText(s)}</span>
-                <span style={S('flex:0.9 1 0;min-width:0')}><span style={S(pill(s.status))}>{s.status}</span></span>
-              </button></li>
-            ))}
-          </ul>
-          {c.sold.length === 0 && <p style={S('margin:0;padding:28px 20px;color:#5E6673;font-size:14px')}>{noneSold(c)}</p>}
-        </section>
-      ) : (
-        <section aria-label="Your packages" style={S('display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px')}>
-          {c.types.map((t) => <TypeCard key={t.id} t={t} c={c} />)}
-          {c.types.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>{c.canEdit ? 'No packages yet. Create your first one.' : 'No packages yet.'}</p>}
-        </section>
-      )}
+        </div>
+        <div style={S('overflow-x:auto')}>
+          <div style={S('min-width:720px')}>
+            {c.tab === 'sold' ? (<>
+              <div style={S('display:flex;align-items:center;gap:16px;padding:12px 20px;border-bottom:1px solid #EEF0F3;color:#5E6673;font-size:12.5px;font-weight:500')}>{th('Client', '1.6')}{th('Package', '1.6')}{th('Visits left', '1.4')}{th('Bought', '1')}{th('Expires', '1.2')}{th('Status', '0.9')}</div>
+              <ul style={S('margin:0;padding:0;list-style:none')}>
+                {c.sold.map((s) => (
+                  <li key={s.id}><button className="row" onClick={() => c.pick(s.id)} aria-label={`${s.client}, ${s.name}, ${s.left} of ${s.uses} left, ${s.status}`} style={S(rowCss + ';cursor:pointer')}>
+                    <span style={S('flex:1.6 1 0;min-width:0;font-weight:500;overflow-wrap:anywhere')}>{s.client}</span>
+                    <span style={S('flex:1.6 1 0;min-width:0;overflow-wrap:anywhere')}>{s.name}</span>
+                    <span style={S('flex:1.4 1 0;min-width:0')}><span style={S('display:block;font-weight:600')}>{s.left} of {s.uses}</span>{barOf(s.left, s.uses)}</span>
+                    <span style={S('flex:1 1 0;min-width:0;color:#5E6673')}>{dShort(s.bought)}</span>
+                    <span style={S('flex:1.2 1 0;min-width:0;color:#5E6673')}>{expText(s)}</span>
+                    <span style={S('flex:0.9 1 0;min-width:0')}><span style={S(pill(s.status))}>{s.status}</span></span>
+                  </button></li>
+                ))}
+              </ul>
+            </>) : (<>
+              <div style={S('display:flex;align-items:center;gap:16px;padding:12px 20px;border-bottom:1px solid #EEF0F3;color:#5E6673;font-size:12.5px;font-weight:500')}>{th('Package', '1.8')}{th('Service', '1.6')}{th('Visits', '0.8')}{th('Price', '1')}{th('Valid for', '1')}{th('Sold', '0.7')}{th('Status', '0.9')}</div>
+              <ul style={S('margin:0;padding:0;list-style:none')}>
+                {c.types.map((t) => {
+                  const cells = (<>
+                    <span style={S('flex:1.8 1 0;min-width:0;font-weight:500;overflow-wrap:anywhere')}>{t.name}</span>
+                    <span style={S('flex:1.6 1 0;min-width:0;overflow-wrap:anywhere;color:#5E6673')}>{t.service}</span>
+                    <span style={S('flex:0.8 1 0;min-width:0')}>{t.uses}</span>
+                    <span style={S('flex:1 1 0;min-width:0;font-weight:600')}>{money(t.priceCents)}</span>
+                    <span style={S('flex:1 1 0;min-width:0;color:#5E6673')}>{t.validDays ? validText(t.validDays) : 'No expiry'}</span>
+                    <span style={S('flex:0.7 1 0;min-width:0;color:#5E6673')}>{t.sold}</span>
+                    <span style={S('flex:0.9 1 0;min-width:0')}><span style={S(pill(t.active ? 'Active' : 'Archived'))}>{t.active ? 'Offered' : 'Archived'}</span></span>
+                  </>);
+                  return <li key={t.id}>{c.canEdit ? <button className="row" onClick={() => c.openEdit(t)} aria-label={'Edit ' + t.name} style={S(rowCss + ';cursor:pointer')}>{cells}</button> : <div style={S(rowCss)}>{cells}</div>}</li>;
+                })}
+              </ul>
+            </>)}
+          </div>
+        </div>
+        {c.tab === 'sold' && c.sold.length === 0 && <p style={S('margin:0;padding:28px 20px;color:#5E6673;font-size:14px')}>{noneSold(c)}</p>}
+        {c.tab === 'types' && c.types.length === 0 && <p style={S('margin:0;padding:28px 20px;color:#5E6673;font-size:14px')}>{c.canEdit ? 'No packages yet. Create your first one.' : 'No packages yet.'}</p>}
+      </section>
       {c.open && <Mobile c={c} drawer />}
     </div>
   );
