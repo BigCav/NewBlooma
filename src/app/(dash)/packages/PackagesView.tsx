@@ -321,8 +321,8 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
           {stat('Active packages', String(c.live.length))}{stat('Visits left', String(c.visitsLeft))}{stat('Prepaid value left', money(c.owed))}{stat('Sold this month', money(c.soldM))}
         </section>
         <div style={S('display:flex;gap:10px')}>
-          <button onClick={c.openSell} style={S('flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:8px;height:52px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font:inherit;font-size:14.5px;font-weight:500')}>Sell package</button>
-          {c.canEdit && <button className="ghost" onClick={c.openNew} style={S('flex:1 1 0;height:52px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font:inherit;font-size:14.5px;font-weight:500')}>New package</button>}
+          <button onClick={c.openSell} style={S('flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:8px;height:52px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font:inherit;font-size:14.5px;font-weight:500')}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>Sell package</button>
+          {c.canEdit && c.tab === 'types' && <button className="ghost" onClick={c.openNew} style={S('flex:1 1 0;height:52px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font:inherit;font-size:14.5px;font-weight:500')}>New package</button>}
         </div>
         <div role="tablist" aria-label="Packages view" className="hscroll" style={S('display:flex;gap:8px')}>{([['sold', 'Sold to clients'], ['types', 'Your packages']] as const).map(([id, l]) => <button key={id} role="tab" aria-selected={c.tab === id} onClick={() => c.setTab(id)} style={S(chip(c.tab === id, true))}>{l}</button>)}</div>
         {c.tab === 'sold' ? (<>
