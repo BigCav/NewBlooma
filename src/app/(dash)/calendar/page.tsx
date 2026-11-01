@@ -27,7 +27,7 @@ export default async function Calendar({ searchParams }: { searchParams: Promise
     sb.from('services').select('id,name,duration_min,price_cents,is_addon,service_categories(name)').eq('active', true).order('name'),
     sb.from('service_staff').select('service_id,staff_id'),
     sb.from('service_addons').select('addon_id,service_id'),
-    sb.from('bookings').select('client_id,clients(name)').not('client_id', 'is', null).order('starts_at', { ascending: false }).limit(80),
+    sb.from('bookings').select('client_id,clients(name,phone)').not('client_id', 'is', null).order('starts_at', { ascending: false }).limit(80),
     sb.from('closed_periods').select('starts_on,ends_on,reason').gte('ends_on', ymd(new Date(Date.now() - 2 * 86400000), salon.timezone)),
   ]);
   const ids = (bk ?? []).map((x) => x.id);

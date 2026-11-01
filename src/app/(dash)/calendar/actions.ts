@@ -115,7 +115,7 @@ export async function loadNewAppt() {
     sb.from('services').select('id,name,duration_min,price_cents,is_addon,service_categories(name)').eq('active', true).order('name'),
     sb.from('service_staff').select('service_id,staff_id'),
     sb.from('service_addons').select('addon_id,service_id'),
-    sb.from('bookings').select('client_id,clients(name)').not('client_id', 'is', null).order('starts_at', { ascending: false }).limit(80),
+    sb.from('bookings').select('client_id,clients(name,phone)').not('client_id', 'is', null).order('starts_at', { ascending: false }).limit(80),
     sb.from('closed_periods').select('starts_on,ends_on,reason').gte('ends_on', ymdOf(new Date(Date.now() - 2 * 86400000), salon.timezone)),
   ]);
   return {
@@ -337,7 +337,14 @@ export async function findClients(q: string): Promise<ClientHit[]> {
   const digits = needle.replace(/\D/g, '');
   const ors = [`name.ilike.%${needle}%`, `email.ilike.%${needle}%`, ...(digits.length >= 3 ? [`phone.ilike.%${digits}%`] : [])];
   const { data } = await sb.from('clients').select('id,name,email,phone').or(ors.join(',')).order('name').limit(6);
-  return ((data ?? []) as any[]).map((c) => ({ id: c.id, name: c.name, sub: c.phone || c.email || '' }));
+  return ((data ?? []) as any[]).map((c) => ({ id: c.id, name: c.name, sub: c.phone || '' }));
+}
+
+/** The seven clients booked most recently, for the client pickers. */
+export async function recentClients(): Promise<{ id: string; name: string; phone: string }[]> {
+  const { sb } = await requireCtx();
+  const { data } = await sb.from('bookings').select('client_id,clients(name,phone)').not('client_id', 'is', null).order('starts_at', { ascending: false }).limit(80);
+  return buildRecent(data);
 }
 
 export type SearchHit = { id: string; dayYmd: string; start: number; client: string; services: string; staff: string; cat: string };

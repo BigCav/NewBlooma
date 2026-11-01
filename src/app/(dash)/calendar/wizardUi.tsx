@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { fmtMin, initials } from '@/lib/cal';
-import { findClients, type ClientHit } from './actions';
+import { findClients, recentClients, type ClientHit } from './actions';
 import { S } from './pickers';
 import { slotCss, dayCss, PRIMARY, CLOSE_BTN, ERR, CloseX } from './calUi';
 
@@ -85,30 +85,46 @@ function Matches({ query, pickedId, onPick }: { query: string; pickedId: string 
   );
 }
 
-/** Search box, matches and recent clients. Picking selects; it never moves on by itself and never opens the keyboard. */
-export function ClientStep({ name, clientId, recent, onChange }: { name: string; clientId: string | null; recent: { id: string; name: string }[]; onChange: (name: string, id: string | null) => void }) {
+type Recent = { id: string; name: string; phone?: string };
+let recentCache: { at: number; list: Recent[] } | null = null;
+
+const rowBody = (name: string, phone: string | undefined, tick: boolean) => (<>
+  <span style={S(AV)}>{initials(name)}</span>
+  <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{name}</span>{!!phone && <span style={S('display:block;font-size:13px;color:#5E6673;overflow:hidden;text-overflow:ellipsis;white-space:nowrap')}>{phone}</span>}</span>
+  {tick && TICK}
+</>);
+
+/** Search box, matches and recent clients. Picking selects that client alone; it never moves on by itself and never opens the keyboard. */
+export function ClientStep({ name, clientId, recent, onChange }: { name: string; clientId: string | null; recent: Recent[]; onChange: (name: string, id: string | null) => void }) {
   const typed = name.trim();
+  const [phones, setPhones] = useState<Record<string, string>>({});
+  const [fetched, setFetched] = useState<Recent[]>(() => (recentCache && Date.now() - recentCache.at < 60000 ? recentCache.list : []));
+  // Pickers that were not handed a recent list fetch their own, so every client search looks the same.
+  useEffect(() => {
+    if (recent.length || fetched.length) return;
+    let live = true;
+    recentClients().then((l) => { recentCache = { at: Date.now(), list: l }; if (live) setFetched(l); }).catch(() => {});
+    return () => { live = false; };
+  }, [recent.length, fetched.length]);
+  const list = (recent.length ? recent : fetched).slice(0, 7);
+  const pick = (id: string, n: string, phone?: string) => { if (phone) setPhones((p) => ({ ...p, [id]: phone })); onChange(n, id); };
   return (<>
     <div style={S('position:relative')}>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A93A0" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={S('position:absolute;left:16px;top:15px')} aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m20 20-4-4" /></svg>
       <input type="text" aria-label="Client" value={name} onChange={(e) => onChange(e.target.value, null)} placeholder="Search or type a client name" style={{ ...S('box-sizing:border-box;width:100%;height:48px;padding:0 14px 0 42px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF'), minHeight: 0 }} />
     </div>
-    <Matches query={name} pickedId={clientId} onPick={(h) => onChange(h.name, h.id)} />
-    {clientId && !recent.some((r) => r.id === clientId) && (
-      <button onClick={() => onChange('', null)} aria-pressed="true" style={S(ROW(true))}>
-        <span style={S(AV)}>{initials(name)}</span><span style={S('flex:1 1 auto;min-width:0;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{name}</span>{TICK}
-      </button>
-    )}
-    {(!typed || !!clientId) && recent.length > 0 && (<>
-      <h3 style={S('margin:6px 0 0;font-size:15px;font-weight:600')}>Recent clients</h3>
-      <div style={S('display:flex;flex-direction:column')}>
-        {recent.slice(0, 8).map((r) => { const on = clientId === r.id; return (
-          <button key={r.id} onClick={() => (on ? onChange('', null) : onChange(r.name, r.id))} aria-pressed={on} style={S(ROW(on))}>
-            <span style={S(AV)}>{initials(r.name)}</span>
-            <span style={S('flex:1 1 auto;min-width:0;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{r.name}</span>{on && TICK}
-          </button>
-        ); })}
-      </div>
+    {clientId ? (
+      <button onClick={() => onChange('', null)} aria-pressed="true" style={S(ROW(true))}>{rowBody(name, phones[clientId] ?? list.find((r) => r.id === clientId)?.phone, true)}</button>
+    ) : (<>
+      <Matches query={name} pickedId={clientId} onPick={(h) => pick(h.id, h.name, h.sub)} />
+      {!typed && list.length > 0 && (<>
+        <h3 style={S('margin:6px 0 0;font-size:15px;font-weight:600')}>Recent clients</h3>
+        <div style={S('display:flex;flex-direction:column')}>
+          {list.map((r) => (
+            <button key={r.id} onClick={() => pick(r.id, r.name, r.phone)} aria-pressed="false" style={S(ROW(false))}>{rowBody(r.name, r.phone, false)}</button>
+          ))}
+        </div>
+      </>)}
     </>)}
   </>);
 }

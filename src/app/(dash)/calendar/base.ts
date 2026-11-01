@@ -32,8 +32,8 @@ export function buildCfg(settings: Record<string, any>, role: string): CalSettin
   return { taxRate: Number(settings.tax_rate ?? 15), taxInclusive: settings.tax_inclusive !== false, askTip: settings.ask_for_tip !== false, tipDefault: Number(settings.suggested_tip_pct ?? 0), acceptCard: settings.accept_card !== false, acceptCash: settings.accept_cash !== false, acceptGift: settings.accept_gift_cards !== false, canDiscount: role !== 'stylist' };
 }
 
-export function buildRecent(rc: any[] | null): { id: string; name: string }[] {
-  const seen = new Set<string>(); const recent: { id: string; name: string }[] = [];
-  for (const r of rc ?? []) { if (!r.client_id || seen.has(r.client_id) || !r.clients?.name) continue; seen.add(r.client_id); recent.push({ id: r.client_id, name: r.clients.name }); if (recent.length >= 8) break; }
+export function buildRecent(rc: any[] | null): { id: string; name: string; phone: string }[] {
+  const seen = new Set<string>(); const recent: { id: string; name: string; phone: string }[] = [];
+  for (const r of rc ?? []) { if (!r.client_id || seen.has(r.client_id) || !r.clients?.name) continue; seen.add(r.client_id); recent.push({ id: r.client_id, name: r.clients.name, phone: r.clients.phone ?? '' }); if (recent.length >= 7) break; }
   return recent;
 }

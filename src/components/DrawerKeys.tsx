@@ -22,7 +22,7 @@ function closeFront() {
 
 /**
  * Desktop drawers: Esc and a click on the blurred area close the front layer, whatever kind of page it is.
- * A drawer that unmounts is copied back for a moment and played out in reverse, so it slides away instead of snapping shut.
+ * A drawer, or a sheet inside one, that unmounts is copied back for a moment and played out in reverse, so it slides away instead of snapping shut.
  */
 export function DrawerKeys() {
   useEffect(() => {
@@ -41,11 +41,24 @@ export function DrawerKeys() {
       if (!wide.matches || calm.matches) return;
       for (const m of list) {
         m.removedNodes.forEach((n) => {
-          if (!(n instanceof HTMLElement) || !n.classList.contains('m-drawer') || n.classList.contains('m-drawer-out') || n.isConnected) return;
+          if (!(n instanceof HTMLElement) || n.isConnected || n.classList.contains('m-drawer-out') || n.classList.contains('sheet-out')) return;
+          if (n.classList.contains('m-drawer')) {
+            const ghost = n.cloneNode(true) as HTMLElement;
+            ghost.classList.add('m-drawer-out');
+            ghost.setAttribute('aria-hidden', 'true');
+            document.body.appendChild(ghost);
+            setTimeout(() => ghost.remove(), 240);
+            return;
+          }
+          // A sheet (such as the triple-dot menu) or its backdrop closing inside an open drawer: put it back where it was and play it out.
+          const host = m.target instanceof HTMLElement ? m.target : null;
+          if (!host || !host.isConnected || !host.closest(LIVE) || n.querySelector('.m-drawer')) return;
+          const backdrop = n.tagName === 'BUTTON' && (n.getAttribute('aria-label') ?? '').startsWith('Close');
+          if (!backdrop && !n.matches('.sheet') && !n.querySelector('.sheet')) return;
           const ghost = n.cloneNode(true) as HTMLElement;
-          ghost.classList.add('m-drawer-out');
+          ghost.classList.add('sheet-out');
           ghost.setAttribute('aria-hidden', 'true');
-          document.body.appendChild(ghost);
+          host.insertBefore(ghost, m.nextSibling && m.nextSibling.parentNode === host ? m.nextSibling : null);
           setTimeout(() => ghost.remove(), 240);
         });
       }

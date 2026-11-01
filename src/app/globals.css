@@ -147,6 +147,9 @@ html[data-theme=dark] img,html[data-theme=dark] video,html[data-theme=dark] ifra
 .m-drawer-out,.m-drawer-out *{pointer-events:none !important}
 .m-drawer-out .sheet,.m-drawer-out>[role="dialog"]{animation:drOut .2s cubic-bezier(.4,0,1,1) forwards !important}
 .m-drawer-out>div>button[aria-label^="Close"],.m-drawer-out:has(>[role="dialog"]){animation:drFadeOut .2s ease-in forwards !important}
+.sheet-out,.sheet-out *{pointer-events:none !important}
+.sheet-out.sheet,.sheet-out .sheet{animation:drOut .2s cubic-bezier(.4,0,1,1) forwards !important}
+button.sheet-out,.sheet-out>button[aria-label^="Close"]{animation:drFadeOut .2s ease-in forwards !important}
 }
 @media (prefers-reduced-motion:reduce){.m-drawer .sheet,.m-drawer>div>button{animation:none !important}}
 
