@@ -38,7 +38,7 @@ export default async function Sales({ searchParams }: { searchParams: Promise<{ 
       method: status === 'Pending' ? 'Not taken yet' : METHOD[s.method] ?? '', status,
       amount: s.subtotal_cents + s.discount_cents, discount: s.discount_cents, discountNote: s.discount_note ?? '', taxRate: Number(s.tax_rate), taxIncl: !!s.tax_inclusive, tip: s.tip_cents, tax: s.tax_inclusive ? 0 : s.tax_cents, total: s.total_cents,
       dayShort: dayInfo(day).short, gst: s.tax_cents, range: s.bookings?.starts_at && s.bookings?.ends_at ? hm(s.bookings.starts_at, tz) + ' – ' + hm(s.bookings.ends_at, tz) : '',
-      lines: items.map((i) => ({ label: i.label as string, qty: i.qty as number, cents: i.price_cents as number, dur: i.service_id ? durOf.get(i.service_id as string) ?? null : null })),
+      lines: items.map((i) => ({ label: i.label as string, qty: i.qty as number, cents: i.price_cents as number, dur: i.service_id ? durOf.get(i.service_id as string) ?? null : null, svc: !!i.service_id })),
       canEdit: status === 'Pending' && canEdit && items.filter((i) => i.service_id).length === 1,
     };
     return { row, day, paid: s.status === 'paid' };

@@ -4,10 +4,11 @@ import { decimalInput } from '@/lib/numeric';
 import type { CalService } from '@/lib/cal';
 import { S, ServicePicker } from './pickers';
 import { m2, TIP_OPTS } from './calUi';
-import { DISC_PCTS, NO_DISC, discountCents, type DiscPick } from '../sales/shared';
+import { DISC_PCTS, NO_DISC, discountCents, type CoProduct, type DiscPick } from '../sales/shared';
 import { StepShell, useSteps, Tiles, DetailRows, ICONS } from './wizardUi';
 
 export type CoState = { method: string; tip: number; code: string; disc: DiscPick };
+export type CoRetail = { products: CoProduct[]; qty: Record<string, number>; onQty: (id: string, n: number) => void };
 export type CoLine = { key: string; name: string; sub?: string; cents: number };
 export type CoCfg = { canDiscount: boolean; askTip: boolean; taxInclusive: boolean; taxRate: number };
 
@@ -17,22 +18,31 @@ const FIELD = 'box-sizing:border-box;width:100%;height:48px;padding:0 14px;borde
  * Checkout as steps, shared by the calendar and the Sales page: payment method, discount and tip when switched on,
  * a summary, and for cash one more step to confirm what was handed over. The caller decides what charging does.
  */
-export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCharge, busy, error, setError, wait, onClose, edit }: {
+export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCharge, busy, error, setError, wait, onClose, edit, retail, tipBase }: {
   who: string; methods: readonly (readonly [string, string])[]; co: CoState; setCo: (s: CoState) => void; cfg: CoCfg; lines: CoLine[]; gross: number;
   onCharge: () => void; busy: boolean; error: string; setError: (e: string) => void; wait?: string; onClose: () => void;
   edit?: { services: CalService[]; selected: string[]; lock: (x: CalService) => string; initialCat?: string; onPick: (id: string) => void };
+  /** Retail products that can be added to the visit, with how many of each are on the sale. */
+  retail?: CoRetail;
+  /** What the tip is worked out on (the services only). Defaults to the whole amount. */
+  tipBase?: number;
 }) {
   const cash = co.method === 'cash';
   const kinds = ['method', ...(cfg.canDiscount ? ['discount'] : []), ...(cfg.askTip ? ['tip'] : []), 'summary', ...(cash ? ['cash'] : [])] as string[];
   const summaryAt = kinds.indexOf('summary');
   const { step, go, jump, forward, back } = useSteps(summaryAt, () => setError(''));
   const [editing, setEditing] = useState(false);
+  const [shopping, setShopping] = useState(false);
+  const [find, setFind] = useState('');
   const [got, setGot] = useState('');
   const [cashHow, setCashHow] = useState<'partial' | 'exact' | null>(null);
   const kind = kinds[step];
 
-  const disc = cfg.canDiscount ? discountCents(gross, co.disc) : 0, net = gross - disc;
-  const tip = cfg.askTip ? Math.round(gross * co.tip / 100) : 0;
+  const prodLines = retail ? retail.products.filter((p) => (retail.qty[p.id] ?? 0) > 0).map((p) => ({ p, n: retail.qty[p.id], cents: p.priceCents * retail.qty[p.id] })) : [];
+  const prodTotal = prodLines.reduce((a, l) => a + l.cents, 0);
+  const all = gross + prodTotal;
+  const disc = cfg.canDiscount ? discountCents(all, co.disc) : 0, net = all - disc;
+  const tip = cfg.askTip ? Math.round((tipBase ?? gross) * co.tip / 100) : 0;
   const taxAmt = cfg.taxInclusive ? Math.round(net * cfg.taxRate / (100 + cfg.taxRate)) : Math.round(net * cfg.taxRate / 100);
   const total = net + tip + (cfg.taxInclusive ? 0 : taxAmt);
   const gst = cfg.taxInclusive ? 'Includes ' + cfg.taxRate + '% GST' : 'GST ' + cfg.taxRate + '%';
@@ -56,6 +66,44 @@ export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCha
       <ServicePicker lock={edit.lock} services={edit.services} selected={edit.selected} initialCat={edit.initialCat} chipHeight={44} onPick={edit.onPick} />
     </StepShell>
   );
+
+  if (shopping && retail) {
+    const q = find.trim().toLowerCase();
+    const shown = retail.products.filter((p) => !q || (p.name + ' ' + p.brand).toLowerCase().includes(q));
+    const count = prodLines.reduce((a, l) => a + l.n, 0);
+    const close = () => { setError(''); setShopping(false); setFind(''); };
+    const stepBtn = (dis: boolean) => 'flex:0 0 auto;width:40px;height:40px;padding:0;border-radius:999px;border:1px solid #E1E4E9;background:#FFFFFF;font:inherit;font-size:20px;line-height:1;color:#0E1116;cursor:pointer;opacity:' + (dis ? 0.35 : 1);
+    return (
+      <StepShell plain step={0} titles={['Add products']} onBack={close} onClose={onClose} error={error}
+        summary={<div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px')}><span style={S('color:#5E6673;font-size:14px')}>{count + (count === 1 ? ' product' : ' products')}</span><span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{m2(prodTotal)}</span></div>}
+        actions={[{ label: 'Done', onClick: close }]}>
+        <p style={S('margin:0;color:#5E6673;font-size:14px')}>Products are charged with the visit and come off your stock when it is paid.</p>
+        <input aria-label="Search products" value={find} onChange={(e) => setFind(e.target.value)} placeholder="Search products" style={{ ...S(FIELD), minHeight: 0 }} />
+        {!retail.products.length && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No products yet. Add some on the Products page.</p>}
+        {!!retail.products.length && !shown.length && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No products match that search.</p>}
+        {shown.map((p) => {
+          const n = retail.qty[p.id] ?? 0, out = p.stock < 1;
+          return (
+            <div key={p.id} style={S('display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid ' + (n > 0 ? '#0E1116' : '#E6E8EC') + ';border-radius:16px;opacity:' + (out ? 0.55 : 1))}>
+              <span style={S('flex:1 1 auto;min-width:0')}>
+                <span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{p.name}</span>
+                <span style={S('display:block;font-size:13px;color:#5E6673')}>{(p.brand ? p.brand + ', ' : '') + m2(p.priceCents) + ', ' + (out ? 'out of stock' : p.stock + ' in stock')}</span>
+              </span>
+              {n > 0 ? (
+                <span style={S('flex:0 0 auto;display:flex;align-items:center;gap:10px')}>
+                  <button onClick={() => retail.onQty(p.id, n - 1)} aria-label={'Remove one ' + p.name} style={S(stepBtn(false))}>-</button>
+                  <span aria-live="polite" style={S('min-width:18px;text-align:center;font-size:15px;font-weight:600')}>{n}</span>
+                  <button onClick={() => retail.onQty(p.id, n + 1)} disabled={n >= p.stock} aria-label={'Add one ' + p.name} style={S(stepBtn(n >= p.stock))}>+</button>
+                </span>
+              ) : (
+                <button onClick={() => retail.onQty(p.id, 1)} disabled={out} style={S('flex:0 0 auto;height:40px;padding:0 18px;border-radius:999px;border:1px solid #E1E4E9;background:#FFFFFF;font:inherit;font-size:14px;font-weight:500;color:#0E1116;cursor:pointer;opacity:' + (out ? 0.35 : 1))}>Add</button>
+              )}
+            </div>
+          );
+        })}
+      </StepShell>
+    );
+  }
 
   return (
     <StepShell step={step} titles={kinds.map((k) => titles[k])} onBack={back} onClose={onClose} error={error}
@@ -92,6 +140,19 @@ export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCha
             </div>
           ))}
         </div>
+        {retail && (
+          <div style={S('display:flex;flex-direction:column;gap:10px')}>
+            <div style={S('display:flex;align-items:center;justify-content:space-between')}><h3 style={S('margin:0;font-size:17px;font-weight:600;letter-spacing:-0.01em')}>Products</h3><button onClick={() => { setError(''); setShopping(true); }} style={S('border:0;background:transparent;font:inherit;font-size:14px;font-weight:500;text-decoration:underline;cursor:pointer;color:#0E1116')}>{prodLines.length ? 'Edit' : 'Add'}</button></div>
+            {!prodLines.length && <span style={S('font-size:13.5px;color:#5E6673')}>Sell retail items with this visit.</span>}
+            {prodLines.map((l) => (
+              <div key={l.p.id} style={S('display:flex;align-items:center;gap:12px')}>
+                <span style={S('flex:0 0 4px;align-self:stretch;border-radius:999px;background:#9ED9C0')} />
+                <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{l.p.name}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{l.n > 1 ? l.n + ' x ' + m2(l.p.priceCents) : (l.p.brand || 'Retail')}</span></span>
+                <span style={S('flex:0 0 auto;font-size:14.5px;font-weight:500')}>{m2(l.cents)}</span>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="sum-rows" style={S('padding:2px 16px;border:1px solid #E6E8EC;border-radius:22px')}>
           {([...(disc > 0 ? [['Discount', '-' + m2(disc)]] : []), ...(tip ? [['Tip', m2(tip)]] : []), [gst, m2(taxAmt)]] as [string, string][]).map(([l, v]) => (
             <div key={l} style={S('display:flex;justify-content:space-between;gap:12px;padding:13px 0;font-size:15px')}><span style={S('color:#5E6673')}>{l}</span><span style={S('font-weight:500;white-space:nowrap')}>{v}</span></div>

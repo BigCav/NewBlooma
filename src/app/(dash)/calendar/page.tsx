@@ -19,7 +19,7 @@ export default async function Calendar({ searchParams }: { searchParams: Promise
   const to = addDaysYmd(from, view === 'week' ? 7 : 1);
   const a = zonedToUtc(from, '00:00', salon.timezone), b = zonedToUtc(to, '00:00', salon.timezone);
 
-  const [{ data: team }, { data: bk }, { data: bl }, { data: oh }, { data: svc }, { data: ss }, { data: sa }, { data: rc }, { data: cp }] = await Promise.all([
+  const [{ data: team }, { data: bk }, { data: bl }, { data: oh }, { data: svc }, { data: ss }, { data: sa }, { data: rc }, { data: cp }, { data: pr }] = await Promise.all([
     sb.from('staff').select('id,name,role_title').eq('active', true).order('name'),
     sb.from('bookings').select('id,ref_no,staff_id,client_id,starts_at,ends_at,status,source,notes,clients(name),booking_services(service_id,price_cents,services(name,category_id,service_categories(name)))').gte('starts_at', a.toISOString()).lt('starts_at', b.toISOString()).not('status', 'in', '(cancelled,no_show)'),
     sb.from('staff_blocks').select('id,staff_id,starts_at,ends_at,kind,note').lt('starts_at', b.toISOString()).gt('ends_at', a.toISOString()),
@@ -29,6 +29,7 @@ export default async function Calendar({ searchParams }: { searchParams: Promise
     sb.from('service_addons').select('addon_id,service_id'),
     sb.from('bookings').select('client_id,clients(name,phone)').not('client_id', 'is', null).order('starts_at', { ascending: false }).limit(80),
     sb.from('closed_periods').select('starts_on,ends_on,reason').gte('ends_on', ymd(new Date(Date.now() - 2 * 86400000), salon.timezone)),
+    sb.from('products').select('id,name,brand,price_cents,stock').eq('active', true).order('name'),
   ]);
   const ids = (bk ?? []).map((x) => x.id);
   const { data: sales } = ids.length ? await sb.from('sales').select('id,booking_id,status,total_cents,method').in('booking_id', ids).neq('status', 'refunded') : { data: [] as any[] };
@@ -66,7 +67,7 @@ export default async function Calendar({ searchParams }: { searchParams: Promise
       day={day} today={today} view={view} nowMin={nowMin} tz={salon.timezone}
       team={(team ?? []).map((t) => ({ id: t.id, name: t.name, role: t.role_title ?? '' }))}
       bookings={bookings} blocks={blocks} hours={hours} closed={closed} services={services}
-      staffFilter={sp.s ?? 'all'} slug={salon.slug} offers={offers} cfg={cfg} recent={recent} initialNew={sp.new === '1'} initialClient={sp.c ?? ''} initialSel={/^[0-9a-f-]{36}$/i.test(sp.b ?? '') ? sp.b : undefined}
+      staffFilter={sp.s ?? 'all'} slug={salon.slug} offers={offers} cfg={cfg} recent={recent} products={(pr ?? []).map((x) => ({ id: x.id, name: x.name, brand: x.brand ?? '', priceCents: x.price_cents, stock: x.stock }))} initialNew={sp.new === '1'} initialClient={sp.c ?? ''} initialSel={/^[0-9a-f-]{36}$/i.test(sp.b ?? '') ? sp.b : undefined}
     />
   );
 }

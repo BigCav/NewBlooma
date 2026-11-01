@@ -235,14 +235,16 @@ export async function addWalkIn(name: string, clientId: string | null, serviceId
 
 
 /** Create (or recreate with a new tip) the sale for a booking and take payment. Card returns the sale id for the payment screen. */
-export async function checkoutBooking(bookingId: string, method: 'card' | 'cash' | 'gift_card', tipPct: number, giftCode?: string, disc?: { kind: string; value: string; note: string }, services?: string[]): Promise<R & { saleId?: string; total?: number }> {
+export async function checkoutBooking(bookingId: string, method: 'card' | 'cash' | 'gift_card', tipPct: number, giftCode?: string, disc?: { kind: string; value: string; note: string }, services?: string[], products?: { productId: string; qty: number }[]): Promise<R & { saleId?: string; total?: number }> {
   const { sb } = await requireCtx();
   const { data: ex } = await sb.from('sales').select('id,status').eq('booking_id', bookingId).neq('status', 'refunded').maybeSingle();
   if (ex?.status === 'paid') return { error: 'This appointment is already paid.' };
   // A card page that was opened and closed without paying would otherwise keep the old sale locked.
   if (ex) await releaseOnline(ex.id);
   if (ex) { const v = await sb.rpc('void_pending_sale', { p_sale: ex.id }); if (v.error) return { error: friendly(v.error.message) }; }
-  const { data: id, error } = await sb.rpc('create_sale', { p_booking: bookingId, p_client: null, p_items: [], p_tip_pct: tipPct, p_description: null });
+  // Retail items sold with the visit: the database checks stock, prices them and takes them off the shelf when the sale is paid.
+  const items = (products ?? []).filter((x) => x.qty > 0).map((x) => ({ product_id: x.productId, qty: Math.floor(x.qty) }));
+  const { data: id, error } = await sb.rpc('create_sale', { p_booking: bookingId, p_client: null, p_items: items, p_tip_pct: tipPct, p_description: null });
   if (error) return { error: friendly(error.message) };
   // Services changed at the till: only the sale's lines change, never the booking.
   if (services?.length) {

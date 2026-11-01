@@ -149,7 +149,7 @@ function SaleCheckout({ c, s }: { c: C; s: SaleRow }) {
       co={{ method: c.pay.method, tip: parseInt(c.pay.tip, 10) || 0, code: c.pay.code, disc: c.pay.disc }}
       setCo={(x) => c.setPay({ method: x.method as PayMethod['id'], tip: String(x.tip), code: x.code, disc: x.disc })}
       cfg={{ canDiscount: c.canDiscount, askTip: c.askTip, taxInclusive: s.taxIncl, taxRate: s.taxRate }}
-      lines={lines} gross={s.amount} onCharge={c.takePayment} busy={c.busy || !!c.txn} error={c.error} setError={c.setError} wait={c.wait} onClose={c.cancel} />
+      lines={lines} gross={s.amount} tipBase={s.lines.some((l) => l.svc) ? s.lines.filter((l) => l.svc).reduce((a, l) => a + l.cents * l.qty, 0) : s.amount} onCharge={c.takePayment} busy={c.busy || !!c.txn} error={c.error} setError={c.setError} wait={c.wait} onClose={c.cancel} />
   );
 }
 

@@ -1,3 +1,4 @@
+import type { CoProduct } from '../sales/shared';
 import { type CalBlock, type CalBooking, type CalHours, type CalService, type CalSettings, type CalStaff } from '@/lib/cal';
 export const HATCH = 'repeating-linear-gradient(135deg,#F7F8FA 0,#F7F8FA 8px,#ECEEF2 8px,#ECEEF2 16px)';
 export const first = (n: string) => n.split(' ')[0];
@@ -34,7 +35,7 @@ export type Props = {
   day: string; today: string; view: 'day' | 'week'; nowMin: number; team: CalStaff[]; bookings: CalBooking[]; blocks: CalBlock[]; hours: CalHours[]; services: CalService[];
   /** Days the salon is closed (date to reason), on top of the weekly hours. */
   closed?: Record<string, string>;
-  offers: Record<string, string[]>; cfg: CalSettings; slug: string; tz: string; recent: { id: string; name: string; phone?: string }[]; initialNew?: boolean; initialClient?: string; initialSel?: string; staffFilter: string; remoteSearch?: boolean;
+  offers: Record<string, string[]>; cfg: CalSettings; slug: string; tz: string; recent: { id: string; name: string; phone?: string }[]; products?: CoProduct[]; initialNew?: boolean; initialClient?: string; initialSel?: string; staffFilter: string; remoteSearch?: boolean;
   /** Set when the new-appointment sheet is opened from another page: called instead of staying on the calendar. */
   onCreated?: (r: { id?: string; day: string }) => void;
 };

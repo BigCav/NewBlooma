@@ -1,7 +1,7 @@
 export type SaleRow = {
   id: string; ref: string; client: string; service: string; staffName: string; staffPhoto: string | null; firstName: string; time: string; method: string;
   status: 'Paid' | 'Pending' | 'Refunded'; initials: string; amount: number; tip: number; tax: number; total: number; canEdit: boolean; discount: number; discountNote: string; taxRate: number; taxIncl: boolean;
-  dayShort: string; gst: number; range: string; lines: { label: string; qty: number; cents: number; dur: number | null }[];
+  dayShort: string; gst: number; range: string; lines: { label: string; qty: number; cents: number; dur: number | null; svc: boolean }[];
 };
 export type PayMethod = { id: 'terminal' | 'online' | 'cash' | 'gift_card'; label: string };
 export type SvcOpt = { id: string; name: string; priceCents: number };
@@ -20,3 +20,6 @@ export const discountCents = (gross: number, d: DiscPick) => {
   return Math.min(d.kind === 'percent' ? Math.round(gross * Math.min(v, 100) / 100) : Math.round(v * 100), gross);
 };
 export const discOf = (r?: { discount: number; discountNote: string }): DiscPick => r && r.discount > 0 ? { kind: 'amount', value: String(r.discount / 100), note: r.discountNote } : NO_DISC;
+
+/** A retail product that can be added to an appointment at checkout. */
+export type CoProduct = { id: string; name: string; brand: string; priceCents: number; stock: number };
