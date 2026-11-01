@@ -69,7 +69,7 @@ export function FormsMain({ c }: { c: FormsCtl }) {
   );
 }
 
-function Done({ c }: { c: FormsCtl }) {
+export function Done({ c }: { c: FormsCtl }) {
   const q = c.query.trim().toLowerCase();
   const list = c.done.filter((r) => !q || (r.client + ' ' + r.form).toLowerCase().includes(q));
   return (<>
@@ -89,7 +89,7 @@ function Done({ c }: { c: FormsCtl }) {
   </>);
 }
 
-function Upcoming({ c }: { c: FormsCtl }) {
+export function Upcoming({ c, wide }: { c: FormsCtl; wide?: boolean }) {
   const q = c.query.trim().toLowerCase();
   const list = c.cards.filter((k) => !q || (k.name + ' ' + k.svc).toLowerCase().includes(q));
   if (!c.cards.length) return (
@@ -106,6 +106,7 @@ function Upcoming({ c }: { c: FormsCtl }) {
     {groups.map((g) => (
       <div key={g.day} style={S('display:flex;flex-direction:column;gap:10px')}>
         <h3 style={S('margin:6px 0 0;font-size:15px;font-weight:600;color:#5E6673')}>{g.day}</h3>
+        <div style={S(wide ? 'display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:12px' : 'display:flex;flex-direction:column;gap:10px')}>
         {g.items.map((k) => {
           const t = levelChip(k);
           return (
@@ -121,6 +122,7 @@ function Upcoming({ c }: { c: FormsCtl }) {
             </button>
           );
         })}
+        </div>
       </div>
     ))}
   </>);
