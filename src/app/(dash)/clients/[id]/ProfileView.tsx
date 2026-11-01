@@ -215,39 +215,6 @@ function FormsCard({ forms, card, titles = true }: { forms: ProfileData['forms']
 const PRI = 'height:44px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500;padding:0 20px;';
 const MSGS = 'height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;padding:0 20px;';
 
-function MessageForm({ c }: { c: C }) {
-  return (
-        <div style={S('display:flex;flex-direction:column;gap:10px')}>
-          <label htmlFor="pf-msg" style={S('font-size:14px;font-weight:600')}>Message {c.first}</label>
-          <textarea id="pf-msg" value={c.msg} onChange={(e) => { c.setMsg(e.target.value); c.setError(''); }} placeholder="Write a message" style={S('box-sizing:border-box;width:100%;min-height:96px;resize:vertical;padding:12px 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:14.5px;color:#0E1116;background:#FFFFFF')} />
-          {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
-          <div style={S('display:flex;gap:10px')}><button onClick={c.sendMsg} disabled={c.busy} style={S(PRI + 'flex:1 1 0')}>Send</button><button className="ghost" onClick={() => { c.setMode('view'); c.setError(''); }} style={S(MSGS + 'flex:1 1 0')}>Cancel</button></div>
-        </div>
-  );
-}
-
-function EditForm({ c }: { c: C }) {
-  return (
-        <div style={S('display:flex;flex-direction:column;gap:12px')}>
-          <label htmlFor="pf-name" style={S('font-size:14px;font-weight:600')}>Full name</label>
-          <input id="pf-name" type="text" value={c.ed.name} onChange={(e) => { c.setEd({ ...c.ed, name: e.target.value }); c.setError(''); }} style={TXTIN(48)} />
-          <label htmlFor="pf-email" style={S('font-size:14px;font-weight:600')}>Email</label>
-          <input id="pf-email" type="email" inputMode="email" value={c.ed.email} onChange={(e) => { c.setEd({ ...c.ed, email: e.target.value }); c.setError(''); }} placeholder="name@example.com" style={TXTIN(48)} />
-          <label htmlFor="pf-phone" style={S('font-size:14px;font-weight:600')}>Phone</label>
-          <input id="pf-phone" type="tel" inputMode="tel" value={c.ed.phone} onChange={(e) => { c.setEd({ ...c.ed, phone: phoneInput(e.target.value) }); c.setError(''); }} placeholder="Optional" style={TXTIN(48)} />
-          {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
-          <div style={S('display:flex;gap:10px')}><button onClick={c.saveEdit} disabled={c.busy} style={S(PRI + 'flex:1 1 0')}>Save details</button><button className="ghost" onClick={() => { c.setMode('view'); c.setError(''); }} style={S(MSGS + 'flex:1 1 0')}>Cancel</button></div>
-          {!c.confirmDel
-            ? <button className="ghost" onClick={() => c.setConfirmDel(true)} style={S('height:44px;border:0;border-radius:999px;background:transparent;color:#B42318;font-size:14px;font-weight:500')}>Delete client</button>
-            : <div style={S('display:flex;flex-direction:column;gap:10px;padding:14px;border:1px solid #F3C6C3;border-radius:16px;background:#FEF3F2')}>
-                <span style={S('font-size:14px;font-weight:600')}>Delete {c.row.name} for good?</span>
-                <span style={S('font-size:13.5px;color:#5E6673')}>Only possible when they have no bookings or sales. Their notes go too.</span>
-                <div style={S('display:flex;gap:10px')}><button onClick={c.removeClient} disabled={c.busy} style={S('flex:1 1 0;height:44px;border:0;border-radius:999px;background:#C0261B;color:#FFFFFF;font-size:14px;font-weight:500')}>Delete client</button><button className="ghost" onClick={() => c.setConfirmDel(false)} style={S(MSGS + 'flex:1 1 0')}>Keep</button></div>
-              </div>}
-        </div>
-  );
-}
-
 function Header({ c, m }: { c: C; m: boolean }) {
   const { row } = c;
   const tone = TONE[row.tag];
@@ -286,8 +253,6 @@ function Header({ c, m }: { c: C; m: boolean }) {
       {m && actions}
       {!!c.notice && <span role="status" style={S('align-self:flex-start;padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.notice}</span>}
       {!!c.error && c.mode === 'view' && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
-      {c.mode === 'message' && <MessageForm c={c} />}
-      {c.mode === 'edit' && <EditForm c={c} />}
     </section>
   );
 }
@@ -313,6 +278,7 @@ function Desktop({ c }: { c: C }) {
         <div style={S('flex:1.4 1 480px;min-width:0;display:flex;flex-direction:column;gap:24px')}>{s.history}{s.forms}</div>
         <div style={S('flex:1 1 340px;min-width:0;display:flex;flex-direction:column;gap:24px')}>{s.notes}{s.alerts}{s.formula}{s.prefs}</div>
       </div>
+      {c.mode !== 'view' && <Mobile c={c} drawer />}
     </div>
   );
 }
@@ -354,7 +320,7 @@ function BottomBar({ error, children }: { error?: string; children: React.ReactN
   );
 }
 
-function Mobile({ c, initial }: { c: C; initial?: string }) {
+function Mobile({ c, initial, drawer }: { c: C; initial?: string; drawer?: boolean }) {
   const { row, d } = c;
   const [view, setView] = useState<Sub>(initial === 'messages' ? 'messages' : 'home');
   const [thread, setThread] = useState(d.messages);
@@ -408,10 +374,13 @@ function Mobile({ c, initial }: { c: C; initial?: string }) {
   );
   const page = "position:relative;width:100%;height:100dvh;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4;";
 
-  // Messaging and editing take over the page.
+  // Messaging and editing take over the page (on desktop, they slide in from the right instead).
+  const wrap = (label: string, inner: React.ReactNode) => drawer
+    ? <div className="m-cal cal-root m-drawer"><div role="dialog" aria-label={label} style={S(page.replace('position:relative;width:100%;height:100dvh;', 'position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;') + 'background:#F4F5F7')}>{inner}</div></div>
+    : <div className="only-m m-cal cal-root" style={S(page + 'background:#F4F5F7')}>{inner}</div>;
   if (c.mode === 'message') {
-    return (
-      <div className="only-m m-cal cal-root" style={S(page + 'background:#F4F5F7')}>
+    return wrap('Message ' + c.first, (
+      <>
         <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px')}>
           <button onClick={() => { c.setMode('view'); c.setError(''); }} aria-label="Back" style={S(RING)}>{BACK}</button>
           <h1 style={S('margin:0;flex:1 1 auto;font-size:22px;font-weight:600;letter-spacing:-0.025em')}>{'Message ' + c.first}</h1>
@@ -421,12 +390,12 @@ function Mobile({ c, initial }: { c: C; initial?: string }) {
           <p style={S('margin:0;font-size:13px;color:#5E6673')}>{channelNote(d.channels, row.phone, row.email)}</p>
         </main>
         <BottomBar error={c.error}><button onClick={c.sendMsg} disabled={c.busy} style={S(BLACK + ';width:100%;height:52px')}>Send</button></BottomBar>
-      </div>
-    );
+      </>
+    ));
   }
   if (c.mode === 'edit') {
-    return (
-      <div className="only-m m-cal cal-root" style={S(page + 'background:#F4F5F7')}>
+    return wrap('Edit details', (
+      <>
         <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px')}>
           <button onClick={() => { c.setMode('view'); c.setError(''); }} aria-label="Back" style={S(RING)}>{BACK}</button>
           <h1 style={S('margin:0;flex:1 1 auto;font-size:22px;font-weight:600;letter-spacing:-0.025em')}>Edit details</h1>
@@ -454,8 +423,8 @@ function Mobile({ c, initial }: { c: C; initial?: string }) {
             <div style={S('display:flex;gap:10px')}><button onClick={c.removeClient} disabled={c.busy} style={S('flex:1 1 0;height:48px;border:0;border-radius:999px;background:#C0261B;color:#FFFFFF;font-size:14px;font-weight:500')}>Delete client</button><button className="ghost" onClick={() => { c.setConfirmDel(false); setEqa(false); }} style={S('flex:1 1 0;height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>Keep</button></div>
           </div>
         ), () => { c.setConfirmDel(false); setEqa(false); })}
-      </div>
-    );
+      </>
+    ));
   }
 
   const appts = d.appts.filter((a) => (apFilter === 'all' ? true : apFilter === 'upcoming' ? a.upcoming : !a.upcoming));
