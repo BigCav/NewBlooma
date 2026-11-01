@@ -23,3 +23,6 @@ export const discOf = (r?: { discount: number; discountNote: string }): DiscPick
 
 /** A retail product that can be added to an appointment at checkout. */
 export type CoProduct = { id: string; name: string; brand: string; priceCents: number; stock: number };
+
+/** A client's package with visits left, offered at checkout when the visit has the service it covers. */
+export type CoPackage = { id: string; serviceId: string; name: string; left: number };

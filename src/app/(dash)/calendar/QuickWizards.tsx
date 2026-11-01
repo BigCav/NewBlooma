@@ -98,7 +98,7 @@ export function BlockWizard({ c }: { c: C }) {
 
 /** The calendar's checkout: the shared steps, charging the booking being looked at. */
 export function CheckoutWizard({ c }: { c: C }) {
-  const { sel, co, setCo, cfg, charge, setError, error, hasError, busy, close, svcMap, lockFor, services, products } = c;
+  const { sel, co, setCo, cfg, charge, setError, error, hasError, busy, close, svcMap, lockFor, services, products, packages } = c;
   if (!sel) return null;
   // The services on the sale. Changing them here only changes what is charged, never the booking.
   const ids = co.svc ?? sel.b.serviceIds;
@@ -117,6 +117,7 @@ export function CheckoutWizard({ c }: { c: C }) {
       cfg={{ canDiscount: cfg.canDiscount, askTip: cfg.askTip, taxInclusive: cfg.taxInclusive, taxRate: cfg.taxRate }}
       lines={lines} gross={gross} onCharge={charge} busy={busy} error={hasError ? error : ''} setError={setError} onClose={close}
       edit={{ services, selected: ids, lock: lockFor(ids), initialCat: found[0]?.cat, onPick: pickSvc }}
+      packs={{ list: (packages[sel.b.clientId ?? ''] ?? []).filter((x) => ids.includes(x.serviceId)), chosen: co.pkgs, onToggle: (id) => setCo({ ...co, pkgs: co.pkgs.includes(id) ? co.pkgs.filter((x) => x !== id) : [...co.pkgs, id] }) }}
       retail={{ products, qty: co.prods, onQty: (id, n) => setCo({ ...co, prods: { ...co.prods, [id]: Math.max(0, n) } }) }} />
   );
 }

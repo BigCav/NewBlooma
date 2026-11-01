@@ -11,6 +11,7 @@ const PRESETS: Record<string, Preset> = {
   services: { search: true, action: true, stats: 3, body: { t: 'table', table: { chips: 2, cols: [3, 1.2, 1, 1, 1], rows: 3, avatar: true } } },
   team: { search: true, action: true, stats: 3, body: { t: 'table', table: { chips: 3, cols: [2.6, 1, 1, 1, 1, 1, 1, 1, 1], rows: 3, avatar: true } } },
   products: { search: true, action: true, stats: 3, body: { t: 'table', table: { chips: 4, cols: [3, 1.2, 1, 1, 1, 1], rows: 3, avatar: true } } },
+  packages: { search: true, action: true, stats: 4, body: { t: 'table', table: { chips: 2, cols: [2.4, 2, 1, 1.2, 1], rows: 5, avatar: true } } },
   'gift-cards': { search: true, action: true, stats: 4, body: { t: 'table', table: { chips: 3, cols: [2, 2, 1, 1, 1.4, 1], rows: 5, avatar: false } } },
   sales: { search: true, action: true, stats: 3, body: { t: 'sales', table: { chips: 4, cols: [2, 1, 1.3, 1, 1.2, 1, 1], rows: 6, avatar: true } } },
   inbox: { search: true, action: false, stats: 3, body: { t: 'inbox' } },

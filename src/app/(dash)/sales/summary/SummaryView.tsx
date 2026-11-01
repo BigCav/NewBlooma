@@ -19,7 +19,7 @@ type Summary = {
   appointments: { completed: number; no_shows: number; cancelled: { reason: string; count: number }[] };
 };
 
-const METHOD: Record<string, string> = { card: 'Card', cash: 'Cash', gift_card: 'Gift card' };
+const METHOD: Record<string, string> = { card: 'Card', cash: 'Cash', gift_card: 'Gift card', package: 'Package' };
 const dayText = (d: string) => new Date(d + 'T00:00:00Z').toLocaleDateString('en-NZ', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 const CARD = 'box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:22px 24px;min-width:0';
 const NOTE = 'margin:0;padding-top:12px;font-size:13px;line-height:1.5;color:#5E6673';

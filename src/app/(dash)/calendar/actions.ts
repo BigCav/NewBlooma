@@ -235,7 +235,7 @@ export async function addWalkIn(name: string, clientId: string | null, serviceId
 
 
 /** Create (or recreate with a new tip) the sale for a booking and take payment. Card returns the sale id for the payment screen. */
-export async function checkoutBooking(bookingId: string, method: 'card' | 'cash' | 'gift_card', tipPct: number, giftCode?: string, disc?: { kind: string; value: string; note: string }, services?: string[], products?: { productId: string; qty: number }[]): Promise<R & { saleId?: string; total?: number }> {
+export async function checkoutBooking(bookingId: string, method: 'card' | 'cash' | 'gift_card', tipPct: number, giftCode?: string, disc?: { kind: string; value: string; note: string }, services?: string[], products?: { productId: string; qty: number }[], packs?: { clientPackageId: string; serviceId: string }[]): Promise<R & { saleId?: string; total?: number; paid?: boolean }> {
   const { sb } = await requireCtx();
   const { data: ex } = await sb.from('sales').select('id,status').eq('booking_id', bookingId).neq('status', 'refunded').maybeSingle();
   if (ex?.status === 'paid') return { error: 'This appointment is already paid.' };
@@ -253,6 +253,20 @@ export async function checkoutBooking(bookingId: string, method: 'card' | 'cash'
     const t = await sb.rpc('set_sale_tip', { p_sale: id, p_pct: tipPct });
     if (t.error) { await sb.rpc('void_pending_sale', { p_sale: id }); return { error: friendly(t.error.message) }; }
   }
+  // Visits covered by a package: those service lines become nothing to pay. A visit with nothing left to pay is closed on the spot.
+  if (packs?.length) {
+    const ap = await sb.rpc('apply_packages_to_sale', { p_sale: id, p_uses: packs.map((x) => ({ client_package_id: x.clientPackageId, service_id: x.serviceId })) });
+    if (ap.error) { await sb.rpc('void_pending_sale', { p_sale: id }); return { error: friendly(ap.error.message) }; }
+    const { data: left } = await sb.from('sales').select('total_cents').eq('id', id).single();
+    if (left && left.total_cents === 0) {
+      const done = await sb.rpc('complete_sale', { p_sale: id, p_method: 'package', p_gift_code: null });
+      if (done.error) { await sb.rpc('void_pending_sale', { p_sale: id }); return { error: friendly(done.error.message) }; }
+      revalidatePath('/calendar'); revalidatePath('/sales'); revalidatePath('/packages');
+      return { ok: true, saleId: id as string, paid: true };
+    }
+    const t = await sb.rpc('set_sale_tip', { p_sale: id, p_pct: tipPct });
+    if (t.error) { await sb.rpc('void_pending_sale', { p_sale: id }); return { error: friendly(t.error.message) }; }
+  }
   if (disc && disc.kind !== 'none') {
     const v = Number(String(disc.value).replace(/[^0-9.]/g, ''));
     const d = await sb.rpc('set_sale_discount', { p_sale: id, p_kind: disc.kind, p_value: disc.kind === 'amount' ? Math.round(v * 100) : v || 0, p_note: disc.note });
@@ -264,7 +278,7 @@ export async function checkoutBooking(bookingId: string, method: 'card' | 'cash'
   if (method === 'gift_card' && !String(giftCode ?? '').trim()) { await sb.rpc('void_pending_sale', { p_sale: id }); return { error: 'Enter the gift card code.' }; }
   const done = await sb.rpc('complete_sale', { p_sale: id, p_method: method, p_gift_code: method === 'gift_card' ? String(giftCode).trim().toUpperCase() : null });
   if (done.error) { await sb.rpc('void_pending_sale', { p_sale: id }); return { error: friendly(done.error.message) }; }
-  revalidatePath('/calendar'); revalidatePath('/sales');
+  revalidatePath('/calendar'); revalidatePath('/sales'); revalidatePath('/packages');
   return { ok: true, saleId: id as string };
 }
 

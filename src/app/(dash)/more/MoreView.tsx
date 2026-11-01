@@ -7,6 +7,7 @@ import { S } from '../calendar/pickers';
 const ITEMS: [string, string, React.ReactNode][] = [
   ['/inbox', 'Inbox', <><path d="M3.5 13.5 6 5.5h12l2.5 8"/><path d="M3.5 13.5V18a1.5 1.5 0 0 0 1.5 1.5h14a1.5 1.5 0 0 0 1.5-1.5v-4.5h-5l-1 2h-4l-1-2z"/></>],
   ['/products', 'Products', <><path d="M3.5 8 12 3.5 20.5 8v8L12 20.5 3.5 16z"/><path d="M3.5 8 12 12.5 20.5 8M12 12.5v8"/></>],
+  ['/packages', 'Packages', <><path d="M12 3.5 3.5 8 12 12.5 20.5 8z"/><path d="M3.5 12 12 16.5 20.5 12M3.5 16 12 20.5 20.5 16"/></>],
   ['/team', 'Team', <><rect x="4" y="3.5" width="16" height="17" rx="3"/><circle cx="12" cy="10" r="2.5"/><path d="M7.5 17c.6-2 2.4-3 4.5-3s3.9 1 4.5 3"/></>],
   ['/waitlist', 'Waitlist', <><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="8.5"/></>],
   ['/clients/forms', 'Client forms', <><rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="M9 9h6M9 13h6M9 17h3"/></>],

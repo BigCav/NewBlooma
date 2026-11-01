@@ -33,6 +33,10 @@ export default async function Calendar({ searchParams }: { searchParams: Promise
   ]);
   const ids = (bk ?? []).map((x) => x.id);
   const { data: sales } = ids.length ? await sb.from('sales').select('id,booking_id,status,total_cents,method').in('booking_id', ids).neq('status', 'refunded') : { data: [] as any[] };
+  const cids = [...new Set((bk ?? []).map((x: any) => x.client_id).filter(Boolean))] as string[];
+  const { data: cpk } = cids.length ? await sb.from('client_package_status').select('id,client_id,service_id,name,uses_left,expires_at').in('client_id', cids).eq('sale_status', 'paid').gt('uses_left', 0) : { data: [] as any[] };
+  const packages: Record<string, { id: string; serviceId: string; name: string; left: number }[]> = {};
+  for (const x of (cpk ?? []) as any[]) { if (x.expires_at && new Date(x.expires_at).getTime() <= Date.now()) continue; (packages[x.client_id] ??= []).push({ id: x.id, serviceId: x.service_id, name: x.name, left: x.uses_left }); }
   const catIdx = new Map<string, number>(); 
   const tpls = await loadTemplates(sb, salon.id);
   const subs = tpls.length ? await loadSubs(sb, [...new Set((bk ?? []).map((x: any) => x.client_id).filter(Boolean))] as string[]) : [];
@@ -46,7 +50,7 @@ export default async function Calendar({ searchParams }: { searchParams: Promise
       id: x.id, ref: x.ref_no, staffId: x.staff_id, clientId: x.client_id, client: x.clients?.name ?? 'Client',
       services: lines.map((l) => l.services?.name).filter(Boolean).join(' + '),
       dayYmd: ymd(x.starts_at, salon.timezone), start: minutesOfDay(x.starts_at, salon.timezone), end: minutesOfDay(x.ends_at, salon.timezone) || 24 * 60,
-      status: x.status, priceCents: lines.reduce((s, l) => s + l.price_cents, 0), paid: sale?.status === 'paid', paidText: sale?.status === 'paid' ? `Paid ${money2(sale.total_cents / 100).replace(/\.00$/, '')}${sale.method ? ' by ' + ({ card: 'Card', cash: 'Cash', gift_card: 'Gift card' } as Record<string, string>)[sale.method] : ''}` : '', saleId: sale?.id ?? null, serviceIds: lines.map((l) => l.service_id),
+      status: x.status, priceCents: lines.reduce((s, l) => s + l.price_cents, 0), paid: sale?.status === 'paid', paidText: sale?.status === 'paid' ? `Paid ${money2(sale.total_cents / 100).replace(/\.00$/, '')}${sale.method ? ' by ' + ({ card: 'Card', cash: 'Cash', gift_card: 'Gift card', package: 'Package' } as Record<string, string>)[sale.method] : ''}` : '', saleId: sale?.id ?? null, serviceIds: lines.map((l) => l.service_id),
       tone: Math.max(0, TONE_LIST.indexOf(toneFor(cname, cid ? catIdx.get(cid)! : 0))), walkin: x.notes === 'Walk-in', notes: x.notes,
       forms: (() => {
         if (!tpls.length || !x.client_id || x.status === 'completed') return null;
@@ -67,7 +71,7 @@ export default async function Calendar({ searchParams }: { searchParams: Promise
       day={day} today={today} view={view} nowMin={nowMin} tz={salon.timezone}
       team={(team ?? []).map((t) => ({ id: t.id, name: t.name, role: t.role_title ?? '' }))}
       bookings={bookings} blocks={blocks} hours={hours} closed={closed} services={services}
-      staffFilter={sp.s ?? 'all'} slug={salon.slug} offers={offers} cfg={cfg} recent={recent} products={(pr ?? []).map((x) => ({ id: x.id, name: x.name, brand: x.brand ?? '', priceCents: x.price_cents, stock: x.stock }))} initialNew={sp.new === '1'} initialClient={sp.c ?? ''} initialSel={/^[0-9a-f-]{36}$/i.test(sp.b ?? '') ? sp.b : undefined}
+      staffFilter={sp.s ?? 'all'} slug={salon.slug} offers={offers} cfg={cfg} recent={recent} packages={packages} products={(pr ?? []).map((x) => ({ id: x.id, name: x.name, brand: x.brand ?? '', priceCents: x.price_cents, stock: x.stock }))} initialNew={sp.new === '1'} initialClient={sp.c ?? ''} initialSel={/^[0-9a-f-]{36}$/i.test(sp.b ?? '') ? sp.b : undefined}
     />
   );
 }

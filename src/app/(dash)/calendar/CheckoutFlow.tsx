@@ -4,10 +4,11 @@ import { decimalInput } from '@/lib/numeric';
 import type { CalService } from '@/lib/cal';
 import { S, ServicePicker } from './pickers';
 import { m2, TIP_OPTS } from './calUi';
-import { DISC_PCTS, NO_DISC, discountCents, type CoProduct, type DiscPick } from '../sales/shared';
-import { StepShell, useSteps, Tiles, DetailRows, ICONS } from './wizardUi';
+import { DISC_PCTS, NO_DISC, discountCents, type CoPackage, type CoProduct, type DiscPick } from '../sales/shared';
+import { StepShell, useSteps, Tiles, DetailRows, ICONS, ROW, TICK } from './wizardUi';
 
 export type CoState = { method: string; tip: number; code: string; disc: DiscPick };
+export type CoPacks = { list: CoPackage[]; chosen: string[]; onToggle: (id: string) => void };
 export type CoRetail = { products: CoProduct[]; qty: Record<string, number>; onQty: (id: string, n: number) => void };
 export type CoLine = { key: string; name: string; sub?: string; cents: number };
 export type CoCfg = { canDiscount: boolean; askTip: boolean; taxInclusive: boolean; taxRate: number };
@@ -18,16 +19,28 @@ const FIELD = 'box-sizing:border-box;width:100%;height:48px;padding:0 14px;borde
  * Checkout as steps, shared by the calendar and the Sales page: payment method, discount and tip when switched on,
  * a summary, and for cash one more step to confirm what was handed over. The caller decides what charging does.
  */
-export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCharge, busy, error, setError, wait, onClose, edit, retail, tipBase }: {
+export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCharge, busy, error, setError, wait, onClose, edit, retail, packs, tipBase }: {
   who: string; methods: readonly (readonly [string, string])[]; co: CoState; setCo: (s: CoState) => void; cfg: CoCfg; lines: CoLine[]; gross: number;
   onCharge: () => void; busy: boolean; error: string; setError: (e: string) => void; wait?: string; onClose: () => void;
   edit?: { services: CalService[]; selected: string[]; lock: (x: CalService) => string; initialCat?: string; onPick: (id: string) => void };
   /** Retail products that can be added to the visit, with how many of each are on the sale. */
   retail?: CoRetail;
+  /** Packages the client has with visits left that cover a service on this sale. */
+  packs?: CoPacks;
   /** What the tip is worked out on (the services only). Defaults to the whole amount. */
   tipBase?: number;
 }) {
-  const cash = co.method === 'cash';
+  const prodLines = retail ? retail.products.filter((p) => (retail.qty[p.id] ?? 0) > 0).map((p) => ({ p, n: retail.qty[p.id], cents: p.priceCents * retail.qty[p.id] })) : [];
+  const prodTotal = prodLines.reduce((a, l) => a + l.cents, 0);
+  const packLines = packs ? packs.list.filter((x) => packs.chosen.includes(x.id)).map((x) => lines.find((l) => l.key === x.serviceId)).filter((l): l is CoLine => !!l) : [];
+  const packOff = packLines.reduce((acc, l) => acc + l.cents, 0);
+  const all = gross - packOff + prodTotal;
+  const disc = cfg.canDiscount ? discountCents(all, co.disc) : 0, net = all - disc;
+  const tip = cfg.askTip ? Math.round(((tipBase ?? gross) - packOff) * co.tip / 100) : 0;
+  const taxAmt = cfg.taxInclusive ? Math.round(net * cfg.taxRate / (100 + cfg.taxRate)) : Math.round(net * cfg.taxRate / 100);
+  const total = net + tip + (cfg.taxInclusive ? 0 : taxAmt);
+  const gst = cfg.taxInclusive ? 'Includes ' + cfg.taxRate + '% GST' : 'GST ' + cfg.taxRate + '%';
+  const cash = co.method === 'cash' && total > 0;
   const kinds = ['method', ...(cfg.canDiscount ? ['discount'] : []), ...(cfg.askTip ? ['tip'] : []), 'summary', ...(cash ? ['cash'] : [])] as string[];
   const summaryAt = kinds.indexOf('summary');
   const { step, go, jump, forward, back } = useSteps(summaryAt, () => setError(''));
@@ -38,14 +51,6 @@ export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCha
   const [cashHow, setCashHow] = useState<'partial' | 'exact' | null>(null);
   const kind = kinds[step];
 
-  const prodLines = retail ? retail.products.filter((p) => (retail.qty[p.id] ?? 0) > 0).map((p) => ({ p, n: retail.qty[p.id], cents: p.priceCents * retail.qty[p.id] })) : [];
-  const prodTotal = prodLines.reduce((a, l) => a + l.cents, 0);
-  const all = gross + prodTotal;
-  const disc = cfg.canDiscount ? discountCents(all, co.disc) : 0, net = all - disc;
-  const tip = cfg.askTip ? Math.round((tipBase ?? gross) * co.tip / 100) : 0;
-  const taxAmt = cfg.taxInclusive ? Math.round(net * cfg.taxRate / (100 + cfg.taxRate)) : Math.round(net * cfg.taxRate / 100);
-  const total = net + tip + (cfg.taxInclusive ? 0 : taxAmt);
-  const gst = cfg.taxInclusive ? 'Includes ' + cfg.taxRate + '% GST' : 'GST ' + cfg.taxRate + '%';
 
   const methodLabel = methods.find((m) => m[0] === co.method)?.[1] ?? '';
   const discKey = co.disc.kind === 'none' ? 'none' : co.disc.kind === 'amount' ? 'amt' : 'p' + co.disc.value;
@@ -108,7 +113,7 @@ export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCha
   return (
     <StepShell step={step} titles={kinds.map((k) => titles[k])} onBack={back} onClose={onClose} error={error}
       actions={[
-        kind === 'summary' ? { label: cash ? 'Charge ' + m2(total) : 'Charge ' + m2(total), onClick: cash ? forward : onCharge, disabled: busy || !!wait }
+        kind === 'summary' ? { label: total === 0 ? 'Complete visit' : 'Charge ' + m2(total), onClick: cash ? forward : onCharge, disabled: busy || !!wait }
         : kind === 'cash' ? { label: 'Confirm sale', onClick: onCharge, disabled: busy || !cashReady }
         : { label: 'Continue', onClick: () => { if (!canNext) { setError('Enter the gift card code.'); return; } forward(); }, disabled: !canNext },
       ]}>
@@ -136,10 +141,24 @@ export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCha
             <div key={v.key} style={S('display:flex;align-items:center;gap:12px')}>
               <span style={S('flex:0 0 4px;align-self:stretch;border-radius:999px;background:#B9AEFB')} />
               <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{v.name}</span>{!!v.sub && <span style={S('display:block;font-size:13px;color:#5E6673')}>{v.sub}</span>}</span>
-              <span style={S('flex:0 0 auto;font-size:14.5px;font-weight:500')}>{m2(v.cents)}</span>
+              <span style={S('flex:0 0 auto;font-size:14.5px;font-weight:500')}>{packLines.includes(v) ? 'Package' : m2(v.cents)}</span>
             </div>
           ))}
         </div>
+        {!!packs?.list.length && (
+          <div style={S('display:flex;flex-direction:column;gap:10px')}>
+            <h3 style={S('margin:0;font-size:17px;font-weight:600;letter-spacing:-0.01em')}>Packages</h3>
+            <div role="group" aria-label="Packages" style={S('display:flex;flex-direction:column')}>
+              {packs.list.map((x) => { const on = packs.chosen.includes(x.id); return (
+                <button key={x.id} onClick={() => packs.onToggle(x.id)} aria-pressed={on} style={S(ROW(on))}>
+                  <span style={S('flex:1 1 auto;min-width:0;text-align:left')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{x.name}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{x.left + (x.left === 1 ? ' visit left' : ' visits left')}</span></span>
+                  <span style={S('flex:0 0 auto;font-size:14px;color:#5E6673')}>{on ? 'Using' : 'Use'}</span>
+                  {on && TICK}
+                </button>
+              ); })}
+            </div>
+          </div>
+        )}
         {retail && (
           <div style={S('display:flex;flex-direction:column;gap:10px')}>
             <div style={S('display:flex;align-items:center;justify-content:space-between')}><h3 style={S('margin:0;font-size:17px;font-weight:600;letter-spacing:-0.01em')}>Products</h3><button onClick={() => { setError(''); setShopping(true); }} style={S('border:0;background:transparent;font:inherit;font-size:14px;font-weight:500;text-decoration:underline;cursor:pointer;color:#0E1116')}>{prodLines.length ? 'Edit' : 'Add'}</button></div>

@@ -23,7 +23,7 @@ export default async function Sales({ searchParams }: { searchParams: Promise<{ 
     staff.app_role === 'owner' ? sb.from('card_payments').select('id,review_note,amount_cents,resolved_at,sales(clients(name))').eq('needs_review', true).gte('resolved_at', new Date(Date.now() - 30 * 86400e3).toISOString()).order('resolved_at', { ascending: false }).limit(5) : Promise.resolve({ data: [] as any[] }),
   ]);
   const canEdit = staff.app_role !== 'stylist';
-  const METHOD: Record<string, string> = { card: 'Card', cash: 'Cash', gift_card: 'Gift card' };
+  const METHOD: Record<string, string> = { card: 'Card', cash: 'Cash', gift_card: 'Gift card', package: 'Package' };
   const durOf = new Map<string, number>(((svcs ?? []) as any[]).map((x) => [x.id as string, x.duration_min as number]));
   const list = ((sales ?? []) as any[]).map((s) => {
     const items = s.sale_items as any[];
