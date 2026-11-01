@@ -1,5 +1,5 @@
 import { PageSkeleton } from '@/components/Skeleton';
 
 export default function Loading() {
-  return <PageSkeleton kind="tiles" search={false} />;
+  return <PageSkeleton page="settings" />;
 }

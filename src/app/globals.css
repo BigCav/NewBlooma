@@ -124,7 +124,7 @@ html[data-theme=dark] img,html[data-theme=dark] video,html[data-theme=dark] ifra
 .sk-page{display:flex;flex-direction:column;gap:14px;max-width:720px}
 .sk-title{height:34px;width:180px}.sk-sub{height:16px;width:240px;margin-bottom:10px}
 .sk-row{display:flex;gap:12px}.sk-stat{flex:1 1 0;height:64px}.sk-pill{height:52px;border-radius:999px}.sk-card{height:84px;border-radius:24px}
-@media (max-width:900px){.sk-page{margin:-18px -16px 0;padding:28px 20px 0;max-width:none}}
+@media (max-width:900px){.sk-page{display:flex !important;margin:-18px -16px 0;padding:28px 20px 0;max-width:none}}
 @media (prefers-reduced-motion:reduce){.sk{animation:none}}
 
 /* Desktop drawer: the phone overlays of a page, shown as a panel sliding in from the right over a softly blurred page. */
@@ -163,6 +163,7 @@ button.sheet-out,.sheet-out>button[aria-label^="Close"]{animation:drFadeOut .2s 
 /* Desktop loading placeholder sits exactly where the page will: same padding, same gap beside a submenu. */
 @media (min-width:901px){
 .main:has(.sk-desk){padding:0}
+.sk-page{display:none !important}
 .sk-desk{transition:padding-left .22s cubic-bezier(.4,0,.2,1)}
 .shell:has(.subpanel.open) .sk-desk{padding-left:8px !important}
 }
