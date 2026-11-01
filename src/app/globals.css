@@ -154,3 +154,8 @@ button.sheet-out,.sheet-out>button[aria-label^="Close"]{animation:drFadeOut .2s 
 @media (prefers-reduced-motion:reduce){.m-drawer .sheet,.m-drawer>div>button{animation:none !important}}
 
 .d-cal .s-card:hover{background:#FAFAFB !important;border-color:#D5D9E0 !important}
+
+/* With a submenu open the page sits closer to it (the submenu already leaves its own gap). */
+.d-cal{transition:padding-left .22s cubic-bezier(.4,0,.2,1)}
+.shell:has(.subpanel.open) .d-cal{padding-left:8px !important}
+@media (prefers-reduced-motion:reduce){.d-cal{transition:none}}

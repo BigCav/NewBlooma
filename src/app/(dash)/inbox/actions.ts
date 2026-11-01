@@ -15,6 +15,13 @@ export async function markRead(id: string): Promise<R> {
   refresh(); return { ok: true };
 }
 
+export async function markAllRead(): Promise<R> {
+  const { sb } = await requireCtx();
+  const { error } = await sb.from('inbox_items').update({ unread: false }).eq('unread', true);
+  if (error) return { error: friendly(error.message) };
+  refresh(); return { ok: true };
+}
+
 export async function markDone(id: string): Promise<R> {
   const { sb } = await requireCtx();
   const { error } = await sb.from('inbox_items').update({ status: 'handled', unread: false }).eq('id', id);

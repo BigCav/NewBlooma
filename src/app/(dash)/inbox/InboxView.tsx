@@ -9,7 +9,7 @@ import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { ActiveFilter, FilterButton, FilterSheet } from '@/components/FilterBits';
 import { S } from '../calendar/pickers';
 import { MobileItem } from './MobileItem';
-import { acceptRequest, declineRequest, markDone, markRead, replyToItem } from './actions';
+import { acceptRequest, declineRequest, markAllRead, markDone, markRead, replyToItem } from './actions';
 import { FILTERS, REASONS, STATUS, TYPES, initialsOf, isAction, isInfo, type InboxItem } from './shared';
 
 const PER_PAGE = 15;
@@ -49,6 +49,10 @@ function useInbox(props: { items: InboxItem[] }) {
     setSelectedId(id); setMode('view'); setReason(null); setDraft(''); setNotice(''); setError(''); setOpen(true);
     if (items.find((i) => i.id === id)?.unread) { patch(id, { unread: false }); markRead(id).then(() => router.refresh()); }
   };
+  const markAll = () => {
+    setOver((o) => { const n = { ...o }; for (const i of items) if (i.unread) n[i.id] = { ...(n[i.id] ?? {}), unread: false }; return n; });
+    markAllRead().then((r) => { if (r.error) setError(r.error); router.refresh(); });
+  };
   const done = (fn: () => Promise<{ error?: string; notice?: string }>, ok: (n?: string) => void) => startT(async () => { const r = await fn(); if (r.error) { setError(r.error); return; } setError(''); ok(r.notice); router.refresh(); });
   const accept = () => sel && done(() => acceptRequest(sel.id), (n) => { patch(sel.id, { status: 'accepted', unread: false }); setNotice(n ?? 'Accepted'); });
   const sendDecline = () => {
@@ -82,7 +86,7 @@ function useInbox(props: { items: InboxItem[] }) {
   const needs = items.filter((i) => isAction(i.type) && i.status === 'new' && !i.cancelled).length;
   const unread = items.filter((i) => i.unread).length;
   const handled = items.filter((i) => hasChip(i)).length;
-  return { items, narrow, selectedId, filter, setFilter: setFilterP, query, setQuery: setQueryP, pageRows, pageNo, pages, goPage, compose, mode, setMode, reason, setReason, draft, setDraft, notice, setNotice, error, setError, open, setOpen, sel, rows, needs, unread, handled, select, accept, sendDecline, sendReply, finish, cancel, busy };
+  return { items, narrow, selectedId, filter, setFilter: setFilterP, query, setQuery: setQueryP, pageRows, pageNo, pages, goPage, compose, mode, setMode, reason, setReason, draft, setDraft, notice, setNotice, error, setError, open, setOpen, sel, rows, needs, unread, handled, markAll, select, accept, sendDecline, sendReply, finish, cancel, busy };
 }
 type C = ReturnType<typeof useInbox>;
 export type InboxCtl = C;
@@ -230,7 +234,10 @@ function Desktop({ c }: { c: C }) {
             <div role="group" aria-label="Filter inbox" style={S('display:flex;flex-wrap:wrap;gap:8px')}>
               {FILTERS.map((f) => <button key={f.id} onClick={() => c.setFilter(f.id)} aria-pressed={c.filter === f.id} style={S(chipS(c.filter === f.id))}>{f.label}</button>)}
             </div>
-            <span style={S('color:#5E6673;font-size:13.5px')}>{c.rows.length === c.items.length ? `${c.items.length} in total` : `${c.rows.length} of ${c.items.length}`}</span>
+            <span style={S('display:flex;align-items:center;gap:16px;color:#5E6673;font-size:13.5px')}>
+              {c.rows.length === c.items.length ? `${c.items.length} in total` : `${c.rows.length} of ${c.items.length}`}
+              <button onClick={c.markAll} disabled={c.unread === 0} style={S(chipS(false) + ';' + (c.unread === 0 ? 'opacity:.5;cursor:default' : ''))}>Mark all as read</button>
+            </span>
           </div>
           {c.pageRows.map((i) => <Row key={i.id} c={c} i={i} m={false} />)}
           {c.rows.length === 0 && <p style={S('margin:0;padding:24px 20px;color:#5E6673;font-size:14px')}>{c.query.trim() ? `Nothing matches "${c.query.trim()}".` : 'Nothing here right now.'}</p>}
@@ -255,6 +262,7 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
         <div style={S('display:flex;align-items:center;gap:12px')}>
           <FilterButton onClick={() => setFopen(true)} active={c.filter !== 'all'} label="Filter inbox" />
           <span style={S('flex:1 1 auto;min-width:0;color:#5E6673;font-size:14px')}>{c.rows.length === c.items.length ? `${c.items.length} in total` : `${c.rows.length} of ${c.items.length}`}</span>
+          <button onClick={c.markAll} disabled={c.unread === 0} style={S('flex:0 0 auto;height:44px;padding:0 16px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;font:inherit;font-size:14px;font-weight:500;color:#0E1116;' + (c.unread === 0 ? 'opacity:.5' : ''))}>Mark all as read</button>
         </div>
         {c.filter !== 'all' && <ActiveFilter label={fl} onClear={() => c.setFilter('all')} />}
         {c.pageRows.map((i) => <MRow key={i.id} c={c} i={i} />)}
