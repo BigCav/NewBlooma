@@ -89,7 +89,7 @@ export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCha
         {shown.map((p) => {
           const n = retail.qty[p.id] ?? 0, out = p.stock < 1;
           return (
-            <div key={p.id} style={S('display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid ' + (n > 0 ? '#0E1116' : '#E6E8EC') + ';border-radius:16px;opacity:' + (out ? 0.55 : 1))}>
+            <div key={p.id} style={S('display:flex;align-items:center;gap:12px;box-sizing:border-box;min-height:56px;padding:10px 16px;border-radius:16px;opacity:' + (out ? 0.55 : 1) + ';border:1px solid ' + (n > 0 ? '#0E1116' : '#E1E4E9') + ';background:' + (n > 0 ? '#F4F5F7' : '#FFFFFF') + (n > 0 ? ';box-shadow:inset 0 0 0 1px #0E1116' : ''))}>
               <span style={S('flex:1 1 auto;min-width:0')}>
                 <span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{p.name}</span>
                 <span style={S('display:block;font-size:13px;color:#5E6673')}>{(p.brand ? p.brand + ', ' : '') + m2(p.priceCents) + ', ' + (out ? 'out of stock' : p.stock + ' in stock')}</span>
