@@ -76,7 +76,7 @@ function Controls({ c, m }: { c: C; m: boolean }) {
 function Desktop({ c }: { c: C }) {
   const [sel, setSel] = useState<string | null>(null);
   return (
-    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 8px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
+    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <PayrollDesk c={c} onOpen={setSel} />
       {sel && <PayrollMobile key={sel + c.tab} c={c} drawer startId={sel} onClose={() => setSel(null)} />}
     </div>

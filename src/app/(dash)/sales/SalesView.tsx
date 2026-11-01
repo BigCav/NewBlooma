@@ -351,7 +351,7 @@ function Desktop({ c }: { c: C }) {
   const max = Math.max(1, ...c.bars.map((b) => b.cents));
   const week = c.bars.reduce((a, b) => a + b.cents, 0);
   return (
-    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 8px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
+    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <PageHeader title="Sales" subtitle={c.subtitle} query={c.query} onQuery={c.setQuery} placeholder="Search sales" actionLabel="New sale" onAction={c.openNew} />
       <section aria-label="Sales at a glance" style={S('display:flex;flex-wrap:wrap;gap:20px 64px')}>{stat('Sales today', fmt(c.todayTotal))}{stat('Paid sales', String(c.paidCount))}{stat('Average sale', fmt(c.paidCount ? Math.round(c.todayTotal / c.paidCount) : 0))}</section>
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>

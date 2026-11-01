@@ -122,7 +122,7 @@ export function FormsView(props: Props) {
       </div>
     )}
     {c.narrow !== true && (
-      <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 8px;display:flex;flex-direction:column;gap:24px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
+      <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:24px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
         <div>{back}</div>
         <PageHeader title="Forms and consultations" subtitle="What clients fill in before an appointment. Set which services need which form, how long it stays valid, and what happens when one is missing." showSearch={false} showAction={false} />
         <div style={S('width:100%;max-width:760px;display:flex;flex-direction:column;gap:14px')}><MobileList c={c} /></div>

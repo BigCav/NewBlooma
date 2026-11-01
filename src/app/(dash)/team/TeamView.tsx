@@ -221,7 +221,7 @@ function Desktop({ c }: { c: C }) {
     <div><div style={S('color:#5E6673;font-size:13.5px')}>{label}</div><div style={S('margin-top:4px;font-size:38px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{v}</div></div>
   );
   return (
-    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 8px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
+    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <PageHeader title="Team" subtitle="Who works when, and what they offer" query={c.query} onQuery={c.setQuery} placeholder="Search team" actionLabel="New team member" onAction={c.startNew} />
       <section aria-label="Team at a glance" style={S('display:flex;flex-wrap:wrap;gap:20px 64px')}>
         {stat('Team members', c.items.length)}{stat('Working today', c.items.filter((m) => m.todayOn).length)}{stat('Bookable online', c.items.filter((m) => m.online).length)}

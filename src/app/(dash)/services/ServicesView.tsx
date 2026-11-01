@@ -298,7 +298,7 @@ function Desktop({ c }: { c: C }) {
   const catCount = cats.filter((x) => services.some((s) => s.catId === x.id)).length;
   const chips = [{ id: 'all', label: 'All services' }, ...cats.map((x) => ({ id: x.id, label: x.name }))];
   return (
-    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 8px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
+    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <PageHeader title="Services" subtitle="What clients can book" query={c.query} onQuery={c.setQuery} placeholder="Search services" actionLabel="New service" onAction={c.startNew} showAction={c.canEdit} />
 
       <section aria-label="Services at a glance" style={S('display:flex;flex-wrap:wrap;gap:20px 64px')}>

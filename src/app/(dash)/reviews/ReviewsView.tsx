@@ -74,7 +74,7 @@ function Desktop({ c }: { c: C }) {
   const list = c.shown.filter((r) => !q || (r.name + ' ' + r.text + ' ' + r.svc + ' ' + r.pro).toLowerCase().includes(q));
   const needs = c.rows.filter((r) => !r.reply).length;
   return (
-    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 8px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
+    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <PageHeader title="Reviews" subtitle={`What clients say about ${c.salonName}`} query={c.query} onQuery={c.setQuery} placeholder="Search reviews" actionLabel="Ask for reviews" onAction={c.request} />
       <section aria-label="Reviews at a glance" style={S('display:flex;flex-wrap:wrap;align-items:flex-end;gap:20px 64px')}>
         {big('Average rating', c.n ? c.avg.toFixed(1) : '0.0')}{big('Reviews', String(c.n))}{big('Needs a reply', String(needs))}

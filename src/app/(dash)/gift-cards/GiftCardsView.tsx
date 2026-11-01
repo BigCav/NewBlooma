@@ -169,7 +169,7 @@ const noneText = (c: C) => (c.all.length === 0 ? (c.canIssue ? 'No gift cards ye
 function Desktop({ c }: { c: C }) {
   const stat = (l: string, v: string) => <div key={l}><div style={S('color:#5E6673;font-size:13.5px')}>{l}</div><div style={S('margin-top:4px;font-size:38px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{v}</div></div>;
   return (
-    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 8px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
+    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <PageHeader title="Gift cards" subtitle="Issue gift cards and track what is left on them" query={c.query} onQuery={c.setQuery} placeholder="Search code or name" actionLabel="Issue gift card" onAction={c.openNew} showAction={c.canIssue} />
       <section aria-label="Gift cards at a glance" style={S('display:flex;flex-wrap:wrap;gap:20px 64px')}>
         {stat('Owed to clients', money(c.owed))}{stat('Active cards', String(c.active))}{stat('Issued this month', money(c.issuedM))}{stat('Redeemed this month', money(c.redeemedM))}

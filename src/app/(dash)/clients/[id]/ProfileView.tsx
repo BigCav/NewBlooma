@@ -306,7 +306,7 @@ function Stats({ c, cols, big }: { c: C; cols: number; big: boolean }) {
 function Desktop({ c }: { c: C }) {
   const s = Sections({ c, pad: 24 });
   return (
-    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 8px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
+    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <Header c={c} m={false} />
       <Stats c={c} cols={5} big />
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:24px')}>

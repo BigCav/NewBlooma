@@ -167,7 +167,7 @@ function Err({ text }: { text: string }) { return <p role="alert" style={S('marg
 
 function Desktop({ c }: { c: C }) {
   return (
-    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 8px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
+    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <PageHeader title="Reports" subtitle="How the business is doing" showSearch={false} showAction={false} />
       {c.error || !c.p ? <Err text={c.error ?? 'Could not load the report.'} /> : <Body c={c} m={false} />}
     </div>

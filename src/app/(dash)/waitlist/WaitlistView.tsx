@@ -94,7 +94,7 @@ function Desktop({ c }: { c: C }) {
   const list = c.rows.filter((r) => filter === 'all' || r.status === filter);
   const fl = WL_FILTERS.find((f) => f.id === filter)?.label ?? 'All';
   return (
-    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 8px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
+    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <PageHeader title="Waitlist" subtitle={c.waiting + (c.waiting === 1 ? ' client is waiting' : ' clients are waiting')} query={c.query} onQuery={c.setQuery} placeholder="Search waitlist" actionLabel="Add to waitlist" onAction={() => { c.setMode('add'); c.setError(''); c.setNotice(''); }} />
       <div role="group" aria-label="Filter waitlist" style={S('display:flex;flex-wrap:wrap;gap:8px')}>
         {WL_FILTERS.map((f) => <button key={f.id} onClick={() => setFilter(f.id)} aria-pressed={filter === f.id} style={S(chip(filter === f.id))}>{f.label}</button>)}
