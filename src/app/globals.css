@@ -140,6 +140,14 @@ html[data-theme=dark] img,html[data-theme=dark] video,html[data-theme=dark] ifra
 }
 @keyframes drIn{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
 @keyframes drFade{from{opacity:0}to{opacity:1}}
+@keyframes drOut{from{transform:none;opacity:1}to{transform:translateX(40px);opacity:0}}
+@keyframes drFadeOut{from{opacity:1}to{opacity:0}}
+/* A closed drawer's copy plays the opening in reverse, then is removed. */
+@media (min-width:901px){
+.m-drawer-out,.m-drawer-out *{pointer-events:none !important}
+.m-drawer-out .sheet,.m-drawer-out>[role="dialog"]{animation:drOut .2s cubic-bezier(.4,0,1,1) forwards !important}
+.m-drawer-out>div>button[aria-label^="Close"],.m-drawer-out:has(>[role="dialog"]){animation:drFadeOut .2s ease-in forwards !important}
+}
 @media (prefers-reduced-motion:reduce){.m-drawer .sheet,.m-drawer>div>button{animation:none !important}}
 
 .d-cal .s-card:hover{background:#FAFAFB !important;border-color:#D5D9E0 !important}
