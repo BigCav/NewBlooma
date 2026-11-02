@@ -258,9 +258,14 @@ export async function cancelTerminal(txn: string) {
   const c = await getCreds(cp.salon_id);
   try {
     const st = await hit(c, { Station: c.station!, TxnType: 'Status', TxnRef: txn });
+    // The button Windcave currently labels CANCEL; before the terminal has shown one, try both (spec: Name is B1 or B2, Val is CANCEL).
     const b = hitButtons(st).find((x) => x.label.toUpperCase() === 'CANCEL');
-    if (b) await hit(c, { Station: c.station!, TxnType: 'UI', UiType: 'Bn', Name: b.name, Val: 'CANCEL', TxnRef: txn });
-  } catch { /* terminal will time out; poll resolves it */ }
+    for (const name of b ? [b.name] : ['B2', 'B1']) {
+      const r = await hit(c, { Station: c.station!, TxnType: 'UI', UiType: 'Bn', Name: name, Val: 'CANCEL', TxnRef: txn });
+      console.log('windcave cancel', name, 'status:', st.replace(/\s+/g, ' ').slice(0, 300), 'reply:', r.replace(/\s+/g, ' ').slice(0, 200));
+      if (pick(r, 'Success') === '1') break;
+    }
+  } catch (e) { console.error('windcave cancel failed', e); /* terminal will time out; poll resolves it */ }
 }
 
 /* ---------------- Refunds ---------------- */

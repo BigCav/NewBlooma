@@ -17,6 +17,7 @@ export function useTerminal(onSettled?: (approved: boolean) => void) {
   const [cancelling, setCancelling] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const seen = useRef(new Set<string>());
+  const wantCancel = useRef(false);
   const done = useRef(onSettled);
   done.current = onSettled;
 
@@ -27,8 +28,9 @@ export function useTerminal(onSettled?: (approved: boolean) => void) {
       let r: Awaited<ReturnType<typeof terminalPoll>>;
       try { r = await terminalPoll(txn); } catch { if (!stop) timer.current = setTimeout(tick, 3000); return; }
       if (stop) return;
-      if (r.state === 'pending') { setText(r.text || 'Waiting for the customer'); setBtns(r.buttons ?? []); timer.current = setTimeout(tick, 2000); return; }
-      setTxn(''); setBtns([]); setCancelling(false);
+      // Cancel was pressed but the terminal is still going: ask again until it ends.
+      if (r.state === 'pending') { if (wantCancel.current) terminalCancel(txn); setText(r.text || 'Waiting for the customer'); setBtns(r.buttons ?? []); timer.current = setTimeout(tick, 2000); return; }
+      wantCancel.current = false; setTxn(''); setBtns([]); setCancelling(false);
       if (r.state === 'approved') { setPhase('approved'); setText(''); }
       else { setPhase('failed'); setText(r.state === 'declined' ? (r.text ? 'Not approved: ' + r.text : 'The payment was not approved.') : r.text || 'Something went wrong. Check the terminal.'); }
       done.current?.(r.state === 'approved');
@@ -48,7 +50,7 @@ export function useTerminal(onSettled?: (approved: boolean) => void) {
   return {
     txn, phase,
     /** The moment Charge is pressed, before the server has answered. */
-    begin: () => { setPhase('pending'); setText('Sending to the terminal'); setBtns([]); setCancelling(false); },
+    begin: () => { wantCancel.current = false; setPhase('pending'); setText('Sending to the terminal'); setBtns([]); setCancelling(false); },
     start: (t: string) => { seen.current.add(t); setTxn(t); setPhase('pending'); setText('Sent to the terminal'); setBtns([]); setCancelling(false); },
     /** Pick up a payment that was already running when the page opened. Each one is only picked up once. */
     resume: (t: string) => { if (seen.current.has(t) || phase !== 'idle') return; seen.current.add(t); setTxn(t); setPhase('pending'); setText('Payment in progress on the terminal'); },
@@ -56,7 +58,7 @@ export function useTerminal(onSettled?: (approved: boolean) => void) {
     reset: () => { setTxn(''); setPhase('idle'); setText(''); setBtns([]); setCancelling(false); },
     view: {
       phase, text, btns, cancelling, hasTxn: !!txn,
-      onCancel: () => { if (!txn) return; setCancelling(true); setText('Cancelling on the terminal'); terminalCancel(txn); },
+      onCancel: () => { if (!txn) return; wantCancel.current = true; setCancelling(true); terminalCancel(txn); },
       onPress: (b: TermBtn) => { if (txn) terminalPress(txn, b.name, b.label); },
     },
   };

@@ -39,9 +39,7 @@ function Mark({ phase }: { phase: Exclude<TermPhase, 'idle'> }) {
 export function TerminalStatus({ t, amount }: { t: TermView; amount: string }) {
   const phase = t.phase === 'idle' ? 'pending' : t.phase;
   const title = phase === 'pending' ? 'Pending payment' : phase === 'approved' ? 'Payment approved' : 'Payment not taken';
-  const sub = phase === 'pending'
-    ? 'Ask the customer to tap, insert or swipe their card on the terminal.'
-    : phase === 'approved' ? 'The visit is paid.' : '';
+  const sub = phase === 'approved' ? 'The visit is paid.' : '';
   return (
     <div data-pay-lock={phase === 'pending' ? '' : undefined} style={S('display:flex;flex-direction:column;flex:1 1 auto;min-height:0;margin:0 -20px -40px')}>
       <div role="status" aria-live="polite" style={S('flex:1 1 0;min-height:0;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px 28px;text-align:center')}>
@@ -49,13 +47,12 @@ export function TerminalStatus({ t, amount }: { t: TermView; amount: string }) {
         <h2 style={S('margin:6px 0 0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>{title}</h2>
         <div style={S('font-size:34px;font-weight:600;letter-spacing:-0.03em')}>{amount}</div>
         {!!sub && <p style={S('margin:0;max-width:320px;color:#5E6673;font-size:14.5px;line-height:1.45')}>{sub}</p>}
-        {!!t.text && phase !== 'approved' && <p style={S('margin:0;max-width:340px;font-size:14.5px;font-weight:500;line-height:1.45;color:' + (phase === 'failed' ? '#B42318' : '#0E1116'))}>{t.text}</p>}
+        {!!t.text && phase === 'failed' && <p style={S('margin:0;max-width:340px;font-size:14.5px;font-weight:500;line-height:1.45;color:' + (phase === 'failed' ? '#B42318' : '#0E1116'))}>{t.text}</p>}
         {phase === 'pending' && !!t.btns.length && (
           <div style={S('display:flex;gap:10px;width:100%;max-width:340px')}>
             {t.btns.map((b) => <button key={b.name} onClick={() => t.onPress(b)} style={S(SECOND + ';flex:1 1 0;width:auto')}>{b.label}</button>)}
           </div>
         )}
-        {phase === 'pending' && <p style={S('margin:6px 0 0;max-width:320px;color:#5E6673;font-size:13px;line-height:1.45')}>Keep this page open until it finishes. If you do leave, the payment carries on and the sale is finished when it ends.</p>}
       </div>
       <div style={S('flex:0 0 auto;padding:14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3;display:flex;flex-direction:column;gap:12px')}>
         {phase === 'pending' && <button onClick={t.onCancel} disabled={!t.hasTxn || t.cancelling} style={S(SECOND + ';opacity:' + (!t.hasTxn || t.cancelling ? 0.45 : 1))}>{t.cancelling ? 'Cancelling' : 'Cancel payment'}</button>}
