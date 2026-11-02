@@ -337,7 +337,7 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
             })()}
 
             {mode === 'message' && cur && (cur.clientId
-              ? <ChatPanel clientId={cur.clientId} first={first(cur.client)} context={cur.services + ', ' + dayInfo(cur.dayYmd).short + ' at ' + fmtMin(cur.start)} send={(t) => messageBookingClient(cur.id, t)} onBack={backToView} />
+              ? <ChatPanel clientId={cur.clientId} name={cur.client} first={first(cur.client)} context={cur.services + ', ' + dayInfo(cur.dayYmd).short + ' at ' + fmtMin(cur.start)} send={(t) => messageBookingClient(cur.id, t)} onBack={backToView} />
               : <p style={S('margin:0;color:#5E6673;font-size:14px')}>This booking has no client to message.</p>)}
 
             {mode === 'blockview' && bvB && (<>

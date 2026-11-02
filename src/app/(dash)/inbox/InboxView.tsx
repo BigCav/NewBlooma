@@ -9,7 +9,7 @@ import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { ActiveFilter, FilterButton, FilterSheet } from '@/components/FilterBits';
 import { S } from '../calendar/pickers';
 import { MobileItem } from './MobileItem';
-import { acceptRequest, declineRequest, markAllRead, markDone, markRead, replyToItem } from './actions';
+import { acceptRequest, declineRequest, markAllRead, markDone, markRead } from './actions';
 import { FILTERS, REASONS, STATUS, TYPES, initialsOf, isAction, isInfo, type InboxItem } from './shared';
 
 const PER_PAGE = 15;
@@ -38,7 +38,6 @@ function useInbox(props: { items: InboxItem[] }) {
   const [query, setQuery] = useState('');
   const [mode, setMode] = useState<Mode>('view');
   const [reason, setReason] = useState<string | null>(null);
-  const [draft, setDraft] = useState('');
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [open, setOpen] = useState(false);
@@ -46,7 +45,7 @@ function useInbox(props: { items: InboxItem[] }) {
   const patch = (id: string, p: Partial<InboxItem>) => setOver((o) => ({ ...o, [id]: { ...(o[id] ?? {}), ...p } }));
 
   const select = (id: string) => {
-    setSelectedId(id); setMode('view'); setReason(null); setDraft(''); setNotice(''); setError(''); setOpen(true);
+    setSelectedId(id); setMode('view'); setReason(null); setNotice(''); setError(''); setOpen(true);
     if (items.find((i) => i.id === id)?.unread) { patch(id, { unread: false }); markRead(id).then(() => router.refresh()); }
   };
   const markAll = () => {
@@ -60,14 +59,11 @@ function useInbox(props: { items: InboxItem[] }) {
     if (!reason) { setError('Choose a reason so we can tell ' + sel.client.split(' ')[0] + '.'); return; }
     done(() => declineRequest(sel.id, reason), (n) => { patch(sel.id, { status: 'declined', unread: false }); setMode('view'); setReason(null); setNotice(n ?? 'Declined'); });
   };
-  const sendReply = () => {
+  /** The conversation panel sent a reply: keep the list in step. */
+  const replied = (text: string) => {
     if (!sel) return;
-    const text = draft.trim();
-    if (!text) { setError('Write a reply first.'); return; }
-    done(() => replyToItem(sel.id, text), (n) => {
-      if (sel.type === 'message') patch(sel.id, { thread: [...sel.thread, { mine: true, text, at: 'Now' }], unread: false });
-      setDraft(''); setMode('view'); setNotice(n ?? 'Sent');
-    });
+    if (sel.type === 'message') patch(sel.id, { thread: [...sel.thread, { mine: true, text, at: 'Now' }], unread: false });
+    router.refresh();
   };
   const finish = () => sel && done(() => markDone(sel.id), () => { patch(sel.id, { status: 'done', unread: false }); setMode('view'); setNotice(''); });
   const cancel = () => { setMode('view'); setError(''); setReason(null); };
@@ -82,11 +78,11 @@ function useInbox(props: { items: InboxItem[] }) {
   const goPage = (n: number) => { setPage(Math.max(0, Math.min(pages - 1, n))); window.scrollTo({ top: 0, behavior: 'smooth' }); document.querySelector('.m-cal .page')?.scrollTo({ top: 0 }); };
   const setFilterP = (f: string) => { setFilter(f); setPage(0); };
   const setQueryP = (v: string) => { setQuery(v); setPage(0); };
-  const compose = () => { setMode('compose'); setDraft(''); setError(''); setNotice(''); };
+  const compose = () => { setMode('compose'); setError(''); setNotice(''); };
   const needs = items.filter((i) => isAction(i.type) && i.status === 'new' && !i.cancelled).length;
   const unread = items.filter((i) => i.unread).length;
   const handled = items.filter((i) => hasChip(i)).length;
-  return { items, narrow, selectedId, filter, setFilter: setFilterP, query, setQuery: setQueryP, pageRows, pageNo, pages, goPage, compose, mode, setMode, reason, setReason, draft, setDraft, notice, setNotice, error, setError, open, setOpen, sel, rows, needs, unread, handled, markAll, select, accept, sendDecline, sendReply, finish, cancel, busy };
+  return { items, narrow, selectedId, filter, setFilter: setFilterP, query, setQuery: setQueryP, pageRows, pageNo, pages, goPage, compose, mode, setMode, reason, setReason, notice, setNotice, error, setError, open, setOpen, sel, rows, needs, unread, handled, markAll, select, accept, sendDecline, replied, finish, cancel, busy };
 }
 type C = ReturnType<typeof useInbox>;
 export type InboxCtl = C;

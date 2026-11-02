@@ -1,11 +1,12 @@
 'use client';
-import { RING, BACK, CLOSE, DOTS, SEND, BLACK, OUTLINE, MENU_ROW } from '@/components/ui';
-import { ChatBubbles } from '@/components/ChatPanel';
+import { RING, BACK, CLOSE, DOTS, BLACK, OUTLINE, MENU_ROW } from '@/components/ui';
+import { ChatPanel } from '@/components/ChatPanel';
 import { BottomSheet } from '@/components/BottomSheet';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { S } from '../calendar/pickers';
 import { ROW, TICK } from '../calendar/wizardUi';
+import { replyToItem } from './actions';
 import { BookingCard, BookingQuickView } from './BookingQuickView';
 import { REASONS, STATUS, TYPES, initialsOf } from './shared';
 import type { InboxCtl } from './InboxView';
@@ -41,7 +42,7 @@ export function MobileItem({ c, onClose }: { c: InboxCtl; onClose: () => void })
   const t = TYPES[sel.type];
   const hasMore = !!clientHref || !!calHref || !!sel.booking || isCancel || canDone || (!isMsg && c.mode === 'view');
 
-  useEffect(() => { const el = mainRef.current; if (el) el.scrollTo({ top: isMsg ? el.scrollHeight : 0 }); }, [sel.id, sel.thread.length, c.mode, isMsg]);
+  useEffect(() => { const el = mainRef.current; if (el) el.scrollTo({ top: 0 }); }, [sel.id, c.mode]);
 
   const err = c.error ? <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p> : null;
   const bar = (children: React.ReactNode) => (
@@ -55,13 +56,6 @@ export function MobileItem({ c, onClose }: { c: InboxCtl; onClose: () => void })
     foot = bar(<div style={S('display:flex;gap:10px')}>
       <button className="ghost" onClick={c.cancel} style={S(OUTLINE)}>Back</button>
       <button onClick={c.sendDecline} disabled={c.busy} style={S(BLACK + ';background:#C0261B')}>Send decline</button>
-    </div>);
-  } else if (c.mode === 'compose') {
-    foot = bar(<button onClick={c.sendReply} disabled={c.busy} style={S(BLACK + ';flex:0 0 auto;width:100%')}>Send</button>);
-  } else if (isMsg) {
-    foot = bar(<div style={S('display:flex;align-items:flex-end;gap:10px')}>
-      <textarea value={c.draft} onChange={(e) => { c.setDraft(e.target.value); c.setError(''); }} placeholder={'Reply to ' + first} rows={1} aria-label={'Reply to ' + first} style={{ ...S('flex:1 1 auto;min-width:0;box-sizing:border-box;max-height:120px;resize:none;padding:13px 16px;border:1px solid #E1E4E9;border-radius:24px;background:#FFFFFF;font:inherit;font-size:15px;color:#0E1116'), minHeight: 48 }} />
-      <button onClick={c.sendReply} disabled={c.busy || !c.draft.trim()} aria-label="Send" style={S('flex:0 0 48px;width:48px;height:48px;border:0;border-radius:999px;background:#0E1116;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:' + (c.busy || !c.draft.trim() ? 0.45 : 1))}>{SEND}</button>
     </div>);
   } else if (actionable) {
     foot = bar(<div style={S('display:flex;gap:10px')}>
@@ -80,17 +74,42 @@ export function MobileItem({ c, onClose }: { c: InboxCtl; onClose: () => void })
     </div>);
   }
 
-  const title = c.mode === 'decline' ? 'Decline request' : c.mode === 'compose' ? 'Message ' + first : isMsg ? 'Messages' : t.label;
+  const title = c.mode === 'decline' ? 'Decline request' : t.label;
+
+  // A message (or writing to the client from any other item) is the shared conversation panel, the same as everywhere else.
+  const chat = isMsg || c.mode === 'compose';
+  const sheets = (<>
+      {bq && sel.booking && <BookingQuickView b={sel.booking} client={sel.client} onClose={() => setBq(false)} />}
+      {qa && (
+        <Sheet title="More actions" onClose={() => setQa(false)}>
+          <div style={S('display:flex;flex-direction:column')}>
+            {!isMsg && <button onClick={() => { setQa(false); c.compose(); }} style={S(MENU_ROW)}>Message {first}</button>}
+            {clientHref && <Link href={clientHref} style={S(MENU_ROW)}>Open {first}&apos;s profile</Link>}
+            {sel.booking && <button onClick={() => { setQa(false); setBq(true); }} style={S(MENU_ROW)}>Quick view booking</button>}
+            {calHref && <Link href={calHref} style={S(MENU_ROW)}>View in calendar</Link>}
+            {isCancel && <Link href={rebookHref} style={S(MENU_ROW)}>Book again</Link>}
+            {canDone && <button onClick={() => { setQa(false); c.finish(); }} disabled={c.busy} style={S(MENU_ROW)}>Mark as done</button>}
+          </div>
+        </Sheet>
+      )}
+  </>);
 
   return (
     <div role="dialog" aria-label="Inbox item" style={S("position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;display:flex;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
+      {chat ? (<>
+        <ChatPanel fill key={sel.id + c.mode} clientId={sel.clientId} name={sel.client} first={first}
+          initial={isMsg ? sel.thread.map((m, i) => ({ id: String(i), mine: m.mine, text: m.text, day: '', time: m.at })) : undefined}
+          top={isMsg && sel.booking ? <BookingCard b={sel.booking} onOpen={() => setBq(true)} /> : undefined}
+          menu={isMsg ? <button onClick={() => setQa(true)} aria-label="More actions" aria-haspopup="dialog" style={S(RING)}>{DOTS}</button> : undefined}
+          send={(t) => replyToItem(sel.id, t)} onSent={(m) => c.replied(m.text)} onBack={back} />
+        {sheets}
+      </>) : (<>
       <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px;border-bottom:1px solid #E6E8EC')}>
         <button onClick={back} aria-label="Back" style={S(RING)}>{BACK}</button>
         <div style={S('flex:0 0 36px;width:36px;height:36px;border-radius:999px;background:#EEEAFE;color:#3A2BB5;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600')}>{initialsOf(sel.client)}</div>
         <div style={S('flex:1 1 auto;min-width:0;font-size:18px;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{sel.client}</div>
-        {hasMore && c.mode === 'view' && <button onClick={() => setQa(true)} aria-label="More actions" aria-haspopup="dialog" style={S(RING)}>{DOTS}</button>}
+        {hasMore && <button onClick={() => setQa(true)} aria-label="More actions" aria-haspopup="dialog" style={S(RING)}>{DOTS}</button>}
       </header>
-      {isMsg && c.mode === 'view' && sel.booking && <div style={S('flex:0 0 auto;padding:12px 20px 0')}><BookingCard b={sel.booking} onOpen={() => setBq(true)} /></div>}
       <main ref={mainRef} className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:16px 20px 20px;display:flex;flex-direction:column;gap:16px')}>
         {c.mode === 'decline' && actionable && (<>
           <h2 style={S('margin:0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>{title}</h2>
@@ -100,20 +119,7 @@ export function MobileItem({ c, onClose }: { c: InboxCtl; onClose: () => void })
           </div>
         </>)}
 
-        {c.mode === 'compose' && (<>
-          <h2 style={S('margin:0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>{title}</h2>
-          <label style={S('display:block;box-sizing:border-box;padding:10px 16px 12px;border:1px solid #E1E4E9;border-radius:16px;background:#FFFFFF')}>
-            <span style={S('display:block;font-size:12.5px;color:#5E6673')}>Message</span>
-            <textarea value={c.draft} onChange={(e) => { c.setDraft(e.target.value); c.setError(''); }} placeholder="Write a message" rows={7} style={{ ...S('box-sizing:border-box;width:100%;margin-top:2px;padding:0;border:0;outline:none;background:transparent;font:inherit;font-size:16px;color:#0E1116;resize:none'), minHeight: 0, borderRadius: 0 }} />
-          </label>
-        </>)}
-
-        {c.mode === 'view' && isMsg && (<>
-          <ChatBubbles thread={sel.thread.map((m, i) => ({ id: String(i), mine: m.mine, text: m.text, day: '', time: m.at }))} empty="No messages yet." />
-          {!!c.notice && <p role="status" style={S('margin:0;align-self:center;padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.notice}</p>}
-        </>)}
-
-        {c.mode === 'view' && !isMsg && (<>
+        {c.mode === 'view' && (<>
           <div>
             <h2 style={S('margin:0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>{title}</h2>
             <p style={S('margin:6px 0 0;font-size:14px;color:#5E6673;overflow-wrap:anywhere')}>{sel.summary}</p>
@@ -135,19 +141,8 @@ export function MobileItem({ c, onClose }: { c: InboxCtl; onClose: () => void })
         </>)}
       </main>
       {foot}
-      {bq && sel.booking && <BookingQuickView b={sel.booking} client={sel.client} onClose={() => setBq(false)} />}
-      {qa && (
-        <Sheet title="More actions" onClose={() => setQa(false)}>
-          <div style={S('display:flex;flex-direction:column')}>
-            {!isMsg && <button onClick={() => { setQa(false); c.compose(); }} style={S(MENU_ROW)}>Message {first}</button>}
-            {clientHref && <Link href={clientHref} style={S(MENU_ROW)}>Open {first}&apos;s profile</Link>}
-            {sel.booking && <button onClick={() => { setQa(false); setBq(true); }} style={S(MENU_ROW)}>Quick view booking</button>}
-            {calHref && <Link href={calHref} style={S(MENU_ROW)}>View in calendar</Link>}
-            {isCancel && <Link href={rebookHref} style={S(MENU_ROW)}>Book again</Link>}
-            {canDone && <button onClick={() => { setQa(false); c.finish(); }} disabled={c.busy} style={S(MENU_ROW)}>Mark as done</button>}
-          </div>
-        </Sheet>
-      )}
+      {sheets}
+      </>)}
     </div>
   );
 }

@@ -310,7 +310,7 @@ function Desktop({ c, initial }: { c: C; initial?: string }) {
         <div className="m-cal cal-root m-drawer">
           <div role="dialog" aria-label={SUB_TITLE[page]} style={S(drawer)}>
             {page === 'messages'
-              ? <ChatPanel fill clientId={row.id} first={c.first} initial={thread} send={(t) => sendClientMessage(row.id, t)} onSent={(m) => setThread((x) => [...x, m])} onBack={back} />
+              ? <ChatPanel fill clientId={row.id} name={row.name} first={c.first} initial={thread} send={(t) => sendClientMessage(row.id, t)} onSent={(m) => setThread((x) => [...x, m])} onBack={back} />
               : (<>
                 <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px;border-bottom:1px solid #E6E8EC;margin-bottom:8px')}>
                   <button onClick={back} aria-label="Back" style={S(RING)}>{BACK}</button>
@@ -584,7 +584,7 @@ function Mobile({ c, initial, drawer }: { c: C; initial?: string; drawer?: boole
     ? <div className="m-cal cal-root m-drawer"><div role="dialog" aria-label={label} style={S(page.replace('position:relative;width:100%;height:100dvh;', 'position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;') + 'background:#F4F5F7')}>{inner}</div></div>
     : <div className="only-m m-cal cal-root" style={S(page + 'background:#F4F5F7')}>{inner}</div>;
   if (c.mode === 'message') {
-    return wrap('Message ' + c.first, <ChatPanel fill clientId={row.id} first={c.first} initial={thread} send={(t) => sendClientMessage(row.id, t)} onSent={(m) => setThread((x) => [...x, m])} onBack={() => { c.setMode('view'); c.setError(''); }} />);
+    return wrap('Message ' + c.first, <ChatPanel fill clientId={row.id} name={row.name} first={c.first} initial={thread} send={(t) => sendClientMessage(row.id, t)} onSent={(m) => setThread((x) => [...x, m])} onBack={() => { c.setMode('view'); c.setError(''); }} />);
   }
   if (c.mode === 'edit') {
     return wrap('Edit details', (

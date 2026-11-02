@@ -183,7 +183,7 @@ function Panel({ c, m }: { c: C; m: boolean }) {
       )}
     </>)}
     {c.mode === 'book' && sel && <BookPanel data={c.book} client={{ id: sel.id, name: sel.name, first: c.first }} mobile={m} onBooked={c.booked} onCancel={c.cancel} />}
-    {c.mode === 'message' && sel && <ChatPanel clientId={sel.id} first={c.first} send={(t) => sendClientMessage(sel.id, t)} onBack={c.cancel} />}
+    {c.mode === 'message' && sel && <ChatPanel clientId={sel.id} name={sel.name} first={c.first} send={(t) => sendClientMessage(sel.id, t)} onBack={c.cancel} />}
     {c.mode === 'new' && (
       <div style={S('display:flex;flex-direction:column;gap:18px')}>
         <div><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>New client</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>They start with the New tag.</p></div>
