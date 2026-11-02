@@ -164,7 +164,7 @@ export async function testTerminal(salonId: string): Promise<{ ok?: true; error?
     try { out = await hit(c, { Station: c.station, TxnType: 'Status', TxnRef: ref('TEST') }, url); } catch { notes.push(`${name} service: could not be reached`); continue; }
     const reply = out.replace(/\s+/g, ' ').slice(0, 200);
     // Windcave answers an unknown reference with PJ ("TxnRef not matched"): the user, key and station were all accepted.
-    if ((pick(out, 'ReCo') ?? '').trim() === 'PJ') return url === here ? { ok: true, reply: name + ' service, ' + reply } : { error: `Your terminal details work on Windcave's ${name} service, but the app is set to use the ${order[0][1]} one. Tell me and I will switch it.`, reply };
+    if ((pick(out, 'ReCo') ?? '').trim() === 'PJ' || (pick(out, 'RC') ?? '').trim() === 'PJ') return url === here ? { ok: true, reply: name + ' service, ' + reply } : { error: `Your terminal details work on Windcave's ${name} service, but the app is set to use the ${order[0][1]} one. Tell me and I will switch it.`, reply };
     notes.push(`${name} service: ${hitProblem(out) ?? reply}`);
   }
   return { error: 'Windcave did not accept the details on either service. ' + notes.join(' | ') };
