@@ -216,10 +216,10 @@ function FormsCard({ forms, card, titles = true }: { forms: ProfileData['forms']
 
 const TABS: [Sub, string][] = [['overview', 'Overview'], ['appointments', 'Appointments'], ['messages', 'Messages'], ['details', 'Details'], ['notes', 'Notes'], ['alerts', 'Allergies'], ['formula', 'Formula'], ['forms', 'Forms'], ['prefs', 'Preferences']];
 
-/** The profile on a computer: the client on the left, their pages on the right. The same cards and pages as the phone. */
+/** The profile on a computer: the same layout as the phone, with the pages (overview, appointments, messages ...) behind the three dots. A page opens in the right-hand drawer. */
 function Desktop({ c, initial }: { c: C; initial?: string }) {
   const { row, d } = c;
-  const [view, setView] = useState<Sub>(initial === 'messages' ? 'messages' : 'overview');
+  const [page, setPage] = useState<Sub | null>(initial === 'messages' ? 'messages' : null);
   const [thread, setThread] = useState(d.messages);
   const [apFilter, setApFilter] = useState<'all' | 'upcoming' | 'past'>('all');
   const [openForm, setOpenForm] = useState('');
@@ -229,54 +229,66 @@ function Desktop({ c, initial }: { c: C; initial?: string }) {
   const ring = RING + ';flex:0 0 52px;width:52px;height:52px';
   const ico = (path: string) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')} aria-hidden="true"><path d={path} /></svg>;
   const counts: Partial<Record<Sub, number>> = { appointments: d.appts.length, messages: thread.length, notes: c.notes.length, alerts: c.allergies.length, forms: d.forms.length };
-  const go = (v: Sub) => { c.setError(''); c.setNotice(''); setOpenForm(''); setView(v); };
+  const open = (v: Sub) => { c.setError(''); c.setNotice(''); setOpenForm(''); setQa(false); setPage(v); };
+  const close = () => { setPage(null); setOpenForm(''); c.setError(''); c.setNotice(''); };
+  const avatar = (px: number, fs: number) => <div style={S('flex:0 0 ' + px + 'px;width:' + px + 'px;height:' + px + 'px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:' + fs + 'px;font-weight:600;background:' + tone[0] + ';color:' + tone[1])}>{initialsOf(row.name, 2)}</div>;
+  const drawer = "position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;display:flex;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4";
   return (
-    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:24px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
+    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:20px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <Link href="/clients" style={S('align-self:flex-start;display:inline-flex;align-items:center;gap:10px;text-decoration:none;color:#0E1116;font-size:15px;font-weight:500')}><span style={S(RING)}>{BACK}</span>Clients</Link>
-      <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:28px')}>
-        <aside style={S('flex:0 0 340px;max-width:100%;display:flex;flex-direction:column;gap:16px;position:sticky;top:20px')}>
-          <div style={S('display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0 4px;text-align:center')}>
-            <div style={S('flex:0 0 112px;width:112px;height:112px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:600;background:' + tone[0] + ';color:' + tone[1])}>{initialsOf(row.name, 2)}</div>
-            <h1 style={S('margin:12px 0 0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em;overflow-wrap:anywhere')}>{row.name}</h1>
-            <div style={S('display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px')}><span style={S('display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;background:' + tone[0] + ';color:' + tone[1])}>{row.tag}</span>{!!row.email && <span style={S('font-size:14px;color:#5E6673;overflow-wrap:anywhere')}>{row.email}</span>}</div>
-          </div>
-          <div style={S('display:flex;gap:10px')}>
-            <button onClick={() => setQa(true)} aria-label="More actions" aria-haspopup="dialog" style={S(ring)}><svg width="20" height="20" viewBox="0 0 24 24" fill="#0E1116"><circle cx="12" cy="5.5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="18.5" r="1.6" /></svg></button>
-            <button onClick={() => go('messages')} aria-label={'Messages with ' + c.first} style={S(ring)}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3.5" y="5.5" width="17" height="13" rx="3" /><path d="m4.5 7.5 7.5 5.5 7.5-5.5" /></svg></button>
-            <Link href={book} style={S('flex:1 1 0;height:52px;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none')}>Book now</Link>
-          </div>
-          <div style={S(LIST_CARD + ';display:flex;flex-direction:column')} className="sum-rows">
-            {[[PHONE_P, row.phone || 'No phone'], [MAIL_P, row.email || 'No email'], [CAL_P, d.since]].map(([p, t]) => <div key={p} style={S('display:flex;align-items:center;gap:12px;padding:14px 0;font-size:15px')}>{ico(p)}<span style={S('min-width:0;overflow-wrap:anywhere')}>{t}</span></div>)}
-          </div>
-        </aside>
-        <div style={S('flex:1 1 480px;min-width:0;max-width:860px;display:flex;flex-direction:column;gap:16px')}>
-          <div role="tablist" aria-label="Client pages" style={S('display:flex;flex-wrap:wrap;gap:8px')}>
-            {TABS.map(([id, label]) => {
-              const on = view === id;
-              return (
-                <button key={id} role="tab" aria-selected={on} onClick={() => go(id)} style={S('flex:0 0 auto;display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 18px;border-radius:999px;font:inherit;font-size:14px;font-weight:500;cursor:pointer;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116'))}>
-                  {label}
-                  {!!counts[id] && <span style={S('min-width:22px;height:22px;padding:0 7px;box-sizing:border-box;border-radius:999px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;background:' + (on ? 'rgba(255,255,255,0.18)' : '#EEF0F3') + ';color:' + (on ? '#FFFFFF' : '#4A525E'))}>{counts[id]}</span>}
-                </button>
-              );
-            })}
-          </div>
-          {!!c.notice && <span role="status" style={S('align-self:flex-start;padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.notice}</span>}
-          {!!c.error && c.mode === 'view' && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
-          {view === 'messages'
-            ? <section style={S(CARD_M)}><ChatPanel bare clientId={row.id} first={c.first} initial={thread} send={(t) => sendClientMessage(row.id, t)} onSent={(m) => setThread((x) => [...x, m])} onBack={() => go('overview')} /></section>
-            : <ProfilePages c={c} view={view} setView={go} thread={thread} apFilter={apFilter} setApFilter={setApFilter} openForm={openForm} setOpenForm={setOpenForm} />}
+      <div style={S('align-self:center;width:100%;max-width:560px;display:flex;flex-direction:column;gap:16px')}>
+        <div style={S('display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0 4px;text-align:center')}>
+          {avatar(112, 34)}
+          <h1 style={S('margin:12px 0 0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em;overflow-wrap:anywhere')}>{row.name}</h1>
+          <div style={S('display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px')}><span style={S('display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;background:' + tone[0] + ';color:' + tone[1])}>{row.tag}</span>{!!row.email && <span style={S('font-size:14px;color:#5E6673;overflow-wrap:anywhere')}>{row.email}</span>}</div>
+        </div>
+        {!!c.notice && <span role="status" style={S('align-self:center;padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.notice}</span>}
+        <div style={S('display:flex;gap:10px')}>
+          <button onClick={() => setQa(true)} aria-label="More actions" aria-haspopup="dialog" style={S(ring)}><svg width="20" height="20" viewBox="0 0 24 24" fill="#0E1116"><circle cx="12" cy="5.5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="18.5" r="1.6" /></svg></button>
+          <button onClick={() => open('messages')} aria-label={'Messages with ' + c.first} style={S(ring)}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3.5" y="5.5" width="17" height="13" rx="3" /><path d="m4.5 7.5 7.5 5.5 7.5-5.5" /></svg></button>
+          <Link href={book} style={S('flex:1 1 0;height:52px;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none')}>Book now</Link>
+        </div>
+        <div style={S(LIST_CARD + ';display:flex;flex-direction:column')} className="sum-rows">
+          {[[PHONE_P, row.phone || 'No phone'], [MAIL_P, row.email || 'No email'], [CAL_P, d.since]].map(([p, t]) => <div key={p} style={S('display:flex;align-items:center;gap:12px;padding:14px 0;font-size:15px')}>{ico(p)}<span style={S('min-width:0;overflow-wrap:anywhere')}>{t}</span></div>)}
         </div>
       </div>
       {c.mode !== 'view' && <Mobile c={c} drawer />}
       {qa && (
         <div className="m-cal cal-root m-drawer">
-          <QuickActions onClose={() => setQa(false)}>
+          <QuickActions title="More" onClose={() => setQa(false)}>
             <QaGroup first>
+              {TABS.map(([id, label]) => (
+                <button key={id} onClick={() => open(id)} style={S(QA_ITEM + ';gap:12px')}>
+                  <span style={S('flex:1 1 auto;min-width:0')}>{label}</span>
+                  {!!counts[id] && <span style={S('flex:0 0 auto;min-width:24px;height:24px;padding:0 8px;box-sizing:border-box;border-radius:999px;background:#EEF0F3;color:#4A525E;font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center')}>{counts[id]}</span>}
+                </button>
+              ))}
+            </QaGroup>
+            <QaGroup>
               <button onClick={() => { setQa(false); c.startEdit(); }} style={S(QA_ITEM)}>Edit details</button>
               <Link href={'/clients/forms?c=' + row.id} style={S(QA_ITEM)}>Client forms</Link>
             </QaGroup>
           </QuickActions>
+        </div>
+      )}
+      {page && (
+        <div className="m-cal cal-root m-drawer">
+          <div role="dialog" aria-label={SUB_TITLE[page]} style={S(drawer)}>
+            {page === 'messages'
+              ? <ChatPanel fill clientId={row.id} first={c.first} initial={thread} send={(t) => sendClientMessage(row.id, t)} onSent={(m) => setThread((x) => [...x, m])} onBack={close} />
+              : (<>
+                <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px;border-bottom:1px solid #E6E8EC;margin-bottom:8px')}>
+                  <button onClick={() => { if (openForm) { setOpenForm(''); return; } close(); }} aria-label="Back to profile" style={S(RING)}>{BACK}</button>
+                  {avatar(36, 13)}
+                  <div style={S('flex:1 1 auto;min-width:0;font-size:18px;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{row.name}</div>
+                  <button onClick={close} aria-label="Close" style={S(RING)}>{CLOSE}</button>
+                </header>
+                <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 24px;display:flex;flex-direction:column;gap:16px')}>
+                  {!!c.error && c.mode === 'view' && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
+                  <ProfilePages c={c} view={page} setView={(v) => { setOpenForm(''); setPage(v === 'home' ? null : v); }} thread={thread} apFilter={apFilter} setApFilter={setApFilter} openForm={openForm} setOpenForm={setOpenForm} title />
+                </main>
+              </>)}
+          </div>
         </div>
       )}
     </div>
