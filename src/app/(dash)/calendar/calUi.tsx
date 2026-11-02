@@ -1,3 +1,5 @@
+import { BLACK as PRIMARY, OUTLINE as SECOND } from '@/components/ui';
+export { PRIMARY, SECOND };
 import { dollars } from '@/lib/format';
 import type { CoPackage, CoProduct } from '../sales/shared';
 import { type CalBlock, type CalBooking, type CalHours, type CalService, type CalSettings, type CalStaff } from '@/lib/cal';
@@ -19,8 +21,6 @@ export const chip = (on: boolean, off = false) => 'flex:0 0 auto;height:44px;pad
 export const slotCss = (on: boolean, why: boolean) => 'width:100%;height:44px;padding:0;border-radius:14px;font-size:14px;font-weight:500;font-family:inherit;border:1px solid ' + (on ? '#0E1116' : (why ? '#EEF0F3' : '#E1E4E9')) + ';background:' + (on ? '#0E1116' : (why ? '#F4F5F7' : '#FFFFFF')) + ';color:' + (on ? '#FFFFFF' : (why ? '#8A93A0' : '#0E1116')) + (why ? ';text-decoration:line-through;cursor:default' : '');
 export const dayCss = (on: boolean, closed: boolean) => 'flex:0 0 60px;height:76px;box-sizing:border-box;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:inherit;border:1px solid ' + (on ? '#0E1116' : '#E6E8EC') + ';background:' + (on ? '#0E1116' : (closed ? '#F4F5F7' : '#FFFFFF')) + ';color:' + (on ? '#FFFFFF' : (closed ? '#8A93A0' : '#0E1116')) + (closed ? ';cursor:default' : '');
 export const note = (bg: string, fg: string) => 'border-radius:16px;background:' + bg + ';color:' + fg + ';padding:12px 14px;font-size:13.5px;font-weight:500';
-export const PRIMARY = 'flex:1 1 0;height:48px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;cursor:pointer';
-export const SECOND = 'flex:1 1 0;height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14.5px;font-weight:500;cursor:pointer';
 export const CLOSE_BTN = 'flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer';
 export const H2S = 'margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em';
 export const ERR = 'margin:0;color:#B42318;font-size:13.5px;font-weight:500';

@@ -5,7 +5,8 @@ import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/Chrome';
 import { S } from '../../calendar/pickers';
-import { BACK as BACK_ICON, BAR, CARD, Field as CardField, FIELD_IN, PAGE, RING } from '../forms/FormPage';
+import { BACK as BACK_ICON, FIELD_IN, RING } from '@/components/ui';
+import { BAR, CARD, Field as CardField, PAGE } from '../forms/FormPage';
 import { checkTerminal, savePayments } from './actions';
 
 type Props = { taxInclusive: boolean; online: boolean; terminal: boolean; station: string; saved: { online_user: boolean; online_key: boolean; hit_user: boolean; hit_key: boolean } };

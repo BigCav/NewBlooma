@@ -7,7 +7,8 @@ import { decimalInput } from '@/lib/numeric';
 import { useNightMode } from '@/components/Theme';
 import { S } from '../calendar/pickers';
 import { addClosedPeriod, removeClosedPeriod } from './actions';
-import { BACK, BAR, CARD, Field, FIELD_IN, PAGE, PickSheet, RING, SettingRow } from './forms/FormPage';
+import { BACK, FIELD_IN, RING } from '@/components/ui';
+import { BAR, CARD, Field, PAGE, PickSheet, SettingRow } from './forms/FormPage';
 import { DAY_FULL, GROUPS, SECTIONS, type Values } from './shared';
 import type { SettingsCtl } from './SettingsView';
 

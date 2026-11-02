@@ -1,4 +1,5 @@
 'use client';
+import { FIELD_IN, BARE } from '@/components/ui';
 import { BottomSheet } from '@/components/BottomSheet';
 import { ConfirmBox } from '@/components/ConfirmBox';
 import { dollars } from '@/lib/format';
@@ -11,8 +12,6 @@ import type { ServicesCtl } from './ServicesView';
 
 const money = dollars;
 const durLabel = (m: number) => (m < 60 ? m + ' min' : m === 60 ? '1 hour' : m % 60 === 0 ? m / 60 + ' hours' : m % 60 === 30 ? Math.floor(m / 60) + '.5 hours' : Math.floor(m / 60) + ' hr ' + (m % 60) + ' min');
-const FIELD_IN = { ...S('box-sizing:border-box;width:100%;margin-top:2px;padding:0;border:0;outline:none;background:transparent;font:inherit;font-size:16px;color:#0E1116'), minHeight: 0, borderRadius: 0 } as const;
-const BARE = { ...S('flex:1 1 auto;min-width:0;border:0;outline:none;background:transparent;font:inherit;font-size:16px;color:#0E1116'), padding: 0, minHeight: 0, width: 'auto', borderRadius: 0 } as const;
 
 function Field({ label, children, htmlFor }: { label: string; children: React.ReactNode; htmlFor?: string }) {
   return <label htmlFor={htmlFor} style={S('display:block;box-sizing:border-box;padding:10px 16px 12px;border:1px solid #E1E4E9;border-radius:16px;background:#FFFFFF')}><span style={S('display:block;font-size:12.5px;color:#5E6673')}>{label}</span>{children}</label>;

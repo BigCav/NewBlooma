@@ -1,11 +1,11 @@
 'use client';
+import { FIELD_IN } from '@/components/ui';
 import { phoneInput } from '@/lib/phone';
 import { S } from '../calendar/pickers';
 import { ICONS, StepShell, useSteps, DetailRows } from '../calendar/wizardUi';
 import { initialsOf } from './shared';
 import type { ClientsCtl } from './ClientsView';
 
-const FIELD_IN = { ...S('box-sizing:border-box;width:100%;margin-top:2px;padding:0;border:0;outline:none;background:transparent;font:inherit;font-size:16px;color:#0E1116'), minHeight: 0, borderRadius: 0 } as const;
 const I_MAIL = <><rect x="3.5" y="5.5" width="17" height="13" rx="3" /><path d="m4.5 7.5 7.5 5.5 7.5-5.5" /></>;
 const I_PHONE = <path d="M6.5 4h3l1.5 4-2 1.3a10 10 0 0 0 4.7 4.7l1.3-2 4 1.5v3a2 2 0 0 1-2.2 2A14.5 14.5 0 0 1 4.5 6.2 2 2 0 0 1 6.5 4z" />;
 

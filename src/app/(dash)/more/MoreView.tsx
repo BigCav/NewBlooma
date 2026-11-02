@@ -1,4 +1,5 @@
 'use client';
+import { CHEV } from '@/components/ui';
 import Link from 'next/link';
 import { MobileHeader, MobileTabs } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
@@ -19,7 +20,6 @@ const ITEMS: [string, string, React.ReactNode][] = [
   ['/reports', 'Reports', <><path d="M5 20v-7M12 20V5M19 20V10"/></>],
   ['/settings', 'Settings', <><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></>]
 ];
-const CHEV = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')}><path d="M9.5 6l6 6-6 6" /></svg>;
 
 export function MoreView({ slug, signOut }: { slug: string; signOut: () => Promise<void> }) {
   return (

@@ -1,12 +1,12 @@
 'use client';
 // Messaging a client: the whole conversation with them, newest at the bottom, and a box to reply. One panel for the calendar,
 // the Clients list and the client's profile (on desktop and on the phone), so writing to a client looks the same everywhere.
+import { RING } from '@/components/ui';
 import { useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
 import { clientThread } from '@/app/(dash)/clients/actions';
 import type { ChatMsg } from '@/app/(dash)/clients/thread';
 import { S } from '@/app/(dash)/calendar/pickers';
 
-const RING = 'flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0';
 
 /** The conversation as bubbles, with the day shown when it changes. */
 export function ChatBubbles({ thread, empty = 'No messages yet. Say hello below.' }: { thread: ChatMsg[]; empty?: string }) {

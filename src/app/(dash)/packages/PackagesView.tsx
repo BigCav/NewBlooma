@@ -1,4 +1,5 @@
 'use client';
+import { FIELD_IN } from '@/components/ui';
 import { BottomSheet } from '@/components/BottomSheet';
 import { dollars } from '@/lib/format';
 import { rootCls } from '@/components/drawer';
@@ -89,7 +90,6 @@ type C = ReturnType<typeof usePackages>;
 function Field({ label, children, htmlFor }: { label: string; children: React.ReactNode; htmlFor?: string }) {
   return <label htmlFor={htmlFor} style={S('display:block;box-sizing:border-box;padding:10px 16px 12px;border:1px solid #E1E4E9;border-radius:16px;background:#FFFFFF')}><span style={S('display:block;font-size:12.5px;color:#5E6673')}>{label}</span>{children}</label>;
 }
-const FIELD_IN = { ...S('box-sizing:border-box;width:100%;margin-top:2px;padding:0;border:0;outline:none;background:transparent;font:inherit;font-size:16px;color:#0E1116'), minHeight: 0, borderRadius: 0 } as const;
 
 /** Create or change a package, one question at a time, ending in a summary. A package being changed opens on the summary. */
 function PackageForm({ c }: { c: C }) {

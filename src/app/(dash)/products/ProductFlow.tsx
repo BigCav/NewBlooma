@@ -1,4 +1,5 @@
 'use client';
+import { FIELD_IN, BARE, BLACK as PRIMARY, OUTLINE as SECOND } from '@/components/ui';
 import { BottomSheet } from '@/components/BottomSheet';
 import { ConfirmBox } from '@/components/ConfirmBox';
 import { useState } from 'react';
@@ -9,8 +10,6 @@ import { ROW, TICK, ICONS, StepShell, useSteps, Tiles, DetailRows } from '../cal
 import { STATUS, initialsOf, money, toneOf } from './shared';
 import type { ProductsCtl } from './ProductsView';
 
-const FIELD_IN = { ...S('box-sizing:border-box;width:100%;margin-top:2px;padding:0;border:0;outline:none;background:transparent;font:inherit;font-size:16px;color:#0E1116'), minHeight: 0, borderRadius: 0 } as const;
-const BARE = { ...S('flex:1 1 auto;min-width:0;border:0;outline:none;background:transparent;font:inherit;font-size:16px;color:#0E1116'), padding: 0, minHeight: 0, width: 'auto', borderRadius: 0 } as const;
 const QTYS = [6, 12, 24];
 
 const I_BOX = <><path d="M4 8l8-4 8 4v8l-8 4-8-4z" /><path d="M4 8l8 4 8-4M12 12v8" /></>;
@@ -23,8 +22,6 @@ function Field({ label, children, htmlFor }: { label: string; children: React.Re
 
 const tile = (c: ProductsCtl, cat: string, size: number, r: number, fs: number) => { const t = toneOf(c.cats, cat); return `flex:0 0 ${size}px;width:${size}px;height:${size}px;border-radius:${r}px;display:flex;align-items:center;justify-content:center;font-size:${fs}px;font-weight:600;background:${t.bg};color:${t.fg}`; };
 const dots = <svg width="20" height="20" viewBox="0 0 24 24" fill="#0E1116"><circle cx="12" cy="5.5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="18.5" r="1.6" /></svg>;
-const PRIMARY = 'flex:1 1 0;height:52px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;cursor:pointer';
-const SECOND = 'flex:1 1 0;height:52px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14.5px;font-weight:500;cursor:pointer';
 
 /** What the phone shows in the product sheet: the product, a restock page, or the new/edit step flow. */
 export function ProductBody({ c }: { c: ProductsCtl }) {

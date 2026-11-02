@@ -1,11 +1,11 @@
 'use client';
+import { FIELD_IN } from '@/components/ui';
 import { decimalInput } from '@/lib/numeric';
 import { S } from '../calendar/pickers';
 import { ClientCard, ClientStep, DetailRows, ICONS, ROW, StepShell, TICK, Tiles, useSteps } from '../calendar/wizardUi';
 import { DISC_PCTS, NO_DISC, TIP_OPTS, discountCents, fmt } from './shared';
 import type { SalesCtl } from './SalesView';
 
-const FIELD_IN = { ...S('box-sizing:border-box;width:100%;margin-top:2px;padding:0;border:0;outline:none;background:transparent;font:inherit;font-size:16px;color:#0E1116'), minHeight: 0, borderRadius: 0 } as const;
 const I_CARD = <><rect x="3.5" y="6" width="17" height="12" rx="2.5" /><path d="M3.5 10.5h17" /></>;
 
 function Field({ label, children, htmlFor }: { label: string; children: React.ReactNode; htmlFor?: string }) {

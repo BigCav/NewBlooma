@@ -1,4 +1,5 @@
 'use client';
+import { FIELD_IN } from '@/components/ui';
 import { dollars } from '@/lib/format';
 import { useState } from 'react';
 import { decimalInput } from '@/lib/numeric';
@@ -7,7 +8,6 @@ import { DetailRows, ICONS, StepShell, Tiles, useSteps } from '../calendar/wizar
 import type { GiftCtl } from './GiftCardsView';
 
 const PRESETS = [2500, 5000, 10000, 15000];
-const FIELD_IN = { ...S('box-sizing:border-box;width:100%;margin-top:2px;padding:0;border:0;outline:none;background:transparent;font:inherit;font-size:16px;color:#0E1116'), minHeight: 0, borderRadius: 0 } as const;
 const MONO = "'Geist Mono',ui-monospace,monospace";
 const I_DOLLAR = <><circle cx="12" cy="12" r="8.5" /><path d="M14.5 9.2c-.4-.8-1.3-1.2-2.5-1.2-1.4 0-2.4.7-2.4 1.8 0 2.5 5 1.2 5 3.7 0 1.1-1.1 1.8-2.6 1.8-1.2 0-2.2-.5-2.6-1.4M12 6.5v1.5M12 16v1.5" /></>;
 const I_CODE = <><rect x="3.5" y="6" width="17" height="12" rx="2.5" /><path d="M8 10.5h3M8 14h8" /></>;
