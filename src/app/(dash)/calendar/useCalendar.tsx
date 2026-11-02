@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { useTerminal } from '../sales/useTerminal';
 import { TONE_LIST, addDaysYmd, dayInfo, fmtMin, initials, weekStartOf, type CalBlock, type CalBooking, type CalHours, type CalService, type CalSettings, type CalStaff, BLOCK_KINDS, slotsBetween } from '@/lib/cal';
-import { delayStaffDay, noShowBooking, messageBookingClient, addWalkIn, approveBooking, cancelBooking, checkInBooking, checkoutBooking, createBlock, dayAvailability, deleteBlock, editBooking, rebookBooking, rescheduleBooking, walkinPlan, createNewAppointment, startCardForSale, searchBookings, type SearchHit } from './actions';
+import { delayStaffDay, noShowBooking, messageBookingClient, addWalkIn, approveBooking, cancelBooking, checkInBooking, checkoutBooking, createBlock, dayAvailability, deleteBlock, editBooking, rebookBooking, rescheduleBooking, walkinPlan, createNewAppointment, startCardForSale, payNowBooking, searchBookings, type SearchHit } from './actions';
 
 import { first, usd, m2, BLOCK_DURS_M, METHODS, TIP_OPTS, STEP, chipTone, kindOf, note, HATCH, type Avail, type Props } from './calUi';
 export function useCalendar(props: Props) {
@@ -182,6 +182,19 @@ export function useCalendar(props: Props) {
   };
   const retryCard = () => { if (!cardSale.current) return; term.begin(); startT(async () => { await sendToTerminal(cardSale.current); }); };
   const finishCard = () => { term.reset(); setMode('view'); setNotice(''); refresh(); };
+  // Express card payment: the same pending step, tick or cross as checkout, without leaving the calendar.
+  const payNow = (id: string) => {
+    setSelId(id); setOpen(true); setMode('checkout'); setError(''); setNotice('');
+    setCo({ method: 'card', tip: 0, code: '', disc: NO_DISC, svc: null, prods: {}, pkgs: [] });
+    if (props.terminal) term.begin();
+    startT(async () => {
+      const r = await payNowBooking(id);
+      if (r.error) { term.reset(); setMode('view'); setError(r.error); return; }
+      if (r.url) { window.location.href = r.url; return; }
+      if (r.txn) { cardSale.current = r.saleId ?? ''; term.start(r.txn); return; }
+      term.reset(); router.push(`/sales?sale=${r.saleId}&pay=1`);
+    });
+  };
   const charge = () => {
     if (!cur) return;
     const method = co.method as 'card' | 'cash' | 'gift_card';
@@ -445,5 +458,5 @@ export function useCalendar(props: Props) {
   }) : [];
 
   const nLock = lockFor(nf.services), edLock = lockFor(ed.ids);
-  return { laterUp, laterLate, laterDone, nLock, edLock, lockFor, HOUR_PX, act, activeCards, addWalkin, amap, av, avail, availKey, backToView, bf, bfDur, blank, blockId, blockRows, blocks, bookings, busy, bvB, cards, cfg, charge, chk, close, co, coMath, createNew, cur, day, dayB, dayHrs, days14, di, doneBk, ed, editPlan, error, firstOpenDay, gEnd, gHours, gStart, go, hasError, hours, hrsOf, closedWhy, cancelAsk, setCancelAsk, later, laterBk, minutesFromIso, mode, moveBooking, nFirstSvc, nKeyStr, nKeys, nOffers, nPickSvc, nPlan, nSlots, nWhy, nf, notice, now, nowTop, offered, offers, open, openBlock, openBooking, openDays, openNew, pageSubtitle, pageTitle, pendingSel, plan, primary, query, reason, refresh, router, row, rs, saveBlock, saveEdit, searchOpen, seg, sel, selId, services, setAmap, setAvail, setBf, setBlockId, setCo, setEd, setError, setMode, setNf, setNotice, setNow, setOpen, setPendingSel, setPlan, setQuery, setRs, setSearchOpen, setSelId, setSres, setStaffSel, setWi, setWkOpen, slotsFor, sq, sres, staffName, staffSel, startCheckout, startResched, startT, statCount, statRevenue, statNext, strip, svcMap, team, today, todayList, tz, upcoming, view, viewEvents, vm, weekDays, wi, wiPlanText, wiPlanCss, wiSvc, wkCards, wkOpen, wkRange, wkStaff, wkTitle, ws, msg, setMsg, startMessage, sendMessage, started, markNoShow, lf, setLf, openLate, lateList, saveLate, products: props.products ?? [], packages: props.packages ?? {}, term, retryCard, finishCard };
+  return { laterUp, laterLate, laterDone, nLock, edLock, lockFor, HOUR_PX, act, activeCards, addWalkin, amap, av, avail, availKey, backToView, bf, bfDur, blank, blockId, blockRows, blocks, bookings, busy, bvB, cards, cfg, charge, chk, close, co, coMath, createNew, cur, day, dayB, dayHrs, days14, di, doneBk, ed, editPlan, error, firstOpenDay, gEnd, gHours, gStart, go, hasError, hours, hrsOf, closedWhy, cancelAsk, setCancelAsk, later, laterBk, minutesFromIso, mode, moveBooking, nFirstSvc, nKeyStr, nKeys, nOffers, nPickSvc, nPlan, nSlots, nWhy, nf, notice, now, nowTop, offered, offers, open, openBlock, openBooking, openDays, openNew, pageSubtitle, pageTitle, pendingSel, plan, primary, query, reason, refresh, router, row, rs, saveBlock, saveEdit, searchOpen, seg, sel, selId, services, setAmap, setAvail, setBf, setBlockId, setCo, setEd, setError, setMode, setNf, setNotice, setNow, setOpen, setPendingSel, setPlan, setQuery, setRs, setSearchOpen, setSelId, setSres, setStaffSel, setWi, setWkOpen, slotsFor, sq, sres, staffName, staffSel, startCheckout, startResched, startT, statCount, statRevenue, statNext, strip, svcMap, team, today, todayList, tz, upcoming, view, viewEvents, vm, weekDays, wi, wiPlanText, wiPlanCss, wiSvc, wkCards, wkOpen, wkRange, wkStaff, wkTitle, ws, msg, setMsg, startMessage, sendMessage, started, markNoShow, lf, setLf, openLate, lateList, saveLate, products: props.products ?? [], packages: props.packages ?? {}, term, retryCard, finishCard, payNow };
 }

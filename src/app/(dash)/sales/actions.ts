@@ -34,7 +34,7 @@ export async function createWalkin(client: string, clientId: string | null, serv
  * Take payment for an open sale. Cash and gift card settle at once; the terminal returns a transaction to poll;
  * on-screen card returns the hosted payment page to go to.
  */
-export async function payFlow(saleId: string, method: 'terminal' | 'online' | 'cash' | 'gift_card', tipPct: number, code: string, disc?: { kind: string; value: string; note: string }): Promise<Res & { txn?: string; url?: string }> {
+export async function payFlow(saleId: string, method: 'terminal' | 'online' | 'cash' | 'gift_card', tipPct: number, code: string, disc?: { kind: string; value: string; note: string }, products?: { productId: string; qty: number }[]): Promise<Res & { txn?: string; url?: string }> {
   const { sb, salon } = await requireCtx();
   // With a card terminal switched on, every card payment goes to it, never to the on-screen page.
   if (method === 'online' && (await getCreds(salon.id)).terminalEnabled) method = 'terminal';
@@ -43,6 +43,11 @@ export async function payFlow(saleId: string, method: 'terminal' | 'online' | 'c
   if (open) return { txn: open };
   // A hosted payment page that was closed without paying would otherwise lock the sale.
   await releaseOnline(saleId);
+  // Products changed at the till: only the sale's product lines change, before the discount and tip are worked out.
+  if (products) {
+    const p = await sb.rpc('set_sale_products', { p_sale: saleId, p_items: products.filter((x) => x.qty > 0).map((x) => ({ product_id: x.productId, qty: Math.floor(x.qty) })) });
+    if (p.error) return { error: friendly(p.error.message) };
+  }
   if (disc) {
     const v = Number(String(disc.value).replace(/[^0-9.]/g, ''));
     const d = await sb.rpc('set_sale_discount', { p_sale: saleId, p_kind: disc.kind, p_value: disc.kind === 'amount' ? Math.round(v * 100) : v || 0, p_note: disc.note });

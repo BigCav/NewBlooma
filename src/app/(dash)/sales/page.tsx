@@ -17,13 +17,14 @@ export default async function Sales({ searchParams }: { searchParams: Promise<{ 
   const since = new Date(Date.now() - 15 * 86400e3).toISOString();
   // A terminal payment finished while nobody was watching still finishes its sale.
   await settleTerminals(salon.id);
-  const [{ data: sales }, { data: svcs }, { data: pay }, { data: flagged }] = await Promise.all([
-    sb.from('sales').select('id,status,method,subtotal_cents,discount_cents,discount_note,tax_rate,tip_cents,tax_cents,tax_inclusive,total_cents,created_at,paid_at,clients(id,name),staff(name,photo_url),bookings(ref_no,starts_at,ends_at),sale_items(label,qty,price_cents,service_id)')
+  const [{ data: sales }, { data: svcs }, { data: pay }, { data: flagged }, { data: prods }] = await Promise.all([
+    sb.from('sales').select('id,status,method,subtotal_cents,discount_cents,discount_note,tax_rate,tip_cents,tax_cents,tax_inclusive,total_cents,created_at,paid_at,clients(id,name),staff(name,photo_url),bookings(ref_no,starts_at,ends_at),sale_items(label,qty,price_cents,service_id,product_id)')
       .or(`created_at.gte.${since},status.eq.pending`).order('created_at', { ascending: false }).limit(300),
     sb.from('services').select('id,name,price_cents,duration_min,service_categories(name,sort)').eq('active', true).order('name'),
     sb.from('salon_payment_settings').select('online_cards_enabled,terminal_enabled').eq('salon_id', salon.id).maybeSingle(),
     // Card payments the system could not match to a sale cleanly (amount differs, or paid another way as well). Shown for 30 days.
     staff.app_role === 'owner' ? sb.from('card_payments').select('id,review_note,amount_cents,resolved_at,sales(clients(name))').eq('needs_review', true).gte('resolved_at', new Date(Date.now() - 30 * 86400e3).toISOString()).order('resolved_at', { ascending: false }).limit(5) : Promise.resolve({ data: [] as any[] }),
+    sb.from('products').select('id,name,brand,price_cents,stock').eq('active', true).order('name'),
   ]);
   const canEdit = staff.app_role !== 'stylist';
   const { data: openCards } = await sb.from('card_payments').select('sale_id,txn_ref').eq('kind', 'terminal').eq('status', 'pending');
@@ -43,7 +44,7 @@ export default async function Sales({ searchParams }: { searchParams: Promise<{ 
       method: status === 'Pending' ? 'Not taken yet' : METHOD[s.method] ?? '', status,
       amount: s.subtotal_cents + s.discount_cents, discount: s.discount_cents, discountNote: s.discount_note ?? '', taxRate: Number(s.tax_rate), taxIncl: !!s.tax_inclusive, tip: s.tip_cents, tax: s.tax_inclusive ? 0 : s.tax_cents, total: s.total_cents,
       dayShort: dayInfo(day).short, gst: s.tax_cents, range: s.bookings?.starts_at && s.bookings?.ends_at ? hm(s.bookings.starts_at, tz) + ' – ' + hm(s.bookings.ends_at, tz) : '',
-      lines: items.map((i) => ({ label: i.label as string, qty: i.qty as number, cents: i.price_cents as number, dur: i.service_id ? durOf.get(i.service_id as string) ?? null : null, svc: !!i.service_id })),
+      lines: items.map((i) => ({ label: i.label as string, qty: i.qty as number, cents: i.price_cents as number, dur: i.service_id ? durOf.get(i.service_id as string) ?? null : null, svc: !!i.service_id, productId: (i.product_id as string | null) ?? null })),
       txn: openTxn.get(s.id),
       canEdit: status === 'Pending' && canEdit && items.filter((i) => i.service_id).length === 1,
     };
@@ -73,6 +74,6 @@ export default async function Sales({ searchParams }: { searchParams: Promise<{ 
       </div>
     )}
     <SalesView canDiscount={canEdit} rows={rows} bars={bars} todayTotal={todayTotal} paidCount={todayPaid.length} subtitle={`${t.weekday}, ${t.num} ${t.month}`}
-      methods={methods} services={services} askTip={st.ask_for_tip} initial={{ sale: sp.sale ?? null, pay: sp.pay === '1', card: sp.card ?? '' }} />
+      methods={methods} services={services} products={((prods ?? []) as any[]).map((x) => ({ id: x.id as string, name: x.name as string, brand: (x.brand ?? '') as string, priceCents: x.price_cents as number, stock: x.stock as number }))} askTip={st.ask_for_tip} initial={{ sale: sp.sale ?? null, pay: sp.pay === '1', card: sp.card ?? '' }} />
   </>;
 }

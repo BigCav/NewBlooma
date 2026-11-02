@@ -287,7 +287,7 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
                   {sel.k === 'done'
                     ? (sel.b.saleId ? <button onClick={() => primary(sel.b)} style={S(PRIMARY + ';height:52px')}>View sale</button> : null)
                     : (<>
-                      {cfg.acceptCard && <button disabled={busy} onClick={() => act(async () => { const r = await payNowBooking(sel.b.id); if (!r.error && r.url) { window.location.href = r.url; return r; } if (!r.error && r.saleId) router.push(`/sales?sale=${r.saleId}&pay=1`); return r; }, '')} style={S(SECOND + ';height:52px')}>Pay now</button>}
+                      {cfg.acceptCard && <button disabled={busy} onClick={() => c.payNow(sel.b.id)} style={S(SECOND + ';height:52px')}>Pay now</button>}
                       <button onClick={() => startCheckout(sel.b.id)} style={S(PRIMARY + ';height:52px')}>Checkout</button>
                     </>)}
                   </div>

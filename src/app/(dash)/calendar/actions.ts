@@ -298,12 +298,12 @@ export async function startCardForSale(saleId: string): Promise<R & { url?: stri
 }
 
 /** Express checkout: card, no tip, no discount, straight to the on-screen Windcave payment page. */
-export async function payNowBooking(bookingId: string): Promise<R & { saleId?: string; url?: string }> {
+export async function payNowBooking(bookingId: string): Promise<R & { saleId?: string; url?: string; txn?: string }> {
   const r = await checkoutBooking(bookingId, 'card', 0);
   if (r.error || !r.saleId) return r;
-  if (r.resume) return { ok: true, saleId: r.saleId };
+  if (r.resume) return { ok: true, saleId: r.saleId, txn: r.resume };
   const o = await startCardForSale(r.saleId);
-  return o.error ? { error: o.error, saleId: r.saleId } : { ok: true, saleId: r.saleId, url: o.url };
+  return o.error ? { error: o.error, saleId: r.saleId } : { ok: true, saleId: r.saleId, url: o.url, txn: o.txn };
 }
 
 /** Change the services on a booking (and optionally its start), and book services another team member performs as separate appointments. */
