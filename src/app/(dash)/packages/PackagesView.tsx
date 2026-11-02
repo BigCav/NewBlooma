@@ -1,4 +1,5 @@
 'use client';
+import { dollars } from '@/lib/format';
 import { rootCls } from '@/components/drawer';
 import { decimalInput } from '@/lib/numeric';
 import { useRouter } from 'next/navigation';
@@ -15,7 +16,7 @@ type Props = { types: PkgType[]; sold: PkgSold[]; services: { id: string; name: 
 type Form = { name: string; serviceId: string; uses: string; price: string; validDays: number | null };
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const money = (c: number) => '$' + (c / 100).toLocaleString('en-US', { minimumFractionDigits: c % 100 ? 2 : 0, maximumFractionDigits: 2 });
+const money = dollars;
 const dShort = (s: string) => parseInt(s.slice(8), 10) + ' ' + MON[parseInt(s.slice(5, 7), 10) - 1];
 const dLong = (s: string) => dShort(s) + ' ' + s.slice(0, 4);
 const VALID: [number | null, string][] = [[null, 'No expiry'], [90, '3 months'], [180, '6 months'], [365, '1 year']];

@@ -1,4 +1,6 @@
 'use client';
+import { ConfirmBox } from '@/components/ConfirmBox';
+import { dollars } from '@/lib/format';
 import { rootCls } from '@/components/drawer';
 import { useNewParam } from '@/components/useNewParam';
 import { decimalInput } from '@/lib/numeric';
@@ -18,7 +20,7 @@ type NewForm = { amount: string; name: string; code: string };
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const MONL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-const money = (c: number) => '$' + (c / 100).toLocaleString('en-US', { minimumFractionDigits: c % 100 ? 2 : 0, maximumFractionDigits: 2 });
+const money = dollars;
 const dShort = (s: string) => parseInt(s.slice(8), 10) + ' ' + MON[parseInt(s.slice(5, 7), 10) - 1];
 const dLong = (s: string) => parseInt(s.slice(8), 10) + ' ' + MONL[parseInt(s.slice(5, 7), 10) - 1] + ' ' + s.slice(0, 4);
 const ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -134,13 +136,7 @@ function Panel({ c, m }: { c: C; m: boolean }) {
         {canVoid && <button className="ghost" onClick={() => c.setConfirmVoid(true)} style={S('flex:1 1 0;height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14.5px;font-weight:500')}>Void card</button>}
       </div>
       {c.confirmVoid && (
-        <div role="alertdialog" aria-label="Void this gift card" style={S('border-radius:16px;background:#FDECEA;padding:14px 16px;display:flex;flex-direction:column;gap:10px')}>
-          <span style={S('font-size:14px;color:#B42318;font-weight:500')}>Void this card? Its {money(sel.balance)} balance will be set to zero and cannot be used again.</span>
-          <div style={S('display:flex;gap:10px')}>
-            <button onClick={c.doVoid} disabled={c.busy} style={S('flex:1 1 0;height:44px;border:0;border-radius:999px;background:#C0261B;color:#FFFFFF;font-size:14px;font-weight:500')}>Void card</button>
-            <button className="ghost" onClick={() => c.setConfirmVoid(false)} style={S('flex:1 1 0;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>Keep it</button>
-          </div>
-        </div>
+        <ConfirmBox label="Void this gift card" title="Void this card?" body={'Its ' + money(sel.balance) + ' balance will be set to zero and cannot be used again.'} action="Void card" onAction={c.doVoid} busy={c.busy} onKeep={() => c.setConfirmVoid(false)} />
       )}
       {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
       <dl style={S('margin:0;display:flex;flex-direction:column')}>

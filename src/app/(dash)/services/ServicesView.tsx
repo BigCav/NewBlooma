@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's Services.dc.html and MobileServices.dc.html. Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions. Added for production: who performs a service, new categories.
+import { dollars } from '@/lib/format';
 import { rootCls } from '@/components/drawer';
 import { useNewParam } from '@/components/useNewParam';
 import { useRouter } from 'next/navigation';
@@ -18,7 +19,7 @@ type Props = { services: SvcRow[]; cats: { id: string; name: string }[]; team: {
 type Draft = { name: string; catId: string; dur: number; price: string; desc: string; online: boolean; staff: string[]; addon: boolean; parents: string[] };
 
 const DURS = [15, 30, 45, 60, 75, 90, 120, 150, 180];
-const money = (c: number) => '$' + (c / 100).toLocaleString('en-US', { minimumFractionDigits: c % 100 ? 2 : 0, maximumFractionDigits: 2 });
+const money = dollars;
 const draftOf = (s: SvcRow): Draft => ({ name: s.name, catId: s.catId, dur: s.dur, price: String(s.priceCents / 100), desc: s.desc, online: s.online, staff: s.staffIds.slice(), addon: s.addon, parents: s.parentIds.slice() });
 
 function useServices(props: Props) {

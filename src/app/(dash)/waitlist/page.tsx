@@ -1,4 +1,5 @@
 import { clock12 } from '@/lib/display';
+import { dollars } from '@/lib/format';
 import { requireCtx } from '@/lib/session';
 import { minutesOfDay, ymd } from '@/lib/format';
 import { dayInfo, type CalService } from '@/lib/cal';
@@ -46,7 +47,7 @@ export default async function Waitlist() {
     const cents = s?.price_cents ?? 0;
     return {
       id: e.id, name: e.clients?.name ?? 'Client', initials: initialsOf(e.clients?.name ?? ''), clientFirst: first(e.clients?.name), status, offer,
-      service: `${s?.name ?? 'Service'}, ${s?.duration_min ?? 0} min, $${(cents / 100).toFixed(cents % 100 ? 2 : 0)}`,
+      service: `${s?.name ?? 'Service'}, ${s?.duration_min ?? 0} min, ${dollars(cents)}`,
       prefs: [e.staff?.name ? first(e.staff.name) : 'Any team member', dayText, win].join(', '),
       meta: `${by}, ${ago(e.created_at)}`,
     };

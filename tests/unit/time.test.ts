@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, minutesOfDay, time12, toCents, ymd, zonedToUtc } from '@/lib/format';
-import { dayInfo, fmtMin, weekStartOf, initials, dollars } from '@/lib/cal';
+import { addDays, dollars, minutesOfDay, time12, toCents, ymd, zonedToUtc } from '@/lib/format';
+import { dayInfo, fmtMin, weekStartOf, initials } from '@/lib/cal';
 
 const NZ = 'Pacific/Auckland';
 

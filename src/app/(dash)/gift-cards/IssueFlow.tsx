@@ -1,4 +1,5 @@
 'use client';
+import { dollars } from '@/lib/format';
 import { useState } from 'react';
 import { decimalInput } from '@/lib/numeric';
 import { S } from '../calendar/pickers';
@@ -10,7 +11,7 @@ const FIELD_IN = { ...S('box-sizing:border-box;width:100%;margin-top:2px;padding
 const MONO = "'Geist Mono',ui-monospace,monospace";
 const I_DOLLAR = <><circle cx="12" cy="12" r="8.5" /><path d="M14.5 9.2c-.4-.8-1.3-1.2-2.5-1.2-1.4 0-2.4.7-2.4 1.8 0 2.5 5 1.2 5 3.7 0 1.1-1.1 1.8-2.6 1.8-1.2 0-2.2-.5-2.6-1.4M12 6.5v1.5M12 16v1.5" /></>;
 const I_CODE = <><rect x="3.5" y="6" width="17" height="12" rx="2.5" /><path d="M8 10.5h3M8 14h8" /></>;
-const money = (c: number) => '$' + (c / 100).toLocaleString('en-US', { minimumFractionDigits: c % 100 ? 2 : 0, maximumFractionDigits: 2 });
+const money = dollars;
 
 function Field({ label, children, htmlFor }: { label: string; children: React.ReactNode; htmlFor?: string }) {
   return <label htmlFor={htmlFor} style={S('display:block;box-sizing:border-box;padding:10px 16px 12px;border:1px solid #E1E4E9;border-radius:16px;background:#FFFFFF')}><span style={S('display:block;font-size:12.5px;color:#5E6673')}>{label}</span>{children}</label>;

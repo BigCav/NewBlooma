@@ -1,4 +1,6 @@
 'use client';
+import { ConfirmBox } from '@/components/ConfirmBox';
+import { dollars } from '@/lib/format';
 import { useState } from 'react';
 import { decimalInput, digitsInput } from '@/lib/numeric';
 import { S } from '../calendar/pickers';
@@ -6,7 +8,7 @@ import { CLOSE_BTN as RING_BTN, CloseX } from '../calendar/calUi';
 import { AV, ROW, TICK, ICONS, StepShell, useSteps, Tiles, DetailRows } from '../calendar/wizardUi';
 import type { ServicesCtl } from './ServicesView';
 
-const money = (c: number) => '$' + (c / 100).toLocaleString('en-US', { minimumFractionDigits: c % 100 ? 2 : 0, maximumFractionDigits: 2 });
+const money = dollars;
 const durLabel = (m: number) => (m < 60 ? m + ' min' : m === 60 ? '1 hour' : m % 60 === 0 ? m / 60 + ' hours' : m % 60 === 30 ? Math.floor(m / 60) + '.5 hours' : Math.floor(m / 60) + ' hr ' + (m % 60) + ' min');
 const FIELD_IN = { ...S('box-sizing:border-box;width:100%;margin-top:2px;padding:0;border:0;outline:none;background:transparent;font:inherit;font-size:16px;color:#0E1116'), minHeight: 0, borderRadius: 0 } as const;
 const BARE = { ...S('flex:1 1 auto;min-width:0;border:0;outline:none;background:transparent;font:inherit;font-size:16px;color:#0E1116'), padding: 0, minHeight: 0, width: 'auto', borderRadius: 0 } as const;
@@ -103,14 +105,7 @@ export function ServiceFlow({ c }: { c: ServicesCtl }) {
               <button type="button" className="ghost" onClick={() => setCe({ mode: '', name: '' })} style={S('flex:0 0 auto;height:48px;padding:0 16px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>Cancel</button>
             </div>
           ) : (
-            <div style={S('display:flex;flex-direction:column;gap:8px;padding:14px;border:1px solid #F3C6C3;border-radius:16px;background:#FEF3F2')}>
-              <span style={S('font-size:14px;font-weight:600')}>Delete {catName}?</span>
-              <span style={S('font-size:13px;color:#5E6673')}>Only works when it has no services in it.</span>
-              <div style={S('display:flex;gap:8px')}>
-                <button type="button" onClick={c.removeCat} disabled={busy} style={S('flex:1 1 0;height:48px;border:0;border-radius:999px;background:#C0261B;color:#FFFFFF;font-size:14px;font-weight:500')}>Delete category</button>
-                <button type="button" className="ghost" onClick={() => setCe({ mode: '', name: '' })} style={S('flex:1 1 0;height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>Keep</button>
-              </div>
-            </div>
+            <ConfirmBox label="Confirm delete category" title={'Delete ' + catName + '?'} body="Only works when it has no services in it." action="Delete category" onAction={c.removeCat} busy={busy} onKeep={() => setCe({ mode: '', name: '' })} />
           ))}
         </>)}
 
@@ -195,14 +190,7 @@ export function ServiceFlow({ c }: { c: ServicesCtl }) {
               <button type="button" onClick={() => setConfirm(true)} style={S('display:flex;align-items:center;width:100%;min-height:54px;box-sizing:border-box;padding:0;border:0;background:transparent;font:inherit;font-size:16px;text-align:left;color:#B42318;cursor:pointer')}>Delete service</button>
             </div>
           ) : (
-            <div role="alertdialog" aria-label="Confirm delete" style={S('display:flex;flex-direction:column;gap:12px;box-sizing:border-box;padding:16px;border:1px solid #F3C6C3;border-radius:20px;background:#FEF3F2')}>
-              <div><div style={S('font-size:14.5px;font-weight:600')}>Delete this service?</div><div style={S('margin-top:2px;font-size:13px;color:#5E6673')}>It will no longer be available to book. This can&apos;t be undone.</div></div>
-              {!!error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{error}</p>}
-              <div style={S('display:flex;gap:10px')}>
-                <button type="button" className="ghost" onClick={() => { setConfirm(false); setMenu(false); }} style={S('flex:1 1 0;height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>Keep</button>
-                <button type="button" onClick={c.remove} disabled={busy} style={S('flex:1 1 0;height:48px;border:0;border-radius:999px;background:#C0261B;color:#FFFFFF;font-size:14px;font-weight:500')}>Delete service</button>
-              </div>
-            </div>
+            <ConfirmBox label="Confirm delete" title="Delete this service?" body="It will no longer be available to book. This can't be undone." error={error} action="Delete service" onAction={c.remove} busy={busy} onKeep={() => { setConfirm(false); setMenu(false); }} />
           )}
         </div>
       </div>

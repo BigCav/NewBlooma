@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's Sales.dc.html and MobileSales.dc.html. Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
+import { ConfirmBox } from '@/components/ConfirmBox';
 import { rootCls } from '@/components/drawer';
 import { useNewParam } from '@/components/useNewParam';
 import { decimalInput } from '@/lib/numeric';
@@ -219,13 +220,7 @@ function MobileSale({ c, s }: { c: C; s: SaleRow }) {
         {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
       </>}
       actions={c.confirmRefund ? (
-        <div role="alertdialog" aria-label="Confirm refund" style={S('display:flex;flex-direction:column;gap:12px;box-sizing:border-box;padding:16px;border:1px solid #F3C6C3;border-radius:18px;background:#FEF3F2')}>
-          <div><div style={S('font-size:14.5px;font-weight:600')}>Refund {fmt(s.total)}?</div><div style={S('margin-top:2px;font-size:13px;color:#5E6673')}>The sale is marked as refunded and removed from today&apos;s sales.</div></div>
-          <div style={S('display:flex;gap:10px')}>
-            <button className="ghost" onClick={() => c.setConfirmRefund(false)} style={S('flex:1 1 0;border:1px solid #E1E4E9;background:#FFFFFF;color:#0E1116;' + BTN)}>Cancel</button>
-            <button onClick={c.doRefund} disabled={c.busy} style={S('flex:1 1 0;border:0;background:#C0261B;color:#FFFFFF;' + BTN)}>Refund</button>
-          </div>
-        </div>
+        <ConfirmBox label="Confirm refund" title={'Refund ' + fmt(s.total) + '?'} body="The sale is marked as refunded and removed from today's sales." action="Refund" keep="Cancel" onAction={c.doRefund} busy={c.busy} onKeep={() => c.setConfirmRefund(false)} />
       ) : (
         <div style={S('display:flex;gap:10px')}>
           <MoreButton onClick={() => c.setQa(true)} />

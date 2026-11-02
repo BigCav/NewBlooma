@@ -1,8 +1,8 @@
 import type { CSSProperties, ReactNode } from 'react';
 
 type Table = { chips: number; cols: number[]; rows: number; avatar: boolean };
-type Body = { t: 'table'; table: Table } | { t: 'inbox' } | { t: 'sales'; table: Table } | { t: 'timecards' } | { t: 'waitcards' } | { t: 'reviews' } | { t: 'tiles' } | { t: 'calendar' } | { t: 'report' };
-type Preset = { search: boolean; action: boolean; stats: number; delta?: boolean; periods?: boolean; body: Body };
+type Body = { t: 'table'; table: Table } | { t: 'inbox' } | { t: 'sales'; table: Table } | { t: 'timecards' } | { t: 'waitcards' } | { t: 'reviews' } | { t: 'tiles' } | { t: 'calendar' } | { t: 'report' } | { t: 'profile' };
+type Preset = { search: boolean; action: boolean; stats: number; delta?: boolean; periods?: boolean; bare?: boolean; body: Body };
 
 /** One entry per page: what its real desktop layout is made of, so the grey version lines up with it. */
 const PRESETS: Record<string, Preset> = {
@@ -20,6 +20,8 @@ const PRESETS: Record<string, Preset> = {
   payroll: { search: false, action: false, stats: 3, body: { t: 'timecards' } },
   settings: { search: false, action: false, stats: 0, body: { t: 'tiles' } },
   reports: { search: false, action: false, stats: 4, delta: true, periods: true, body: { t: 'report' } },
+  summary: { search: false, action: false, stats: 4, periods: true, body: { t: 'report' } },
+  profile: { search: false, action: false, stats: 0, bare: true, body: { t: 'profile' } },
 };
 
 const B = ({ w, h, r = 12, s }: { w: number | string; h: number; r?: number; s?: CSSProperties }) => <div className="sk" style={{ width: w, height: h, borderRadius: r, flex: '0 0 auto', maxWidth: '100%', ...s }} />;
@@ -206,6 +208,20 @@ function Report() {
   );
 }
 
+/** A client's profile: back and close, the client, three buttons, the contact card and the list of pages. */
+function Profile() {
+  const row = (k: number) => <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 0', borderTop: k ? LINE : undefined }}><B w={20} h={20} r={999} /><B w={120 + (k % 3) * 40} h={15} /></div>;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between' }}><B w={44} h={44} r={999} /><B w={44} h={44} r={999} /></div>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '8px 0 4px' }}><B w={112} h={112} r={999} /><B w={190} h={28} s={{ marginTop: 6 }} /><B w={230} h={16} /></div>
+      <div style={{ display: 'flex', gap: 10 }}><B w={52} h={52} r={999} /><B w={52} h={52} r={999} /><B w="100%" h={52} r={999} s={{ flex: '1 1 0' }} /></div>
+      <div style={{ ...CARD, padding: '4px 20px' }}>{[0, 1, 2].map(row)}</div>
+      <div style={{ ...CARD, padding: '4px 20px' }}>{[0, 1, 2, 3, 4].map((k) => <div key={k} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 4px', borderTop: k ? LINE : undefined }}><B w={110 + (k % 3) * 30} h={15} /><B w={14} h={14} r={999} /></div>)}</div>
+    </div>
+  );
+}
+
 function Content({ b }: { b: Body }): ReactNode {
   switch (b.t) {
     case 'table': return <TableCard t={b.table} />;
@@ -217,6 +233,7 @@ function Content({ b }: { b: Body }): ReactNode {
     case 'tiles': return <Tiles />;
     case 'calendar': return <CalendarCard />;
     case 'report': return <Report />;
+    case 'profile': return <Profile />;
   }
 }
 
@@ -225,7 +242,7 @@ export function PageSkeleton({ page = 'clients' }: { page?: keyof typeof PRESETS
   const p = PRESETS[page] ?? PRESETS.clients;
   return (<>
     <div className="only-d sk-desk" role="status" aria-busy="true" aria-label="Loading" style={{ boxSizing: 'border-box', padding: '28px 32px 40px 32px', display: 'flex', flexDirection: 'column', gap: 28 }}>
-      <Head search={p.search} action={p.action} />
+      {!p.bare && <Head search={p.search} action={p.action} />}
       {p.periods && <Chips n={4} />}
       {p.stats > 0 && <Stats n={p.stats} delta={p.delta} />}
       <Content b={p.body} />

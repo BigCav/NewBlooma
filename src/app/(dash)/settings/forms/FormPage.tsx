@@ -1,4 +1,5 @@
 'use client';
+import { ConfirmBox } from '@/components/ConfirmBox';
 import Link from 'next/link';
 import { useState } from 'react';
 import { S } from '../../calendar/pickers';
@@ -165,15 +166,7 @@ export function FormPage({ c }: { c: FormsCtl }) {
                 <button onClick={() => (d.isNew ? c.remove() : c.setConfirmDel(true))} style={S(rowCss + ';color:#B42318')}>{d.isNew ? 'Discard form' : 'Delete form'}</button>
               </div>
             ) : (
-              <div style={S('display:flex;flex-direction:column;gap:12px;padding:16px;border:1px solid #F3C6C3;border-radius:20px;background:#FEF3F2')}>
-                <span style={S('font-size:14.5px;font-weight:600')}>Delete {d.name}?</span>
-                <span style={S('font-size:13.5px;color:#5E6673')}>Clients stop being asked for it. Answers already given stay on their record.</span>
-                {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
-                <div style={S('display:flex;gap:10px')}>
-                  <button type="button" onClick={c.remove} disabled={c.busy} style={S('flex:1 1 0;height:48px;border:0;border-radius:999px;background:#C0261B;color:#FFFFFF;font:inherit;font-size:14px;font-weight:500;cursor:pointer')}>Delete form</button>
-                  <button type="button" className="ghost" onClick={() => { c.setConfirmDel(false); setSheet(null); }} style={S('flex:1 1 0;height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font:inherit;font-size:14px;font-weight:500;cursor:pointer')}>Keep</button>
-                </div>
-              </div>
+              <ConfirmBox label="Confirm delete" title={'Delete ' + d.name + '?'} body="Clients stop being asked for it. Answers already given stay on their record." error={c.error} action="Delete form" onAction={c.remove} busy={c.busy} onKeep={() => { c.setConfirmDel(false); setSheet(null); }} />
             )}
           </div>
         </div>

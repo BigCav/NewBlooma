@@ -1,4 +1,5 @@
 'use client';
+import { ConfirmBox } from '@/components/ConfirmBox';
 import { useState } from 'react';
 import { S, ServicePicker } from '../calendar/pickers';
 import { ClientCard, ClientStep, DetailRows, ICONS, PeopleStep, ROW, StepShell, TICK, Tiles, useSteps } from '../calendar/wizardUi';
@@ -114,14 +115,7 @@ export function EntryPage({ c, r }: { c: WaitlistCtl; r: WlRow }) {
               <button onClick={() => setQa(false)} aria-label="Close" style={S(RING)}>{CLOSE}</button>
             </div>
             {!confirm ? <button onClick={() => setConfirm(true)} style={S(rowCss)}>Remove from waitlist</button> : (
-              <div style={S('display:flex;flex-direction:column;gap:12px;padding:16px;border:1px solid #F3C6C3;border-radius:20px;background:#FEF3F2')}>
-                <span style={S('font-size:14.5px;font-weight:600')}>Remove {r.name} from the waitlist?</span>
-                {err}
-                <div style={S('display:flex;gap:10px')}>
-                  <button onClick={() => c.remove(r)} disabled={c.busy} style={S('flex:1 1 0;height:48px;border:0;border-radius:999px;background:#C0261B;color:#FFFFFF;font-size:14px;font-weight:500')}>Remove</button>
-                  <button className="ghost" onClick={() => { setConfirm(false); setQa(false); }} style={S('flex:1 1 0;height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>Keep</button>
-                </div>
-              </div>
+              <ConfirmBox label="Confirm removal" title={'Remove ' + r.name + ' from the waitlist?'} error={c.error} action="Remove" onAction={() => c.remove(r)} busy={c.busy} onKeep={() => { setConfirm(false); setQa(false); }} />
             )}
           </div>
         </div>

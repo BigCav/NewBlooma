@@ -42,7 +42,7 @@ export default async function ClientProfile({ params, searchParams }: { params: 
     const staffFirst = String(b.staff?.name ?? '').split(' ')[0];
     return {
       id: b.id, ref: 'B-' + b.ref_no, date: fmtDay(b.starts_at, tz, today), service: lines.map((l) => l.services?.name).filter(Boolean).join(' + ') || 'Visit', staff: staffFirst, cents,
-      when: `${wd} ${D} ${MON[M - 1]}, ${fmtClock(b.starts_at, tz)}`, paid: sale ? `${METHOD[sale.method] ?? 'Paid'}, $${(sale.total_cents / 100).toFixed(sale.total_cents % 100 ? 2 : 0)}` : 'Not recorded',
+      when: `${wd} ${D} ${MON[M - 1]}, ${fmtClock(b.starts_at, tz)}`, paid: sale ? `${METHOD[sale.method] ?? 'Paid'}, ${dollars(sale.total_cents)}` : 'Not recorded',
     };
   });
   // Every conversation with this client, in time order.

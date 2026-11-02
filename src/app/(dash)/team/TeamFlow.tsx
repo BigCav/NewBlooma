@@ -1,4 +1,5 @@
 'use client';
+import { ConfirmBox } from '@/components/ConfirmBox';
 import { useState } from 'react';
 import { S } from '../calendar/pickers';
 import { CLOSE_BTN as RING_BTN, CloseX } from '../calendar/calUi';
@@ -165,14 +166,7 @@ export function TeamFlow({ c }: { c: TeamCtl }) {
               <button type="button" onClick={() => setConfirm(true)} style={S('display:flex;align-items:center;width:100%;min-height:54px;box-sizing:border-box;padding:0;border:0;background:transparent;font:inherit;font-size:16px;text-align:left;color:#B42318;cursor:pointer')}>Remove team member</button>
             </div>
           ) : (
-            <div role="alertdialog" aria-label="Confirm removal" style={S('display:flex;flex-direction:column;gap:12px;box-sizing:border-box;padding:16px;border:1px solid #F3C6C3;border-radius:20px;background:#FEF3F2')}>
-              <div><div style={S('font-size:14.5px;font-weight:600')}>Remove this team member?</div><div style={S('margin-top:2px;font-size:13px;color:#5E6673')}>They will no longer appear on the calendar or in online booking.</div></div>
-              {!!error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{error}</p>}
-              <div style={S('display:flex;gap:10px')}>
-                <button type="button" className="ghost" onClick={() => { setConfirm(false); setMenu(false); }} style={S('flex:1 1 0;height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>Keep</button>
-                <button type="button" onClick={c.remove} disabled={busy} style={S('flex:1 1 0;height:48px;border:0;border-radius:999px;background:#C0261B;color:#FFFFFF;font-size:14px;font-weight:500')}>Remove</button>
-              </div>
-            </div>
+            <ConfirmBox label="Confirm removal" title="Remove this team member?" body="They will no longer appear on the calendar or in online booking." error={error} action="Remove" onAction={c.remove} busy={busy} onKeep={() => { setConfirm(false); setMenu(false); }} />
           )}
         </div>
       </div>

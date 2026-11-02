@@ -1,4 +1,5 @@
 'use client';
+import { ConfirmBox } from '@/components/ConfirmBox';
 import { useState } from 'react';
 import { decimalInput, digitsInput } from '@/lib/numeric';
 import { S } from '../calendar/pickers';
@@ -209,14 +210,7 @@ function ProductForm({ c }: { c: ProductsCtl }) {
               <button type="button" onClick={() => c.setConfirmDel(true)} style={S('display:flex;align-items:center;width:100%;min-height:54px;box-sizing:border-box;padding:0;border:0;background:transparent;font:inherit;font-size:16px;text-align:left;color:#B42318;cursor:pointer')}>Delete product</button>
             </div>
           ) : (
-            <div role="alertdialog" aria-label="Confirm delete" style={S('display:flex;flex-direction:column;gap:12px;box-sizing:border-box;padding:16px;border:1px solid #F3C6C3;border-radius:20px;background:#FEF3F2')}>
-              <div><div style={S('font-size:14.5px;font-weight:600')}>Delete this product?</div><div style={S('margin-top:2px;font-size:13px;color:#5E6673')}>It will disappear from your product list. Past sales are not affected.</div></div>
-              {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
-              <div style={S('display:flex;gap:10px')}>
-                <button type="button" className="ghost" onClick={closeMenu} style={S('flex:1 1 0;height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>Keep</button>
-                <button type="button" onClick={c.remove} disabled={c.busy} style={S('flex:1 1 0;height:48px;border:0;border-radius:999px;background:#C0261B;color:#FFFFFF;font-size:14px;font-weight:500')}>Delete product</button>
-              </div>
-            </div>
+            <ConfirmBox label="Confirm delete" title="Delete this product?" body="It will disappear from your product list. Past sales are not affected." error={c.error} action="Delete product" onAction={c.remove} busy={c.busy} onKeep={closeMenu} />
           )}
         </div>
       </div>

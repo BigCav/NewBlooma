@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's ClientProfile.dc.html and MobileClientProfile.dc.html. Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
+import { ConfirmBox } from '@/components/ConfirmBox';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
@@ -603,12 +604,7 @@ function Mobile({ c, initial, drawer }: { c: C; initial?: string; drawer?: boole
             <button onClick={() => c.setConfirmDel(true)} style={S(rowCss + ';color:#B42318')}>Delete client</button>
           </div>
         ) : (
-          <div style={S('display:flex;flex-direction:column;gap:12px;padding:16px;border:1px solid #F3C6C3;border-radius:20px;background:#FEF3F2')}>
-            <span style={S('font-size:14.5px;font-weight:600')}>Delete {row.name} for good?</span>
-            <span style={S('font-size:13.5px;color:#5E6673')}>Only possible when they have no bookings or sales. Their notes go too.</span>
-            {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
-            <div style={S('display:flex;gap:10px')}><button onClick={c.removeClient} disabled={c.busy} style={S('flex:1 1 0;height:48px;border:0;border-radius:999px;background:#C0261B;color:#FFFFFF;font-size:14px;font-weight:500')}>Delete client</button><button className="ghost" onClick={() => { c.setConfirmDel(false); setEqa(false); }} style={S('flex:1 1 0;height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>Keep</button></div>
-          </div>
+          <ConfirmBox label="Confirm delete" title={'Delete ' + row.name + ' for good?'} body="Only possible when they have no bookings or sales. Their notes go too." error={c.error} action="Delete client" onAction={c.removeClient} busy={c.busy} onKeep={() => { c.setConfirmDel(false); setEqa(false); }} />
         ), () => { c.setConfirmDel(false); setEqa(false); })}
       </>
     ));
