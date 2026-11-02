@@ -142,6 +142,7 @@ export async function testTerminal(salonId: string): Promise<{ ok?: true; error?
   const msg = pick(out, 'ResponseText') ?? pick(out, 'RT') ?? pick(out, 'DL1') ?? pick(out, 'Error');
   if (/invalid|denied|unauthor|not\s*found|unknown/i.test(out) && !/Complete/.test(out)) return { error: 'Windcave answered: ' + (msg ?? out.slice(0, 160)) };
   void bad;
+  if (/error|invalid|fail/i.test(pick(out, 'RT') ?? '')) return { error: 'Windcave replied "' + pick(out, 'RT') + '" (' + (pick(out, 'RC') ?? '?') + '). Check the HIT user, HIT key and station ID against the Windcave portal.' };
   return { ok: true, reply: out.replace(/\s+/g, ' ').slice(0, 240) };
 }
 
