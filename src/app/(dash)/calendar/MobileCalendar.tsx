@@ -271,7 +271,7 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
                 banner={sel.b.forms && <a href={'/clients/forms?c=' + sel.b.clientId} style={S('display:block;border-radius:16px;text-decoration:none;padding:12px 14px;font-size:13.5px;font-weight:500;background:' + (sel.b.forms.level === 'alert' ? '#FDECEA;color:#B42318' : '#FFF4E5;color:#8A4B00'))}>{sel.b.forms.text}<span style={S('display:block;margin-top:2px;font-size:12.5px;font-weight:600;text-decoration:underline')}>Open forms</span></a>}
                 details={[
                   { label: 'Time', value: sel.time, icon: ICON_TIME },
-                  { label: 'With', value: staffName(sel.b.staffId), icon: ICON_PERSON },
+                  { label: 'With', value: staffName(sel.b.staffId), icon: ICON_PERSON, photo: c.team.find((t) => t.id === sel.b.staffId)?.photo ?? null },
                 ]}
                 lines={(sel.b.serviceIds.map((id) => svcMap.get(id)).filter(Boolean) as NonNullable<ReturnType<typeof svcMap.get>>[]).map((v) => ({ key: v.id, name: v.name, sub: v.dur + ' min', price: usd(v.priceCents) }))}
                 fallback={sel.b.services}

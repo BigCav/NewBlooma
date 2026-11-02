@@ -44,3 +44,9 @@ export function minutesOfDay(iso: string | Date, tz: string) {
   return Number(p.find((x) => x.type === 'hour')!.value) * 60 + Number(p.find((x) => x.type === 'minute')!.value);
 }
 export const STATUS_LABEL: Record<string, string> = { pending: 'Needs approval', confirmed: 'Confirmed', checked_in: 'Checked in', in_progress: 'In progress', completed: 'Completed', cancelled: 'Cancelled', no_show: 'No-show' };
+
+/** Money on staff screens: whole amounts without cents ("$90"), otherwise two decimals ("$90.50"). Every page uses this one. */
+export const dollars = (cents: number) => {
+  const c = Math.round(cents);
+  return '$' + (c / 100).toLocaleString('en-US', { minimumFractionDigits: c % 100 ? 2 : 0, maximumFractionDigits: 2 });
+};

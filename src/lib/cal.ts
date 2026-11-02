@@ -18,7 +18,6 @@ export function fmtMin(m: number) {
 export function hourLabel(h: number) { return `${((h + 11) % 12) + 1}:00${h < 12 ? 'am' : 'pm'}`; }
 export function initials(name: string) { return name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join(''); }
 export function dollars(cents: number) { return '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: cents % 100 ? 2 : 0, maximumFractionDigits: 2 }); }
-export function money2(v: number) { return '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 
 const WD = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const MO = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -33,7 +32,7 @@ export function addDaysYmd(date: string, n: number) {
 }
 export function weekStartOf(ymd: string) { return addDaysYmd(ymd, -dayInfo(ymd).wd); }
 
-export type CalStaff = { id: string; name: string; role: string };
+export type CalStaff = { id: string; name: string; role: string; photo?: string | null };
 export type CalBooking = {
   id: string; staffId: string; clientId: string; client: string; services: string; dayYmd: string; start: number; end: number;
   status: 'pending' | 'confirmed' | 'checked_in' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';

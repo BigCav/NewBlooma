@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { requireCtx } from '@/lib/session';
 import { emailConfigured, smsConfigured } from '@/lib/notify';
-import { minutesOfDay, time12, ymd } from '@/lib/format';
+import { dollars, minutesOfDay, time12, ymd } from '@/lib/format';
 import { fmtClock, fmtDay, loadOverview } from '../data';
 import { dayInfo } from '@/lib/cal';
 import { sinceText } from '../shared';
@@ -49,7 +49,7 @@ export default async function ClientProfile({ params, searchParams }: { params: 
   const messages = await loadThread(sb, id, tz);
   const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const nowIso = new Date().toISOString();
-  const money0 = (c: number) => '$' + (c / 100).toFixed(c % 100 ? 2 : 0);
+  const money0 = dollars;
   const saleOf = new Map<string, any>();
   for (const x of (sls ?? []) as any[]) { if (x.booking_id && x.status !== 'refunded' && !saleOf.has(x.booking_id)) saleOf.set(x.booking_id, x); }
   const visits: (ProfileData['appts'][number] & { at: string })[] = ((allBk ?? []) as any[]).map((b) => {

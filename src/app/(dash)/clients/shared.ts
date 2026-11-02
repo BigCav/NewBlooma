@@ -1,3 +1,4 @@
+import { dollars } from '@/lib/format';
 // Types and pure helpers shared by the Clients list, the profile and their server code.
 export type Tag = 'Regular' | 'New' | 'Lapsed';
 export type ClientRow = {
@@ -7,10 +8,7 @@ export type ClientRow = {
 export const TAG_LIST: Tag[] = ['Regular', 'New', 'Lapsed'];
 export const FILTERS: { id: 'all' | Tag; label: string }[] = [{ id: 'all', label: 'All clients' }, { id: 'Regular', label: 'Regulars' }, { id: 'New', label: 'New' }, { id: 'Lapsed', label: 'Lapsed' }];
 
-export const money = (cents: number) => {
-  const n = cents / 100;
-  return '$' + (Number.isInteger(n) ? n.toLocaleString('en-US') : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-};
+export const money = dollars;
 export const initialsOf = (name: string, max = 2) => name.split(' ').filter(Boolean).map((w) => w[0]).join('').slice(0, max).toUpperCase();
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

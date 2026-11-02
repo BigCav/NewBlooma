@@ -91,86 +91,6 @@ function useInbox(props: { items: InboxItem[] }) {
 type C = ReturnType<typeof useInbox>;
 export type InboxCtl = C;
 
-function Panel({ c, m }: { c: C; m: boolean }) {
-  const sel = c.sel;
-  if (!sel) return <p style={S('margin:0;color:#5E6673;font-size:14px')}>Nothing selected.</p>;
-  const first = sel.client.split(' ')[0];
-  const bh = m ? 48 : 44;
-  const BTN = 'flex:1 1 0;height:' + bh + 'px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500';
-  const BTN2 = 'flex:1 1 0;height:' + bh + 'px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500';
-  const LNK = 'flex:1 1 0;height:' + bh + 'px;box-sizing:border-box;border-radius:999px;font-size:14px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none;white-space:nowrap;border:1px solid #E1E4E9;background:#FFFFFF;color:#0E1116';
-  const pill = (on: boolean) => 'flex:0 0 auto;height:' + (m ? 44 : 40) + 'px;padding:0 16px;border-radius:999px;font-size:13.5px;font-weight:500;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
-  const err = c.error ? <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p> : null;
-  const isMsg = sel.type === 'message', isCancel = sel.type === 'cancellation', isResched = sel.type === 'reschedule';
-  const actionable = sel.type === 'request' && sel.status === 'new' && !sel.cancelled;
-  const calHref = sel.bookingId && sel.calendarDay ? `/calendar?d=${sel.calendarDay}&b=${sel.bookingId}` : null;
-  const clientHref = sel.clientId ? `/clients/${sel.clientId}` : null;
-  const who = (<>
-    <div style={S('flex:0 0 56px;width:56px;height:56px;border-radius:999px;background:#EEF0F3;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600')}>{initialsOf(sel.client)}</div>
-    <div style={S('min-width:0')}><div style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em;line-height:1.2;overflow-wrap:anywhere')}>{sel.client}</div><div style={S('font-size:14px;color:#5E6673;overflow-wrap:anywhere')}>{sel.email || 'No email'}</div></div>
-  </>);
-  const rebookHref = sel.clientId ? `/calendar/new?client=${sel.clientId}` : '/calendar?new=1';
-  const composer = c.mode === 'compose' || isMsg;
-  const showRow = c.mode === 'view' && !isMsg;
-  return (<>
-    {clientHref
-      ? <Link href={clientHref} aria-label={`Open ${sel.client} profile`} style={S('display:flex;align-items:center;gap:14px;color:inherit;text-decoration:none')}>{who}</Link>
-      : <div style={S('display:flex;align-items:center;gap:14px')}>{who}</div>}
-    <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:8px')}>
-      <span style={S(typeStyle(sel.type))}>{TYPES[sel.type].label}</span>
-      {hasChip(sel) && <span style={S(chipStyle(sel))}>{statusText(sel)}</span>}
-      {!!c.notice && <span role="status" style={S('padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.notice}</span>}
-    </div>
-    {sel.rows.length > 0 && (
-      <dl style={S('margin:0;display:flex;flex-direction:column')}>
-        {sel.rows.map(([l, v]) => <div key={l} style={S('display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>{l}</dt><dd style={S('margin:0;font-weight:500;text-align:right;overflow-wrap:anywhere')}>{v}</dd></div>)}
-      </dl>
-    )}
-    {!!sel.note && <p style={S('margin:0;padding:14px 16px;border-radius:16px;background:#F4F5F7;font-size:14px;overflow-wrap:anywhere')}>{sel.note}</p>}
-    {isMsg && <Thread key={sel.id} thread={sel.thread} first={first} />}
-    {actionable && c.mode === 'view' && (
-      <div style={S('display:flex;gap:10px')}>
-        <button onClick={c.accept} disabled={c.busy} style={S(BTN)}>Accept</button>
-        <button className="ghost" onClick={() => { c.setMode('decline'); c.setReason(null); c.setError(''); c.setNotice(''); }} style={S(BTN2)}>Decline</button>
-      </div>
-    )}
-    {showRow && (
-      <div style={S('display:flex;gap:10px')}>
-        <button className={actionable ? 'ghost' : undefined} onClick={c.compose} style={S(actionable ? BTN2 : BTN)}>Message {first}</button>
-        {isCancel
-          ? <Link href={rebookHref} className="ghost" style={S(LNK)}>Book again</Link>
-          : calHref ? <Link href={calHref} className="ghost" style={S(LNK)}>View in calendar</Link>
-          : null}
-      </div>
-    )}
-    {showRow && isResched && sel.status === 'new' && <button className="ghost" onClick={c.finish} disabled={c.busy} style={S(BTN2 + ';flex:0 0 auto')}>Mark as done</button>}
-    {c.mode === 'decline' && actionable && (
-      <div style={S('display:flex;flex-direction:column;gap:14px;box-sizing:border-box;padding:16px;border:1px solid #F3C6C3;border-radius:18px;background:#FEF3F2')}>
-        <div style={S('font-size:14.5px;font-weight:600')}>Why are you declining?</div>
-        <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="dc-reason-label" style={S('font-size:14px;font-weight:600')}>Reason</span>
-          <div role="group" className="hscroll" aria-labelledby="dc-reason-label" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
-            {REASONS.map((r) => <button key={r} onClick={() => { c.setReason(r); c.setError(''); }} aria-pressed={c.reason === r} style={S(pill(c.reason === r))}>{r}</button>)}
-          </div></div>
-        {err}
-        <div style={S('display:flex;gap:10px')}>
-          <button className="ghost" onClick={c.cancel} style={S(BTN2)}>Back</button>
-          <button onClick={c.sendDecline} disabled={c.busy} style={S('flex:1 1 0;height:' + bh + 'px;border:0;border-radius:999px;background:#C0261B;color:#FFFFFF;font-size:14px;font-weight:500')}>Send decline</button>
-        </div>
-      </div>
-    )}
-    {composer && (
-      <div style={S('display:flex;flex-direction:column;gap:14px')}>
-        <div style={S('font-size:15px;font-weight:600')}>{isMsg ? 'Reply to ' + first : 'Message ' + first}</div>
-        <textarea aria-label="Your message" value={c.draft} onChange={(e) => { c.setDraft(e.target.value); c.setError(''); }} placeholder="Write a message" style={S('box-sizing:border-box;width:100%;min-height:96px;resize:vertical;padding:12px 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;color:#0E1116;background:#FFFFFF')} />
-        {err}
-        <div style={S('display:flex;gap:10px')}>
-          <button onClick={c.sendReply} disabled={c.busy} style={S(BTN)}>Send</button>
-          {!isMsg && <button className="ghost" onClick={c.cancel} style={S(BTN2)}>Cancel</button>}
-        </div>
-      </div>
-    )}
-  </>);
-}
 
 function Pager({ c, m }: { c: C; m: boolean }) {
   if (c.pages <= 1) return null;
@@ -285,17 +205,3 @@ export function InboxView({ items }: { items: InboxItem[] }) {
 }
 
 
-/** The conversation: fixed height, scrolls inside itself and opens at the newest message. */
-function Thread({ thread, first }: { thread: InboxItem['thread']; first: string }) {
-  const ref = useRef<HTMLUListElement>(null);
-  useEffect(() => { const el = ref.current; if (el) el.scrollTop = el.scrollHeight; }, [thread.length]);
-  return (
-    <ul ref={ref} aria-label="Conversation" style={S('margin:0;padding:2px 4px 2px 0;list-style:none;display:flex;flex-direction:column;gap:10px;max-height:min(44dvh,360px);overflow-y:auto;overscroll-behavior:contain')}>
-      {thread.map((t, k) => (
-        <li key={k} style={S('display:flex;justify-content:' + (t.mine ? 'flex-end' : 'flex-start'))}><span style={S('display:block;max-width:86%;flex:0 0 auto')}>
-          <span style={S('box-sizing:border-box;padding:10px 14px;border-radius:18px;font-size:14px;overflow-wrap:break-word;white-space:pre-wrap;background:' + (t.mine ? '#0E1116' : '#F4F5F7') + ';color:' + (t.mine ? '#FFFFFF' : '#0E1116') + ';display:block')}>{t.text}</span>
-          <span style={S('display:block;margin-top:4px;font-size:12px;color:#5E6673;text-align:' + (t.mine ? 'right' : 'left'))}>{t.mine ? 'You' : first}, {t.at}</span></span></li>
-      ))}
-    </ul>
-  );
-}

@@ -329,7 +329,7 @@ const VISIT: Record<string, { label: string; card: string; fg: string; chipBg: s
   confirmed: { label: 'Confirmed', card: 'background:#ECE8FE;border:1px solid #ECE8FE', fg: '#3A2BB5', chipBg: '#FFFFFF', chipFg: '#3A2BB5' },
   checked_in: { label: 'Checked in', card: 'background:#E3F0FF;border:1px solid #E3F0FF', fg: '#1B4A8A', chipBg: '#FFFFFF', chipFg: '#1B4A8A' },
   in_progress: { label: 'In progress', card: 'background:#5B3DF5;border:1px solid #5B3DF5', fg: '#FFFFFF', chipBg: '#FFFFFF', chipFg: '#5B3DF5' },
-  completed: { label: 'Done', card: 'background:#FFFFFF;border:1px solid #E6E8EC', fg: '#0E1116', chipBg: '#DDF3EA', chipFg: '#14624A' },
+  completed: { label: 'Completed', card: 'background:#FFFFFF;border:1px solid #E6E8EC', fg: '#0E1116', chipBg: '#DDF3EA', chipFg: '#14624A' },
   cancelled: { label: 'Cancelled', card: 'background:#FDF0EF;border:1px solid #FDF0EF', fg: '#9A7773', chipBg: '#FFFFFF', chipFg: '#B42318', strike: true },
   no_show: { label: 'No-show', card: 'background:#FFF6E8;border:1px solid #FFF6E8', fg: '#8F7A5C', chipBg: '#FFFFFF', chipFg: '#7A4204', strike: true },
   refunded: { label: 'Refunded', card: 'background:#FDF0EF;border:1px solid #FDF0EF', fg: '#9A7773', chipBg: '#FFFFFF', chipFg: '#B42318', strike: true },
