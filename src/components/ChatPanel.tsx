@@ -38,6 +38,15 @@ export function ChatComposer({ first, draft, onDraft, onSend, busy }: { first: s
   );
 }
 
+/** The conversation as its own full page over whatever is open (the same page the client's profile opens), with the panel filling it. */
+export function ChatPage({ label, ...p }: { label: string } & Omit<Parameters<typeof ChatPanel>[0], 'fill'>) {
+  return (
+    <div role="dialog" aria-label={label} style={S("position:absolute;left:0;right:0;top:0;bottom:0;z-index:8;display:flex;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
+      <ChatPanel fill {...p} />
+    </div>
+  );
+}
+
 /**
  * Message a client. The conversation is loaded here (unless the caller already has it) and a sent message is added to it.
  * fill: take the whole height of a full-page panel; otherwise it sits in a sheet at a fixed height.

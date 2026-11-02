@@ -12,7 +12,7 @@ import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
 import { BookPanel, type BookData } from './BookPanel';
 import { addNote, createClient, sendClientMessage } from './actions';
-import { ChatPanel } from '@/components/ChatPanel';
+import { ChatPage } from '@/components/ChatPanel';
 import { ActiveFilter, FilterButton, FilterSheet } from '@/components/FilterBits';
 import { NewClientFlow } from './NewClientFlow';
 import { FILTERS, channelNote, initialsOf, money, type Channels, type ClientRow } from './shared';
@@ -183,7 +183,6 @@ function Panel({ c, m }: { c: C; m: boolean }) {
       )}
     </>)}
     {c.mode === 'book' && sel && <BookPanel data={c.book} client={{ id: sel.id, name: sel.name, first: c.first }} mobile={m} onBooked={c.booked} onCancel={c.cancel} />}
-    {c.mode === 'message' && sel && <ChatPanel clientId={sel.id} name={sel.name} first={c.first} send={(t) => sendClientMessage(sel.id, t)} onBack={c.cancel} />}
     {c.mode === 'new' && (
       <div style={S('display:flex;flex-direction:column;gap:18px')}>
         <div><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>New client</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>They start with the New tag.</p></div>
@@ -284,7 +283,8 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
       </main>
       <MobileTabs active="clients" />
       {fopen && <FilterSheet title="Filter clients" options={FILTERS.filter((f) => f.id !== 'Lapsed')} value={c.filter} onPick={c.setFilter} onClose={() => setFopen(false)} />}
-      {c.open && (
+      {c.open && c.mode === 'message' && c.sel && <ChatPage label="Message client" clientId={c.sel.id} name={c.sel.name} first={c.first} send={(t) => sendClientMessage(c.sel!.id, t)} onBack={c.cancel} />}
+      {c.open && c.mode !== 'message' && (
         <BottomSheet label="Client" onClose={() => { c.setOpen(false); c.setMode('view'); c.setError(''); }} backdropLabel="Close details" handle={false}>
             {c.mode === 'new' ? <NewClientFlow c={c} /> : (<>
               <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0')} />
