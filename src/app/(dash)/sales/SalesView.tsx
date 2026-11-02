@@ -17,6 +17,7 @@ import { NewSaleFlow } from './NewSaleFlow';
 import { createWalkin, payFlow, refundSale, sendReceipt, setPrice, } from './actions';
 import { useTerminal } from './useTerminal';
 import { TerminalStatus } from '../calendar/TerminalStatus';
+import { VisitSheet, MoreButton, QuickActions, QaGroup, QA_ITEM, ICON_TIME, ICON_PERSON, ICON_CARD, type VisitDetail } from '../calendar/VisitSheet';
 import { DISC_PCTS, FILTERS, NO_DISC, STATUS, TIP_OPTS, discOf, discountCents, fmt, type DiscPick, type PayMethod, type SaleRow, type SvcOpt } from './shared';
 
 type Props = {
@@ -52,6 +53,7 @@ function useSales(props: Props) {
   const [notice, setNotice] = useState('');
   const [error, setError] = useState(props.initial.card ? CARD_MSG[props.initial.card] ?? '' : '');
   const [confirmRefund, setConfirmRefund] = useState(false);
+  const [qa, setQa] = useState(false);
   const [pay, setPay] = useState(blankPay(tipPctOf(rows.find((r) => r.id === startSel)), discOf(rows.find((r) => r.id === startSel))));
   const [editAmount, setEditAmount] = useState('');
   const [nw, setNw] = useState(blankNew());
@@ -125,7 +127,7 @@ function useSales(props: Props) {
 
   const sq = query.trim().toLowerCase();
   const list = rows.filter((t) => (filter === 'all' || t.status === filter) && (!sq || (t.client + ' ' + t.ref + ' ' + t.service + ' ' + t.staffName + ' ' + t.status + ' ' + t.method + ' ' + t.total / 100).toLowerCase().includes(sq.replace(/[$,]/g, ''))));
-  return { ...props, busy, narrow, rows, list, sel, selectedId, filter, setFilter, query, setQuery, mode, setMode, open, notice, error, setError, confirmRefund, setConfirmRefund,
+  return { ...props, busy, narrow, rows, list, sel, selectedId, filter, setFilter, query, setQuery, mode, setMode, open, notice, error, setError, confirmRefund, setConfirmRefund, qa, setQa,
     canDiscount: props.canDiscount, pay, setPay, tipPctOf, editAmount, setEditAmount, nw, setNw, txn: term.txn, termView: { ...term.view, onDone: () => { const r = mode === 'refund'; term.reset(); setMode('view'); setNotice(r ? 'Refund issued' : 'Payment taken'); setError(''); router.refresh(); }, onRetry: mode === 'refund' ? doRefund : takePayment, onBack: () => { term.reset(); if (mode === 'refund') setMode('view'); } }, pick, openNew, cancel, close, takePayment, payNow, saveEdit, doRefund, receipt, createSale,
     paidTotal: props.todayTotal, pendingCount: rows.filter((r) => r.status === 'Pending').length };
 }
@@ -156,14 +158,13 @@ function SaleCheckout({ c, s }: { c: C; s: SaleRow }) {
   );
 }
 
-/** The phone's sale details, laid out like a booking: status, client, details, services, then the total and actions pinned at the bottom. */
+/** The sale's details: the same sheet as an appointment on the calendar. */
 function MobileSale({ c, s }: { c: C; s: SaleRow }) {
-  const ic = (children: React.ReactNode) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')} aria-hidden="true">{children}</svg>;
   const pending = s.status === 'Pending';
-  const detail: (readonly [string, string, React.ReactNode])[] = [
-    ['Time', s.range || s.time, <><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></>],
-    ['With', s.staffName, <><circle cx="12" cy="8.5" r="3.5" /><path d="M5 20c.6-3.4 3.3-5 7-5s6.4 1.6 7 5" /></>],
-    ...(pending ? [] : [['Payment', s.method, <><rect x="3.5" y="6" width="17" height="12" rx="2.5" /><path d="M3.5 10.5h17" /></>] as const]),
+  const details: VisitDetail[] = [
+    { label: 'Time', value: s.range || s.time, icon: ICON_TIME },
+    { label: 'With', value: s.staffName, icon: ICON_PERSON, photo: s.staffPhoto },
+    ...(pending ? [] : [{ label: 'Payment', value: s.method, icon: ICON_CARD }]),
   ];
   const extra: [string, string][] = [
     ...(s.discount ? [['Discount' + (s.discountNote ? ' (' + s.discountNote + ')' : ''), '-' + fmt(s.discount)] as [string, string]] : []),
@@ -173,45 +174,18 @@ function MobileSale({ c, s }: { c: C; s: SaleRow }) {
   const online = c.methods.some((m) => m.id === 'online');
   const BTN = 'height:52px;border-radius:999px;font-size:14.5px;font-weight:500;cursor:pointer';
   const startCheckout = () => { c.setPay({ method: c.methods[0]?.id ?? 'cash', tip: c.tipPctOf(s), code: '', disc: discOf(s) }); c.setMode('pay'); c.setError(''); };
-  return (<>
-    <div style={S('display:flex;justify-content:flex-end;margin-bottom:-8px')}><button onClick={c.close} aria-label="Close" style={S(CLOSE_BTN)}><CloseX /></button></div>
-    <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
-      <h2 style={S('margin:0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em;min-width:0')}>{s.dayShort}</h2>
-      <span style={S(statusStyle(s.status) + ';flex:0 0 auto;font-size:14px;padding:8px 16px')}>{s.status}</span>
-    </div>
-    <div style={S('display:flex;align-items:center;gap:14px;padding:16px;border:1px solid #E6E8EC;border-radius:22px')}>
-      <div style={S('flex:0 0 52px;width:52px;height:52px;border-radius:999px;background:#EEEAFE;color:#3A2BB5;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600')}>{s.initials}</div>
-      <div style={S('flex:1 1 auto;min-width:0')}>
-        <div style={S('font-size:19px;font-weight:600;letter-spacing:-0.02em;line-height:1.2;overflow-wrap:anywhere')}>{s.client}</div>
-        <div style={S('margin-top:2px;font-size:13.5px;color:#5E6673')}>{s.ref ? 'Booking ' + s.ref : 'Sale'}</div>
-      </div>
-    </div>
-    <div className="sum-rows" style={S('padding:2px 16px;border:1px solid #E6E8EC;border-radius:22px;background:#FFFFFF')}>
-      {detail.map(([l, v, icon]) => <div key={l} style={S('display:flex;align-items:center;gap:12px;padding:14px 0;font-size:15px')}>{l === 'With' && s.staffPhoto ? <span aria-hidden="true" style={S('flex:0 0 28px;width:28px;height:28px;margin:-4px 0;border-radius:999px;background-size:cover;background-position:center;background-image:url(' + s.staffPhoto + ')')} /> : ic(icon)}<span style={S('min-width:0;overflow-wrap:anywhere')} aria-label={l}>{v}</span></div>)}
-    </div>
-    <div style={S('display:flex;flex-direction:column;gap:10px')}>
-      <h3 style={S('margin:0;font-size:17px;font-weight:600;letter-spacing:-0.01em')}>Services</h3>
-      {s.lines.map((l, i) => (
-        <div key={l.label + i} style={S('display:flex;align-items:center;gap:12px')}>
-          <span style={S('flex:0 0 4px;align-self:stretch;min-height:28px;border-radius:999px;background:#B9AEFB')} />
-          <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{l.label + (l.qty > 1 ? ' x' + l.qty : '')}</span>{!!l.dur && <span style={S('display:block;font-size:13px;color:#5E6673')}>{l.dur + ' min'}</span>}</span>
-          <span style={S('flex:0 0 auto;font-size:14.5px;font-weight:500')}>{fmt(l.cents * l.qty)}</span>
-        </div>
-      ))}
-    </div>
-    {extra.length > 0 && (
-      <div className="sum-rows" style={S('padding:2px 16px;border:1px solid #E6E8EC;border-radius:22px')}>
-        {extra.map(([l, v]) => <div key={l} style={S('display:flex;justify-content:space-between;gap:12px;padding:13px 0;font-size:15px')}><span style={S('color:#5E6673;overflow-wrap:anywhere')}>{l}</span><span style={S('font-weight:500;white-space:nowrap')}>{v}</span></div>)}
-      </div>
-    )}
-    <div style={S('position:sticky;bottom:-40px;margin:auto -20px -40px;padding:14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3;display:flex;flex-direction:column;gap:12px')}>
-      {!!c.notice && <span role="status" style={S('align-self:flex-start;padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.notice}</span>}
-      {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
-      <div>
-        <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px')}><span style={S('color:#5E6673;font-size:14px')}>Total</span><span style={S('color:#5E6673;font-size:16px')}>{fmt(s.total)}</span></div>
-        <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:2px')}><span style={S('font-size:15px;font-weight:600')}>{pending ? 'To pay' : s.status}</span><span style={S('font-size:22px;font-weight:600;letter-spacing:-0.02em')}>{fmt(s.total)}</span></div>
-      </div>
-      {c.confirmRefund ? (
+  return (
+    <VisitSheet onClose={c.close} title={s.dayShort}
+      status={<span style={S(statusStyle(s.status) + ';flex:0 0 auto;font-size:14px;padding:8px 16px')}>{s.status}</span>}
+      avatar={s.initials} name={s.client} sub={s.ref ? 'Booking ' + s.ref : 'Sale'}
+      details={details} extra={extra}
+      lines={s.lines.map((l, i) => ({ key: l.label + i, name: l.label + (l.qty > 1 ? ' x' + l.qty : ''), sub: l.dur ? l.dur + ' min' : undefined, price: fmt(l.cents * l.qty) }))}
+      total={fmt(s.total)} label={pending ? 'To pay' : s.status}
+      message={<>
+        {!!c.notice && <span role="status" style={S('align-self:flex-start;padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.notice}</span>}
+        {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
+      </>}
+      actions={c.confirmRefund ? (
         <div role="alertdialog" aria-label="Confirm refund" style={S('display:flex;flex-direction:column;gap:12px;box-sizing:border-box;padding:16px;border:1px solid #F3C6C3;border-radius:18px;background:#FEF3F2')}>
           <div><div style={S('font-size:14.5px;font-weight:600')}>Refund {fmt(s.total)}?</div><div style={S('margin-top:2px;font-size:13px;color:#5E6673')}>The sale is marked as refunded and removed from today&apos;s sales.</div></div>
           <div style={S('display:flex;gap:10px')}>
@@ -219,22 +193,20 @@ function MobileSale({ c, s }: { c: C; s: SaleRow }) {
             <button onClick={c.doRefund} disabled={c.busy} style={S('flex:1 1 0;border:0;background:#C0261B;color:#FFFFFF;' + BTN)}>Refund</button>
           </div>
         </div>
-      ) : pending ? (
-        <div style={S('display:flex;gap:10px')}>
-          {s.canEdit && <button onClick={() => { c.setEditAmount(String(s.amount / 100)); c.setMode('edit'); c.setError(''); }} aria-label="Edit sale price" style={S('flex:0 0 52px;width:52px;height:52px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer')}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-4-4L4 16z" /><path d="m13.5 6.5 4 4" /></svg>
-          </button>}
-          {online && <button onClick={c.payNow} disabled={c.busy} style={S('flex:1 1 0;border:1px solid #E1E4E9;background:#FFFFFF;color:#0E1116;' + BTN)}>Pay now</button>}
-          <button onClick={startCheckout} disabled={c.busy} style={S('flex:1 1 0;border:0;background:#0E1116;color:#FFFFFF;' + BTN)}>Checkout</button>
-        </div>
       ) : (
         <div style={S('display:flex;gap:10px')}>
-          {s.status === 'Paid' && <button className="ghost" onClick={() => c.setConfirmRefund(true)} style={S('flex:1 1 0;border:1px solid #E1E4E9;background:#FFFFFF;color:#0E1116;' + BTN)}>Refund</button>}
-          <button onClick={c.receipt} disabled={c.busy} style={S('flex:1 1 0;border:0;background:#0E1116;color:#FFFFFF;' + BTN)}>Send receipt</button>
+          <MoreButton onClick={() => c.setQa(true)} />
+          {pending ? (<>
+            {online && <button onClick={c.payNow} disabled={c.busy} style={S('flex:1 1 0;border:1px solid #E1E4E9;background:#FFFFFF;color:#0E1116;' + BTN)}>Pay now</button>}
+            <button onClick={startCheckout} disabled={c.busy} style={S('flex:1 1 0;border:0;background:#0E1116;color:#FFFFFF;' + BTN)}>Checkout</button>
+          </>) : (<>
+            {s.status === 'Paid' && <button className="ghost" onClick={() => c.setConfirmRefund(true)} style={S('flex:1 1 0;border:1px solid #E1E4E9;background:#FFFFFF;color:#0E1116;' + BTN)}>Refund</button>}
+            <button onClick={c.receipt} disabled={c.busy} style={S('flex:1 1 0;border:0;background:#0E1116;color:#FFFFFF;' + BTN)}>Send receipt</button>
+          </>)}
         </div>
       )}
-    </div>
-  </>);
+    />
+  );
 }
 
 function Panel({ c, m }: { c: C; m: boolean }) {
@@ -467,6 +439,22 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
           </div>
         </div>
       )}
+      {c.qa && c.open && c.mode === 'view' && c.sel && (() => {
+        const q = c.sel;
+        return (
+          <QuickActions onClose={() => c.setQa(false)}>
+            {(!!q.clientId || !!q.bookingDay) && <QaGroup first>
+              {!!q.clientId && <Link href={'/clients/' + q.clientId} style={S(QA_ITEM)}>Open client profile</Link>}
+              {!!q.bookingDay && <Link href={'/calendar?d=' + q.bookingDay + '&v=day'} style={S(QA_ITEM)}>Open booking in calendar</Link>}
+            </QaGroup>}
+            <QaGroup first={!q.clientId && !q.bookingDay}>
+              {q.status === 'Pending' && q.canEdit && <button onClick={() => { c.setQa(false); c.setEditAmount(String(q.amount / 100)); c.setMode('edit'); c.setError(''); }} style={S(QA_ITEM)}>Edit sale price</button>}
+              {q.status !== 'Pending' && <button onClick={() => { c.setQa(false); c.receipt(); }} style={S(QA_ITEM)}>Send receipt</button>}
+              {q.status === 'Paid' && <button onClick={() => { c.setQa(false); c.setConfirmRefund(true); }} style={S(QA_ITEM)}>Refund</button>}
+            </QaGroup>
+          </QuickActions>
+        );
+      })()}
     </div>
   );
 }
