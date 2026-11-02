@@ -31,5 +31,5 @@ export async function savePayments(_: unknown, fd: FormData) {
     if (error) return { error: friendly(error.message) };
   }
   revalidatePath('/settings/windcave');
-  return { ok: 'Payment settings saved.' };
+  return { ok: 'Payment settings saved' };
 }

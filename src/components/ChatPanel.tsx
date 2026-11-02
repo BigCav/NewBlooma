@@ -66,7 +66,7 @@ export function ChatPanel({ clientId, first, context, initial, send, onBack, onS
       const r = await send(t);
       if (r.error) { setErr(r.error); return; }
       setErr(''); setDraft('');
-      const sent: ChatMsg = { id: 'me-' + Date.now(), mine: true, text: t, day: 'Today', time: new Date().toLocaleTimeString('en-NZ', { hour: 'numeric', minute: '2-digit' }).toLowerCase() };
+      const sent: ChatMsg = { id: 'me-' + Date.now(), mine: true, text: t, day: 'Today', time: new Date().toLocaleTimeString('en-NZ', { hour: 'numeric', minute: '2-digit' }).toLowerCase().replace(/\s+/g, '') };
       setThread((m) => [...m, sent]); onSent?.(sent);
     });
   };

@@ -546,7 +546,7 @@ function Mobile({ c, initial, drawer }: { c: C; initial?: string; drawer?: boole
       const r = await sendClientMessage(row.id, t);
       if (r.error) { setSendErr(r.error); return; }
       setSendErr(''); setDraft('');
-      setThread((m) => [...m, { id: 'me-' + Date.now(), mine: true, text: t, day: 'Today', time: new Date().toLocaleTimeString('en-NZ', { hour: 'numeric', minute: '2-digit' }).toLowerCase() }]);
+      setThread((m) => [...m, { id: 'me-' + Date.now(), mine: true, text: t, day: 'Today', time: new Date().toLocaleTimeString('en-NZ', { hour: 'numeric', minute: '2-digit' }).toLowerCase().replace(/\s+/g, '') }]);
     });
   };
   const tone = TONE[row.tag];
