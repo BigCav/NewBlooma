@@ -1,3 +1,4 @@
+import { TONE } from '@/lib/tones';
 import { BLACK as PRIMARY, OUTLINE as SECOND } from '@/components/ui';
 export { PRIMARY, SECOND };
 import { dollars } from '@/lib/format';
@@ -13,8 +14,8 @@ export const TIP_OPTS: [number, string][] = [[0, 'No tip'], [10, '10%'], [15, '1
 export const STEP = 30;
 
 export const chipTone: Record<string, { t: string; bg: string; fg: string }> = {
-  live: { t: 'In progress', bg: '#5B3DF5', fg: '#FFFFFF' }, confirmed: { t: 'Confirmed', bg: '#DDF3EA', fg: '#14624A' }, done: { t: 'Completed', bg: '#EEF0F3', fg: '#4A525E' },
-  pending: { t: 'Needs approval', bg: '#FFEBD0', fg: '#7A4204' },
+  live: { t: 'In progress', bg: '#5B3DF5', fg: '#FFFFFF' }, confirmed: { t: 'Confirmed', ...TONE.green }, done: { t: 'Completed', ...TONE.grey },
+  pending: { t: 'Needs approval', ...TONE.amber },
 };
 export const kindOf = (s: CalBooking['status']) => (s === 'checked_in' || s === 'in_progress' ? 'live' : s === 'completed' ? 'done' : s === 'pending' ? 'pending' : 'confirmed');
 export const chip = (on: boolean, off = false) => 'flex:0 0 auto;height:44px;padding:0 16px;border-radius:999px;font-size:14px;font-weight:500;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : (off ? '#F4F5F7' : '#FFFFFF')) + ';color:' + (on ? '#FFFFFF' : (off ? '#8A93A0' : '#0E1116')) + (off ? ';cursor:default' : '');

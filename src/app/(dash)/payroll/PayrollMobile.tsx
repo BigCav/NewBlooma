@@ -14,7 +14,7 @@ import type { PayrollCtl } from './PayrollView';
 const PAGE = "position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;display:flex;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4";
 const BAR = 'flex:0 0 auto;padding:14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3;display:flex;flex-direction:column;gap:12px';
 const CARD = 'box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:18px';
-const CELL = { done: 'background:#EEF0F3;color:#0E1116;font-weight:500', today: 'background:#ECE8FF;color:#3B2BB5;font-weight:600', plan: 'background:#F4F5F7;color:#8A93A0' };
+const CELL = { done: 'background:#EEF0F3;color:#0E1116;font-weight:500', today: 'background:#EEEAFE;color:#3A2BB5;font-weight:600', plan: 'background:#F4F5F7;color:#8A93A0' };
 const initials = (n: string) => n.split(' ').filter((w) => /[A-Za-z0-9]/.test(w[0] ?? '')).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || 'C';
 const AV = (px: number, fs: number) => 'flex:0 0 ' + px + 'px;width:' + px + 'px;height:' + px + 'px;border-radius:999px;background:#EEEAFE;color:#3A2BB5;display:flex;align-items:center;justify-content:center;font-size:' + fs + 'px;font-weight:600';
 const pct = (n: number) => (Math.round(n * 10) / 10) + '%';
@@ -31,7 +31,7 @@ function Header({ title, onBack, p }: { title: string; onBack: () => void; p?: P
 
 function payTone(c: PayrollCtl, p: PayRow) {
   const pending = !c.over;
-  return pending ? { t: 'Pending until Sunday', bg: '#FFEBD0', fg: '#7A4204' } : p.paid ? { t: 'Paid', bg: '#DDF3EA', fg: '#14624A' } : { t: 'Ready to pay', bg: '#ECE8FF', fg: '#3B2BB5' };
+  return pending ? { t: 'Pending until Sunday', bg: '#FFEBD0', fg: '#7A4204' } : p.paid ? { t: 'Paid', bg: '#DDF3EA', fg: '#14624A' } : { t: 'Ready to pay', bg: '#EEEAFE', fg: '#3A2BB5' };
 }
 
 function Week({ p, days, big }: { p: PayRow; days: number; big?: boolean }) {

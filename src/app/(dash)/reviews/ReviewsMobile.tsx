@@ -39,7 +39,7 @@ export function ReviewCard({ r, onOpen }: { r: ReviewRow; onOpen: () => void }) 
               <Stars n={r.stars} size={15} />
               <span style={S('display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;font-size:14.5px;color:#0E1116')}>{r.text}</span>
               <span style={S('font-size:12.5px;color:#8A93A0;overflow-wrap:anywhere')}>{r.svc} with {r.pro}</span>
-              <span style={S('align-self:flex-start;margin-top:4px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;background:' + (r.reply ? '#DDF3EA' : '#FFF4E5') + ';color:' + (r.reply ? '#14624A' : '#8A4B00'))}>{r.reply ? 'Replied' : 'Needs reply'}</span>
+              <span style={S('align-self:flex-start;margin-top:4px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;background:' + (r.reply ? '#DDF3EA' : '#FFF4E5') + ';color:' + (r.reply ? '#14624A' : '#7A4204'))}>{r.reply ? 'Replied' : 'Needs reply'}</span>
             </span>
           </button>
   );

@@ -26,12 +26,12 @@ const PRICING_FAQ = [
   { q: 'Can I bring my clients from another system?', a: 'Yes. Export a CSV from your current system and import your clients, services and upcoming appointments in a few minutes.' },
 ];
 const FEATURES: { t: string; d: string; bg: string; fg: string; icon: React.ReactNode }[] = [
-  { t: 'One calendar for the team', d: "Everyone's day in one view. Drag to move, tap to check out.", bg: '#EFEBFF', fg: '#5B3DF5', icon: <><rect x="3.5" y="5" width="17" height="15" rx="3" /><path d="M8 3v4M16 3v4M3.5 10h17" /></> },
+  { t: 'One calendar for the team', d: "Everyone's day in one view. Drag to move, tap to check out.", bg: '#EEEAFE', fg: '#5B3DF5', icon: <><rect x="3.5" y="5" width="17" height="15" rx="3" /><path d="M8 3v4M16 3v4M3.5 10h17" /></> },
   { t: 'Online booking', d: 'A booking page clients can use any time, with the services and team you choose.', bg: '#E4F1FF', fg: '#1D6FC4', icon: <><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18" /></> },
-  { t: 'Reminders and waitlist', d: 'Automatic email reminders cut no-shows. Cancelled times are offered to your waitlist.', bg: '#FFF4E5', fg: '#8A4B00', icon: <path d="M6 16v-5a6 6 0 0112 0v5l1.5 2h-15zM10 21h4" /> },
+  { t: 'Reminders and waitlist', d: 'Automatic email reminders cut no-shows. Cancelled times are offered to your waitlist.', bg: '#FFF4E5', fg: '#7A4204', icon: <path d="M6 16v-5a6 6 0 0112 0v5l1.5 2h-15zM10 21h4" /> },
   { t: 'Gift cards, packages and memberships', d: 'Sell prepaid bundles and monthly plans, and track every balance.', bg: '#FDE8F1', fg: '#B3226B', icon: <><rect x="3.5" y="9" width="17" height="11" rx="2" /><path d="M12 9v11M3.5 13h17M12 9c-3 0-4-5-1-5 2 0 1 5 1 5zM12 9c3 0 4-5 1-5-2 0-1 5-1 5z" /></> },
   { t: 'Checkout and sales', d: 'Take payment, add tips and products, and see every sale in one place.', bg: '#DDF3EA', fg: '#14624A', icon: <><rect x="3" y="6" width="18" height="13" rx="3" /><path d="M3 10.5h18M7 15h3" /></> },
-  { t: 'Reports and payroll', d: 'See what is working, and work out team pay and commission without a spreadsheet.', bg: '#EFEBFF', fg: '#5B3DF5', icon: <path d="M4 20V10M10 20V4M16 20v-7M2 20h20" /> },
+  { t: 'Reports and payroll', d: 'See what is working, and work out team pay and commission without a spreadsheet.', bg: '#EEEAFE', fg: '#5B3DF5', icon: <path d="M4 20V10M10 20V4M16 20v-7M2 20h20" /> },
 ];
 const STEPS = [
   { t: 'Create your account', d: 'Add your salon name and opening hours.' },

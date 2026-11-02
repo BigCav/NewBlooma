@@ -28,7 +28,7 @@ const ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const genCode = () => { const g = () => Array.from({ length: 4 }, () => ALPHA[Math.floor(Math.random() * ALPHA.length)]).join(''); return 'GIFT-' + g() + '-' + g(); };
 const chip = (on: boolean, m: boolean) => `flex:0 0 auto;height:${m ? 44 : 40}px;padding:0 14px;border-radius:999px;font-size:13.5px;font-weight:500;border:1px solid ` + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
 const statusOf = (c: GiftRow) => (c.voided ? 'Voided' : c.balance === 0 ? 'Used up' : c.balance < c.original ? 'Part used' : 'Unused');
-const PILL: Record<string, [string, string]> = { Unused: ['#DDF3EA', '#14624A'], 'Part used': ['#E8ECFF', '#3B2BB8'], 'Used up': ['#EEF0F3', '#4A525E'], Voided: ['#FDECEA', '#B42318'] };
+const PILL: Record<string, [string, string]> = { Unused: ['#DDF3EA', '#14624A'], 'Part used': ['#EEEAFE', '#3A2BB5'], 'Used up': ['#EEF0F3', '#4A525E'], Voided: ['#FDECEA', '#B42318'] };
 const pill = (s: string) => 'display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;background:' + PILL[s][0] + ';color:' + PILL[s][1];
 const MONO = "font-family:'Geist Mono',ui-monospace,monospace";
 const FILTERS: [string, string][] = [['all', 'All'], ['active', 'Active'], ['used', 'Used up or voided']];

@@ -1,3 +1,4 @@
+import { TONE } from '@/lib/tones';
 export type ItemType = 'request' | 'reschedule' | 'rescheduled' | 'message' | 'cancellation' | 'booking';
 export type ItemStatus = 'new' | 'accepted' | 'declined' | 'done';
 /** The booking a message or request is about: what the quick view shows. */
@@ -17,17 +18,17 @@ export type InboxItem = {
   bookingId: string | null;
 };
 export const TYPES: Record<ItemType, { label: string; bg: string; fg: string }> = {
-  request: { label: 'Booking request', bg: '#E9F0FF', fg: '#1B4A8A' },
-  reschedule: { label: 'Reschedule request', bg: '#ECE8FF', fg: '#3B2BB5' },
-  rescheduled: { label: 'Rescheduled', bg: '#ECE8FF', fg: '#3B2BB5' },
-  message: { label: 'Message', bg: '#DDF3EA', fg: '#14624A' },
-  cancellation: { label: 'Cancellation', bg: '#FFEBD0', fg: '#7A4204' },
-  booking: { label: 'New booking', bg: '#EEF0F3', fg: '#4A525E' },
+  request: { label: 'Booking request', ...TONE.blue },
+  reschedule: { label: 'Reschedule request', ...TONE.purple },
+  rescheduled: { label: 'Rescheduled', ...TONE.purple },
+  message: { label: 'Message', ...TONE.green },
+  cancellation: { label: 'Cancellation', ...TONE.amber },
+  booking: { label: 'New booking', ...TONE.grey },
 };
 export const STATUS: Record<Exclude<ItemStatus, 'new'>, { t: string; bg: string; fg: string }> = {
-  accepted: { t: 'Accepted', bg: '#DDF3EA', fg: '#14624A' },
-  declined: { t: 'Declined', bg: '#FCE3E3', fg: '#9B1C1C' },
-  done: { t: 'Done', bg: '#EEF0F3', fg: '#4A525E' },
+  accepted: { t: 'Accepted', ...TONE.green },
+  declined: { t: 'Declined', ...TONE.red },
+  done: { t: 'Done', ...TONE.grey },
 };
 export const REASONS = ['Not available then', 'Fully booked', 'Something else'];
 export const FILTERS = [{ id: 'all', label: 'All' }, { id: 'action', label: 'Needs action' }, { id: 'message', label: 'Messages' }, { id: 'cancellation', label: 'Cancellations' }];

@@ -196,7 +196,7 @@ function Desktop({ m }: { m: M }) {
         </div>
         {showAside && (
           <aside className="bk-flow" style={S('flex:1 1 320px;max-width:380px;min-width:0;position:sticky;top:24px;display:flex;flex-direction:column;gap:16px')}>
-            {view && !!m.p.forms && <div style={S(ASIDE_CARD + ';background:#EFEBFF;border-color:#D9D1FF')}>
+            {view && !!m.p.forms && <div style={S(ASIDE_CARD + ';background:#EEEAFE;border-color:#D9D1FF')}>
               <h2 style={S('margin:0;font-size:18px;font-weight:600;letter-spacing:-0.02em;color:#2B1F8A')}>Before your visit</h2>
               <p style={S('margin:0;color:#2B1F8A;font-size:14px;overflow-wrap:anywhere')}>Please complete {m.p.forms.names.join(' and ')}. It takes about two minutes.</p>
               <a href={m.p.forms.url} style={S('display:flex;align-items:center;justify-content:center;height:48px;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;text-decoration:none')}>Complete your form</a>

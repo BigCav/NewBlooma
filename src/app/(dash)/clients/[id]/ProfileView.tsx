@@ -27,7 +27,7 @@ export type ProfileData = {
   appts: { id: string; href: string; month: string; label: string; time: string; status: string; staff: string; services: string; cents: number; pay: string; upcoming: boolean }[];
 };
 // The same colours as the tags in the Clients list: Regular purple, New green, Lapsed amber.
-const TONE: Record<string, [string, string]> = { Regular: ['#ECE8FF', '#3B2BB5'], New: ['#DDF3EA', '#14624A'], Lapsed: ['#FFEBD0', '#7A4204'] };
+const TONE: Record<string, [string, string]> = { Regular: ['#EEEAFE', '#3A2BB5'], New: ['#DDF3EA', '#14624A'], Lapsed: ['#FFEBD0', '#7A4204'] };
 
 function useProfile(d: ProfileData) {
   const router = useRouter();
@@ -337,7 +337,7 @@ const SUB_TITLE: Record<Sub, string> = { home: '', overview: 'Overview', appoint
 const VISIT: Record<string, { label: string; card: string; fg: string; chipBg: string; chipFg: string; strike?: boolean }> = {
   pending: { label: 'Needs approval', card: 'background:#FFF4E5;border:1px solid #F6D9A8', fg: '#7A4204', chipBg: '#FFEBD0', chipFg: '#7A4204' },
   confirmed: { label: 'Confirmed', card: 'background:#ECE8FE;border:1px solid #ECE8FE', fg: '#3A2BB5', chipBg: '#FFFFFF', chipFg: '#3A2BB5' },
-  checked_in: { label: 'Checked in', card: 'background:#E3F0FF;border:1px solid #E3F0FF', fg: '#1B4A8A', chipBg: '#FFFFFF', chipFg: '#1B4A8A' },
+  checked_in: { label: 'Checked in', card: 'background:#E9F0FF;border:1px solid #E9F0FF', fg: '#1B4A8A', chipBg: '#FFFFFF', chipFg: '#1B4A8A' },
   in_progress: { label: 'In progress', card: 'background:#5B3DF5;border:1px solid #5B3DF5', fg: '#FFFFFF', chipBg: '#FFFFFF', chipFg: '#5B3DF5' },
   completed: { label: 'Completed', card: 'background:#FFFFFF;border:1px solid #E6E8EC', fg: '#0E1116', chipBg: '#DDF3EA', chipFg: '#14624A' },
   cancelled: { label: 'Cancelled', card: 'background:#FDF0EF;border:1px solid #FDF0EF', fg: '#9A7773', chipBg: '#FFFFFF', chipFg: '#B42318', strike: true },

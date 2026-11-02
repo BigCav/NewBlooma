@@ -258,13 +258,13 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
                   </button>}
                 tags={(sel.b.paid || sel.b.refunded) && <div style={S('display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:-6px')}>
                   {sel.b.paid && <span style={S('padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{sel.b.paidText}</span>}
-                  {sel.b.refunded && <span style={S('padding:4px 12px;border-radius:999px;background:#F1F2F4;color:#4A525E;font-size:12.5px;font-weight:500')}>Refunded</span>}
+                  {sel.b.refunded && <span style={S('padding:4px 12px;border-radius:999px;background:#EEF0F3;color:#4A525E;font-size:12.5px;font-weight:500')}>Refunded</span>}
                 </div>}
                 avatar={initials(sel.b.client)} avatarStyle={sel.avatarStyle} name={sel.b.client} sub={'Booking B-' + sel.b.ref}
                 clientAction={<button onClick={c.startMessage} aria-label={'Message ' + first(sel.b.client)} style={S('flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer')}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3.5" y="5.5" width="17" height="13" rx="3" /><path d="m4.5 7.5 7.5 5.5 7.5-5.5" /></svg>
                 </button>}
-                banner={sel.b.forms && <a href={'/clients/forms?c=' + sel.b.clientId} style={S('display:block;border-radius:16px;text-decoration:none;padding:12px 14px;font-size:13.5px;font-weight:500;background:' + (sel.b.forms.level === 'alert' ? '#FDECEA;color:#B42318' : '#FFF4E5;color:#8A4B00'))}>{sel.b.forms.text}<span style={S('display:block;margin-top:2px;font-size:12.5px;font-weight:600;text-decoration:underline')}>Open forms</span></a>}
+                banner={sel.b.forms && <a href={'/clients/forms?c=' + sel.b.clientId} style={S('display:block;border-radius:16px;text-decoration:none;padding:12px 14px;font-size:13.5px;font-weight:500;background:' + (sel.b.forms.level === 'alert' ? '#FDECEA;color:#B42318' : '#FFF4E5;color:#7A4204'))}>{sel.b.forms.text}<span style={S('display:block;margin-top:2px;font-size:12.5px;font-weight:600;text-decoration:underline')}>Open forms</span></a>}
                 details={[
                   { label: 'Time', value: sel.time, icon: ICON_TIME },
                   { label: 'With', value: staffName(sel.b.staffId), icon: ICON_PERSON, photo: c.team.find((t) => t.id === sel.b.staffId)?.photo ?? null },
@@ -323,7 +323,7 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
                 )}
                 {!pl.problem && (pl.dur > cur.end - cur.start || pl.start !== cur.start) && <div style={S(note('#DDF3EA', '#14624A'))}>{pl.f + ' is free for the full ' + pl.dur + ' min' + (pl.start !== cur.start ? ' from ' + fmtMin(pl.start) : '') + '.'}</div>}
                 {pl.extras.map((x) => x.at !== undefined
-                  ? <div key={x.svc.id} style={S(note('#ECE8FF', '#3B2BB5'))}>{x.svc.name + ' is a ' + x.svc.cat.toLowerCase() + ' service. It will be booked as a separate appointment with ' + x.f + ' at ' + fmtMin(x.at) + ', ' + x.svc.dur + ' min.'}</div>
+                  ? <div key={x.svc.id} style={S(note('#EEEAFE', '#3A2BB5'))}>{x.svc.name + ' is a ' + x.svc.cat.toLowerCase() + ' service. It will be booked as a separate appointment with ' + x.f + ' at ' + fmtMin(x.at) + ', ' + x.svc.dur + ' min.'}</div>
                   : <div key={x.svc.id} style={S(note('#FDECEA', '#B42318'))}>{x.sid ? x.f + ' has no free time for ' + x.svc.name + ' on this day.' : 'No one offers ' + x.svc.name + ' yet, so it cannot be added.'}</div>)}
                 {errP()}
                 <div style={S('display:flex;gap:10px')}>

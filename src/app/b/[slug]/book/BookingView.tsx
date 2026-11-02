@@ -410,7 +410,7 @@ function DoneNote({ m }: { m: M }) {
   return (<>
     {n && <div role="status" style={S('box-sizing:border-box;padding:18px 20px;border-radius:24px;background:#0E1116;color:#FFFFFF;font-size:15px;font-weight:500;line-height:1.4')}>{n}</div>}
     {f && (
-      <div role="status" style={S('box-sizing:border-box;padding:20px;border-radius:24px;background:#EFEBFF;color:#2B1F8A;display:flex;flex-direction:column;gap:10px')}>
+      <div role="status" style={S('box-sizing:border-box;padding:20px;border-radius:24px;background:#EEEAFE;color:#2B1F8A;display:flex;flex-direction:column;gap:10px')}>
         <div style={S('font-size:16px;font-weight:600')}>{f.ask ? 'One more thing before your visit' : 'Forms for your visit'}</div>
         <p style={S('margin:0;font-size:14.5px;line-height:1.45;overflow-wrap:anywhere')}>{f.ask ? `Please complete ${f.names.join(' and ')} now. It takes about two minutes.` : `Please complete ${f.names.join(' and ')} before your visit.${m.p.emailOn ? ' We have also emailed you the link.' : ''}`}</p>
         <a href={f.url} style={S('align-self:flex-start;display:inline-flex;align-items:center;height:48px;padding:0 24px;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;text-decoration:none')}>Complete your form</a>

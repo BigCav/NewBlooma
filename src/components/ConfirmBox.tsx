@@ -11,7 +11,7 @@ export function ConfirmBox({ label, title, body, error, action, keep = 'Keep', o
   action: string; keep?: string; onAction: () => void; onKeep: () => void; busy?: boolean;
 }) {
   return (
-    <div role="alertdialog" aria-label={label} style={S('display:flex;flex-direction:column;gap:12px;box-sizing:border-box;padding:16px;border:1px solid #F3C6C3;border-radius:20px;background:#FEF3F2')}>
+    <div role="alertdialog" aria-label={label} style={S('display:flex;flex-direction:column;gap:12px;box-sizing:border-box;padding:16px;border:1px solid #F3C6C3;border-radius:20px;background:#FDECEA')}>
       <div>
         <div style={S('font-size:14.5px;font-weight:600;overflow-wrap:anywhere')}>{title}</div>
         {!!body && <div style={S('margin-top:2px;font-size:13px;color:#5E6673')}>{body}</div>}

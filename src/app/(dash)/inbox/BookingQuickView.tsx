@@ -1,5 +1,6 @@
 'use client';
 // The booking a message is about: a card under the header to tap, and its details in the same sheet the calendar and Sales use.
+import { TONE } from '@/lib/tones';
 import Link from 'next/link';
 import { BottomSheet } from '@/components/BottomSheet';
 import { STATUS_LABEL } from '@/lib/format';
@@ -8,7 +9,7 @@ import { S } from '../calendar/pickers';
 import { ICON_PERSON, ICON_TIME, VisitSheet } from '../calendar/VisitSheet';
 import { initialsOf, type InboxBooking } from './shared';
 
-const statusTone = (st: string) => (st === 'cancelled' || st === 'no_show' ? { bg: '#FCE3E3', fg: '#9B1C1C' } : chipTone[kindOf(st as Parameters<typeof kindOf>[0])]);
+const statusTone = (st: string) => (st === 'cancelled' || st === 'no_show' ? TONE.red : chipTone[kindOf(st as Parameters<typeof kindOf>[0])]);
 const chipCss = (st: string, big = false) => 'flex:0 0 auto;display:inline-block;border-radius:999px;font-weight:500;white-space:nowrap;background:' + statusTone(st).bg + ';color:' + statusTone(st).fg + (big ? ';font-size:14px;padding:8px 16px' : ';font-size:12.5px;padding:4px 12px');
 const BTN = ';display:flex;align-items:center;justify-content:center;text-decoration:none;height:52px';
 
@@ -38,7 +39,7 @@ export function BookingQuickView({ b, client, onClose }: { b: InboxBooking; clie
         status={<span style={S(chipCss(b.status, true))}>{STATUS_LABEL[b.status] ?? b.status}</span>}
         tags={(b.paid || b.refunded) && <div style={S('display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:-6px')}>
           {b.paid && <span style={S('padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{b.paidText}</span>}
-          {b.refunded && <span style={S('padding:4px 12px;border-radius:999px;background:#F1F2F4;color:#4A525E;font-size:12.5px;font-weight:500')}>Refunded</span>}
+          {b.refunded && <span style={S('padding:4px 12px;border-radius:999px;background:#EEF0F3;color:#4A525E;font-size:12.5px;font-weight:500')}>Refunded</span>}
         </div>}
         avatar={initialsOf(client)} name={client} sub={b.ref ? 'Booking ' + b.ref : 'Booking'}
         details={[{ label: 'Time', value: b.time, icon: ICON_TIME }, { label: 'With', value: b.staff, icon: ICON_PERSON, photo: b.photo }]}

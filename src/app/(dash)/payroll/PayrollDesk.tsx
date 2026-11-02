@@ -5,7 +5,7 @@ import { photoCss } from '../team/shared';
 import { dollars0, type PayRow } from './shared';
 import type { PayrollCtl } from './PayrollView';
 
-const CELL = { done: 'background:#EEF0F3;color:#0E1116;font-weight:500', today: 'background:#ECE8FF;color:#3B2BB5;font-weight:600', plan: 'background:#F4F5F7;color:#8A93A0' };
+const CELL = { done: 'background:#EEF0F3;color:#0E1116;font-weight:500', today: 'background:#EEEAFE;color:#3A2BB5;font-weight:600', plan: 'background:#F4F5F7;color:#8A93A0' };
 const initials = (n: string) => n.split(' ').filter((w) => /[A-Za-z0-9]/.test(w[0] ?? '')).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || 'C';
 const AV = 'flex:0 0 40px;width:40px;height:40px;border-radius:999px;background:#EEEAFE;color:#3A2BB5;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600';
 const ARROW = (d: string) => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>;
@@ -15,7 +15,7 @@ const chip = (on: boolean) => 'height:40px;padding:0 16px;border-radius:999px;fo
 const big = (l: string, v: string) => <div key={l}><div style={S('color:#5E6673;font-size:13.5px')}>{l}</div><div style={S('margin-top:4px;font-size:38px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{v}</div></div>;
 
 function payTone(c: PayrollCtl, p: PayRow) {
-  return !c.over ? { t: 'Pending', bg: '#FFEBD0', fg: '#7A4204' } : p.paid ? { t: 'Paid', bg: '#DDF3EA', fg: '#14624A' } : { t: 'Ready to pay', bg: '#ECE8FF', fg: '#3B2BB5' };
+  return !c.over ? { t: 'Pending', bg: '#FFEBD0', fg: '#7A4204' } : p.paid ? { t: 'Paid', bg: '#DDF3EA', fg: '#14624A' } : { t: 'Ready to pay', bg: '#EEEAFE', fg: '#3A2BB5' };
 }
 
 /** Desktop payroll: totals, then one table of the team for the chosen week. A row opens in the drawer. */

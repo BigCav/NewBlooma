@@ -164,7 +164,7 @@ function Desktop({ c }: { c: C }) {
                   <span style={S('flex:3 1 0;min-width:0;display:flex;align-items:center;gap:12px')}>
                     <span style={S(tile(s.catIdx, s.cat))}>{ini(s.name)}</span>
                     <span style={S('min-width:0')}>
-                      <span style={S('display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{s.name}{s.addon && <span style={S('margin-left:8px;padding:2px 8px;border-radius:999px;background:#F2EFFE;color:#4B34C9;font-size:11.5px;font-weight:500')}>Add-on</span>}</span>
+                      <span style={S('display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{s.name}{s.addon && <span style={S('margin-left:8px;padding:2px 8px;border-radius:999px;background:#EEEAFE;color:#3A2BB5;font-size:11.5px;font-weight:500')}>Add-on</span>}</span>
                       <span style={S('display:block;font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{s.desc}</span>
                     </span>
                   </span>
@@ -216,7 +216,7 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
             <li key={s.id}>
               <button onClick={() => c.select(s.id)} aria-label={rowLabel(s)} style={S('display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:68px;padding:10px 16px;border:0;border-bottom:1px solid #EEF0F3;background:transparent;text-align:left;font:inherit;color:#0E1116;cursor:pointer')}>
                 <span style={S(tile(s.catIdx, s.cat))}>{ini(s.name)}</span>
-                <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{s.name}{s.addon && <span style={S('margin-left:8px;padding:2px 8px;border-radius:999px;background:#F2EFFE;color:#4B34C9;font-size:11.5px;font-weight:500')}>Add-on</span>}</span><span style={S('display:block;font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{s.dur + ' min, ' + s.cat}</span></span>
+                <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{s.name}{s.addon && <span style={S('margin-left:8px;padding:2px 8px;border-radius:999px;background:#EEEAFE;color:#3A2BB5;font-size:11.5px;font-weight:500')}>Add-on</span>}</span><span style={S('display:block;font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{s.dur + ' min, ' + s.cat}</span></span>
                 <span style={S('flex:0 0 auto;text-align:right')}><span style={S('display:block;font-size:14.5px;font-weight:600')}>{money(s.priceCents)}</span><span style={S('display:block;margin-top:2px')}><span style={S(onlineCss(s.online))}>{s.online ? 'Online' : 'Hidden'}</span></span></span>
               </button>
             </li>

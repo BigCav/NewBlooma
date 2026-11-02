@@ -17,7 +17,7 @@ const draftOf = (t: Tpl): Draft => ({ id: t.id, isNew: false, name: t.name, catI
   qs: t.questions.map((q) => ({ id: q.id, label: q.label, type: q.type, required: q.required, options: q.options.join(', '), detail: q.detailPrompt ?? '' })) });
 let UID = 0;
 const chip = (on: boolean) => 'flex:0 0 auto;height:44px;padding:0 18px;border-radius:999px;font:inherit;font-size:14px;font-weight:500;cursor:pointer;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
-const tick = (on: boolean) => 'flex:0 0 auto;display:flex;align-items:center;gap:8px;height:44px;padding:0 18px 0 12px;border-radius:999px;font:inherit;font-size:14px;font-weight:500;cursor:pointer;border:1px solid ' + (on ? '#5B3DF5' : '#E1E4E9') + ';background:' + (on ? '#EFEBFF' : '#FFFFFF') + ';color:' + (on ? '#3B2BB5' : '#0E1116');
+const tick = (on: boolean) => 'flex:0 0 auto;display:flex;align-items:center;gap:8px;height:44px;padding:0 18px 0 12px;border-radius:999px;font:inherit;font-size:14px;font-weight:500;cursor:pointer;border:1px solid ' + (on ? '#5B3DF5' : '#E1E4E9') + ';background:' + (on ? '#EEEAFE' : '#FFFFFF') + ';color:' + (on ? '#3A2BB5' : '#0E1116');
 const INPUT = 'box-sizing:border-box;width:100%;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF';
 const noMin = { minHeight: 0 } as const;
 const ICON = 'flex:0 0 auto;width:36px;height:36px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;';

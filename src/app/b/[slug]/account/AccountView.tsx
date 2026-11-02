@@ -44,7 +44,7 @@ function SignIn({ slug, salon }: { slug: string; salon: string }) {
             <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 12 }}>
               {['See your upcoming visits', 'Change or cancel in a tap', 'Rebook your favourites faster', 'Your details saved for next time'].map((t) => (
                 <li key={t} style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 15, color: '#D5D9E0' }}>
-                  <span aria-hidden style={{ flex: '0 0 auto', width: 22, height: 22, borderRadius: 999, background: '#ECE8FF', color: '#3B2BB5', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>✓</span>{t}
+                  <span aria-hidden style={{ flex: '0 0 auto', width: 22, height: 22, borderRadius: 999, background: '#EEEAFE', color: '#3A2BB5', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>✓</span>{t}
                 </li>
               ))}
             </ul>
@@ -142,7 +142,7 @@ function AccountInner({ slug, salon, account, upcoming, past }: Props) {
                       </span>
                       {u.manage
                         ? <Link href={u.manage} aria-label={`Change or cancel ${u.what} on ${u.when}`} style={{ ...dark, width: '100%', padding: '0 20px' }}>Change or cancel</Link>
-                        : <span style={{ alignSelf: 'flex-start', padding: '6px 14px', borderRadius: 999, background: '#ECE8FF', color: '#3B2BB5', fontSize: 13, fontWeight: 500 }}>{u.status === 'In progress' ? 'Checked in' : u.status}</span>}
+                        : <span style={{ alignSelf: 'flex-start', padding: '6px 14px', borderRadius: 999, background: '#EEEAFE', color: '#3A2BB5', fontSize: 13, fontWeight: 500 }}>{u.status === 'In progress' ? 'Checked in' : u.status}</span>}
                     </li>
                   ))}
                 </ul>

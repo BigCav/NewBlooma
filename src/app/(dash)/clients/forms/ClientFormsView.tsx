@@ -14,7 +14,7 @@ export type DoneRow = { id: string; clientId: string; client: string; form: stri
 type Props = { cards: ClientCard[]; done: DoneRow[]; initial: string; hasForms: boolean; owner: boolean; today: string };
 
 const STAT: Record<FormState, { t: string; bg: string; fg: string }> = {
-  valid: { t: 'Valid', bg: '#DDF3EA', fg: '#14624A' }, expired: { t: 'Expired', bg: '#FDECEA', fg: '#B42318' }, missing: { t: 'Not completed', bg: '#FFF4E5', fg: '#8A4B00' },
+  valid: { t: 'Valid', bg: '#DDF3EA', fg: '#14624A' }, expired: { t: 'Expired', bg: '#FDECEA', fg: '#B42318' }, missing: { t: 'Not completed', bg: '#FFF4E5', fg: '#7A4204' },
   na: { t: 'Not needed yet', bg: '#EEF0F3', fg: '#4A525E' }, reaction: { t: 'Reaction', bg: '#FDECEA', fg: '#B42318' },
 };
 

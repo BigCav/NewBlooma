@@ -19,7 +19,7 @@ import { FILTERS, channelNote, initialsOf, money, type Channels, type ClientRow 
 
 type Props = { clients: ClientRow[]; count: number; newThisMonth: number; rebookRate: string; book: BookData; channels: Channels };
 type Mode = 'view' | 'book' | 'message' | 'new';
-const TAGS: Record<string, { bg: string; fg: string }> = { Regular: { bg: '#ECE8FF', fg: '#3B2BB5' }, New: { bg: '#DDF3EA', fg: '#14624A' }, Lapsed: { bg: '#FFEBD0', fg: '#7A4204' } };
+const TAGS: Record<string, { bg: string; fg: string }> = { Regular: { bg: '#EEEAFE', fg: '#3A2BB5' }, New: { bg: '#DDF3EA', fg: '#14624A' }, Lapsed: { bg: '#FFEBD0', fg: '#7A4204' } };
 const tagStyle = (t: string) => 'flex:0 0 auto;display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;background:' + TAGS[t].bg + ';color:' + TAGS[t].fg;
 const SHOW_MAX = 300;
 

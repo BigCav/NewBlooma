@@ -78,7 +78,7 @@ export function EntryPage({ c, r }: { c: WaitlistCtl; r: WlRow }) {
           { icon: ICONS.person, text: prefs[0] ?? '' },
           { icon: ICONS.day, text: prefs.slice(1).join(', ') || 'Any day, Any time' },
         ]} />
-        {!!r.offer && r.status === 'Offered' && <div style={S('border-radius:16px;background:#ECE8FF;color:#3B2BB5;padding:12px 16px;font-size:14px;font-weight:500;overflow-wrap:anywhere')}>{r.offer}. Waiting for a reply.</div>}
+        {!!r.offer && r.status === 'Offered' && <div style={S('border-radius:16px;background:#EEEAFE;color:#3A2BB5;padding:12px 16px;font-size:14px;font-weight:500;overflow-wrap:anywhere')}>{r.offer}. Waiting for a reply.</div>}
         {r.status !== 'Booked' && (
           <section aria-label="Times that fit">
             <h3 style={S('margin:0 0 10px;font-size:17px;font-weight:600;letter-spacing:-0.01em')}>Times that fit</h3>

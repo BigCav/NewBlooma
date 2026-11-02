@@ -22,7 +22,7 @@ const CARD = 'box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;
 const INPUT = 'box-sizing:border-box;width:100%;height:52px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15.5px;color:#0E1116;background:#FFFFFF';
 const ERR = 'margin:0;color:#B42318;font-size:13.5px;font-weight:500';
 const noMin = { minHeight: 0 } as const;
-const pickCss = (on: boolean, wide = true) => (wide ? 'flex:1 1 0;' : 'width:100%;text-align:left;display:flex;align-items:center;gap:12px;') + 'box-sizing:border-box;min-height:52px;padding:8px 16px 8px 14px;border-radius:14px;font:inherit;font-size:15px;font-weight:500;cursor:pointer;border:1px solid ' + (on ? '#5B3DF5' : '#E1E4E9') + ';background:' + (on ? '#EFEBFF' : '#FFFFFF') + ';color:' + (on ? '#3B2BB5' : '#0E1116');
+const pickCss = (on: boolean, wide = true) => (wide ? 'flex:1 1 0;' : 'width:100%;text-align:left;display:flex;align-items:center;gap:12px;') + 'box-sizing:border-box;min-height:52px;padding:8px 16px 8px 14px;border-radius:14px;font:inherit;font-size:15px;font-weight:500;cursor:pointer;border:1px solid ' + (on ? '#5B3DF5' : '#E1E4E9') + ';background:' + (on ? '#EEEAFE' : '#FFFFFF') + ';color:' + (on ? '#3A2BB5' : '#0E1116');
 const ynCss = (on: boolean) => 'flex:1 1 0;height:52px;border-radius:14px;font:inherit;font-size:15px;font-weight:500;cursor:pointer;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
 
 function Tick({ on }: { on: boolean }) {
@@ -171,14 +171,14 @@ export function FormFillView(p: FillProps) {
   return (
     <div className="page" style={S("max-width:680px;margin:0 auto;box-sizing:border-box;padding:16px 20px 56px;display:flex;flex-direction:column;gap:24px;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4;color:#0E1116")}>
       {header}
-      {p.mode === 'preview' && <p role="note" style={S('margin:0;padding:12px 16px;border-radius:14px;background:#EFEBFF;color:#3B2BB5;font-size:14px;font-weight:600')}>Preview. This is what clients see. Nothing you enter here is saved.</p>}
+      {p.mode === 'preview' && <p role="note" style={S('margin:0;padding:12px 16px;border-radius:14px;background:#EEEAFE;color:#3A2BB5;font-size:14px;font-weight:600')}>Preview. This is what clients see. Nothing you enter here is saved.</p>}
       <div style={S('display:flex;flex-direction:column;gap:16px')}>
         <div style={S('display:flex;flex-direction:column;gap:8px')}>
           <h1 style={S('margin:0;font-size:36px;line-height:1.1;font-weight:600;letter-spacing:-0.03em')}>{title}</h1>
           <p style={S('margin:0;color:#4A525E;font-size:16px;line-height:1.5')}>{sub}</p>
         </div>
         <div style={S('display:flex;align-items:center;gap:12px;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:18px;padding:14px 16px')}>
-          <span aria-hidden="true" style={S('flex:0 0 40px;width:40px;height:40px;border-radius:12px;background:#EFEBFF;color:#5B3DF5;display:flex;align-items:center;justify-content:center')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="3" /><path d="M8 3v4M16 3v4M3.5 10h17" /></svg></span>
+          <span aria-hidden="true" style={S('flex:0 0 40px;width:40px;height:40px;border-radius:12px;background:#EEEAFE;color:#5B3DF5;display:flex;align-items:center;justify-content:center')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="3" /><path d="M8 3v4M16 3v4M3.5 10h17" /></svg></span>
           <span style={S('min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{p.apptLine}</span><span style={S('display:block;color:#5E6673;font-size:14px;overflow-wrap:anywhere')}>{p.svcLine}</span></span>
         </div>
       </div>

@@ -1,4 +1,5 @@
 'use client';
+import { TONE } from '@/lib/tones';
 import { RING, BACK, CLOSE, DOTS, BLACK, OUTLINE, MENU_ROW } from '@/components/ui';
 import { ChatPanel } from '@/components/ChatPanel';
 import { BottomSheet } from '@/components/BottomSheet';
@@ -38,7 +39,7 @@ export function MobileItem({ c, onClose }: { c: InboxCtl; onClose: () => void })
   const calHref = sel.bookingId && sel.calendarDay ? `/calendar?d=${sel.calendarDay}&b=${sel.bookingId}` : null;
   const rebookHref = sel.clientId ? `/calendar/new?client=${sel.clientId}` : '/calendar?new=1';
   const canDone = (isResched || isMsg) && sel.status === 'new';
-  const status = sel.cancelled ? { t: 'Booking cancelled', bg: '#FCE3E3', fg: '#9B1C1C' } : isMsg || isCancel || sel.type === 'booking' || sel.type === 'rescheduled' || sel.status === 'new' ? null : STATUS[sel.status];
+  const status = sel.cancelled ? { t: 'Booking cancelled', ...TONE.red } : isMsg || isCancel || sel.type === 'booking' || sel.type === 'rescheduled' || sel.status === 'new' ? null : STATUS[sel.status];
   const t = TYPES[sel.type];
   const hasMore = !!clientHref || !!calHref || !!sel.booking || isCancel || canDone || (!isMsg && c.mode === 'view');
 
