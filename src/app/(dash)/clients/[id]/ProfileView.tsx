@@ -224,13 +224,19 @@ function Desktop({ c, initial }: { c: C; initial?: string }) {
   const [apFilter, setApFilter] = useState<'all' | 'upcoming' | 'past'>('all');
   const [openForm, setOpenForm] = useState('');
   const [qa, setQa] = useState(false);
+  // Where the open page was reached from: Back goes there (the menu, or the profile itself).
+  const [viaMenu, setViaMenu] = useState(false);
   const tone = TONE[row.tag];
   const book = `/calendar?new=1&c=${encodeURIComponent(row.name)}`;
   const ring = RING + ';flex:0 0 52px;width:52px;height:52px';
   const ico = (path: string) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')} aria-hidden="true"><path d={path} /></svg>;
   const counts: Partial<Record<Sub, number>> = { appointments: d.appts.length, messages: thread.length, notes: c.notes.length, alerts: c.allergies.length, forms: d.forms.length };
-  const open = (v: Sub) => { c.setError(''); c.setNotice(''); setOpenForm(''); setQa(false); setPage(v); };
+  const open = (v: Sub, menu = false) => { c.setError(''); c.setNotice(''); setOpenForm(''); setQa(false); setViaMenu(menu); setPage(v); };
   const close = () => { setPage(null); setOpenForm(''); c.setError(''); c.setNotice(''); };
+  const back = () => { if (openForm) { setOpenForm(''); return; } const m = viaMenu; close(); if (m) setQa(true); };
+  // Editing opens its own drawer, so the page that asked for it steps aside first.
+  const edit = () => { close(); setQa(false); c.startEdit(); };
+  const cc = { ...c, startEdit: edit };
   const avatar = (px: number, fs: number) => <div style={S('flex:0 0 ' + px + 'px;width:' + px + 'px;height:' + px + 'px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:' + fs + 'px;font-weight:600;background:' + tone[0] + ';color:' + tone[1])}>{initialsOf(row.name, 2)}</div>;
   const drawer = "position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;display:flex;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4";
   return (
@@ -261,14 +267,14 @@ function Desktop({ c, initial }: { c: C; initial?: string }) {
           <QuickActions title="More" onClose={() => setQa(false)}>
             <QaGroup first>
               {TABS.map(([id, label]) => (
-                <button key={id} onClick={() => open(id)} style={S(QA_ITEM + ';gap:12px')}>
+                <button key={id} onClick={() => open(id, true)} style={S(QA_ITEM + ';gap:12px')}>
                   <span style={S('flex:1 1 auto;min-width:0')}>{label}</span>
                   {!!counts[id] && <span style={S('flex:0 0 auto;min-width:24px;height:24px;padding:0 8px;box-sizing:border-box;border-radius:999px;background:#EEF0F3;color:#4A525E;font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center')}>{counts[id]}</span>}
                 </button>
               ))}
             </QaGroup>
             <QaGroup>
-              <button onClick={() => { setQa(false); c.startEdit(); }} style={S(QA_ITEM)}>Edit details</button>
+              <button onClick={edit} style={S(QA_ITEM)}>Edit details</button>
               <Link href={'/clients/forms?c=' + row.id} style={S(QA_ITEM)}>Client forms</Link>
             </QaGroup>
           </QuickActions>
@@ -278,17 +284,17 @@ function Desktop({ c, initial }: { c: C; initial?: string }) {
         <div className="m-cal cal-root m-drawer">
           <div role="dialog" aria-label={SUB_TITLE[page]} style={S(drawer)}>
             {page === 'messages'
-              ? <ChatPanel fill clientId={row.id} first={c.first} initial={thread} send={(t) => sendClientMessage(row.id, t)} onSent={(m) => setThread((x) => [...x, m])} onBack={close} />
+              ? <ChatPanel fill clientId={row.id} first={c.first} initial={thread} send={(t) => sendClientMessage(row.id, t)} onSent={(m) => setThread((x) => [...x, m])} onBack={back} />
               : (<>
                 <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px;border-bottom:1px solid #E6E8EC;margin-bottom:8px')}>
-                  <button onClick={() => { if (openForm) { setOpenForm(''); return; } close(); }} aria-label="Back to profile" style={S(RING)}>{BACK}</button>
+                  <button onClick={back} aria-label="Back" style={S(RING)}>{BACK}</button>
                   {avatar(36, 13)}
                   <div style={S('flex:1 1 auto;min-width:0;font-size:18px;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{row.name}</div>
                   <button onClick={close} aria-label="Close" style={S(RING)}>{CLOSE}</button>
                 </header>
                 <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 24px;display:flex;flex-direction:column;gap:16px')}>
                   {!!c.error && c.mode === 'view' && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
-                  <ProfilePages c={c} view={page} setView={(v) => { setOpenForm(''); setPage(v === 'home' ? null : v); }} thread={thread} apFilter={apFilter} setApFilter={setApFilter} openForm={openForm} setOpenForm={setOpenForm} title />
+                  <ProfilePages c={cc} view={page} setView={(v) => { setOpenForm(''); setPage(v === 'home' ? null : v); }} thread={thread} apFilter={apFilter} setApFilter={setApFilter} openForm={openForm} setOpenForm={setOpenForm} title />
                 </main>
               </>)}
           </div>
