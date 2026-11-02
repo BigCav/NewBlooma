@@ -69,10 +69,10 @@ function useSales(props: Props) {
   for (const l of sel?.lines ?? []) if (l.productId) onSale[l.productId] = (onSale[l.productId] ?? 0) + l.qty;
   const prodQty = prodEdit && prodEdit.id === sel?.id ? prodEdit.qty : onSale;
   const onQty = (id: string, n: number) => setProdEdit({ id: sel?.id ?? '', qty: { ...prodQty, [id]: Math.max(0, n) } });
-  // Services and packages at checkout, as on the calendar. They work on a sale made from a booking.
+  // Services and packages at checkout, as on the calendar.
   const [ext, setExt] = useState<{ id: string; svc: string[] | null; pkgs: string[] } | null>(null);
   const rules = serviceRules(props.catalog, props.offers);
-  const canExtra = !!sel && sel.status === 'Pending' && !!sel.bookingDay;
+  const canExtra = !!sel && sel.status === 'Pending';
   const mine = ext && ext.id === sel?.id ? ext : null;
   const svcIds = mine?.svc ?? (sel?.lines ?? []).filter((l) => l.serviceId).map((l) => l.serviceId as string);
   const pkgIds = mine?.pkgs ?? [];

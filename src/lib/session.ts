@@ -42,7 +42,7 @@ export function friendly(msg?: string | null) {
   const map: Record<string, string> = {
     slot_unavailable: 'That time is no longer available.', forbidden: 'You do not have access to that.', owner_only: 'Only the owner can do that.',
     already_has_salon: 'This account already has a salon.', invalid_timezone: 'Pick a valid timezone.', sale_already_exists: 'This appointment already has a sale.',
-    empty_sale: 'Add at least one service or product.', gift_card_insufficient: 'Gift card balance is too low.', gift_card_not_found: 'Gift card not found.',
+    empty_sale: 'Add at least one service or product.', no_client: 'A package can only be used on a sale with a client.', gift_card_insufficient: 'Gift card balance is too low.', gift_card_not_found: 'Gift card not found.',
     method_disabled: 'That payment method is switched off in Settings.', staff_cannot_perform: 'That team member does not offer these services.',
     price_not_editable: 'This sale has more than one service, so its price can only be changed on the appointment.', client_required: 'Add the client\'s name.',
     booking_not_found: 'That booking no longer exists.', booking_not_editable: 'This booking can no longer be changed.', booking_needs_service: 'Keep at least one service on the booking.',
