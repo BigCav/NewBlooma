@@ -5,7 +5,8 @@ import { decrypt } from '@/lib/crypto';
 
 const prod = () => process.env.WINDCAVE_ENV === 'prod';
 const REST = () => (prod() ? 'https://sec.windcave.com' : 'https://uat.windcave.com');
-const HIT = () => (prod() ? 'https://sec.windcave.com/hit/pos.aspx' : 'https://uat.windcave.com/hit/pos.aspx');
+// A physical terminal only exists on Windcave's live service; the test (UAT) service has no real machines to reach.
+const HIT = () => 'https://sec.windcave.com/hit/pos.aspx';
 
 type Creds = { restUser?: string; restKey?: string; hitUser?: string; hitKey?: string; station?: string; onlineEnabled: boolean; terminalEnabled: boolean };
 
@@ -125,9 +126,23 @@ const pick = (x: string, k: string) => x.match(new RegExp(`<${k}>([^<]*)</${k}>`
 
 async function hit(c: Creds, body: Record<string, string | number>) {
   const res = await fetch(HIT(), { method: 'POST', headers: { 'Content-Type': 'application/xml' },
-    body: xml({ action: 'doScrHIT', user: c.hitUser!, key: c.hitKey! }, { ...body, DeviceId: process.env.WINDCAVE_DEVICE_ID ?? '', PosName: process.env.WINDCAVE_POS_NAME ?? 'Aster', VendorId: process.env.WINDCAVE_VENDOR_ID ?? '' }) });
+    body: xml({ action: 'doScrHIT', user: c.hitUser!, key: c.hitKey! }, { ...body, ...(process.env.WINDCAVE_DEVICE_ID ? { DeviceId: process.env.WINDCAVE_DEVICE_ID } : {}), PosName: process.env.WINDCAVE_POS_NAME ?? 'Aster', ...(process.env.WINDCAVE_VENDOR_ID ? { VendorId: process.env.WINDCAVE_VENDOR_ID } : {}) }) });
   if (!res.ok) throw new Error('hit_http');
   return res.text();
+}
+
+/** Asks the terminal service about a made-up transaction: proves the username, key and station are accepted without charging anything. */
+export async function testTerminal(salonId: string): Promise<{ ok?: true; error?: string }> {
+  const c = await getCreds(salonId);
+  if (!c.hitUser || !c.hitKey) return { error: 'Add the terminal username and key first.' };
+  if (!c.station) return { error: 'Add the terminal station ID first.' };
+  let out: string;
+  try { out = await hit(c, { Station: c.station, TxnType: 'Status', TxnRef: ref('TEST') }); } catch { return { error: 'Could not reach Windcave.' }; }
+  const bad = pick(out, 'ReCo') ?? pick(out, 'RC');
+  const msg = pick(out, 'ResponseText') ?? pick(out, 'RT') ?? pick(out, 'DL1') ?? pick(out, 'Error');
+  if (/invalid|denied|unauthor|not\s*found|unknown/i.test(out) && !/Complete/.test(out)) return { error: 'Windcave answered: ' + (msg ?? out.slice(0, 160)) };
+  void bad;
+  return { ok: true };
 }
 
 export async function startTerminal(saleId: string): Promise<{ txn?: string; error?: string }> {

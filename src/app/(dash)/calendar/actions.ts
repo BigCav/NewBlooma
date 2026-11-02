@@ -285,8 +285,8 @@ export async function checkoutBooking(bookingId: string, method: 'card' | 'cash'
 /** Open the on-screen Windcave page for a pending sale. With only a card terminal switched on there is no page, so the caller sends the sale to the Sales page. */
 export async function startCardForSale(saleId: string): Promise<R & { url?: string }> {
   const { sb, salon } = await requireCtx();
-  const { data: pay } = await sb.from('salon_payment_settings').select('online_cards_enabled').eq('salon_id', salon.id).maybeSingle();
-  if (!pay?.online_cards_enabled) return { ok: true };
+  const { data: pay } = await sb.from('salon_payment_settings').select('online_cards_enabled,terminal_enabled').eq('salon_id', salon.id).maybeSingle();
+  if (pay?.terminal_enabled || !pay?.online_cards_enabled) return { ok: true };
   const h = await headers();
   const o = await startOnline(saleId, process.env.NEXT_PUBLIC_APP_URL || `https://${h.get('x-forwarded-host') ?? h.get('host')}`);
   return o.error ? { error: o.error } : { ok: true, url: o.url };

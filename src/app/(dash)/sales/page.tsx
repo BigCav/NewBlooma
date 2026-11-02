@@ -51,8 +51,8 @@ export default async function Sales({ searchParams }: { searchParams: Promise<{ 
 
   const card = st.accept_card;
   const methods: PayMethod[] = [];
-  if (card && pay?.terminal_enabled && pay?.online_cards_enabled) methods.push({ id: 'terminal', label: 'Card terminal' }, { id: 'online', label: 'Card on screen' });
-  else if (card && pay?.terminal_enabled) methods.push({ id: 'terminal', label: 'Card' });
+  // With a card terminal switched on, every card payment goes to it.
+  if (card && pay?.terminal_enabled) methods.push({ id: 'terminal', label: 'Card' });
   else if (card && pay?.online_cards_enabled) methods.push({ id: 'online', label: 'Card' });
   if (st.accept_cash) methods.push({ id: 'cash', label: 'Cash' });
   if (st.accept_gift_cards) methods.push({ id: 'gift_card', label: 'Gift card' });

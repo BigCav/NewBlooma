@@ -46,6 +46,8 @@ export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCha
   const { step, go, jump, forward, back } = useSteps(summaryAt, () => setError(''));
   const [editing, setEditing] = useState(false);
   const [shopping, setShopping] = useState(false);
+  /** What was in the basket when the product screen opened, so Back can put it back. */
+  const [before, setBefore] = useState<Record<string, number>>({});
   const [find, setFind] = useState('');
   const [got, setGot] = useState('');
   const [cashHow, setCashHow] = useState<'partial' | 'exact' | null>(null);
@@ -77,9 +79,13 @@ export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCha
     const shown = retail.products.filter((p) => !q || (p.name + ' ' + p.brand).toLowerCase().includes(q));
     const count = prodLines.reduce((a, l) => a + l.n, 0);
     const close = () => { setError(''); setShopping(false); setFind(''); };
+    const discard = () => {
+      for (const p of retail.products) { const was = before[p.id] ?? 0; if ((retail.qty[p.id] ?? 0) !== was) retail.onQty(p.id, was); }
+      close();
+    };
     const stepBtn = (dis: boolean) => 'flex:0 0 auto;width:40px;height:40px;padding:0;border-radius:999px;border:1px solid #E1E4E9;background:#FFFFFF;font:inherit;font-size:20px;line-height:1;color:#0E1116;cursor:pointer;opacity:' + (dis ? 0.35 : 1);
     return (
-      <StepShell plain step={0} titles={['Add products']} onBack={close} onClose={onClose} error={error}
+      <StepShell plain step={0} titles={['Add products']} onBack={discard} onClose={onClose} error={error}
         summary={<div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px')}><span style={S('color:#5E6673;font-size:14px')}>{count + (count === 1 ? ' product' : ' products')}</span><span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{m2(prodTotal)}</span></div>}
         actions={[{ label: 'Done', onClick: close }]}>
         <p style={S('margin:0;color:#5E6673;font-size:14px')}>Products are charged with the visit and come off your stock when it is paid.</p>
@@ -161,7 +167,7 @@ export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCha
         )}
         {retail && (
           <div style={S('display:flex;flex-direction:column;gap:10px')}>
-            <div style={S('display:flex;align-items:center;justify-content:space-between')}><h3 style={S('margin:0;font-size:17px;font-weight:600;letter-spacing:-0.01em')}>Products</h3><button onClick={() => { setError(''); setShopping(true); }} style={S('border:0;background:transparent;font:inherit;font-size:14px;font-weight:500;text-decoration:underline;cursor:pointer;color:#0E1116')}>{prodLines.length ? 'Edit' : 'Add'}</button></div>
+            <div style={S('display:flex;align-items:center;justify-content:space-between')}><h3 style={S('margin:0;font-size:17px;font-weight:600;letter-spacing:-0.01em')}>Products</h3><button onClick={() => { setError(''); setBefore(retail ? { ...retail.qty } : {}); setShopping(true); }} style={S('border:0;background:transparent;font:inherit;font-size:14px;font-weight:500;text-decoration:underline;cursor:pointer;color:#0E1116')}>{prodLines.length ? 'Edit' : 'Add'}</button></div>
             {!prodLines.length && <span style={S('font-size:13.5px;color:#5E6673')}>Sell retail items with this visit.</span>}
             {prodLines.map((l) => (
               <div key={l.p.id} style={S('display:flex;align-items:center;gap:12px')}>

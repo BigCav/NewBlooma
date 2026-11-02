@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/Chrome';
 import { S } from '../../calendar/pickers';
 import { BACK as BACK_ICON, BAR, CARD, Field as CardField, FIELD_IN, PAGE, RING } from '../forms/FormPage';
-import { savePayments } from './actions';
+import { checkTerminal, savePayments } from './actions';
 
 type Props = { taxInclusive: boolean; online: boolean; terminal: boolean; station: string; saved: { online_user: boolean; online_key: boolean; hit_user: boolean; hit_key: boolean } };
 
@@ -41,7 +41,12 @@ function useForm(p: Props) {
     setV((o) => ({ ...o, online_user: '', online_key: '', hit_user: '', hit_key: '' }));
     setError(''); setNotice('Payment settings saved'); router.refresh();
   });
-  return { narrow, v, set, save, busy, error, notice, saved: p.saved };
+  const test = () => startT(async () => {
+    const r = await checkTerminal();
+    if (r.error) { setError(r.error); setNotice(''); return; }
+    setError(''); setNotice(r.ok ?? '');
+  });
+  return { narrow, v, set, save, test, busy, error, notice, saved: p.saved };
 }
 type C = ReturnType<typeof useForm>;
 
@@ -111,6 +116,8 @@ function Mobile({ c, inline }: { c: C; inline?: boolean }) {
         <Key id="wc-st" label="Terminal station ID" value={v.station} set={(x) => set('station', x)} />
         <Key id="wc-hu" label="HIT user" value={v.hit_user} set={(x) => set('hit_user', x)} saved={saved.hit_user} />
         <Key id="wc-hk" label="HIT key" value={v.hit_key} set={(x) => set('hit_key', x)} saved={saved.hit_key} secret />
+        <p style={S(NOTE)}>Save first, then test. Testing asks Windcave about a made-up payment, so nothing is charged.</p>
+        <button onClick={c.test} disabled={c.busy} style={S('height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font:inherit;font-size:14.5px;font-weight:500;cursor:pointer;opacity:' + (c.busy ? 0.6 : 1))}>Test terminal connection</button>
       </main>
       <div style={S(BAR)}>
         {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}

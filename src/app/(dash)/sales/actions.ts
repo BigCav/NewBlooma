@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireCtx, friendly } from '@/lib/session';
-import { releaseOnline, startOnline,startTerminal, pollTerminal, cancelTerminal, refundCard } from '@/lib/windcave';
+import { getCreds, releaseOnline, startOnline, startTerminal, pollTerminal, cancelTerminal, refundCard } from '@/lib/windcave';
 import { sendCustomMessage } from '@/lib/notify';
 import { mailP } from '@/lib/email-layout';
 import { dateLong } from '@/lib/format';
@@ -35,7 +35,9 @@ export async function createWalkin(client: string, clientId: string | null, serv
  * on-screen card returns the hosted payment page to go to.
  */
 export async function payFlow(saleId: string, method: 'terminal' | 'online' | 'cash' | 'gift_card', tipPct: number, code: string, disc?: { kind: string; value: string; note: string }): Promise<Res & { txn?: string; url?: string }> {
-  const { sb } = await requireCtx();
+  const { sb, salon } = await requireCtx();
+  // With a card terminal switched on, every card payment goes to it, never to the on-screen page.
+  if (method === 'online' && (await getCreds(salon.id)).terminalEnabled) method = 'terminal';
   // A hosted payment page that was closed without paying would otherwise lock the sale.
   await releaseOnline(saleId);
   if (disc) {

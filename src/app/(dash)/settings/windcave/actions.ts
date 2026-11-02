@@ -3,9 +3,16 @@ import { revalidatePath } from 'next/cache';
 import { requireOwner, friendly } from '@/lib/session';
 import { encrypt } from '@/lib/crypto';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { testTerminal } from '@/lib/windcave';
 
 const bool = (fd: FormData, k: string) => fd.get(k) === 'on';
 const s = (fd: FormData, k: string) => String(fd.get(k) ?? '').trim();
+
+export async function checkTerminal() {
+  const { salon } = await requireOwner();
+  const r = await testTerminal(salon.id);
+  return r.error ? { error: r.error } : { ok: 'Windcave accepted the username, key and station. Nothing was charged.' };
+}
 
 export async function savePayments(_: unknown, fd: FormData) {
   const { sb, salon } = await requireOwner();
