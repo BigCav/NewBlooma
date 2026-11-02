@@ -214,7 +214,6 @@ function FormsCard({ forms, card, titles = true }: { forms: ProfileData['forms']
   );
 }
 
-const TABS: [Sub, string][] = [['overview', 'Overview'], ['appointments', 'Appointments'], ['messages', 'Messages'], ['details', 'Details'], ['notes', 'Notes'], ['alerts', 'Allergies'], ['formula', 'Formula'], ['forms', 'Forms'], ['prefs', 'Preferences']];
 
 /** The profile on a computer: the same layout as the phone, with the pages (overview, appointments, messages ...) behind the three dots. A page opens in the right-hand drawer. */
 function Desktop({ c, initial }: { c: C; initial?: string }) {
@@ -224,20 +223,27 @@ function Desktop({ c, initial }: { c: C; initial?: string }) {
   const [apFilter, setApFilter] = useState<'all' | 'upcoming' | 'past'>('all');
   const [openForm, setOpenForm] = useState('');
   const [qa, setQa] = useState(false);
-  // Where the open page was reached from: Back goes there (the menu, or the profile itself).
-  const [viaMenu, setViaMenu] = useState(false);
+  const [rec, setRec] = useState(false);
   const tone = TONE[row.tag];
   const book = `/calendar?new=1&c=${encodeURIComponent(row.name)}`;
   const ring = RING + ';flex:0 0 52px;width:52px;height:52px';
   const ico = (path: string) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')} aria-hidden="true"><path d={path} /></svg>;
   const counts: Partial<Record<Sub, number>> = { appointments: d.appts.length, messages: thread.length, notes: c.notes.length, alerts: c.allergies.length, forms: d.forms.length };
-  const open = (v: Sub, menu = false) => { c.setError(''); c.setNotice(''); setOpenForm(''); setQa(false); setViaMenu(menu); setPage(v); };
+  const open = (v: Sub) => { c.setError(''); c.setNotice(''); setOpenForm(''); setQa(false); setPage(v); };
   const close = () => { setPage(null); setOpenForm(''); c.setError(''); c.setNotice(''); };
-  const back = () => { if (openForm) { setOpenForm(''); return; } const m = viaMenu; close(); if (m) setQa(true); };
+  const back = () => { if (openForm) { setOpenForm(''); return; } close(); };
   // Editing opens its own drawer, so the page that asked for it steps aside first.
   const edit = () => { close(); setQa(false); c.startEdit(); };
   const cc = { ...c, startEdit: edit };
   const avatar = (px: number, fs: number) => <div style={S('flex:0 0 ' + px + 'px;width:' + px + 'px;height:' + px + 'px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:' + fs + 'px;font-weight:600;background:' + tone[0] + ';color:' + tone[1])}>{initialsOf(row.name, 2)}</div>;
+  // One row of the list under the contact card: it opens that page in the right-hand drawer.
+  const menuRow = (id: Sub, label: string, indent?: boolean) => (
+    <button key={id} onClick={() => open(id)} style={S(ROW_BTN + (indent ? ';padding-left:24px' : ''))}>
+      <span style={S('flex:1 1 auto;min-width:0')}>{label}</span>
+      {!!counts[id] && <span style={S('flex:0 0 auto;min-width:24px;height:24px;padding:0 8px;box-sizing:border-box;border-radius:999px;background:#EEF0F3;color:#4A525E;font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center')}>{counts[id]}</span>}
+      {CHEV}
+    </button>
+  );
   const drawer = "position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;display:flex;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4";
   return (
     <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:20px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
@@ -260,20 +266,26 @@ function Desktop({ c, initial }: { c: C; initial?: string }) {
         <div style={S(LIST_CARD + ';display:flex;flex-direction:column')} className="sum-rows">
           {[[PHONE_P, row.phone || 'No phone'], [MAIL_P, row.email || 'No email'], [CAL_P, d.since]].map(([p, t]) => <div key={p} style={S('display:flex;align-items:center;gap:12px;padding:14px 0;font-size:15px')}>{ico(p)}<span style={S('min-width:0;overflow-wrap:anywhere')}>{t}</span></div>)}
         </div>
+        <div style={S(LIST_CARD + ';display:flex;flex-direction:column')} className="sum-rows">
+          {menuRow('overview', 'Overview')}
+          {menuRow('appointments', 'Appointments')}
+          {menuRow('messages', 'Messages')}
+          {menuRow('details', 'Client details')}
+          <button onClick={() => setRec(!rec)} aria-expanded={rec} style={S(ROW_BTN)}><span style={S('flex:1 1 auto')}>Records</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto;transform:rotate(' + (rec ? 180 : 0) + 'deg)')} aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg></button>
+          {rec && <>
+            {menuRow('notes', 'Notes', true)}
+            {menuRow('alerts', 'Allergies and patch tests', true)}
+            {menuRow('formula', 'Colour formula', true)}
+            {menuRow('forms', 'Client forms', true)}
+          </>}
+          {menuRow('prefs', 'Preferences')}
+        </div>
       </div>
       {c.mode !== 'view' && <Mobile c={c} drawer />}
       {qa && (
         <div className="m-cal cal-root m-drawer">
-          <QuickActions title="More" onClose={() => setQa(false)}>
+          <QuickActions onClose={() => setQa(false)}>
             <QaGroup first>
-              {TABS.map(([id, label]) => (
-                <button key={id} onClick={() => open(id, true)} style={S(QA_ITEM + ';gap:12px')}>
-                  <span style={S('flex:1 1 auto;min-width:0')}>{label}</span>
-                  {!!counts[id] && <span style={S('flex:0 0 auto;min-width:24px;height:24px;padding:0 8px;box-sizing:border-box;border-radius:999px;background:#EEF0F3;color:#4A525E;font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center')}>{counts[id]}</span>}
-                </button>
-              ))}
-            </QaGroup>
-            <QaGroup>
               <button onClick={edit} style={S(QA_ITEM)}>Edit details</button>
               <Link href={'/clients/forms?c=' + row.id} style={S(QA_ITEM)}>Client forms</Link>
             </QaGroup>
