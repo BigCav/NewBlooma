@@ -1,9 +1,18 @@
 export type ItemType = 'request' | 'reschedule' | 'rescheduled' | 'message' | 'cancellation' | 'booking';
 export type ItemStatus = 'new' | 'accepted' | 'declined' | 'done';
+/** The booking a message or request is about: what the quick view shows. */
+export type InboxBooking = {
+  id: string; ref: string; status: string; day: string; time: string; staff: string; photo: string | null;
+  lines: { key: string; name: string; dur: string; price: string }[]; total: string; label: string;
+  paid: boolean; refunded: boolean; paidText: string; clientId: string | null;
+  /** Still on the calendar (not cancelled or a no-show), so it can be opened there. */
+  calendarHref: string | null;
+};
 export type InboxItem = {
   id: string; type: ItemType; client: string; email: string; time: string; unread: boolean; status: ItemStatus; summary: string;
   cancelled: boolean; rows: [string, string][]; note: string; thread: { mine: boolean; text: string; at: string }[]; calendarDay: string | null;
   clientId: string | null;
+  booking: InboxBooking | null;
   /** Set while the booking is still on the calendar (not cancelled or a no-show), so "View in calendar" can open it. */
   bookingId: string | null;
 };

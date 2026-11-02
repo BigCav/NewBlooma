@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { S } from '../calendar/pickers';
 import { ROW, TICK } from '../calendar/wizardUi';
+import { BookingCard, BookingQuickView } from './BookingQuickView';
 import { REASONS, STATUS, TYPES, initialsOf } from './shared';
 import type { InboxCtl } from './InboxView';
 
@@ -34,6 +35,7 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
 export function MobileItem({ c, onClose }: { c: InboxCtl; onClose: () => void }) {
   const sel = c.sel!;
   const [qa, setQa] = useState(false);
+  const [bq, setBq] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
   const first = sel.client.split(' ')[0];
   const isMsg = sel.type === 'message', isCancel = sel.type === 'cancellation', isResched = sel.type === 'reschedule';
@@ -44,7 +46,7 @@ export function MobileItem({ c, onClose }: { c: InboxCtl; onClose: () => void })
   const canDone = (isResched || isMsg) && sel.status === 'new';
   const status = sel.cancelled ? { t: 'Booking cancelled', bg: '#FCE3E3', fg: '#9B1C1C' } : isMsg || isCancel || sel.type === 'booking' || sel.type === 'rescheduled' || sel.status === 'new' ? null : STATUS[sel.status];
   const t = TYPES[sel.type];
-  const hasMore = !!clientHref || !!calHref || isCancel || canDone || (!isMsg && c.mode === 'view');
+  const hasMore = !!clientHref || !!calHref || !!sel.booking || isCancel || canDone || (!isMsg && c.mode === 'view');
 
   useEffect(() => { const el = mainRef.current; if (el) el.scrollTo({ top: isMsg ? el.scrollHeight : 0 }); }, [sel.id, sel.thread.length, c.mode, isMsg]);
 
@@ -95,6 +97,7 @@ export function MobileItem({ c, onClose }: { c: InboxCtl; onClose: () => void })
         <div style={S('flex:1 1 auto;min-width:0;font-size:18px;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{sel.client}</div>
         {hasMore && c.mode === 'view' && <button onClick={() => setQa(true)} aria-label="More actions" aria-haspopup="dialog" style={S(RING)}>{DOTS}</button>}
       </header>
+      {isMsg && c.mode === 'view' && sel.booking && <div style={S('flex:0 0 auto;padding:12px 20px 0')}><BookingCard b={sel.booking} onOpen={() => setBq(true)} /></div>}
       <main ref={mainRef} className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:16px 20px 20px;display:flex;flex-direction:column;gap:16px')}>
         {c.mode === 'decline' && actionable && (<>
           <h2 style={S('margin:0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>{title}</h2>
@@ -139,11 +142,13 @@ export function MobileItem({ c, onClose }: { c: InboxCtl; onClose: () => void })
         </>)}
       </main>
       {foot}
+      {bq && sel.booking && <BookingQuickView b={sel.booking} client={sel.client} onClose={() => setBq(false)} />}
       {qa && (
         <Sheet title="More actions" onClose={() => setQa(false)}>
           <div style={S('display:flex;flex-direction:column')}>
             {!isMsg && <button onClick={() => { setQa(false); c.compose(); }} style={S(MENU_ROW)}>Message {first}</button>}
             {clientHref && <Link href={clientHref} style={S(MENU_ROW)}>Open {first}&apos;s profile</Link>}
+            {sel.booking && <button onClick={() => { setQa(false); setBq(true); }} style={S(MENU_ROW)}>Quick view booking</button>}
             {calHref && <Link href={calHref} style={S(MENU_ROW)}>View in calendar</Link>}
             {isCancel && <Link href={rebookHref} style={S(MENU_ROW)}>Book again</Link>}
             {canDone && <button onClick={() => { setQa(false); c.finish(); }} disabled={c.busy} style={S(MENU_ROW)}>Mark as done</button>}
