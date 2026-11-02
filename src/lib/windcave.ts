@@ -5,8 +5,8 @@ import { decrypt } from '@/lib/crypto';
 
 const prod = () => process.env.WINDCAVE_ENV === 'prod';
 const REST = () => (prod() ? 'https://sec.windcave.com' : 'https://uat.windcave.com');
-// A physical terminal only exists on Windcave's live service; the test (UAT) service has no real machines to reach.
-const HIT = () => 'https://sec.windcave.com/hit/pos.aspx';
+const HIT_LIVE = 'https://sec.windcave.com/hit/pos.aspx', HIT_TEST = 'https://uat.windcave.com/hit/pos.aspx';
+const HIT = () => (prod() ? HIT_LIVE : HIT_TEST);
 
 type Creds = { restUser?: string; restKey?: string; hitUser?: string; hitKey?: string; station?: string; onlineEnabled: boolean; terminalEnabled: boolean };
 
@@ -127,9 +127,9 @@ const pick = (x: string, k: string) => x.match(new RegExp(`<${k}>([^<]*)</${k}>`
 /** The spec requires DeviceId, PosName and VendorId (1 to 32 characters) on Purchase and Refund; Status and button requests carry only Station, TxnType and TxnRef. */
 const POS_IDS = () => ({ DeviceId: process.env.WINDCAVE_DEVICE_ID || 'Aster-1', PosName: process.env.WINDCAVE_POS_NAME || 'Aster', PosVersion: '1', VendorId: process.env.WINDCAVE_VENDOR_ID || 'Aster' });
 
-async function hit(c: Creds, body: Record<string, string | number>) {
+async function hit(c: Creds, body: Record<string, string | number>, url: string = HIT()) {
   const money = body.TxnType === 'Purchase' || body.TxnType === 'Refund';
-  const res = await fetch(HIT(), { method: 'POST', headers: { 'Content-Type': 'application/xml' }, body: xml({ action: 'doScrHIT', user: c.hitUser!, key: c.hitKey! }, money ? { ...body, ...POS_IDS() } : body) });
+  const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/xml' }, body: xml({ action: 'doScrHIT', user: c.hitUser!, key: c.hitKey! }, money ? { ...body, ...POS_IDS() } : body) });
   if (!res.ok) throw new Error('hit_http');
   return res.text();
 }
@@ -156,14 +156,18 @@ export async function testTerminal(salonId: string): Promise<{ ok?: true; error?
   const c = await getCreds(salonId);
   if (!c.hitUser || !c.hitKey) return { error: 'Add the terminal username and key first.' };
   if (!c.station) return { error: 'Add the terminal station ID first.' };
-  let out: string;
-  try { out = await hit(c, { Station: c.station, TxnType: 'Status', TxnRef: ref('TEST') }); } catch { return { error: 'Could not reach Windcave.' }; }
-  const reply = out.replace(/\s+/g, ' ').slice(0, 300);
-  const bad = hitProblem(out);
-  if (bad) return { error: bad + ' (' + pick(out, 'ReCo') + ')' };
-  // Windcave answers an unknown reference with PJ ("TxnRef not matched"): the user, key and station were all accepted.
-  if ((pick(out, 'ReCo') ?? '').trim() === 'PJ') return { ok: true, reply };
-  return { error: 'Windcave gave an answer that is not in its specification, so the setup cannot be confirmed: ' + reply, reply };
+  // Ask the service the app is set to use first, then the other one: HIT users are issued for either the live or the test service, never both.
+  const here = HIT(), order: [string, string][] = here === HIT_LIVE ? [[HIT_LIVE, 'live'], [HIT_TEST, 'test']] : [[HIT_TEST, 'test'], [HIT_LIVE, 'live']];
+  const notes: string[] = [];
+  for (const [url, name] of order) {
+    let out: string;
+    try { out = await hit(c, { Station: c.station, TxnType: 'Status', TxnRef: ref('TEST') }, url); } catch { notes.push(`${name} service: could not be reached`); continue; }
+    const reply = out.replace(/\s+/g, ' ').slice(0, 200);
+    // Windcave answers an unknown reference with PJ ("TxnRef not matched"): the user, key and station were all accepted.
+    if ((pick(out, 'ReCo') ?? '').trim() === 'PJ') return url === here ? { ok: true, reply: name + ' service, ' + reply } : { error: `Your terminal details work on Windcave's ${name} service, but the app is set to use the ${order[0][1]} one. Tell me and I will switch it.`, reply };
+    notes.push(`${name} service: ${hitProblem(out) ?? reply}`);
+  }
+  return { error: 'Windcave did not accept the details on either service. ' + notes.join(' | ') };
 }
 
 export async function startTerminal(saleId: string): Promise<{ txn?: string; error?: string }> {
