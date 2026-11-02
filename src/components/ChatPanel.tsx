@@ -42,8 +42,8 @@ export function ChatComposer({ first, draft, onDraft, onSend, busy }: { first: s
  * Message a client. The conversation is loaded here (unless the caller already has it) and a sent message is added to it.
  * fill: take the whole height of a full-page panel; otherwise it sits in a sheet at a fixed height.
  */
-export function ChatPanel({ clientId, first, context, initial, send, onBack, onSent, fill }: {
-  clientId: string; first: string; context?: ReactNode; initial?: ChatMsg[]; onSent?: (m: ChatMsg) => void;
+export function ChatPanel({ clientId, first, context, initial, send, onBack, onSent, fill, bare }: {
+  clientId: string; first: string; context?: ReactNode; initial?: ChatMsg[]; onSent?: (m: ChatMsg) => void; bare?: boolean;
   send: (text: string) => Promise<{ error?: string }>; onBack: () => void; fill?: boolean;
 }) {
   const [thread, setThread] = useState<ChatMsg[]>(initial ?? []);
@@ -73,13 +73,13 @@ export function ChatPanel({ clientId, first, context, initial, send, onBack, onS
   const pad = fill ? '20px' : '0';
   return (
     <div style={S('display:flex;flex-direction:column;min-height:0;' + (fill ? 'flex:1 1 auto;height:100%' : 'height:min(72dvh,620px)'))}>
-      <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:' + (fill ? '20px 20px 12px' : '0 0 12px'))}>
+      {!bare && <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:' + (fill ? '20px 20px 12px' : '0 0 12px'))}>
         <button onClick={onBack} aria-label="Back" style={S(RING)}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 6l-6 6 6 6" /></svg></button>
         <div style={S('min-width:0')}>
           <h2 style={S('margin:0;font-size:22px;font-weight:600;letter-spacing:-0.025em;overflow-wrap:anywhere')}>{'Message ' + first}</h2>
           {!!context && <p style={S('margin:2px 0 0;color:#5E6673;font-size:13.5px;overflow-wrap:anywhere')}>{context}</p>}
         </div>
-      </header>
+      </header>}
       <div className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:8px ' + pad + ' 16px;display:flex;flex-direction:column;gap:14px')}>
         {loading ? <p style={S('margin:0;color:#5E6673;font-size:14px')}>Loading the conversation</p> : <ChatBubbles thread={thread} />}
         <div ref={end} />

@@ -8,6 +8,7 @@ import { MobileTabs } from '@/components/Chrome';
 import { STATUS_LABEL } from '@/lib/format';
 import { S } from '../../calendar/pickers';
 import { ChatBubbles, ChatComposer, ChatPanel } from '@/components/ChatPanel';
+import { QaGroup, QA_ITEM, QuickActions } from '../../calendar/VisitSheet';
 import { addNote, deleteClient, recordPatchTest, removeNote, saveFormula, sendClientMessage, setAllergies, setPatchTest, setPreference, updateClient } from '../actions';
 import { phoneInput } from '@/lib/phone';
 import { channelNote, initialsOf, money, patchInfo, type Channels, type ClientRow } from '../shared';
@@ -213,73 +214,71 @@ function FormsCard({ forms, card, titles = true }: { forms: ProfileData['forms']
   );
 }
 
-const PRI = 'height:44px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500;padding:0 20px;';
-const MSGS = 'height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;padding:0 20px;';
+const TABS: [Sub, string][] = [['overview', 'Overview'], ['appointments', 'Appointments'], ['messages', 'Messages'], ['details', 'Details'], ['notes', 'Notes'], ['alerts', 'Allergies'], ['formula', 'Formula'], ['forms', 'Forms'], ['prefs', 'Preferences']];
 
-function Header({ c, m }: { c: C; m: boolean }) {
-  const { row } = c;
+/** The profile on a computer: the client on the left, their pages on the right. The same cards and pages as the phone. */
+function Desktop({ c, initial }: { c: C; initial?: string }) {
+  const { row, d } = c;
+  const [view, setView] = useState<Sub>(initial === 'messages' ? 'messages' : 'overview');
+  const [thread, setThread] = useState(d.messages);
+  const [apFilter, setApFilter] = useState<'all' | 'upcoming' | 'past'>('all');
+  const [openForm, setOpenForm] = useState('');
+  const [qa, setQa] = useState(false);
   const tone = TONE[row.tag];
-  const msgS = 'height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;padding:0 20px;';
-  const pri = 'height:44px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500;padding:0 20px;';
-  const avatar = 'flex:0 0 72px;width:72px;height:72px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600;background:' + tone[0] + ';color:' + tone[1];
-  const tagS = 'display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;background:' + tone[0] + ';color:' + tone[1];
   const book = `/calendar?new=1&c=${encodeURIComponent(row.name)}`;
-  const ico = (d: string) => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')}><path d={d} /></svg>;
-  const PHONE = 'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z';
-  const MAIL = 'M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zm0 1 8 6 8-6';
-  const actions = c.mode === 'view' && (
-    <div style={S('display:flex;gap:10px;flex-wrap:wrap;' + (m ? 'width:100%' : 'justify-content:flex-end;align-self:flex-start'))}>
-      <Link href={book} style={S(pri + 'display:flex;align-items:center;justify-content:center;text-decoration:none;box-sizing:border-box;' + (m ? 'flex:1 1 0' : 'flex:0 0 auto'))}>{m ? 'Book' : 'Book appointment'}</Link>
-      <button className="ghost" onClick={() => { c.setMode('message'); c.setError(''); c.setNotice(''); }} style={S(msgS + (m ? 'flex:1 1 0' : 'flex:0 0 auto'))}>Message</button>
-      <button className="ghost" onClick={c.startEdit} style={S(msgS + (m ? 'flex:1 1 0' : 'flex:0 0 auto'))}>Edit</button>
-      <Link href={'/clients/forms?c=' + c.row.id} className="ghost" style={S(msgS + (m ? 'flex:1 1 0' : 'flex:0 0 auto') + ';text-decoration:none;display:inline-flex;align-items:center;justify-content:center')}>Forms</Link>
-    </div>
-  );
+  const ring = RING + ';flex:0 0 52px;width:52px;height:52px';
+  const ico = (path: string) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')} aria-hidden="true"><path d={path} /></svg>;
+  const counts: Partial<Record<Sub, number>> = { appointments: d.appts.length, messages: thread.length, notes: c.notes.length, alerts: c.allergies.length, forms: d.forms.length };
+  const go = (v: Sub) => { c.setError(''); c.setNotice(''); setOpenForm(''); setView(v); };
   return (
-    <section style={S(CARD + (m ? ';padding:20px;gap:20px' : ';padding:28px;gap:20px'))}>
-      <div style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:20px')}>
-        <div style={S('display:flex;align-items:center;gap:' + (m ? 14 : 20) + 'px;min-width:0')}>
-          <div style={S(avatar)}>{initialsOf(row.name, 3)}</div>
-          <div style={S('min-width:0;display:flex;flex-direction:column;gap:6px')}>
-            <h1 style={S('margin:0;font-size:' + (m ? 22 : 28) + 'px;line-height:1.15;font-weight:600;letter-spacing:-0.025em;overflow-wrap:anywhere')}>{row.name}</h1>
-            <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:8px')}><span style={S(tagS)}>{row.tag}</span><span style={S('font-size:13px;color:#5E6673')}>{c.d.since}</span></div>
-            <div style={S('display:flex;flex-wrap:wrap;gap:6px 22px;font-size:14px;color:#0E1116;margin-top:2px')}>
-              <span style={S('display:inline-flex;align-items:center;gap:8px;overflow-wrap:anywhere')}>{ico(PHONE)}{row.phone || 'No phone'}</span>
-              <span style={S('display:inline-flex;align-items:center;gap:8px;overflow-wrap:anywhere')}>{ico(MAIL)}{row.email || 'No email'}</span>
-            </div>
+    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:24px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
+      <Link href="/clients" style={S('align-self:flex-start;display:inline-flex;align-items:center;gap:10px;text-decoration:none;color:#0E1116;font-size:15px;font-weight:500')}><span style={S(RING)}>{BACK}</span>Clients</Link>
+      <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:28px')}>
+        <aside style={S('flex:0 0 340px;max-width:100%;display:flex;flex-direction:column;gap:16px;position:sticky;top:20px')}>
+          <div style={S('display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0 4px;text-align:center')}>
+            <div style={S('flex:0 0 112px;width:112px;height:112px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:600;background:' + tone[0] + ';color:' + tone[1])}>{initialsOf(row.name, 2)}</div>
+            <h1 style={S('margin:12px 0 0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em;overflow-wrap:anywhere')}>{row.name}</h1>
+            <div style={S('display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px')}><span style={S('display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;background:' + tone[0] + ';color:' + tone[1])}>{row.tag}</span>{!!row.email && <span style={S('font-size:14px;color:#5E6673;overflow-wrap:anywhere')}>{row.email}</span>}</div>
           </div>
+          <div style={S('display:flex;gap:10px')}>
+            <button onClick={() => setQa(true)} aria-label="More actions" aria-haspopup="dialog" style={S(ring)}><svg width="20" height="20" viewBox="0 0 24 24" fill="#0E1116"><circle cx="12" cy="5.5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="18.5" r="1.6" /></svg></button>
+            <button onClick={() => go('messages')} aria-label={'Messages with ' + c.first} style={S(ring)}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3.5" y="5.5" width="17" height="13" rx="3" /><path d="m4.5 7.5 7.5 5.5 7.5-5.5" /></svg></button>
+            <Link href={book} style={S('flex:1 1 0;height:52px;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none')}>Book now</Link>
+          </div>
+          <div style={S(LIST_CARD + ';display:flex;flex-direction:column')} className="sum-rows">
+            {[[PHONE_P, row.phone || 'No phone'], [MAIL_P, row.email || 'No email'], [CAL_P, d.since]].map(([p, t]) => <div key={p} style={S('display:flex;align-items:center;gap:12px;padding:14px 0;font-size:15px')}>{ico(p)}<span style={S('min-width:0;overflow-wrap:anywhere')}>{t}</span></div>)}
+          </div>
+        </aside>
+        <div style={S('flex:1 1 480px;min-width:0;max-width:860px;display:flex;flex-direction:column;gap:16px')}>
+          <div role="tablist" aria-label="Client pages" className="hscroll" style={S('display:flex;gap:8px;overflow-x:auto;padding-bottom:2px')}>
+            {TABS.map(([id, label]) => {
+              const on = view === id;
+              return (
+                <button key={id} role="tab" aria-selected={on} onClick={() => go(id)} style={S('flex:0 0 auto;display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 18px;border-radius:999px;font:inherit;font-size:14px;font-weight:500;cursor:pointer;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116'))}>
+                  {label}
+                  {!!counts[id] && <span style={S('min-width:22px;height:22px;padding:0 7px;box-sizing:border-box;border-radius:999px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;background:' + (on ? 'rgba(255,255,255,0.18)' : '#EEF0F3') + ';color:' + (on ? '#FFFFFF' : '#4A525E'))}>{counts[id]}</span>}
+                </button>
+              );
+            })}
+          </div>
+          {!!c.notice && <span role="status" style={S('align-self:flex-start;padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.notice}</span>}
+          {!!c.error && c.mode === 'view' && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
+          {view === 'messages'
+            ? <section style={S(CARD_M)}><ChatPanel bare clientId={row.id} first={c.first} initial={thread} send={(t) => sendClientMessage(row.id, t)} onSent={(m) => setThread((x) => [...x, m])} onBack={() => go('overview')} /></section>
+            : <ProfilePages c={c} view={view} setView={go} thread={thread} apFilter={apFilter} setApFilter={setApFilter} openForm={openForm} setOpenForm={setOpenForm} />}
         </div>
-        {!m && actions}
-      </div>
-      {m && actions}
-      {!!c.notice && <span role="status" style={S('align-self:flex-start;padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.notice}</span>}
-      {!!c.error && c.mode === 'view' && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
-    </section>
-  );
-}
-
-function Stats({ c, cols, big }: { c: C; cols: number; big: boolean }) {
-  const { row } = c;
-  const avg = row.visits ? Math.round(row.spentCents / row.visits) : 0;
-  const stats: [string, string][] = [['Visits', String(row.visits)], ['Total spent', money(row.spentCents)], ['Average visit', money(Math.round(avg / 100) * 100)], ['Last visit', row.last], ['Next booking', row.next]];
-  return (
-    <section aria-label="Client stats" style={S('display:grid;grid-template-columns:repeat(' + cols + ',minmax(0,1fr));gap:' + (big ? 16 : 12) + 'px')}>
-      {stats.map(([l, v]) => <div key={l} style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:20px;padding:16px')}><div style={S('font-size:13px;color:#5E6673')}>{l}</div><div style={S('margin-top:4px;font-size:' + (big ? 22 : 20) + 'px;font-weight:600;letter-spacing:-0.02em;overflow-wrap:anywhere')}>{v}</div></div>)}
-    </section>
-  );
-}
-
-function Desktop({ c }: { c: C }) {
-  const s = Sections({ c, pad: 24 });
-  return (
-    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
-      <Header c={c} m={false} />
-      <Stats c={c} cols={5} big />
-      <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:24px')}>
-        <div style={S('flex:1.4 1 480px;min-width:0;display:flex;flex-direction:column;gap:24px')}>{s.history}{s.forms}</div>
-        <div style={S('flex:1 1 340px;min-width:0;display:flex;flex-direction:column;gap:24px')}>{s.notes}{s.alerts}{s.formula}{s.prefs}</div>
       </div>
       {c.mode !== 'view' && <Mobile c={c} drawer />}
+      {qa && (
+        <div className="m-cal cal-root m-drawer">
+          <QuickActions onClose={() => setQa(false)}>
+            <QaGroup first>
+              <button onClick={() => { setQa(false); c.startEdit(); }} style={S(QA_ITEM)}>Edit details</button>
+              <Link href={'/clients/forms?c=' + row.id} style={S(QA_ITEM)}>Client forms</Link>
+            </QaGroup>
+          </QuickActions>
+        </div>
+      )}
     </div>
   );
 }
@@ -309,6 +308,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 const FIELD_IN = { ...S('box-sizing:border-box;width:100%;margin-top:2px;padding:0;border:0;outline:none;background:transparent;font:inherit;font-size:16px;color:#0E1116'), minHeight: 0, borderRadius: 0 } as const;
 const CARD_M = 'box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:20px;display:flex;flex-direction:column;gap:14px';
+const LIST_CARD = 'box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:8px 20px';
+const ROW_BTN = 'display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:58px;padding:0 4px;border:0;background:transparent;font:inherit;font-size:16px;text-align:left;color:#0E1116;cursor:pointer';
+const PHONE_P = 'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z';
+const MAIL_P = 'M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zm0 1 8 6 8-6';
+const CAL_P = 'M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v11A1.5 1.5 0 0 1 19 19.5H5A1.5 1.5 0 0 1 3.5 18V7A1.5 1.5 0 0 1 5 5.5zM3.5 10h17M8 3.5v4M16 3.5v4';
 const BLACK = 'height:48px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500;padding:0 20px;flex:0 0 auto';
 
 /** A bottom bar pinned to the foot of the page, as on the booking and checkout pages. */
@@ -321,101 +325,14 @@ function BottomBar({ error, children }: { error?: string; children: React.ReactN
   );
 }
 
-function Mobile({ c, initial, drawer }: { c: C; initial?: string; drawer?: boolean }) {
+/** The pages of a client's profile (overview, appointments, details, notes ...). The phone and the desktop show the same ones. */
+function ProfilePages({ c, view, setView, thread, apFilter, setApFilter, openForm, setOpenForm, title }: {
+  c: C; view: Sub; setView: (v: Sub) => void; thread: ProfileData['messages']; apFilter: 'all' | 'upcoming' | 'past'; setApFilter: (f: 'all' | 'upcoming' | 'past') => void;
+  openForm: string; setOpenForm: (id: string) => void; title?: boolean;
+}) {
   const { row, d } = c;
-  const [view, setView] = useState<Sub>(initial === 'messages' ? 'messages' : 'home');
-  const [thread, setThread] = useState(d.messages);
-  const [draft, setDraft] = useState('');
-  const [sendErr, setSendErr] = useState('');
-  const [sending, startSend] = useTransition();
-  const [rec, setRec] = useState(false);
-  const [qa, setQa] = useState(false);
-  const [apFilter, setApFilter] = useState<'all' | 'upcoming' | 'past'>('all');
-  const [openForm, setOpenForm] = useState('');
-  const [eqa, setEqa] = useState(false);
-  const mainRef = useRef<HTMLElement>(null);
-  // Every page opens at its top, whatever the last one was scrolled to.
-  useEffect(() => { const el = mainRef.current; if (!el) return; if (view === 'messages') el.scrollTo({ top: el.scrollHeight }); else el.scrollTo({ top: 0 }); }, [view, c.mode, openForm, thread.length]);
-  const sendChat = () => {
-    const t = draft.trim();
-    if (!t) return;
-    startSend(async () => {
-      const r = await sendClientMessage(row.id, t);
-      if (r.error) { setSendErr(r.error); return; }
-      setSendErr(''); setDraft('');
-      setThread((m) => [...m, { id: 'me-' + Date.now(), mine: true, text: t, day: 'Today', time: new Date().toLocaleTimeString('en-NZ', { hour: 'numeric', minute: '2-digit' }).toLowerCase() }]);
-    });
-  };
   const s = Sections({ c, pad: 20, titles: false, usually: false });
-  const tone = TONE[row.tag];
-  const book = `/calendar?new=1&c=${encodeURIComponent(row.name)}`;
-  const avatar = (px: number, fs: number) => <div style={S('flex:0 0 ' + px + 'px;width:' + px + 'px;height:' + px + 'px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:' + fs + 'px;font-weight:600;background:' + tone[0] + ';color:' + tone[1])}>{initialsOf(row.name, 2)}</div>;
-  const rowCss = 'display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:58px;padding:0 4px;border:0;background:transparent;font:inherit;font-size:16px;text-align:left;color:#0E1116;cursor:pointer';
-  const menu = (id: Sub, label: string, count?: number, indent?: boolean) => (
-    <button key={id} onClick={() => { c.setError(''); c.setNotice(''); setOpenForm(''); setView(id); }} style={S(rowCss + (indent ? ';padding-left:24px' : ''))}>
-      <span style={S('flex:1 1 auto;min-width:0')}>{label}</span>
-      {!!count && <span style={S('flex:0 0 auto;min-width:24px;height:24px;padding:0 8px;box-sizing:border-box;border-radius:999px;background:#EEF0F3;color:#4A525E;font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center')}>{count}</span>}
-      {CHEV}
-    </button>
-  );
-  const ico = (path: string) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')} aria-hidden="true"><path d={path} /></svg>;
-  const PHONE = 'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z';
-  const MAIL = 'M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zm0 1 8 6 8-6';
-  const CAL = 'M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v11A1.5 1.5 0 0 1 19 19.5H5A1.5 1.5 0 0 1 3.5 18V7A1.5 1.5 0 0 1 5 5.5zM3.5 10h17M8 3.5v4M16 3.5v4';
-  const card = 'box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:8px 20px';
-  const sheet = (title: string, body: React.ReactNode, onClose: () => void) => (
-    <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:6')}>
-      <button onClick={onClose} aria-label="Close" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
-      <div className="sheet" role="dialog" aria-label={title} style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column;gap:6px')}>
-        <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0;margin-bottom:12px')} />
-        <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px')}><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{title}</h2><button onClick={onClose} aria-label="Close" style={S(RING)}>{CLOSE}</button></div>
-        {body}
-      </div>
-    </div>
-  );
-  const page = "position:relative;width:100%;height:100dvh;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4;";
-
-  // Messaging and editing take over the page (on desktop, they slide in from the right instead).
-  const wrap = (label: string, inner: React.ReactNode) => drawer
-    ? <div className="m-cal cal-root m-drawer"><div role="dialog" aria-label={label} style={S(page.replace('position:relative;width:100%;height:100dvh;', 'position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;') + 'background:#F4F5F7')}>{inner}</div></div>
-    : <div className="only-m m-cal cal-root" style={S(page + 'background:#F4F5F7')}>{inner}</div>;
-  if (c.mode === 'message') {
-    return wrap('Message ' + c.first, <ChatPanel fill clientId={row.id} first={c.first} initial={thread} send={(t) => sendClientMessage(row.id, t)} onSent={(m) => setThread((x) => [...x, m])} onBack={() => { c.setMode('view'); c.setError(''); }} />);
-  }
-  if (c.mode === 'edit') {
-    return wrap('Edit details', (
-      <>
-        <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px')}>
-          <button onClick={() => { c.setMode('view'); c.setError(''); }} aria-label="Back" style={S(RING)}>{BACK}</button>
-          <h1 style={S('margin:0;flex:1 1 auto;font-size:22px;font-weight:600;letter-spacing:-0.025em')}>Edit details</h1>
-        </header>
-        <main ref={mainRef} className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:8px 20px 20px;display:flex;flex-direction:column;gap:12px')}>
-          <Field label="Full name"><input type="text" value={c.ed.name} onChange={(e) => { c.setEd({ ...c.ed, name: e.target.value }); c.setError(''); }} style={FIELD_IN} /></Field>
-          <Field label="Email"><input type="email" inputMode="email" value={c.ed.email} onChange={(e) => { c.setEd({ ...c.ed, email: e.target.value }); c.setError(''); }} placeholder="name@example.com" style={FIELD_IN} /></Field>
-          <Field label="Phone"><input type="tel" inputMode="tel" value={c.ed.phone} onChange={(e) => { c.setEd({ ...c.ed, phone: phoneInput(e.target.value) }); c.setError(''); }} placeholder="Optional" style={FIELD_IN} /></Field>
-        </main>
-        <BottomBar error={c.error}>
-          <div style={S('display:flex;gap:10px')}>
-            <button onClick={() => setEqa(true)} aria-label="More actions" aria-haspopup="dialog" style={S(RING + ';flex:0 0 52px;width:52px;height:52px')}><svg width="20" height="20" viewBox="0 0 24 24" fill="#0E1116"><circle cx="12" cy="5.5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="18.5" r="1.6" /></svg></button>
-            <button onClick={c.saveEdit} disabled={c.busy} style={S(BLACK + ';flex:1 1 0;height:52px')}>Save details</button>
-          </div>
-        </BottomBar>
-        {eqa && sheet('More actions', !c.confirmDel ? (
-          <div style={S('display:flex;flex-direction:column')}>
-            <button onClick={() => c.setConfirmDel(true)} style={S(rowCss + ';color:#B42318')}>Delete client</button>
-          </div>
-        ) : (
-          <div style={S('display:flex;flex-direction:column;gap:12px;padding:16px;border:1px solid #F3C6C3;border-radius:20px;background:#FEF3F2')}>
-            <span style={S('font-size:14.5px;font-weight:600')}>Delete {row.name} for good?</span>
-            <span style={S('font-size:13.5px;color:#5E6673')}>Only possible when they have no bookings or sales. Their notes go too.</span>
-            {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
-            <div style={S('display:flex;gap:10px')}><button onClick={c.removeClient} disabled={c.busy} style={S('flex:1 1 0;height:48px;border:0;border-radius:999px;background:#C0261B;color:#FFFFFF;font-size:14px;font-weight:500')}>Delete client</button><button className="ghost" onClick={() => { c.setConfirmDel(false); setEqa(false); }} style={S('flex:1 1 0;height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>Keep</button></div>
-          </div>
-        ), () => { c.setConfirmDel(false); setEqa(false); })}
-      </>
-    ));
-  }
-
+  const card = LIST_CARD, rowCss = ROW_BTN;
   const appts = d.appts.filter((a) => (apFilter === 'all' ? true : apFilter === 'upcoming' ? a.upcoming : !a.upcoming));
   const groups: { month: string; items: typeof appts }[] = [];
   appts.forEach((a) => { const g = groups[groups.length - 1]; if (g && g.month === a.month) g.items.push(a); else groups.push({ month: a.month, items: [a] }); });
@@ -429,51 +346,8 @@ function Mobile({ c, initial, drawer }: { c: C; initial?: string; drawer?: boole
       <input id={id} type="text" value={value} onChange={(e) => set(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') add(); }} placeholder={ph} style={TXTIN(48)} />
       <button onClick={add} disabled={c.busy} style={S(BLACK)}>Add</button></div>
   );
-
-  return (
-    <div className="only-m m-cal cal-root" style={S(page + 'background:#F4F5F7')}>
-      <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px;' + (view !== 'home' ? 'border-bottom:1px solid #E6E8EC;margin-bottom:8px' : ''))}>
-        {view === 'home'
-          ? <Link href="/clients" aria-label="Back to clients" style={S(RING)}>{BACK}</Link>
-          : <button onClick={() => { if (openForm) { setOpenForm(''); return; } setView('home'); c.setError(''); c.setNotice(''); }} aria-label="Back to profile" style={S(RING)}>{BACK}</button>}
-        {view !== 'home' && <>{avatar(36, 13)}<div style={S('flex:1 1 auto;min-width:0;font-size:18px;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{row.name}</div></>}
-        {view === 'home' && <div style={S('flex:1 1 auto')} />}
-        <Link href="/clients" aria-label="Close profile" style={S(RING)}>{CLOSE}</Link>
-      </header>
-      <main ref={mainRef} className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 24px;display:flex;flex-direction:column;gap:16px')}>
-        {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
-
-        {view === 'home' && (<>
-          <div style={S('display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0 4px;text-align:center')}>
-            {avatar(112, 34)}
-            <h1 style={S('margin:12px 0 0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em;overflow-wrap:anywhere')}>{row.name}</h1>
-            <div style={S('display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px')}><span style={S('display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;background:' + tone[0] + ';color:' + tone[1])}>{row.tag}</span>{!!row.email && <span style={S('font-size:14px;color:#5E6673;overflow-wrap:anywhere')}>{row.email}</span>}</div>
-          </div>
-          <div style={S('display:flex;gap:10px')}>
-            <button onClick={() => setQa(true)} aria-label="More actions" aria-haspopup="dialog" style={S(RING + ';flex:0 0 52px;width:52px;height:52px')}><svg width="20" height="20" viewBox="0 0 24 24" fill="#0E1116"><circle cx="12" cy="5.5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="18.5" r="1.6" /></svg></button>
-            <button onClick={() => { c.setError(''); c.setNotice(''); setView('messages'); }} aria-label={'Messages with ' + c.first} style={S(RING + ';flex:0 0 52px;width:52px;height:52px')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3.5" y="5.5" width="17" height="13" rx="3" /><path d="m4.5 7.5 7.5 5.5 7.5-5.5" /></svg></button>
-            <Link href={book} style={S('flex:1 1 0;height:52px;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none')}>Book now</Link>
-          </div>
-          <div style={S(card + ';display:flex;flex-direction:column')} className="sum-rows">
-            {[[PHONE, row.phone || 'No phone'], [MAIL, row.email || 'No email'], [CAL, d.since]].map(([p, t]) => <div key={p} style={S('display:flex;align-items:center;gap:12px;padding:14px 0;font-size:15px')}>{ico(p)}<span style={S('min-width:0;overflow-wrap:anywhere')}>{t}</span></div>)}
-          </div>
-          <div style={S(card + ';display:flex;flex-direction:column')} className="sum-rows">
-            {menu('overview', 'Overview')}
-            {menu('appointments', 'Appointments', d.appts.length)}
-            {menu('messages', 'Messages', thread.length)}
-            {menu('details', 'Client details')}
-            <button onClick={() => setRec(!rec)} aria-expanded={rec} style={S(rowCss)}><span style={S('flex:1 1 auto')}>Records</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto;transform:rotate(' + (rec ? 180 : 0) + 'deg)')} aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg></button>
-            {rec && <>
-              {menu('notes', 'Notes', c.notes.length, true)}
-              {menu('alerts', 'Allergies and patch tests', c.allergies.length, true)}
-              {menu('formula', 'Colour formula', undefined, true)}
-              {menu('forms', 'Client forms', d.forms.length, true)}
-            </>}
-            {menu('prefs', 'Preferences')}
-          </div>
-        </>)}
-
-        {view !== 'home' && !openForm && <h2 style={S('margin:8px 0 0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>{SUB_TITLE[view]}</h2>}
+  return (<>
+        {title && view !== 'home' && !openForm && <h2 style={S('margin:8px 0 0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>{SUB_TITLE[view]}</h2>}
 
         {view === 'overview' && (<>
           <section aria-label="Total spent" style={S('box-sizing:border-box;border-radius:24px;background:#0E1116;color:#FFFFFF;padding:22px 22px 20px')}>
@@ -613,18 +487,159 @@ function Mobile({ c, initial, drawer }: { c: C; initial?: string; drawer?: boole
           </>);
         })()}
         {view === 'prefs' && s.prefs}
+  </>);
+}
+
+function Mobile({ c, initial, drawer }: { c: C; initial?: string; drawer?: boolean }) {
+  const { row, d } = c;
+  const [view, setView] = useState<Sub>(initial === 'messages' ? 'messages' : 'home');
+  const [thread, setThread] = useState(d.messages);
+  const [draft, setDraft] = useState('');
+  const [sendErr, setSendErr] = useState('');
+  const [sending, startSend] = useTransition();
+  const [rec, setRec] = useState(false);
+  const [qa, setQa] = useState(false);
+  const [apFilter, setApFilter] = useState<'all' | 'upcoming' | 'past'>('all');
+  const [openForm, setOpenForm] = useState('');
+  const [eqa, setEqa] = useState(false);
+  const mainRef = useRef<HTMLElement>(null);
+  // Every page opens at its top, whatever the last one was scrolled to.
+  useEffect(() => { const el = mainRef.current; if (!el) return; if (view === 'messages') el.scrollTo({ top: el.scrollHeight }); else el.scrollTo({ top: 0 }); }, [view, c.mode, openForm, thread.length]);
+  const sendChat = () => {
+    const t = draft.trim();
+    if (!t) return;
+    startSend(async () => {
+      const r = await sendClientMessage(row.id, t);
+      if (r.error) { setSendErr(r.error); return; }
+      setSendErr(''); setDraft('');
+      setThread((m) => [...m, { id: 'me-' + Date.now(), mine: true, text: t, day: 'Today', time: new Date().toLocaleTimeString('en-NZ', { hour: 'numeric', minute: '2-digit' }).toLowerCase() }]);
+    });
+  };
+  const tone = TONE[row.tag];
+  const book = `/calendar?new=1&c=${encodeURIComponent(row.name)}`;
+  const avatar = (px: number, fs: number) => <div style={S('flex:0 0 ' + px + 'px;width:' + px + 'px;height:' + px + 'px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:' + fs + 'px;font-weight:600;background:' + tone[0] + ';color:' + tone[1])}>{initialsOf(row.name, 2)}</div>;
+  const rowCss = ROW_BTN;
+  const menu = (id: Sub, label: string, count?: number, indent?: boolean) => (
+    <button key={id} onClick={() => { c.setError(''); c.setNotice(''); setOpenForm(''); setView(id); }} style={S(rowCss + (indent ? ';padding-left:24px' : ''))}>
+      <span style={S('flex:1 1 auto;min-width:0')}>{label}</span>
+      {!!count && <span style={S('flex:0 0 auto;min-width:24px;height:24px;padding:0 8px;box-sizing:border-box;border-radius:999px;background:#EEF0F3;color:#4A525E;font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center')}>{count}</span>}
+      {CHEV}
+    </button>
+  );
+  const ico = (path: string) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')} aria-hidden="true"><path d={path} /></svg>;
+  const PHONE = PHONE_P, MAIL = MAIL_P, CAL = CAL_P, card = LIST_CARD;
+  const sheet = (title: string, body: React.ReactNode, onClose: () => void) => (
+    <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:6')}>
+      <button onClick={onClose} aria-label="Close" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
+      <div className="sheet" role="dialog" aria-label={title} style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column;gap:6px')}>
+        <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0;margin-bottom:12px')} />
+        <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px')}><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{title}</h2><button onClick={onClose} aria-label="Close" style={S(RING)}>{CLOSE}</button></div>
+        {body}
+      </div>
+    </div>
+  );
+  const page = "position:relative;width:100%;height:100dvh;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4;";
+
+  // Messaging and editing take over the page (on desktop, they slide in from the right instead).
+  const wrap = (label: string, inner: React.ReactNode) => drawer
+    ? <div className="m-cal cal-root m-drawer"><div role="dialog" aria-label={label} style={S(page.replace('position:relative;width:100%;height:100dvh;', 'position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;') + 'background:#F4F5F7')}>{inner}</div></div>
+    : <div className="only-m m-cal cal-root" style={S(page + 'background:#F4F5F7')}>{inner}</div>;
+  if (c.mode === 'message') {
+    return wrap('Message ' + c.first, <ChatPanel fill clientId={row.id} first={c.first} initial={thread} send={(t) => sendClientMessage(row.id, t)} onSent={(m) => setThread((x) => [...x, m])} onBack={() => { c.setMode('view'); c.setError(''); }} />);
+  }
+  if (c.mode === 'edit') {
+    return wrap('Edit details', (
+      <>
+        <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px')}>
+          <button onClick={() => { c.setMode('view'); c.setError(''); }} aria-label="Back" style={S(RING)}>{BACK}</button>
+          <h1 style={S('margin:0;flex:1 1 auto;font-size:22px;font-weight:600;letter-spacing:-0.025em')}>Edit details</h1>
+        </header>
+        <main ref={mainRef} className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:8px 20px 20px;display:flex;flex-direction:column;gap:12px')}>
+          <Field label="Full name"><input type="text" value={c.ed.name} onChange={(e) => { c.setEd({ ...c.ed, name: e.target.value }); c.setError(''); }} style={FIELD_IN} /></Field>
+          <Field label="Email"><input type="email" inputMode="email" value={c.ed.email} onChange={(e) => { c.setEd({ ...c.ed, email: e.target.value }); c.setError(''); }} placeholder="name@example.com" style={FIELD_IN} /></Field>
+          <Field label="Phone"><input type="tel" inputMode="tel" value={c.ed.phone} onChange={(e) => { c.setEd({ ...c.ed, phone: phoneInput(e.target.value) }); c.setError(''); }} placeholder="Optional" style={FIELD_IN} /></Field>
+        </main>
+        <BottomBar error={c.error}>
+          <div style={S('display:flex;gap:10px')}>
+            <button onClick={() => setEqa(true)} aria-label="More actions" aria-haspopup="dialog" style={S(RING + ';flex:0 0 52px;width:52px;height:52px')}><svg width="20" height="20" viewBox="0 0 24 24" fill="#0E1116"><circle cx="12" cy="5.5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="18.5" r="1.6" /></svg></button>
+            <button onClick={c.saveEdit} disabled={c.busy} style={S(BLACK + ';flex:1 1 0;height:52px')}>Save details</button>
+          </div>
+        </BottomBar>
+        {eqa && sheet('More actions', !c.confirmDel ? (
+          <div style={S('display:flex;flex-direction:column')}>
+            <button onClick={() => c.setConfirmDel(true)} style={S(rowCss + ';color:#B42318')}>Delete client</button>
+          </div>
+        ) : (
+          <div style={S('display:flex;flex-direction:column;gap:12px;padding:16px;border:1px solid #F3C6C3;border-radius:20px;background:#FEF3F2')}>
+            <span style={S('font-size:14.5px;font-weight:600')}>Delete {row.name} for good?</span>
+            <span style={S('font-size:13.5px;color:#5E6673')}>Only possible when they have no bookings or sales. Their notes go too.</span>
+            {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
+            <div style={S('display:flex;gap:10px')}><button onClick={c.removeClient} disabled={c.busy} style={S('flex:1 1 0;height:48px;border:0;border-radius:999px;background:#C0261B;color:#FFFFFF;font-size:14px;font-weight:500')}>Delete client</button><button className="ghost" onClick={() => { c.setConfirmDel(false); setEqa(false); }} style={S('flex:1 1 0;height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>Keep</button></div>
+          </div>
+        ), () => { c.setConfirmDel(false); setEqa(false); })}
+      </>
+    ));
+  }
+
+
+  return (
+    <div className="only-m m-cal cal-root" style={S(page + 'background:#F4F5F7')}>
+      <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px;' + (view !== 'home' ? 'border-bottom:1px solid #E6E8EC;margin-bottom:8px' : ''))}>
+        {view === 'home'
+          ? <Link href="/clients" aria-label="Back to clients" style={S(RING)}>{BACK}</Link>
+          : <button onClick={() => { if (openForm) { setOpenForm(''); return; } setView('home'); c.setError(''); c.setNotice(''); }} aria-label="Back to profile" style={S(RING)}>{BACK}</button>}
+        {view !== 'home' && <>{avatar(36, 13)}<div style={S('flex:1 1 auto;min-width:0;font-size:18px;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{row.name}</div></>}
+        {view === 'home' && <div style={S('flex:1 1 auto')} />}
+        <Link href="/clients" aria-label="Close profile" style={S(RING)}>{CLOSE}</Link>
+      </header>
+      <main ref={mainRef} className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 24px;display:flex;flex-direction:column;gap:16px')}>
+        {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
+
+        {view === 'home' && (<>
+          <div style={S('display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0 4px;text-align:center')}>
+            {avatar(112, 34)}
+            <h1 style={S('margin:12px 0 0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em;overflow-wrap:anywhere')}>{row.name}</h1>
+            <div style={S('display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px')}><span style={S('display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;background:' + tone[0] + ';color:' + tone[1])}>{row.tag}</span>{!!row.email && <span style={S('font-size:14px;color:#5E6673;overflow-wrap:anywhere')}>{row.email}</span>}</div>
+          </div>
+          <div style={S('display:flex;gap:10px')}>
+            <button onClick={() => setQa(true)} aria-label="More actions" aria-haspopup="dialog" style={S(RING + ';flex:0 0 52px;width:52px;height:52px')}><svg width="20" height="20" viewBox="0 0 24 24" fill="#0E1116"><circle cx="12" cy="5.5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="18.5" r="1.6" /></svg></button>
+            <button onClick={() => { c.setError(''); c.setNotice(''); setView('messages'); }} aria-label={'Messages with ' + c.first} style={S(RING + ';flex:0 0 52px;width:52px;height:52px')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3.5" y="5.5" width="17" height="13" rx="3" /><path d="m4.5 7.5 7.5 5.5 7.5-5.5" /></svg></button>
+            <Link href={book} style={S('flex:1 1 0;height:52px;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none')}>Book now</Link>
+          </div>
+          <div style={S(card + ';display:flex;flex-direction:column')} className="sum-rows">
+            {[[PHONE, row.phone || 'No phone'], [MAIL, row.email || 'No email'], [CAL, d.since]].map(([p, t]) => <div key={p} style={S('display:flex;align-items:center;gap:12px;padding:14px 0;font-size:15px')}>{ico(p)}<span style={S('min-width:0;overflow-wrap:anywhere')}>{t}</span></div>)}
+          </div>
+          <div style={S(card + ';display:flex;flex-direction:column')} className="sum-rows">
+            {menu('overview', 'Overview')}
+            {menu('appointments', 'Appointments', d.appts.length)}
+            {menu('messages', 'Messages', thread.length)}
+            {menu('details', 'Client details')}
+            <button onClick={() => setRec(!rec)} aria-expanded={rec} style={S(rowCss)}><span style={S('flex:1 1 auto')}>Records</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto;transform:rotate(' + (rec ? 180 : 0) + 'deg)')} aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg></button>
+            {rec && <>
+              {menu('notes', 'Notes', c.notes.length, true)}
+              {menu('alerts', 'Allergies and patch tests', c.allergies.length, true)}
+              {menu('formula', 'Colour formula', undefined, true)}
+              {menu('forms', 'Client forms', d.forms.length, true)}
+            </>}
+            {menu('prefs', 'Preferences')}
+          </div>
+        </>)}
+
+        <ProfilePages c={c} view={view} setView={setView} thread={thread} apFilter={apFilter} setApFilter={setApFilter} openForm={openForm} setOpenForm={setOpenForm} title />
       </main>
       {view === 'messages' ? (
         <BottomBar error={sendErr}>
           <ChatComposer first={c.first} draft={draft} onDraft={(v) => { setDraft(v); setSendErr(''); }} onSend={sendChat} busy={sending} />
         </BottomBar>
       ) : <MobileTabs active="clients" />}
-      {qa && sheet('Quick actions', (
-        <div style={S('display:flex;flex-direction:column')}>
-          <button onClick={() => { setQa(false); c.startEdit(); }} style={S(rowCss)}>Edit details</button>
-          <Link href={'/clients/forms?c=' + row.id} style={S(rowCss + ';text-decoration:none')}>Client forms</Link>
-        </div>
-      ), () => setQa(false))}
+      {qa && (
+        <QuickActions onClose={() => setQa(false)}>
+          <QaGroup first>
+            <button onClick={() => { setQa(false); c.startEdit(); }} style={S(QA_ITEM)}>Edit details</button>
+            <Link href={'/clients/forms?c=' + row.id} style={S(QA_ITEM)}>Client forms</Link>
+          </QaGroup>
+        </QuickActions>
+      )}
     </div>
   );
 }
@@ -633,6 +648,6 @@ export function ProfileView({ data, initial }: { data: ProfileData; initial?: st
   const c = useProfile(data);
   return (<>
     {c.narrow !== false && <Mobile c={c} initial={initial} />}
-    {c.narrow !== true && <Desktop c={c} />}
+    {c.narrow !== true && <Desktop c={c} initial={initial} />}
   </>);
 }
