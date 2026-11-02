@@ -235,8 +235,11 @@ function Desktop({ c, initial }: { c: C; initial?: string }) {
   const drawer = "position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;display:flex;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4";
   return (
     <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:20px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
-      <Link href="/clients" style={S('align-self:flex-start;display:inline-flex;align-items:center;gap:10px;text-decoration:none;color:#0E1116;font-size:15px;font-weight:500')}><span style={S(RING)}>{BACK}</span>Clients</Link>
-      <div style={S('align-self:center;width:100%;max-width:560px;display:flex;flex-direction:column;gap:16px')}>
+      <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
+        <Link href="/clients" aria-label="Back to clients" style={S(RING)}>{BACK}</Link>
+        <Link href="/clients" aria-label="Close profile" style={S(RING)}>{CLOSE}</Link>
+      </div>
+      <div style={S('width:100%;display:flex;flex-direction:column;gap:16px')}>
         <div style={S('display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0 4px;text-align:center')}>
           {avatar(112, 34)}
           <h1 style={S('margin:12px 0 0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em;overflow-wrap:anywhere')}>{row.name}</h1>
