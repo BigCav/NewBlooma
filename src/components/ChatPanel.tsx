@@ -9,11 +9,11 @@ import { S } from '@/app/(dash)/calendar/pickers';
 const RING = 'flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0';
 
 /** The conversation as bubbles, with the day shown when it changes. */
-export function ChatBubbles({ thread }: { thread: ChatMsg[] }) {
+export function ChatBubbles({ thread, empty = 'No messages yet. Say hello below.' }: { thread: ChatMsg[]; empty?: string }) {
   return (<>
-    {thread.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No messages yet. Say hello below.</p>}
+    {thread.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>{empty}</p>}
     {thread.map((m, i) => {
-      const newDay = i === 0 || thread[i - 1].day !== m.day;
+      const newDay = !!m.day && (i === 0 || thread[i - 1].day !== m.day);
       return (
         <div key={m.id} style={S('display:flex;flex-direction:column;gap:6px')}>
           {newDay && <div style={S('align-self:center;margin:8px 0 2px;font-size:12.5px;color:#5E6673')}>{m.day}</div>}

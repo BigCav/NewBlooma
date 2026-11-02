@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's Clients.dc.html and MobileClients.dc.html. Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
+import { BottomSheet } from '@/components/BottomSheet';
 import { rootCls } from '@/components/drawer';
 import { useNewParam } from '@/components/useNewParam';
 import { phoneInput } from '@/lib/phone';
@@ -284,9 +285,7 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
       <MobileTabs active="clients" />
       {fopen && <FilterSheet title="Filter clients" options={FILTERS.filter((f) => f.id !== 'Lapsed')} value={c.filter} onPick={c.setFilter} onClose={() => setFopen(false)} />}
       {c.open && (
-        <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:5')}>
-          <button onClick={() => { c.setOpen(false); c.setMode('view'); c.setError(''); }} aria-label="Close details" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
-          <div className="sheet" role="dialog" aria-label="Client" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:92%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column;gap:16px')}>
+        <BottomSheet label="Client" onClose={() => { c.setOpen(false); c.setMode('view'); c.setError(''); }} backdropLabel="Close details" handle={false}>
             {c.mode === 'new' ? <NewClientFlow c={c} /> : (<>
               <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0')} />
               {(c.mode !== 'view' || !c.sel) && <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Client</h2>
@@ -295,8 +294,7 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
                 </button></div>}
               <Panel c={c} m={true} />
             </>)}
-          </div>
-        </div>
+          </BottomSheet>
       )}
     </div>
   );

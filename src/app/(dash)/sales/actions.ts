@@ -101,7 +101,7 @@ export async function setPrice(saleId: string, dollars: string): Promise<Res> {
   await releaseOnline(saleId);
   const { error } = await sb.rpc('set_sale_service_price', { p_sale: saleId, p_cents: Math.round(n * 100) });
   if (error) return { error: friendly(error.message) };
-  revalidatePath('/sales'); return { notice: 'Sale updated' };
+  revalidatePath('/sales'); return { notice: 'Sale saved' };
 }
 
 export async function refundSale(saleId: string): Promise<Res & { txn?: string }> {

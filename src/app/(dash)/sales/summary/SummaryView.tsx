@@ -1,5 +1,6 @@
 'use client';
 // Takings for a day or a run of days: what was sold, how it was paid, tax, tips, refunds, the team, and the cash drawer.
+import { BottomSheet } from '@/components/BottomSheet';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { CloseX, CLOSE_BTN } from '../../calendar/calUi';
@@ -62,10 +63,7 @@ function Period({ from, to, today, presets }: { from: string; to: string; today:
       </button>
     </div>
     {open && (
-      <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:6')}>
-        <button onClick={() => setOpen(false)} aria-label="Close" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
-        <div className="sheet" role="dialog" aria-label="Choose days" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:92%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column')}>
-          <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0;margin-bottom:12px')} />
+      <BottomSheet label="Choose days" onClose={() => setOpen(false)} z={6} gap={0} handleGap={12}>
           <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px')}>
             <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Choose days</h2>
             <button onClick={() => setOpen(false)} aria-label="Close" style={S(CLOSE_BTN)}><CloseX /></button>
@@ -84,8 +82,7 @@ function Period({ from, to, today, presets }: { from: string; to: string; today:
             <label style={S(field)}><span style={S('display:block;font-size:12.5px;color:#5E6673')}>To</span><input type="date" name="to" aria-label="To" defaultValue={to} max={today} required style={DATE_IN} /></label>
             <button type="submit" style={S('height:52px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font:inherit;font-size:14.5px;font-weight:500;cursor:pointer')}>Show</button>
           </form>
-        </div>
-      </div>
+        </BottomSheet>
     )}
   </>);
 }

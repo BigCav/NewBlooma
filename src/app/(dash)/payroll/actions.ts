@@ -95,5 +95,5 @@ export async function deleteTimesheet(id: string): Promise<Res> {
   if (await weekPaid(sb, t.staff_id, localOf(t.clock_in, salon.timezone).slice(0, 10))) return { error: 'That week is already paid, so its hours are locked.' };
   const { error } = await supabaseAdmin().from('timesheets').delete().eq('id', id).eq('salon_id', salon.id);
   if (error) return { error: friendly(error.message) };
-  revalidatePath('/payroll'); return { notice: 'Entry deleted' };
+  revalidatePath('/payroll'); return { notice: 'Entry removed' };
 }

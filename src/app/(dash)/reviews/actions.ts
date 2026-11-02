@@ -18,7 +18,7 @@ export async function deleteReply(id: string): Promise<Res> {
   const { sb } = await requireCtx();
   const { error } = await sb.from('reviews').update({ reply: null, replied_at: null }).eq('id', id);
   if (error) return { error: friendly(error.message) };
-  revalidatePath('/reviews'); return { notice: 'Reply deleted' };
+  revalidatePath('/reviews'); return { notice: 'Reply removed' };
 }
 
 export async function requestReviews(): Promise<Res> {

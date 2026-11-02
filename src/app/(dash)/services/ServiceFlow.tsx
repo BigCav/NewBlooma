@@ -1,4 +1,5 @@
 'use client';
+import { BottomSheet } from '@/components/BottomSheet';
 import { ConfirmBox } from '@/components/ConfirmBox';
 import { dollars } from '@/lib/format';
 import { useState } from 'react';
@@ -94,8 +95,8 @@ export function ServiceFlow({ c }: { c: ServicesCtl }) {
               <button type="button" className="ghost" onClick={() => setCe({ mode: 'rename', name: catName })} style={S('flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:8px;height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;cursor:pointer')}>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-4-4L4 16z" /><path d="m13.5 6.5 4 4" /></svg>Rename
               </button>
-              <button type="button" className="ghost" onClick={() => setCe({ mode: 'delete', name: '' })} style={S('flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:8px;height:48px;border:1px solid #F3C6C3;border-radius:999px;background:#FFFFFF;color:#B42318;font-size:14px;font-weight:500;cursor:pointer')}>
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#B42318" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4.5 7h15M9.5 7V5h5v2M6.5 7l.8 12h9.4l.8-12M10 11v5M14 11v5" /></svg>Delete
+              <button type="button" className="ghost" onClick={() => setCe({ mode: 'remove', name: '' })} style={S('flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:8px;height:48px;border:1px solid #F3C6C3;border-radius:999px;background:#FFFFFF;color:#B42318;font-size:14px;font-weight:500;cursor:pointer')}>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#B42318" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4.5 7h15M9.5 7V5h5v2M6.5 7l.8 12h9.4l.8-12M10 11v5M14 11v5" /></svg>Remove
               </button>
             </div>
           ) : ce.mode === 'rename' ? (
@@ -105,7 +106,7 @@ export function ServiceFlow({ c }: { c: ServicesCtl }) {
               <button type="button" className="ghost" onClick={() => setCe({ mode: '', name: '' })} style={S('flex:0 0 auto;height:48px;padding:0 16px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>Cancel</button>
             </div>
           ) : (
-            <ConfirmBox label="Confirm delete category" title={'Delete ' + catName + '?'} body="Only works when it has no services in it." action="Delete category" onAction={c.removeCat} busy={busy} onKeep={() => setCe({ mode: '', name: '' })} />
+            <ConfirmBox label="Confirm removal" title={'Remove ' + catName + '?'} body="Only works when it has no services in it." action="Remove category" onAction={c.removeCat} busy={busy} onKeep={() => setCe({ mode: '', name: '' })} />
           ))}
         </>)}
 
@@ -180,20 +181,16 @@ export function ServiceFlow({ c }: { c: ServicesCtl }) {
       </fieldset>
     </StepShell>
     {menu && (
-      <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:6')}>
-        <button onClick={() => { setMenu(false); setConfirm(false); }} aria-label="Close" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
-        <div className="sheet" role="dialog" aria-label="More actions" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:92%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column')}>
-          <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0;margin-bottom:12px')} />
+      <BottomSheet label="More actions" onClose={() => { setMenu(false); setConfirm(false); }} z={6} gap={0} handleGap={12}>
           <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px')}><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>More actions</h2><button onClick={() => { setMenu(false); setConfirm(false); }} aria-label="Close" style={S(RING_BTN)}><CloseX /></button></div>
           {!confirm ? (
             <div style={S('display:flex;flex-direction:column;padding:4px 0;border-top:1px solid #EEF0F3')}>
-              <button type="button" onClick={() => setConfirm(true)} style={S('display:flex;align-items:center;width:100%;min-height:54px;box-sizing:border-box;padding:0;border:0;background:transparent;font:inherit;font-size:16px;text-align:left;color:#B42318;cursor:pointer')}>Delete service</button>
+              <button type="button" onClick={() => setConfirm(true)} style={S('display:flex;align-items:center;width:100%;min-height:54px;box-sizing:border-box;padding:0;border:0;background:transparent;font:inherit;font-size:16px;text-align:left;color:#B42318;cursor:pointer')}>Remove service</button>
             </div>
           ) : (
-            <ConfirmBox label="Confirm delete" title="Delete this service?" body="It will no longer be available to book. This can't be undone." error={error} action="Delete service" onAction={c.remove} busy={busy} onKeep={() => { setConfirm(false); setMenu(false); }} />
+            <ConfirmBox label="Confirm removal" title="Remove this service?" body="It will no longer be available to book. This can't be undone." error={error} action="Remove service" onAction={c.remove} busy={busy} onKeep={() => { setConfirm(false); setMenu(false); }} />
           )}
-        </div>
-      </div>
+        </BottomSheet>
     )}
   </>);
 }

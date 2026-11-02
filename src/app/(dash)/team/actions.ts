@@ -83,7 +83,7 @@ export async function saveMember(i: Input): Promise<Res> {
     if (!want && was) { const { error } = await sb.from('service_staff').delete().eq('staff_id', sid).in('service_id', ids); if (error) return { error: friendly(error.message) }; }
   }
   revalidatePath('/team'); revalidatePath('/calendar');
-  return { id: sid!, notice: i.id ? 'Changes saved' : 'Team member added' };
+  return { id: sid!, notice: i.id ? 'Team member saved' : 'Team member added' };
 }
 
 /** A one-time link that lets this team member create their own login and join the salon. */

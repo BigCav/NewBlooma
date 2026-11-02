@@ -1,4 +1,5 @@
 'use client';
+import { BottomSheet } from '@/components/BottomSheet';
 import { ConfirmBox } from '@/components/ConfirmBox';
 import { useState } from 'react';
 import { S } from '../calendar/pickers';
@@ -69,10 +70,11 @@ export function TeamFlow({ c }: { c: TeamCtl }) {
                   {c.photoBusy ? 'Uploading…' : cur?.photo ? 'Change photo' : 'Add photo'}
                   <input type="file" accept="image/jpeg,image/png,image/webp" disabled={c.photoBusy} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; c.pickPhoto(f); }} style={S('position:absolute;width:1px;height:1px;opacity:0;pointer-events:none')} />
                 </label>
-                {!!cur?.photo && <button type="button" className="ghost" onClick={c.dropPhoto} disabled={c.photoBusy} style={S(PILL)}>Remove</button>}
+                {!!cur?.photo && <button type="button" className="ghost" onClick={() => c.setAskPhoto(true)} disabled={c.photoBusy} style={S(PILL)}>Remove</button>}
               </div>
             )}
           </div>
+          {c.askPhoto && <ConfirmBox label="Confirm removal" title="Remove this photo?" body="The initials show instead until you add another." action="Remove photo" onAction={() => { c.setAskPhoto(false); c.dropPhoto(); }} onKeep={() => c.setAskPhoto(false)} busy={c.photoBusy} />}
           <Field label="Name" htmlFor="tm-name"><input id="tm-name" type="text" value={d.name} onChange={(e) => c.setDraft('name', e.target.value)} placeholder="Full name" style={FIELD_IN} /></Field>
           <Field label="Role (optional)" htmlFor="tm-role"><input id="tm-role" type="text" value={d.role} onChange={(e) => c.setDraft('role', e.target.value)} placeholder="For example, Senior stylist" style={FIELD_IN} /></Field>
         </>)}
@@ -156,10 +158,7 @@ export function TeamFlow({ c }: { c: TeamCtl }) {
       </div>
     </StepShell>
     {menu && (
-      <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:6')}>
-        <button onClick={() => { setMenu(false); setConfirm(false); }} aria-label="Close" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
-        <div className="sheet" role="dialog" aria-label="More actions" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:92%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column')}>
-          <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0;margin-bottom:12px')} />
+      <BottomSheet label="More actions" onClose={() => { setMenu(false); setConfirm(false); }} z={6} gap={0} handleGap={12}>
           <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px')}><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>More actions</h2><button onClick={() => { setMenu(false); setConfirm(false); }} aria-label="Close" style={S(RING_BTN)}><CloseX /></button></div>
           {!confirm ? (
             <div style={S('display:flex;flex-direction:column;padding:4px 0;border-top:1px solid #EEF0F3')}>
@@ -168,8 +167,7 @@ export function TeamFlow({ c }: { c: TeamCtl }) {
           ) : (
             <ConfirmBox label="Confirm removal" title="Remove this team member?" body="They will no longer appear on the calendar or in online booking." error={error} action="Remove" onAction={c.remove} busy={busy} onKeep={() => { setConfirm(false); setMenu(false); }} />
           )}
-        </div>
-      </div>
+        </BottomSheet>
     )}
   </>);
 }

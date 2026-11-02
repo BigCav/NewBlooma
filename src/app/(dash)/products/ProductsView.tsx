@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's Products.dc.html and MobileProducts.dc.html. Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
+import { BottomSheet } from '@/components/BottomSheet';
 import { rootCls } from '@/components/drawer';
 import { useNewParam } from '@/components/useNewParam';
 import { decimalInput } from '@/lib/numeric';
@@ -160,12 +161,9 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
       <MobileTabs active="more" />
       {fopen && <FilterSheet title="Filter products" options={FILTERS} value={c.filter} onPick={c.setFilter} onClose={() => setFopen(false)} />}
       {c.open && (
-        <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:5')}>
-          <button onClick={c.close} aria-label="Close details" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
-          <div className="sheet" role="dialog" aria-label="Product details" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:92%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column;gap:18px')}>
+        <BottomSheet label="Product details" onClose={c.close} backdropLabel="Close details" gap={18} handle={false}>
             <ProductBody key={c.mode + (c.sel?.id ?? 'new')} c={c} />
-          </div>
-        </div>
+          </BottomSheet>
       )}
     </div>
   );

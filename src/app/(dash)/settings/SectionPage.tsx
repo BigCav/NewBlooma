@@ -1,4 +1,5 @@
 'use client';
+import { ConfirmBox } from '@/components/ConfirmBox';
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { phoneInput } from '@/lib/phone';
@@ -42,6 +43,7 @@ function Closed({ c }: { c: SettingsCtl }) {
   const [from, setFrom] = useState(''), [to, setTo] = useState(''), [why, setWhy] = useState('');
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, startT] = useTransition();
+  const [ask, setAsk] = useState<string | null>(null);
   const add = () => startT(async () => {
     const r = await addClosedPeriod(from, to, why);
     if (r.error) { setMsg({ ok: false, text: r.error }); return; }
@@ -56,13 +58,14 @@ function Closed({ c }: { c: SettingsCtl }) {
   });
   return (<>
     <div><h3 style={S(H3)}>Closed dates</h3><p style={S('margin:2px 0 0;' + NOTE)}>Holidays and other days you are shut, even though the weekly hours say open. Nothing is offered online on these days.</p></div>
+    {(() => { const x = c.closed.find((y) => y.id === ask); return x ? <ConfirmBox label="Confirm removal" title={'Open ' + (x.from === x.to ? dayText(x.from) : dayText(x.from) + ' to ' + dayText(x.to)) + ' again?'} body="Those days follow your weekly hours again." action="Remove" onAction={() => { setAsk(null); remove(x.id); }} onKeep={() => setAsk(null)} busy={busy} /> : null; })()}
     {c.closed.map((x) => (
       <div key={x.id} style={S('display:flex;align-items:center;gap:12px;box-sizing:border-box;padding:14px 16px;border:1px solid #E6E8EC;border-radius:22px;background:#FFFFFF')}>
         <div style={S('flex:1 1 auto;min-width:0')}>
           <div style={S('font-size:15px;font-weight:600')}>{x.from === x.to ? dayText(x.from) : dayText(x.from) + ' to ' + dayText(x.to)}</div>
           {x.reason && <div style={S('font-size:13px;color:#5E6673;overflow-wrap:anywhere')}>{x.reason}</div>}
         </div>
-        <button onClick={() => remove(x.id)} disabled={busy} aria-label={'Remove closed dates ' + dayText(x.from)} style={S('flex:0 0 auto;height:40px;padding:0 16px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#B42318;font:inherit;font-size:13.5px;font-weight:500;cursor:pointer')}>Remove</button>
+        <button onClick={() => setAsk(x.id)} disabled={busy} aria-label={'Remove closed dates ' + dayText(x.from)} style={S('flex:0 0 auto;height:40px;padding:0 16px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#B42318;font:inherit;font-size:13.5px;font-weight:500;cursor:pointer')}>Remove</button>
       </div>
     ))}
     {c.closed.length === 0 && <p style={S(NOTE)}>No closed dates coming up.</p>}

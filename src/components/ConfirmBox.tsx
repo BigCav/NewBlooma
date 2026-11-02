@@ -7,7 +7,7 @@ const BTN = 'flex:1 1 0;height:48px;border-radius:999px;font:inherit;font-size:1
 export function ConfirmBox({ label, title, body, error, action, keep = 'Keep', onAction, onKeep, busy }: {
   /** Read out by a screen reader when the box appears. */
   label: string; title: string; body?: string; error?: string;
-  /** The red button, for example "Delete product". */
+  /** The red button, for example "Remove product". */
   action: string; keep?: string; onAction: () => void; onKeep: () => void; busy?: boolean;
 }) {
   return (

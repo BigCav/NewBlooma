@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's Sales.dc.html and MobileSales.dc.html. Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
+import { BottomSheet } from '@/components/BottomSheet';
 import { ConfirmBox } from '@/components/ConfirmBox';
 import { rootCls } from '@/components/drawer';
 import { useNewParam } from '@/components/useNewParam';
@@ -20,7 +21,7 @@ import { createWalkin, payFlow, refundSale, sendReceipt, setPrice, } from './act
 import { useTerminal } from './useTerminal';
 import { TerminalStatus } from '../calendar/TerminalStatus';
 import { VisitSheet, MoreButton, QuickActions, QaGroup, QA_ITEM, ICON_TIME, ICON_PERSON, ICON_CARD, type VisitDetail } from '../calendar/VisitSheet';
-import { DISC_PCTS, FILTERS, NO_DISC, STATUS, TIP_OPTS, discOf, discountCents, fmt, type CoPackage, type CoProduct, type DiscPick, type PayMethod, type SaleRow, type SvcOpt } from './shared';
+import { FILTERS, NO_DISC, STATUS, discOf, fmt, type CoPackage, type CoProduct, type DiscPick, type PayMethod, type SaleRow, type SvcOpt } from './shared';
 
 type Props = {
   rows: SaleRow[]; bars: { day: string; cents: number; today: boolean }[]; todayTotal: number; paidCount: number; subtitle: string;
@@ -161,14 +162,6 @@ export type SalesCtl = C;
 const GHOST = (h: number) => `flex:1 1 0;height:${h}px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500`;
 const DARK = (h: number) => `flex:1 1 0;height:${h}px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500`;
 const statusStyle = (s: SaleRow['status']) => 'display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;background:' + STATUS[s][0] + ';color:' + STATUS[s][1];
-const pill = (on: boolean, m: boolean) => `flex:0 0 auto;height:${m ? 44 : 40}px;padding:0 16px;border-radius:999px;font-size:${m ? 14 : 13.5}px;font-weight:500;border:1px solid ` + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
-const inputS = (h: number): React.CSSProperties => ({ ...S(`box-sizing:border-box;width:100%;height:${h}px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;color:#0E1116;background:#FFFFFF`), padding: '0 14px', minHeight: 0 });
-const DL = (label: string, value: string, o: { last?: boolean; bold?: boolean; wrap?: boolean } = {}) => (
-  <div key={label} style={S('display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #EEF0F3;' + (o.last ? 'border-bottom:1px solid #EEF0F3' : ''))}><dt style={S('color:#5E6673')}>{label}</dt><dd style={S('margin:0;text-align:right;font-weight:' + (o.bold ? 600 : 500) + ';' + (o.wrap ? 'overflow-wrap:anywhere' : 'white-space:nowrap'))}>{value}</dd></div>
-);
-const Chips = ({ id, label, children }: { id: string; label: string; children: React.ReactNode }) => (
-  <div style={S('display:flex;flex-direction:column;gap:8px')}><span id={id} style={S('font-size:14px;font-weight:600')}>{label}</span><div role="group" className="hscroll" aria-labelledby={id} style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>{children}</div></div>
-);
 
 /** The phone's checkout for a sale: the same steps as the calendar's checkout. */
 function SaleCheckout({ c, s }: { c: C; s: SaleRow }) {
@@ -237,77 +230,13 @@ function MobileSale({ c, s }: { c: C; s: SaleRow }) {
   );
 }
 
-function Panel({ c, m }: { c: C; m: boolean }) {
-  const h = m ? 48 : 44, s = c.sel;
-  const notice = !!c.notice && <span role="status" style={S('padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.notice}</span>;
+/** What the sale sheet shows: the sale itself, its checkout, the terminal's refund step, or the price editor. */
+function Panel({ c }: { c: C }) {
+  const s = c.sel;
   const err = !!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>;
-  const tipChips = (cur: string, on: (v: string) => void, id: string) => c.askTip && (
-    <Chips id={id} label="Tip">{TIP_OPTS.map(([v, l]) => <button key={v} onClick={() => on(v)} aria-pressed={cur === v} style={S(pill(cur === v, m))}>{l}</button>)}</Chips>
-  );
-  const methodChips = (cur: string, on: (v: PayMethod['id']) => void, id: string) => (
-    <Chips id={id} label="Payment method">{c.methods.map((x) => <button key={x.id} onClick={() => on(x.id)} aria-pressed={cur === x.id} style={S(pill(cur === x.id, m))}>{x.label}</button>)}</Chips>
-  );
-  const codeField = (v: string, on: (v: string) => void, id: string) => (
-    <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor={id} style={S('font-size:14px;font-weight:600')}>Gift card code</label>
-      <input id={id} type="text" value={v} onChange={(e) => on(e.target.value)} placeholder="Gift card code" style={inputS(h)} /></div>
-  );
-  const discountControl = (cur: DiscPick, on: (d: DiscPick) => void, id: string) => c.canDiscount && (
-    <>
-      <Chips id={id + '-label'} label="Discount">
-        <button onClick={() => on(NO_DISC)} aria-pressed={cur.kind === 'none'} style={S(pill(cur.kind === 'none', m))}>None</button>
-        {DISC_PCTS.map((v) => <button key={v} onClick={() => on({ ...cur, kind: 'percent', value: v })} aria-pressed={cur.kind === 'percent' && cur.value === v} style={S(pill(cur.kind === 'percent' && cur.value === v, m))}>{v}%</button>)}
-        <button onClick={() => on({ ...cur, kind: 'amount', value: cur.kind === 'amount' ? cur.value : '' })} aria-pressed={cur.kind === 'amount'} style={S(pill(cur.kind === 'amount', m))}>$ off</button>
-      </Chips>
-      {cur.kind === 'amount' && <input aria-label="Discount amount in dollars" inputMode="decimal" value={cur.value} onChange={(e) => on({ ...cur, value: decimalInput(e.target.value) })} placeholder="Amount off, like 10 or 7.50" style={inputS(h)} />}
-      {cur.kind !== 'none' && <input aria-label="Discount reason" maxLength={60} value={cur.note} onChange={(e) => on({ ...cur, note: e.target.value })} placeholder="Reason (optional), e.g. Staff discount" style={inputS(h)} />}
-    </>
-  );
-  if (c.mode === 'new') {
-    const svc = c.services.find((x) => x.id === c.nw.service) ?? null;
-    const tipAmt = svc && c.askTip ? Math.round(svc.priceCents * (parseInt(c.nw.tip, 10) || 0) / 100) : 0;
-    const nwDisc = svc && c.canDiscount ? discountCents(svc.priceCents, c.nw.disc) : 0;
-    return (<>
-      <div style={S('display:flex;flex-direction:column;gap:18px')}>
-        <div><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>New sale</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>{svc ? svc.name + ', ' + fmt(svc.priceCents) + (nwDisc ? ' less ' + fmt(nwDisc) + ' discount' : '') + (tipAmt ? ' plus ' + fmt(tipAmt) + ' tip' : '') + ', total ' + fmt(svc.priceCents - nwDisc + tipAmt) : 'Choose a service to see the total.'}</p></div>
-        <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="nw-client" style={S('font-size:14px;font-weight:600')}>Client</label>
-          <input id="nw-client" type="text" value={c.nw.client} onChange={(e) => { c.setNw({ ...c.nw, client: e.target.value, clientId: null }); c.setError(''); }} placeholder="Search or type a client name" autoComplete="off" style={inputS(48)} />
-          <ClientMatches mobile={m} query={c.nw.client} pickedId={c.nw.clientId} onPick={(h) => { c.setNw({ ...c.nw, client: h.name, clientId: h.id }); c.setError(''); }} /></div>
-        <Chips id="nw-service-label" label="Service">{c.services.map((x) => <button key={x.id} onClick={() => { c.setNw({ ...c.nw, service: x.id }); c.setError(''); }} aria-pressed={c.nw.service === x.id} style={S(pill(c.nw.service === x.id, m))}>{x.name}</button>)}</Chips>
-        {methodChips(c.nw.method, (v) => c.setNw({ ...c.nw, method: v }), 'nw-method-label')}
-        {c.nw.method === 'gift_card' && codeField(c.nw.code, (v) => c.setNw({ ...c.nw, code: v }), 'nw-code')}
-        {discountControl(c.nw.disc, (d) => c.setNw({ ...c.nw, disc: d }), 'nw-disc')}
-        {tipChips(c.nw.tip, (v) => c.setNw({ ...c.nw, tip: v }), 'nw-tip-label')}
-        {err}
-        <div style={S('display:flex;gap:10px')}><button onClick={c.createSale} disabled={c.busy} style={S(DARK(h))}>Record sale</button><button className="ghost" onClick={c.cancel} style={S(GHOST(h))}>Cancel</button></div>
-      </div>
-    </>);
-  }
   if (!s) return <p style={S('margin:0;color:#5E6673;font-size:14px')}>No sales yet. Record one with New sale.</p>;
   if (c.mode === 'refund' && c.termView.phase !== 'idle') return <TerminalStatus t={c.termView} amount={fmt(s.total)} refund />;
-  if (m && c.mode === 'pay') return <SaleCheckout c={c} s={s} />;
-  if (c.mode === 'pay') {
-    const pct = c.askTip ? parseInt(c.pay.tip, 10) || 0 : 0;
-    const svcCents = s.amount, tipAmt = Math.round(svcCents * pct / 100);
-    const disc = c.canDiscount ? discountCents(svcCents, c.pay.disc) : s.discount, net = svcCents - disc;
-    const tax = s.taxIncl || !s.taxRate ? 0 : Math.round(net * s.taxRate / 100);
-    return (
-      <div style={S('display:flex;flex-direction:column;gap:18px')}>
-        <div><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Take payment</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px;overflow-wrap:anywhere')}>{s.client}, {s.service}</p></div>
-        {methodChips(c.pay.method, (v) => c.setPay({ ...c.pay, method: v }), 'pay-method-label')}
-        {c.pay.method === 'gift_card' && codeField(c.pay.code, (v) => c.setPay({ ...c.pay, code: v }), 'pay-code')}
-        {discountControl(c.pay.disc, (d) => c.setPay({ ...c.pay, disc: d }), 'pay-disc')}
-        {tipChips(c.pay.tip, (v) => c.setPay({ ...c.pay, tip: v }), 'pay-tip-label')}
-        <dl style={S('margin:0;display:flex;flex-direction:column')}>
-          {DL('Service', fmt(svcCents))}{disc ? DL('Discount', '-' + fmt(disc)) : null}{DL('Tip', tipAmt ? fmt(tipAmt) : 'None')}{tax ? DL('Tax', fmt(tax)) : null}{DL('Total', fmt(net + tipAmt + tax), { last: true, bold: true })}
-        </dl>
-        {err}
-        <div style={S('display:flex;gap:10px')}>
-          <button onClick={c.takePayment} disabled={c.busy || !!c.txn} style={S(DARK(h))}>{c.txn ? 'Waiting on terminalâ€¦' : 'Take payment'}</button>
-          <button className="ghost" onClick={c.cancel} style={S(GHOST(h))}>{c.txn ? 'Cancel on terminal' : 'Cancel'}</button>
-        </div>
-      </div>
-    );
-  }
+  if (c.mode === 'pay') return <SaleCheckout c={c} s={s} />;
   if (c.mode === 'edit') return (
     <div style={S('display:flex;flex-direction:column;gap:18px')}>
       <div><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Edit sale</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px;overflow-wrap:anywhere')}>{s.client}, {s.service}</p></div>
@@ -315,38 +244,10 @@ function Panel({ c, m }: { c: C; m: boolean }) {
         <div style={S('display:flex;align-items:center;gap:6px;box-sizing:border-box;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;background:#FFFFFF')}><span style={S('color:#5E6673')}>$</span>
           <input id="sale-amount" type="text" inputMode="decimal" value={c.editAmount} onChange={(e) => { c.setEditAmount(decimalInput(e.target.value)); c.setError(''); }} style={{ ...S('flex:1 1 auto;min-width:0;border:0;outline:none;background:transparent;font:inherit;color:#0E1116'), padding: 0, minHeight: 0, width: 'auto', borderRadius: 0 }} /></div></div>
       {err}
-      <div style={S('display:flex;gap:10px')}><button onClick={c.saveEdit} disabled={c.busy} style={S(DARK(h))}>Save sale</button><button className="ghost" onClick={c.cancel} style={S(GHOST(h))}>Cancel</button></div>
+      <div style={S('display:flex;gap:10px')}><button onClick={c.saveEdit} disabled={c.busy} style={S(DARK(48))}>Save sale</button><button className="ghost" onClick={c.cancel} style={S(GHOST(48))}>Cancel</button></div>
     </div>
   );
-  if (m) return <MobileSale c={c} s={s} />;
-  // view
-  const secondary = s.status === 'Paid' ? 'Refund' : s.status === 'Pending' && s.canEdit ? 'Edit sale' : null;
-  return (<>
-    <div style={S('display:flex;align-items:center;gap:8px;flex-wrap:wrap')}><span style={S(statusStyle(s.status))}>{s.status}</span>{notice}</div>
-    {err}
-    <div style={S('display:flex;align-items:center;gap:14px')}>
-      <div style={S('flex:0 0 56px;width:56px;height:56px;border-radius:999px;background:#EEF0F3;color:#0E1116;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600')}>{s.initials}</div>
-      <div style={S('min-width:0')}><div style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em;line-height:1.2;overflow-wrap:anywhere')}>{s.client}</div><div style={S('font-size:14px;color:#5E6673;overflow-wrap:anywhere')}>{s.service}</div></div>
-    </div>
-    <dl style={S('margin:0;display:flex;flex-direction:column')}>
-      {s.ref ? DL('Booking', s.ref) : null}{DL('Time', s.time)}{DL('With', s.staffName, { wrap: true })}{DL('Payment', s.method, { wrap: true })}{DL('Service', fmt(s.amount))}{s.discount ? DL('Discount' + (s.discountNote ? ' (' + s.discountNote + ')' : ''), '-' + fmt(s.discount), { wrap: true }) : null}{DL('Tip', s.tip ? fmt(s.tip) : 'None')}{s.tax ? DL('Tax', fmt(s.tax)) : null}{DL('Total', fmt(s.total), { last: true, bold: true })}
-    </dl>
-    {!c.confirmRefund && (
-      <div style={S('display:flex;gap:10px')}>
-        <button onClick={() => { if (s.status === 'Pending') { c.setPay({ method: c.methods[0]?.id ?? 'cash', tip: c.tipPctOf(s), code: '', disc: discOf(s) }); c.setMode('pay'); c.setError(''); } else c.receipt(); }} disabled={c.busy} style={S(DARK(h))}>{s.status === 'Pending' ? 'Take payment' : 'Send receipt'}</button>
-        {secondary && <button className="ghost" onClick={() => { if (s.status === 'Paid') c.setConfirmRefund(true); else { c.setEditAmount(String(s.amount / 100)); c.setMode('edit'); c.setError(''); } }} style={S(GHOST(h))}>{secondary}</button>}
-      </div>
-    )}
-    {c.confirmRefund && (
-      <div role="alertdialog" aria-label="Confirm refund" style={S('display:flex;flex-direction:column;gap:12px;box-sizing:border-box;padding:16px;border:1px solid #F3C6C3;border-radius:18px;background:#FEF3F2')}>
-        <div><div style={S('font-size:14.5px;font-weight:600')}>Refund {fmt(s.total)}?</div><div style={S("margin-top:2px;font-size:13px;color:#5E6673")}>The sale is marked as refunded and removed from today's sales.</div></div>
-        <div style={S('display:flex;gap:10px')}>
-          <button className="ghost" onClick={() => c.setConfirmRefund(false)} style={S(GHOST(h))}>Cancel</button>
-          <button onClick={c.doRefund} disabled={c.busy} style={S(`flex:1 1 0;height:${h}px;border:0;border-radius:999px;background:#C0261B;color:#FFFFFF;font-size:14px;font-weight:500`)}>Refund</button>
-        </div>
-      </div>
-    )}
-  </>);
+  return <MobileSale c={c} s={s} />;
 }
 
 function Desktop({ c }: { c: C }) {
@@ -456,16 +357,12 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
       <MobileTabs active="more" />
       {fopen && <FilterSheet title="Filter sales" options={FILTERS} value={c.filter} onPick={c.setFilter} onClose={() => setFopen(false)} />}
       {c.open && (
-        <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:5')}>
-          <button onClick={c.close} aria-label="Close details" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
-          <div className="sheet" role="dialog" aria-label="Sale details" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:86%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column;gap:16px')}>
-            <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0')} />
+        <BottomSheet label="Sale details" onClose={c.close} backdropLabel="Close details" maxHeight="86%">
             {c.mode === 'new' ? <NewSaleFlow c={c} /> : (<>
               {((c.mode !== 'view' && c.mode !== 'pay') || !c.sel) && <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Sale</h2><button onClick={c.close} aria-label="Close" style={S('flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer')}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg></button></div>}
-              <Panel c={c} m={true} />
+              <Panel c={c} />
             </>)}
-          </div>
-        </div>
+          </BottomSheet>
       )}
       {c.qa && c.open && c.mode === 'view' && c.sel && (() => {
         const q = c.sel;

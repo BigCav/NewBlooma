@@ -22,7 +22,7 @@ export async function saveProduct(id: string, f: { name: string; brand: string; 
   if (isNaN(reorder) || reorder < 0) return { error: 'Enter the reorder level as a whole number, 0 or more.' };
   const { error } = await sb.from('products').update({ name: f.name.trim(), brand: f.brand.trim() || null, price_cents: cents, reorder_level: reorder }).eq('id', id);
   if (error) return { error: friendly(error.message) };
-  revalidatePath('/products'); return { notice: 'Product updated' };
+  revalidatePath('/products'); return { notice: 'Product saved' };
 }
 
 export async function createProduct(f: { name: string; brand: string; cat: string; price: string; stock: string; reorder: string }): Promise<Res> {
@@ -44,11 +44,11 @@ export async function createProduct(f: { name: string; brand: string; cat: strin
   return { error: 'Could not pick a free SKU. Try again.' };
 }
 
-/** Deleting archives the product: it disappears from the app but past sales and stock history stay intact. */
+/** Removing archives the product: it disappears from the app but past sales and stock history stay intact. */
 export async function removeProduct(id: string): Promise<Res> {
   const { sb, staff } = await requireCtx();
-  if (staff.app_role !== 'owner') return { error: 'Only the owner can delete products.' };
+  if (staff.app_role !== 'owner') return { error: 'Only the owner can remove products.' };
   const { error } = await sb.from('products').update({ active: false }).eq('id', id);
   if (error) return { error: friendly(error.message) };
-  revalidatePath('/products'); return { notice: 'Product deleted' };
+  revalidatePath('/products'); return { notice: 'Product removed' };
 }

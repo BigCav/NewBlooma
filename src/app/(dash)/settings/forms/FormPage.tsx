@@ -1,4 +1,5 @@
 'use client';
+import { BottomSheet } from '@/components/BottomSheet';
 import { ConfirmBox } from '@/components/ConfirmBox';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -30,10 +31,7 @@ type Opt = { id: string; label: string; off?: boolean };
 /** A full-page choice list, like the filter sheets. `multi` keeps it open and shows Done. */
 export function PickSheet({ title, options, values, multi, help, onPick, onClose }: { title: string; options: Opt[]; values: string[]; multi?: boolean; help?: string; onPick: (id: string) => void; onClose: () => void }) {
   return (
-    <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:8')}>
-      <button onClick={onClose} aria-label="Close" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
-      <div className="sheet" role="dialog" aria-label={title} style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:92%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column')}>
-        <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0;margin-bottom:12px')} />
+    <BottomSheet label={title} onClose={onClose} z={8} gap={0} handleGap={12}>
         <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px')}>
           <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{title}</h2>
           <button onClick={onClose} aria-label="Close" style={S(RING)}>{CLOSE}</button>
@@ -52,8 +50,7 @@ export function PickSheet({ title, options, values, multi, help, onPick, onClose
           })}
         </div>
         {multi && <button onClick={onClose} style={S('margin-top:14px;height:52px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font:inherit;font-size:14.5px;font-weight:500;cursor:pointer')}>Done</button>}
-      </div>
-    </div>
+      </BottomSheet>
   );
 }
 
@@ -152,10 +149,7 @@ export function FormPage({ c }: { c: FormsCtl }) {
       {sheet === 'how' && <PickSheet title="Completed by" options={HOW_OPTS.map(([v, l]) => ({ id: v, label: l }))} values={[d.how]} onPick={(id) => c.patch((x) => { x.how = id as typeof x.how; if (id === 'staff' && x.miss === 'ask') x.miss = 'warn'; })} onClose={() => setSheet(null)} />}
       {sheet === 'miss' && <PickSheet title="If it is missing" help={missHelp} options={[{ id: 'warn', label: 'Warn staff' }, { id: 'ask', label: 'Ask client when booking', off: staff }]} values={[missOn]} onPick={(id) => c.patch((x) => { x.miss = id as Miss; })} onClose={() => setSheet(null)} />}
       {sheet === 'more' && (
-        <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:8')}>
-          <button onClick={() => setSheet(null)} aria-label="Close" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
-          <div className="sheet" role="dialog" aria-label="More actions" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:92%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column')}>
-            <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0;margin-bottom:12px')} />
+        <BottomSheet label="More actions" onClose={() => setSheet(null)} z={8} gap={0} handleGap={12}>
             <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px')}>
               <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>More actions</h2>
               <button onClick={() => setSheet(null)} aria-label="Close" style={S(RING)}>{CLOSE}</button>
@@ -163,13 +157,12 @@ export function FormPage({ c }: { c: FormsCtl }) {
             {!c.confirmDel ? (
               <div style={S('display:flex;flex-direction:column')}>
                 {!d.isNew && !c.isDirty && <Link href={`/settings/forms/preview?f=${d.id}`} style={S(rowCss)}>See what clients see</Link>}
-                <button onClick={() => (d.isNew ? c.remove() : c.setConfirmDel(true))} style={S(rowCss + ';color:#B42318')}>{d.isNew ? 'Discard form' : 'Delete form'}</button>
+                <button onClick={() => (d.isNew ? c.remove() : c.setConfirmDel(true))} style={S(rowCss + ';color:#B42318')}>{d.isNew ? 'Discard form' : 'Remove form'}</button>
               </div>
             ) : (
-              <ConfirmBox label="Confirm delete" title={'Delete ' + d.name + '?'} body="Clients stop being asked for it. Answers already given stay on their record." error={c.error} action="Delete form" onAction={c.remove} busy={c.busy} onKeep={() => { c.setConfirmDel(false); setSheet(null); }} />
+              <ConfirmBox label="Confirm removal" title={'Remove ' + d.name + '?'} body="Clients stop being asked for it. Answers already given stay on their record." error={c.error} action="Remove form" onAction={c.remove} busy={c.busy} onKeep={() => { c.setConfirmDel(false); setSheet(null); }} />
             )}
-          </div>
-        </div>
+          </BottomSheet>
       )}
     </div>
   );

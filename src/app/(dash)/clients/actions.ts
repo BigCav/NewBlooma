@@ -44,12 +44,12 @@ export async function updateClient(id: string, name: string, email: string, phon
 /** Owner only, and only for a client with no bookings or sales (so no history is lost). Their notes and waitlist entries go with them. */
 export async function deleteClient(id: string): Promise<R> {
   const { sb, staff } = await requireCtx();
-  if (staff.app_role !== 'owner') return { error: 'Only the owner can delete a client.' };
+  if (staff.app_role !== 'owner') return { error: 'Only the owner can remove a client.' };
   const [{ count: b }, { count: s }] = await Promise.all([
     sb.from('bookings').select('id', { count: 'exact', head: true }).eq('client_id', id),
     sb.from('sales').select('id', { count: 'exact', head: true }).eq('client_id', id),
   ]);
-  if ((b ?? 0) > 0 || (s ?? 0) > 0) return { error: 'This client has bookings or sales on record, so they cannot be deleted.' };
+  if ((b ?? 0) > 0 || (s ?? 0) > 0) return { error: 'This client has bookings or sales on record, so they cannot be removed.' };
   await Promise.all([sb.from('client_notes').delete().eq('client_id', id), sb.from('waitlist_entries').delete().eq('client_id', id), sb.from('inbox_items').delete().eq('client_id', id)]);
   const { error } = await sb.from('clients').delete().eq('id', id);
   if (error) return { error: friendly(error.message) };

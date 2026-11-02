@@ -1,4 +1,5 @@
 'use client';
+import { ConfirmBox } from '@/components/ConfirmBox';
 import { useRouter } from 'next/navigation';
 import { rootCls } from '@/components/drawer';
 import { useEffect, useState, useTransition } from 'react';
@@ -199,6 +200,7 @@ function EditPage({ c, p, onBack }: { c: PayrollCtl; p: PayRow; onBack: () => vo
   const router = useRouter();
   const [busy, startT] = useTransition();
   const [rows, setRows] = useState<(SheetRow & { fresh?: boolean })[] | null>(null);
+  const [ask, setAsk] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [note, setNote] = useState('');
   const reload = () => loadTimesheets(p.id, c.from, c.to).then((r) => { if (r.error) setError(r.error); else setRows(r.rows ?? []); });
@@ -221,10 +223,12 @@ function EditPage({ c, p, onBack }: { c: PayrollCtl; p: PayRow; onBack: () => vo
           <section key={r.id} style={S(CARD + ';display:flex;flex-direction:column;gap:10px;padding:14px')}>
             <Field label="In"><input type="datetime-local" value={r.inAt} onChange={(e) => patch(r.id, 'inAt', e.target.value)} style={FIELD_IN} /></Field>
             <Field label="Out (blank if still working)"><input type="datetime-local" value={r.outAt} onChange={(e) => patch(r.id, 'outAt', e.target.value)} style={FIELD_IN} /></Field>
+            {ask === r.id ? <ConfirmBox label="Confirm removal" title="Remove this entry?" body="The clock-in and clock-out times are taken off this week." action="Remove entry" onAction={() => { setAsk(null); del(r); }} onKeep={() => setAsk(null)} busy={busy} /> : (
             <div style={S('display:flex;gap:10px')}>
-              <button className="ghost" onClick={() => del(r)} disabled={busy} style={S(OUTLINE + ';color:#B42318')}>{r.fresh ? 'Discard' : 'Delete'}</button>
+              <button className="ghost" onClick={() => (r.fresh ? del(r) : setAsk(r.id))} disabled={busy} style={S(OUTLINE + ';color:#B42318')}>{r.fresh ? 'Discard' : 'Remove'}</button>
               <button onClick={() => save(r)} disabled={busy} style={S(BLACK)}>{r.fresh ? 'Add entry' : 'Save'}</button>
             </div>
+            )}
           </section>
         ))}
         {!!error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{error}</p>}

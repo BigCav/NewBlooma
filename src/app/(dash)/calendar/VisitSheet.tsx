@@ -1,5 +1,6 @@
 'use client';
 // The details sheet for a visit, shared by the calendar (an appointment) and Sales (its sale): one layout, so they cannot drift apart.
+import { BottomSheet } from '@/components/BottomSheet';
 import type { ReactNode } from 'react';
 import { S } from './pickers';
 import { CloseX, CLOSE_BTN } from './calUi';
@@ -28,14 +29,10 @@ export const QA_ITEM = 'display:flex;align-items:center;width:100%;min-height:54
 /** Quick actions: groups of items in a bottom sheet over the details. */
 export function QuickActions({ onClose, children, title = 'Quick actions' }: { onClose: () => void; children: ReactNode; title?: string }) {
   return (
-    <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:6')}>
-      <button onClick={onClose} aria-label="Close quick actions" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
-      <div className="sheet" role="dialog" aria-label="Quick actions" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:92%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column')}>
-        <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0;margin-bottom:12px')} />
+    <BottomSheet label="Quick actions" onClose={onClose} backdropLabel="Close quick actions" z={6} gap={0} handleGap={12}>
         <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px')}><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{title}</h2><button onClick={onClose} aria-label="Close" style={S(CLOSE_BTN)}><CloseX /></button></div>
         {children}
-      </div>
-    </div>
+      </BottomSheet>
   );
 }
 export const QaGroup = ({ first, children }: { first?: boolean; children: ReactNode }) => <div style={S('display:flex;flex-direction:column;padding:4px 0;' + (first ? '' : 'border-top:1px solid #EEF0F3'))}>{children}</div>;

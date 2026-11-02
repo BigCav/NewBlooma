@@ -1,4 +1,5 @@
 'use client';
+import { ConfirmBox } from '@/components/ConfirmBox';
 import { rootCls } from '@/components/drawer';
 import { useEffect, useState } from 'react';
 import { MobileHeader, MobileTabs } from '@/components/Chrome';
@@ -125,6 +126,7 @@ function ReviewPage({ c, r, onBack }: { c: ReviewsCtl; r: ReviewRow; onBack: () 
 }
 
 function ReplyPage({ c, r }: { c: ReviewsCtl; r: ReviewRow }) {
+  const [ask, setAsk] = useState(false);
   return (
     <div role="dialog" aria-label="Reply" style={S(PAGE + ';z-index:6')}>
       <Header title={'Reply to ' + r.name.split(' ')[0]} onBack={c.closeReply} />
@@ -141,10 +143,12 @@ function ReplyPage({ c, r }: { c: ReviewsCtl; r: ReviewRow }) {
       </main>
       <div style={S(BAR)}>
         {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
-        <div style={S('display:flex;gap:10px')}>
-          {!!r.reply && <button className="ghost" onClick={() => c.removeReply(r.id)} disabled={c.busy} style={S(OUTLINE + ';color:#B42318')}>Delete reply</button>}
-          <button onClick={() => c.save(r.id)} disabled={c.busy} style={S(BLACK)}>Post reply</button>
-        </div>
+        {ask ? <ConfirmBox label="Confirm removal" title="Remove your reply?" body="It stops showing with the review." action="Remove reply" onAction={() => { setAsk(false); c.removeReply(r.id); }} onKeep={() => setAsk(false)} busy={c.busy} /> : (
+          <div style={S('display:flex;gap:10px')}>
+            {!!r.reply && <button className="ghost" onClick={() => setAsk(true)} disabled={c.busy} style={S(OUTLINE + ';color:#B42318')}>Remove reply</button>}
+            <button onClick={() => c.save(r.id)} disabled={c.busy} style={S(BLACK)}>Post reply</button>
+          </div>
+        )}
       </div>
     </div>
   );

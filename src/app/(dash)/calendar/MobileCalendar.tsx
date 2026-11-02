@@ -1,6 +1,8 @@
 'use client';
 // 1:1 conversion of the prototype's Mobile.dc.html (+ MobileHeader, MobileTabs). Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
+import { ConfirmBox } from '@/components/ConfirmBox';
+import { BottomSheet } from '@/components/BottomSheet';
 import { openNewMenu } from '@/components/NewMenu';
 import { rootCls } from '@/components/drawer';
 import { useState } from 'react';
@@ -24,6 +26,7 @@ import type { Props } from './calUi';
 export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useCalendar>; props: Props; drawer?: boolean }) {
   const { HOUR_PX, act, activeCards, addWalkin, amap, av, avail, availKey, backToView, bf, bfDur, blank, blockId, blockRows, blocks, bookings, busy, bvB, cards, cfg, charge, chk, close, co, coMath, createNew, cur, day, dayB, dayHrs, days14, di, doneBk, ed, editPlan, error, firstOpenDay, gEnd, gHours, gStart, go, hasError, hours, hrsOf, later, laterBk, minutesFromIso, mode, moveBooking, nFirstSvc, nKeyStr, nKeys, nOffers, nPickSvc, nPlan, nSlots, nWhy, nf, notice, now, nowTop, offered, offers, open, openBlock, openBooking, openDays, openNew, pageSubtitle, pageTitle, pendingSel, plan, primary, query, reason, refresh, router, row, rs, saveBlock, saveEdit, searchOpen, seg, sel, selId, services, setAmap, setAvail, setBf, setBlockId, setCo, setEd, setError, setMode, setNf, setNotice, setNow, setOpen, setPendingSel, setPlan, setQuery, setRs, setSearchOpen, setSelId, setSres, setStaffSel, setWi, setWkOpen, slotsFor, sq, sres, staffName, staffSel, startCheckout, startResched, startT, statCount, statRevenue, statNext, strip, svcMap, team, today, todayList, tz, upcoming, view, viewEvents, vm, weekDays, wi, wiPlanText, wiPlanCss, wiSvc, wkCards, wkOpen, wkRange, wkStaff, wkTitle, ws, nLock, edLock, lockFor, lf, setLf, openLate, lateList, saveLate } = c;
   const [qa, setQa] = useState(false);
+  const [askBlock, setAskBlock] = useState(false);
   const [qk, setQk] = useState(false);
   const [sum, setSum] = useState(false);
   const done = dayB.filter((b) => b.status === 'completed').length;
@@ -40,17 +43,13 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
   ];
   const SHEET_ROW = 'display:flex;align-items:center;width:100%;min-height:56px;box-sizing:border-box;padding:0;border:0;border-bottom:1px solid #EEF0F3;background:transparent;font:inherit;font-size:16px;text-align:left;color:#0E1116;cursor:pointer';
   const fullSheet = (title: string, body: React.ReactNode, onClose: () => void, bg = '#FFFFFF') => (
-    <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:6')}>
-      <button onClick={onClose} aria-label="Close" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
-      <div className="sheet" role="dialog" aria-label={title} style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:92%;overflow-y:auto;background:' + bg + ';border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column')}>
-        <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0;margin-bottom:12px')} />
+    <BottomSheet label={title} onClose={onClose} z={6} gap={0} handleGap={12} bg={bg}>
         <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px')}>
           <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{title}</h2>
           <button onClick={onClose} aria-label="Close" style={S(CLOSE_BTN)}><CloseX /></button>
         </div>
         {body}
-      </div>
-    </div>
+      </BottomSheet>
   );
   const startWalkin = () => { if (day !== today || view !== 'day') go(today, 'day'); setOpen(true); setMode('walkin'); setWi({ name: '', clientId: null, svc: null, pro: 'any', cat: '' }); setError(''); setNotice(''); };
   const startBlock = () => { setOpen(true); setMode('block'); setBf({ s: team[0]?.id ?? '', kind: 'lunch', day: day < today ? today : day, dur: 60, start: null }); setError(''); setNotice(''); };
@@ -247,10 +246,7 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
       </nav>
 
       {open && (
-        <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:5')}>
-          <button onClick={close} aria-label="Close details" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
-          <div className="sheet" role="dialog" aria-label="Appointment details" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:92%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column;gap:16px')}>
-            <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0')} />
+        <BottomSheet label="Appointment details" onClose={close} backdropLabel="Close details">
 
             {mode === 'view' && sel && (
               <VisitSheet onClose={close} title={dayInfo(sel.b.dayYmd).short}
@@ -352,10 +348,12 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
                 <div style={S(DLROW + ';border-bottom:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>Time</dt><dd style={S('margin:0;font-weight:500;text-align:right')}>{fmtMin(bvB.start) + ' – ' + fmtMin(bvB.end)}</dd></div>
               </dl>
               {errP()}
+              {askBlock ? <ConfirmBox label="Confirm removal" title="Remove this block?" body="The time opens up for bookings again." action="Remove block" onAction={() => { setAskBlock(false); act(() => deleteBlock(bvB.id), 'Block removed', () => { setBlockId(null); setOpen(false); setMode('view'); }); }} onKeep={() => setAskBlock(false)} busy={busy} /> : (
               <div style={S('display:flex;gap:10px')}>
-                <button onClick={() => act(() => deleteBlock(bvB.id), 'Block removed', () => { setBlockId(null); setOpen(false); setMode('view'); })} style={S(PRIMARY)}>Remove block</button>
+                <button onClick={() => setAskBlock(true)} style={S(PRIMARY)}>Remove block</button>
                 <button onClick={close} style={S(SECOND)}>Close</button>
               </div>
+              )}
             </>)}
 
             {mode === 'late' && <LateWizard c={c} />}
@@ -385,8 +383,7 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
                 <button onClick={backToView} style={S(SECOND)}>Cancel</button>
               </div>
             </>)}
-          </div>
-        </div>
+          </BottomSheet>
       )}
 
       {qa && open && mode === 'view' && sel && (
@@ -403,10 +400,7 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
       )}
 
       {st && open && mode === 'view' && sel && (
-        <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:6')}>
-          <button onClick={() => setSt('')} aria-label="Close status" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
-          <div className="sheet" role="dialog" aria-label="Change status" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:92%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column;gap:6px')}>
-            <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0;margin-bottom:12px')} />
+        <BottomSheet label="Change status" onClose={() => setSt('')} backdropLabel="Close status" z={6} gap={6} handleGap={12}>
             {st === 'cancel'
               ? <CancelPick name={first(sel.b.client)} mobile busy={busy} onBack={() => setSt('list')} onConfirm={(why) => act(() => cancelBooking(sel.b.id, why), first(sel.b.client) + "'s booking cancelled", () => { setSt(''); setOpen(false); setMode('view'); })} />
               : (() => {
@@ -433,8 +427,7 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
                   {sel.canEdit && sel.k !== 'live' && <button onClick={() => setSt('cancel')} style={S(ITEM + ';color:#B42318')}>{ico(<><rect x="3.5" y="5" width="17" height="15.5" rx="3" /><path d="M3.5 10h17M10 13.5l4 4M14 13.5l-4 4" /></>)}Cancel booking</button>}
                 </>);
               })()}
-          </div>
-        </div>
+          </BottomSheet>
       )}
     </div>
   );

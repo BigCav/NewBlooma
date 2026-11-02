@@ -76,7 +76,7 @@ export async function deleteForm(id: string): Promise<Res> {
   if (error) return { error: friendly(error.message) };
   if (!data?.length) return { error: 'That form no longer exists.' };
   revalidatePath('/settings/forms'); revalidatePath('/calendar'); revalidatePath('/clients/forms');
-  return { notice: 'Form deleted' };
+  return { notice: 'Form removed' };
 }
 
 /** Adds one of the ready-made forms, needed for every service category to start with. */

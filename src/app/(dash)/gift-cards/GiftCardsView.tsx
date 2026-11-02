@@ -1,4 +1,5 @@
 'use client';
+import { BottomSheet } from '@/components/BottomSheet';
 import { ConfirmBox } from '@/components/ConfirmBox';
 import { dollars } from '@/lib/format';
 import { rootCls } from '@/components/drawer';
@@ -245,13 +246,9 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
       <MobileTabs active="more" />
       {fopen && <FilterSheet title="Filter gift cards" options={opts} value={c.filter} onPick={(id) => c.setFilter(id as never)} onClose={() => setFopen(false)} />}
       {c.open && (
-        <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:5')}>
-          <button onClick={() => c.setOpen(false)} aria-label="Close" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
-          <div className="sheet" role="dialog" aria-label="Gift card" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:90%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column;gap:18px')}>
-            <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0')} />
+        <BottomSheet label="Gift card" onClose={() => c.setOpen(false)} maxHeight="90%" gap={18}>
             {c.mode === 'new' ? <IssueFlow c={c} genCode={genCode} /> : <Panel c={c} m={true} />}
-          </div>
-        </div>
+          </BottomSheet>
       )}
     </div>
   );

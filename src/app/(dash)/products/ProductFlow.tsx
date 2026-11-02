@@ -1,4 +1,5 @@
 'use client';
+import { BottomSheet } from '@/components/BottomSheet';
 import { ConfirmBox } from '@/components/ConfirmBox';
 import { useState } from 'react';
 import { decimalInput, digitsInput } from '@/lib/numeric';
@@ -200,20 +201,16 @@ function ProductForm({ c }: { c: ProductsCtl }) {
       </div>
     </StepShell>
     {menu && (
-      <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:6')}>
-        <button onClick={closeMenu} aria-label="Close" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
-        <div className="sheet" role="dialog" aria-label="More actions" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:92%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column')}>
-          <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0;margin-bottom:12px')} />
+      <BottomSheet label="More actions" onClose={closeMenu} z={6} gap={0} handleGap={12}>
           <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px')}><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>More actions</h2><button onClick={closeMenu} aria-label="Close" style={S(RING_BTN)}><CloseX /></button></div>
           {!c.confirmDel ? (
             <div style={S('display:flex;flex-direction:column;padding:4px 0;border-top:1px solid #EEF0F3')}>
-              <button type="button" onClick={() => c.setConfirmDel(true)} style={S('display:flex;align-items:center;width:100%;min-height:54px;box-sizing:border-box;padding:0;border:0;background:transparent;font:inherit;font-size:16px;text-align:left;color:#B42318;cursor:pointer')}>Delete product</button>
+              <button type="button" onClick={() => c.setConfirmDel(true)} style={S('display:flex;align-items:center;width:100%;min-height:54px;box-sizing:border-box;padding:0;border:0;background:transparent;font:inherit;font-size:16px;text-align:left;color:#B42318;cursor:pointer')}>Remove product</button>
             </div>
           ) : (
-            <ConfirmBox label="Confirm delete" title="Delete this product?" body="It will disappear from your product list. Past sales are not affected." error={c.error} action="Delete product" onAction={c.remove} busy={c.busy} onKeep={closeMenu} />
+            <ConfirmBox label="Confirm removal" title="Remove this product?" body="It will disappear from your product list. Past sales are not affected." error={c.error} action="Remove product" onAction={c.remove} busy={c.busy} onKeep={closeMenu} />
           )}
-        </div>
-      </div>
+        </BottomSheet>
     )}
   </>);
 }

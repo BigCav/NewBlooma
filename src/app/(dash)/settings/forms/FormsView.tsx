@@ -53,7 +53,7 @@ function useForms(props: Props) {
       if (r.error) { setError(r.error); setNotice(''); return; }
       dirty.current.delete(d.id);
       if (d.isNew) { setForms((all) => all.filter((x) => x.id !== d.id)); setSel(r.id!); }
-      setError(''); setNotice(r.notice ?? 'Saved'); router.refresh();
+      setError(''); setNotice(r.notice ?? 'Form saved'); router.refresh();
     });
   };
   const remove = () => { if (!cur) return; const d = cur; if (d.isNew) { setForms((all) => all.filter((x) => x.id !== d.id)); setSel(forms.find((x) => x.id !== d.id)?.id ?? ''); setOpen(false); return; } startT(async () => { const r = await deleteForm(d.id); if (r.error) { setError(r.error); return; } dirty.current.delete(d.id); setConfirmDel(false); setSel(''); setOpen(false); setNotice(r.notice ?? ''); router.refresh(); }); };

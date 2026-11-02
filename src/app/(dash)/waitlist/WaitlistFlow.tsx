@@ -1,4 +1,5 @@
 'use client';
+import { BottomSheet } from '@/components/BottomSheet';
 import { ConfirmBox } from '@/components/ConfirmBox';
 import { useState } from 'react';
 import { S, ServicePicker } from '../calendar/pickers';
@@ -106,10 +107,7 @@ export function EntryPage({ c, r }: { c: WaitlistCtl; r: WlRow }) {
         </div>
       )}
       {qa && (
-        <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:7')}>
-          <button onClick={() => setQa(false)} aria-label="Close" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
-          <div className="sheet" role="dialog" aria-label="More actions" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:92%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column')}>
-            <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0;margin-bottom:12px')} />
+        <BottomSheet label="More actions" onClose={() => setQa(false)} z={7} gap={0} handleGap={12}>
             <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px')}>
               <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>More actions</h2>
               <button onClick={() => setQa(false)} aria-label="Close" style={S(RING)}>{CLOSE}</button>
@@ -117,8 +115,7 @@ export function EntryPage({ c, r }: { c: WaitlistCtl; r: WlRow }) {
             {!confirm ? <button onClick={() => setConfirm(true)} style={S(rowCss)}>Remove from waitlist</button> : (
               <ConfirmBox label="Confirm removal" title={'Remove ' + r.name + ' from the waitlist?'} error={c.error} action="Remove" onAction={() => c.remove(r)} busy={c.busy} onKeep={() => { setConfirm(false); setQa(false); }} />
             )}
-          </div>
-        </div>
+          </BottomSheet>
       )}
     </div>
   );

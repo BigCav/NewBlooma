@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's ClientProfile.dc.html and MobileClientProfile.dc.html. Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
+import { BottomSheet } from '@/components/BottomSheet';
 import { ConfirmBox } from '@/components/ConfirmBox';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -52,6 +53,7 @@ function useProfile(d: ProfileData) {
   const [mode, setMode] = useState<'view' | 'message' | 'edit'>('view');
   const [ed, setEd] = useState({ name: '', email: '', phone: '' });
   const [confirmDel, setConfirmDel] = useState(false);
+  const [ask, setAsk] = useState<{ kind: 'note' | 'allergy'; key: string; label: string } | null>(null);
   const [msg, setMsg] = useState('');
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
@@ -69,7 +71,7 @@ function useProfile(d: ProfileData) {
     setPatch: (on: string | null) => run(() => setPatchTest(row.id, on), () => { setPatchOn(on); }),
     saveFormula: () => run(() => saveFormula(row.id, formula), () => { setSaved(formula); setNotice('Formula saved'); }),
     toggle: (k: 'reminders' | 'marketing') => { const v = k === 'reminders' ? !reminders : !marketing; run(() => setPreference(row.id, k, v), () => (k === 'reminders' ? setReminders(v) : setMarketing(v))); },
-    ed, setEd, confirmDel, setConfirmDel,
+    ed, setEd, confirmDel, setConfirmDel, ask, setAsk,
     startEdit: () => { setEd({ name: row.name, email: row.email, phone: row.phone }); setConfirmDel(false); setMode('edit'); setError(''); setNotice(''); },
     saveEdit: () => { if (!ed.name.trim()) { setError("Add the client's name."); return; } run(() => updateClient(row.id, ed.name, ed.email, ed.phone), () => { setMode('view'); setNotice('Details saved'); router.refresh(); }); },
     removeClient: () => run(() => deleteClient(row.id), () => { router.push('/clients'); router.refresh(); }),
@@ -94,6 +96,14 @@ function Pager({ page, pages, total, per, onPage }: { page: number; pages: numbe
   );
 }
 const X = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>;
+
+/** Asks before a note or an allergy is taken off the client. */
+function AskRemove({ c }: { c: C }) {
+  const a = c.ask;
+  if (!a) return null;
+  return <ConfirmBox label="Confirm removal" title={a.kind === 'note' ? 'Remove this note?' : 'Remove ' + a.label + ' from the allergies?'} body={a.kind === 'note' ? a.label : undefined} action="Remove" busy={c.busy}
+    onAction={() => { c.setAsk(null); if (a.kind === 'note') c.removeNote(a.key); else c.removeAllergy(Number(a.key)); }} onKeep={() => c.setAsk(null)} />;
+}
 
 /* The section cards. `pad` is the card padding (24 desktop, 20 mobile). */
 function Sections({ c, pad, titles = true, usually = true }: { c: C; pad: number; titles?: boolean; usually?: boolean }) {
@@ -131,11 +141,12 @@ function Sections({ c, pad, titles = true, usually = true }: { c: C; pad: number
   );
   const notes = (
     <section style={S(card)}>{titles && <div><h2 style={S('margin:0;font-size:16px;font-weight:600')}>Notes</h2></div>}
+      {c.ask?.kind === 'note' && <AskRemove c={c} />}
       {c.notes.length === 0 && <p style={S('margin:0;font-size:14px;color:#5E6673')}>No notes yet.</p>}
       {c.notes.map((n) => (
         <div key={n.id} style={S('display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:12px 14px;border-radius:16px;background:#F4F5F7')}>
           <span style={S('font-size:14px;overflow-wrap:anywhere;padding-top:6px')}>{n.text}</span>
-          <button className="ghost" onClick={() => c.removeNote(n.id)} aria-label="Remove note" style={S('flex:0 0 36px;width:36px;height:36px;border:0;border-radius:999px;background:transparent;display:flex;align-items:center;justify-content:center')}>{X}</button>
+          <button className="ghost" onClick={() => c.setAsk({ kind: 'note', key: n.id, label: n.text })} aria-label="Remove note" style={S('flex:0 0 36px;width:36px;height:36px;border:0;border-radius:999px;background:transparent;display:flex;align-items:center;justify-content:center')}>{X}</button>
         </div>
       ))}
       <div style={S('display:flex;gap:8px')}><label htmlFor="pf-note" style={S('position:absolute;left:-9999px')}>Add a note</label>
@@ -150,10 +161,11 @@ function Sections({ c, pad, titles = true, usually = true }: { c: C; pad: number
           <span style={S('font-size:14px;font-weight:600')}>Allergies</span>
           {c.allergies.length === 0 && <span style={S('font-size:13.5px;color:#5E6673')}>None recorded</span>}
         </div>
+        {c.ask?.kind === 'allergy' && <AskRemove c={c} />}
         {c.allergies.length > 0 && <div style={S('display:flex;flex-wrap:wrap;gap:8px')}>
           {c.allergies.map((a, i) => (
             <span key={a} style={S('display:inline-flex;align-items:center;gap:2px;padding:0 4px 0 14px;height:36px;border-radius:999px;background:#FDECEA;color:#B42318;font-size:13.5px;font-weight:500')}>{a}
-              <button className="ghost" onClick={() => c.removeAllergy(i)} aria-label={'Remove ' + a} style={S('flex:0 0 32px;width:32px;height:32px;border:0;border-radius:999px;background:transparent;display:flex;align-items:center;justify-content:center')}>{X}</button></span>
+              <button className="ghost" onClick={() => c.setAsk({ kind: 'allergy', key: String(i), label: a })} aria-label={'Remove ' + a} style={S('flex:0 0 32px;width:32px;height:32px;border:0;border-radius:999px;background:transparent;display:flex;align-items:center;justify-content:center')}>{X}</button></span>
           ))}
         </div>}
         <div style={S('display:flex;gap:8px')}><label htmlFor="pf-all" style={S('position:absolute;left:-9999px')}>Add an allergy</label>
@@ -262,7 +274,7 @@ function Desktop({ c, initial }: { c: C; initial?: string }) {
         <div style={S('display:flex;gap:10px')}>
           <button onClick={() => setQa(true)} aria-label="More actions" aria-haspopup="dialog" style={S(ring)}><svg width="20" height="20" viewBox="0 0 24 24" fill="#0E1116"><circle cx="12" cy="5.5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="18.5" r="1.6" /></svg></button>
           <button onClick={() => open('messages')} aria-label={'Messages with ' + c.first} style={S(ring)}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3.5" y="5.5" width="17" height="13" rx="3" /><path d="m4.5 7.5 7.5 5.5 7.5-5.5" /></svg></button>
-          <Link href={book} style={S('flex:1 1 0;height:52px;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none')}>Book now</Link>
+          <Link href={book} style={S('flex:1 1 0;height:52px;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none')}>Book appointment</Link>
         </div>
         <div style={S(LIST_CARD + ';display:flex;flex-direction:column')} className="sum-rows">
           {[[PHONE_P, row.phone || 'No phone'], [MAIL_P, row.email || 'No email'], [CAL_P, d.since]].map(([p, t]) => <div key={p} style={S('display:flex;align-items:center;gap:12px;padding:14px 0;font-size:15px')}>{ico(p)}<span style={S('min-width:0;overflow-wrap:anywhere')}>{t}</span></div>)}
@@ -447,11 +459,12 @@ function ProfilePages({ c, view, setView, thread, apFilter, setApFilter, openFor
         {view === 'alerts' && (<>
           <section style={S(CARD_M)}>
             <h3 style={S('margin:0;font-size:16px;font-weight:600')}>Allergies</h3>
+            {c.ask?.kind === 'allergy' && <AskRemove c={c} />}
             {c.allergies.length === 0 && <p style={S('margin:0;font-size:14px;color:#5E6673')}>No allergies recorded.</p>}
             {c.allergies.map((a, i) => (
               <div key={a} style={S(greyRow)}>
                 <span style={S('font-size:14px;overflow-wrap:anywhere;padding-top:2px')}>{a}</span>
-                <button className="ghost" onClick={() => c.removeAllergy(i)} aria-label={'Remove ' + a} style={S(xBtn)}>{X}</button>
+                <button className="ghost" onClick={() => c.setAsk({ kind: 'allergy', key: String(i), label: a })} aria-label={'Remove ' + a} style={S(xBtn)}>{X}</button>
               </div>
             ))}
             {addRow('pf-all', c.allergyDraft, c.setAllergyDraft, c.addAllergy, 'Add an allergy')}
@@ -563,14 +576,10 @@ function Mobile({ c, initial, drawer }: { c: C; initial?: string; drawer?: boole
   const ico = (path: string) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')} aria-hidden="true"><path d={path} /></svg>;
   const PHONE = PHONE_P, MAIL = MAIL_P, CAL = CAL_P, card = LIST_CARD;
   const sheet = (title: string, body: React.ReactNode, onClose: () => void) => (
-    <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:6')}>
-      <button onClick={onClose} aria-label="Close" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
-      <div className="sheet" role="dialog" aria-label={title} style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column;gap:6px')}>
-        <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0;margin-bottom:12px')} />
+    <BottomSheet label={title} onClose={onClose} z={6} maxHeight="none" gap={6} handleGap={12}>
         <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px')}><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{title}</h2><button onClick={onClose} aria-label="Close" style={S(RING)}>{CLOSE}</button></div>
         {body}
-      </div>
-    </div>
+      </BottomSheet>
   );
   const page = "position:relative;width:100%;height:100dvh;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4;";
 
@@ -601,10 +610,10 @@ function Mobile({ c, initial, drawer }: { c: C; initial?: string; drawer?: boole
         </BottomBar>
         {eqa && sheet('More actions', !c.confirmDel ? (
           <div style={S('display:flex;flex-direction:column')}>
-            <button onClick={() => c.setConfirmDel(true)} style={S(rowCss + ';color:#B42318')}>Delete client</button>
+            <button onClick={() => c.setConfirmDel(true)} style={S(rowCss + ';color:#B42318')}>Remove client</button>
           </div>
         ) : (
-          <ConfirmBox label="Confirm delete" title={'Delete ' + row.name + ' for good?'} body="Only possible when they have no bookings or sales. Their notes go too." error={c.error} action="Delete client" onAction={c.removeClient} busy={c.busy} onKeep={() => { c.setConfirmDel(false); setEqa(false); }} />
+          <ConfirmBox label="Confirm removal" title={'Remove ' + row.name + ' for good?'} body="Only possible when they have no bookings or sales. Their notes go too." error={c.error} action="Remove client" onAction={c.removeClient} busy={c.busy} onKeep={() => { c.setConfirmDel(false); setEqa(false); }} />
         ), () => { c.setConfirmDel(false); setEqa(false); })}
       </>
     ));
@@ -633,7 +642,7 @@ function Mobile({ c, initial, drawer }: { c: C; initial?: string; drawer?: boole
           <div style={S('display:flex;gap:10px')}>
             <button onClick={() => setQa(true)} aria-label="More actions" aria-haspopup="dialog" style={S(RING + ';flex:0 0 52px;width:52px;height:52px')}><svg width="20" height="20" viewBox="0 0 24 24" fill="#0E1116"><circle cx="12" cy="5.5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="18.5" r="1.6" /></svg></button>
             <button onClick={() => { c.setError(''); c.setNotice(''); setView('messages'); }} aria-label={'Messages with ' + c.first} style={S(RING + ';flex:0 0 52px;width:52px;height:52px')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3.5" y="5.5" width="17" height="13" rx="3" /><path d="m4.5 7.5 7.5 5.5 7.5-5.5" /></svg></button>
-            <Link href={book} style={S('flex:1 1 0;height:52px;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none')}>Book now</Link>
+            <Link href={book} style={S('flex:1 1 0;height:52px;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none')}>Book appointment</Link>
           </div>
           <div style={S(card + ';display:flex;flex-direction:column')} className="sum-rows">
             {[[PHONE, row.phone || 'No phone'], [MAIL, row.email || 'No email'], [CAL, d.since]].map(([p, t]) => <div key={p} style={S('display:flex;align-items:center;gap:12px;padding:14px 0;font-size:15px')}>{ico(p)}<span style={S('min-width:0;overflow-wrap:anywhere')}>{t}</span></div>)}

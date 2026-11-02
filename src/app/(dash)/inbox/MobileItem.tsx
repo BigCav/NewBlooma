@@ -1,4 +1,6 @@
 'use client';
+import { ChatBubbles } from '@/components/ChatPanel';
+import { BottomSheet } from '@/components/BottomSheet';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { S } from '../calendar/pickers';
@@ -18,17 +20,13 @@ const MENU_ROW = 'display:flex;align-items:center;gap:12px;width:100%;box-sizing
 
 function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
-    <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:7')}>
-      <button onClick={onClose} aria-label="Close" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
-      <div className="sheet" role="dialog" aria-label={title} style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:92%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column')}>
-        <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0;margin-bottom:12px')} />
+    <BottomSheet label={title} onClose={onClose} z={7} gap={0} handleGap={12}>
         <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px')}>
           <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{title}</h2>
           <button onClick={onClose} aria-label="Close" style={S(RING)}>{CLOSE}</button>
         </div>
         {children}
-      </div>
-    </div>
+      </BottomSheet>
   );
 }
 
@@ -115,13 +113,7 @@ export function MobileItem({ c, onClose }: { c: InboxCtl; onClose: () => void })
         </>)}
 
         {c.mode === 'view' && isMsg && (<>
-          {sel.thread.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No messages yet.</p>}
-          {sel.thread.map((m, i) => (
-            <div key={i} style={S('display:flex;flex-direction:column;align-items:' + (m.mine ? 'flex-end' : 'flex-start') + ';gap:3px')}>
-              <div style={S('max-width:82%;box-sizing:border-box;padding:11px 15px;border-radius:20px;font-size:15px;line-height:1.35;overflow-wrap:anywhere;white-space:pre-wrap;' + (m.mine ? 'background:#0E1116;color:#FFFFFF;border-bottom-right-radius:6px' : 'background:#FFFFFF;color:#0E1116;border:1px solid #E6E8EC;border-bottom-left-radius:6px'))}>{m.text}</div>
-              <div style={S('font-size:11.5px;color:#8A93A0')}>{(m.mine ? 'You, ' : '') + m.at}</div>
-            </div>
-          ))}
+          <ChatBubbles thread={sel.thread.map((m, i) => ({ id: String(i), mine: m.mine, text: m.text, day: '', time: m.at }))} empty="No messages yet." />
           {!!c.notice && <p role="status" style={S('margin:0;align-self:center;padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.notice}</p>}
         </>)}
 

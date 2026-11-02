@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's Team.dc.html and MobileTeam.dc.html. Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
+import { BottomSheet } from '@/components/BottomSheet';
 import { rootCls } from '@/components/drawer';
 import { useNewParam } from '@/components/useNewParam';
 import Link from 'next/link';
@@ -78,6 +79,7 @@ function useTeam(props: Props) {
   });
 
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [askPhoto, setAskPhoto] = useState(false);
   const pickPhoto = async (file: File | undefined) => {
     if (!file || !selectedId) return;
     setPhotoBusy(true); setError(''); setNotice('');
@@ -99,7 +101,7 @@ function useTeam(props: Props) {
 
   const sq = query.trim().toLowerCase();
   const list = items.filter((m) => (filter === 'all' || (filter === 'today' && m.todayOn) || (filter === 'online' && m.online)) && (!sq || (m.name + ' ' + m.role).toLowerCase().includes(sq)));
-  return { ...props, pickShift, setTime, invite, makeInvite, items, photoBusy, pickPhoto, dropPhoto, busy, narrow, selectedId, mode, draft, setDraft, flip, filter, setFilter, query, setQuery, confirm, setConfirm, error, setError, notice, open, setOpen, select, startNew, cancelNew, save, remove, list,
+  return { ...props, pickShift, setTime, invite, makeInvite, items, photoBusy, askPhoto, setAskPhoto, pickPhoto, dropPhoto, busy, narrow, selectedId, mode, draft, setDraft, flip, filter, setFilter, query, setQuery, confirm, setConfirm, error, setError, notice, open, setOpen, select, startNew, cancelNew, save, remove, list,
     close: () => { setOpen(false); setConfirm(false); setError(''); } };
 }
 type C = ReturnType<typeof useTeam>;
@@ -200,12 +202,9 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
       <MobileTabs active="more" />
       {fopen && <FilterSheet title="Filter team" options={FILTERS} value={c.filter} onPick={c.setFilter} onClose={() => setFopen(false)} />}
       {c.open && (
-        <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:5')}>
-          <button onClick={c.close} aria-label="Close editor" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
-          <div className="sheet" role="dialog" aria-label="Team member editor" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:92%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column;gap:18px')}>
+        <BottomSheet label="Team member editor" onClose={c.close} backdropLabel="Close editor" gap={18} handle={false}>
             <TeamFlow key={c.mode + (c.selectedId ?? 'new')} c={c} />
-          </div>
-        </div>
+          </BottomSheet>
       )}
     </div>
   );

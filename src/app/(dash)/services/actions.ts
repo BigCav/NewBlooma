@@ -27,9 +27,9 @@ export async function renameCategory(id: string, name: string): Promise<{ error?
 export async function deleteCategory(id: string): Promise<{ error?: string }> {
   const { sb, salon } = await requireOwner();
   const { count } = await sb.from('services').select('id', { count: 'exact', head: true }).eq('category_id', id).eq('salon_id', salon.id).eq('active', true);
-  if ((count ?? 0) > 0) return { error: `Move or delete its ${count} service${count === 1 ? '' : 's'} first.` };
+  if ((count ?? 0) > 0) return { error: `Move or remove its ${count} service${count === 1 ? '' : 's'} first.` };
   const { error } = await sb.from('service_categories').delete().eq('id', id).eq('salon_id', salon.id);
-  if (error) return { error: error.code === '23503' ? 'Past bookings still use this category, so it cannot be deleted. Rename it instead.' : friendly(error.message) };
+  if (error) return { error: error.code === '23503' ? 'Past bookings still use this category, so it cannot be removed. Rename it instead.' : friendly(error.message) };
   revalidatePath('/services'); return {};
 }
 

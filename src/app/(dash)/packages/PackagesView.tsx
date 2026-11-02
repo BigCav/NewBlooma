@@ -1,4 +1,5 @@
 'use client';
+import { BottomSheet } from '@/components/BottomSheet';
 import { dollars } from '@/lib/format';
 import { rootCls } from '@/components/drawer';
 import { decimalInput } from '@/lib/numeric';
@@ -347,13 +348,9 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
       </main>
       <MobileTabs active="more" />
       {c.open && (
-        <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:5')}>
-          <button onClick={c.close} aria-label="Close" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
-          <div className="sheet" role="dialog" aria-label="Package" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:90%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column;gap:18px')}>
-            <div style={S('align-self:center;width:40px;height:4px;border-radius:999px;background:#D5D9E0')} />
+        <BottomSheet label="Package" onClose={c.close} maxHeight="90%" gap={18}>
             {c.mode === 'new' || c.mode === 'edit' ? <PackageForm c={c} /> : c.mode === 'sell' ? <SellFlow c={c} /> : <Detail c={c} m={true} />}
-          </div>
-        </div>
+          </BottomSheet>
       )}
     </div>
   );

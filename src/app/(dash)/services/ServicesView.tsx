@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's Services.dc.html and MobileServices.dc.html. Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions. Added for production: who performs a service, new categories.
+import { BottomSheet } from '@/components/BottomSheet';
 import { dollars } from '@/lib/format';
 import { rootCls } from '@/components/drawer';
 import { useNewParam } from '@/components/useNewParam';
@@ -39,7 +40,7 @@ function useServices(props: Props) {
   const [notice, setNotice] = useState('');
   const [open, setOpen] = useState(false);
   const [nc, setNc] = useState<{ open: boolean; name: string }>({ open: false, name: '' });
-  const [ce, setCe] = useState<{ mode: '' | 'rename' | 'delete'; name: string }>({ mode: '', name: '' });
+  const [ce, setCe] = useState<{ mode: '' | 'rename' | 'remove'; name: string }>({ mode: '', name: '' });
   const [narrow, setNarrow] = useState<boolean | null>(null);
   useEffect(() => {
     const mq = window.matchMedia('(max-width:900px)');
@@ -66,7 +67,7 @@ function useServices(props: Props) {
       const r = await saveService({ id: mode === 'edit' ? selectedId ?? undefined : undefined, name, categoryId: draft.catId, dur: draft.dur, price: draft.price, desc: draft.desc, online: draft.online, staffIds: draft.staff, addon: draft.addon, parentIds: draft.parents });
       if (r.error) { setError(r.error); return; }
       setError(''); setConfirm(false); setFilter('all');
-      if (r.created) { setSelectedId(r.id!); setMode('edit'); setNotice('Service created'); } else setNotice('Changes saved');
+      if (r.created) { setSelectedId(r.id!); setMode('edit'); setNotice('Service added'); } else setNotice('Service saved');
       setDraft((d) => ({ ...d, name, price: String(Math.round(price * 100) / 100) }));
       setOpen(false);
       router.refresh();
@@ -108,7 +109,7 @@ function useServices(props: Props) {
       const r = await deleteCategory(id);
       if (r.error) { setError(r.error); setCe({ mode: '', name: '' }); return; }
       setExtraCats((e) => e.filter((x) => x.id !== id)); setError(''); setCe({ mode: '', name: '' });
-      setDraft((d) => ({ ...d, catId: props.cats.find((x) => x.id !== id)?.id ?? '' })); setNotice('Category deleted'); router.refresh();
+      setDraft((d) => ({ ...d, catId: props.cats.find((x) => x.id !== id)?.id ?? '' })); setNotice('Category removed'); router.refresh();
     });
   };
 
@@ -228,12 +229,9 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
       {fopen && <FilterSheet title="Filter services" options={chips} value={filter} onPick={setFilter} onClose={() => setFopen(false)} />}
 
       {open && (
-        <div style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:5')}>
-          <button onClick={() => c.setOpen(false)} aria-label="Close editor" style={S('position:absolute;left:0;right:0;top:0;bottom:0;width:100%;height:100%;padding:0;border:0;background:rgba(14,17,22,0.4);cursor:pointer')} />
-          <div className="sheet" role="dialog" aria-label="Service editor" style={S('position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:92%;overflow-y:auto;background:#FFFFFF;border-radius:28px 28px 0 0;padding:12px 20px 28px;display:flex;flex-direction:column;gap:18px')}>
+        <BottomSheet label="Service editor" onClose={() => c.setOpen(false)} backdropLabel="Close editor" gap={18} handle={false}>
             <ServiceFlow key={mode + (c.selectedId ?? 'new')} c={c} />
-          </div>
-        </div>
+          </BottomSheet>
       )}
     </div>
   );
