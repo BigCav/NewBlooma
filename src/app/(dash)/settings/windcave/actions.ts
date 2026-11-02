@@ -11,7 +11,7 @@ const s = (fd: FormData, k: string) => String(fd.get(k) ?? '').trim();
 export async function checkTerminal() {
   const { salon } = await requireOwner();
   const r = await testTerminal(salon.id);
-  return r.error ? { error: r.error } : { ok: 'Windcave accepted the username, key and station. Nothing was charged.' };
+  return r.error ? { error: r.error } : { ok: 'Windcave replied: ' + (r.reply || '(empty)') + ' Nothing was charged.' };
 }
 
 export async function savePayments(_: unknown, fd: FormData) {

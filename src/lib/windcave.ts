@@ -132,7 +132,7 @@ async function hit(c: Creds, body: Record<string, string | number>) {
 }
 
 /** Asks the terminal service about a made-up transaction: proves the username, key and station are accepted without charging anything. */
-export async function testTerminal(salonId: string): Promise<{ ok?: true; error?: string }> {
+export async function testTerminal(salonId: string): Promise<{ ok?: true; error?: string; reply?: string }> {
   const c = await getCreds(salonId);
   if (!c.hitUser || !c.hitKey) return { error: 'Add the terminal username and key first.' };
   if (!c.station) return { error: 'Add the terminal station ID first.' };
@@ -142,7 +142,7 @@ export async function testTerminal(salonId: string): Promise<{ ok?: true; error?
   const msg = pick(out, 'ResponseText') ?? pick(out, 'RT') ?? pick(out, 'DL1') ?? pick(out, 'Error');
   if (/invalid|denied|unauthor|not\s*found|unknown/i.test(out) && !/Complete/.test(out)) return { error: 'Windcave answered: ' + (msg ?? out.slice(0, 160)) };
   void bad;
-  return { ok: true };
+  return { ok: true, reply: out.replace(/\s+/g, ' ').slice(0, 240) };
 }
 
 export async function startTerminal(saleId: string): Promise<{ txn?: string; error?: string }> {
