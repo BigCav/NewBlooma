@@ -19,9 +19,9 @@ const FIELD = 'box-sizing:border-box;width:100%;height:48px;padding:0 14px;borde
  * Checkout as steps, shared by the calendar and the Sales page: payment method, discount and tip when switched on,
  * a summary, and for cash one more step to confirm what was handed over. The caller decides what charging does.
  */
-export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCharge, busy, error, setError, wait, onClose, edit, retail, packs, tipBase }: {
+export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCharge, busy, error, setError, wait, buttons, onButton, onClose, edit, retail, packs, tipBase }: {
   who: string; methods: readonly (readonly [string, string])[]; co: CoState; setCo: (s: CoState) => void; cfg: CoCfg; lines: CoLine[]; gross: number;
-  onCharge: () => void; busy: boolean; error: string; setError: (e: string) => void; wait?: string; onClose: () => void;
+  onCharge: () => void; busy: boolean; error: string; setError: (e: string) => void; wait?: string; buttons?: { name: string; label: string }[]; onButton?: (b: { name: string; label: string }) => void; onClose: () => void;
   edit?: { services: CalService[]; selected: string[]; lock: (x: CalService) => string; initialCat?: string; onPick: (id: string) => void };
   /** Retail products that can be added to the visit, with how many of each are on the sale. */
   retail?: CoRetail;
@@ -185,6 +185,7 @@ export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCha
           <div style={S('display:flex;justify-content:space-between;gap:12px;padding:15px 0;font-size:18px;font-weight:600')}><span>Total</span><span>{m2(total)}</span></div>
         </div>
         {!!wait && <p role="status" style={S('margin:0;color:#5E6673;font-size:13.5px')}>{wait}</p>}
+        {!!buttons?.length && <div style={S('display:flex;gap:10px')}>{buttons.map((b) => <button key={b.name} onClick={() => onButton?.(b)} style={S('flex:1 1 0;height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;font:inherit;font-size:14.5px;font-weight:500;color:#0E1116;cursor:pointer')}>{b.label}</button>)}</div>}
       </>)}
       {kind === 'cash' && (<>
         <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:16px;border:1px solid #E6E8EC;border-radius:22px')}><span style={S('color:#5E6673;font-size:14px')}>To pay</span><span style={S('font-size:24px;font-weight:600;letter-spacing:-0.02em')}>{m2(total)}</span></div>

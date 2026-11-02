@@ -14,7 +14,7 @@ import { S } from '../calendar/pickers';
 import { CloseX, CLOSE_BTN } from '../calendar/calUi';
 import { CheckoutFlow } from '../calendar/CheckoutFlow';
 import { NewSaleFlow } from './NewSaleFlow';
-import { createWalkin, payFlow, refundSale, sendReceipt, setPrice, terminalCancel, terminalPoll } from './actions';
+import { createWalkin, payFlow, refundSale, sendReceipt, setPrice, terminalCancel, terminalPoll, terminalPress } from './actions';
 import { DISC_PCTS, FILTERS, NO_DISC, STATUS, TIP_OPTS, discOf, discountCents, fmt, type DiscPick, type PayMethod, type SaleRow, type SvcOpt } from './shared';
 
 type Props = {
@@ -55,6 +55,8 @@ function useSales(props: Props) {
   const [nw, setNw] = useState(blankNew());
   const [txn, setTxn] = useState('');
   const [wait, setWait] = useState('');
+  // Buttons the terminal asks the till to show, such as YES / NO when a signature is needed.
+  const [btns, setBtns] = useState<{ name: string; label: string }[]>([]);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const mobile = true; // desktop edits in the same drawer
 
@@ -67,8 +69,8 @@ function useSales(props: Props) {
     const tick = async () => {
       const r = await terminalPoll(txn);
       if (stop) return;
-      if (r.state === 'pending') { setWait(r.text || 'Waiting for the customer…'); timer.current = setTimeout(tick, 2000); return; }
-      setTxn(''); setWait('');
+      if (r.state === 'pending') { setWait(r.text || 'Waiting for the customer…'); setBtns(r.buttons ?? []); timer.current = setTimeout(tick, 2000); return; }
+      setTxn(''); setWait(''); setBtns([]);
       if (r.state === 'approved') { setMode('view'); setNotice('Payment taken'); setError(''); }
       else setError(r.state === 'declined' ? `Not approved${r.text ? `: ${r.text}` : ''}` : r.text || 'Something went wrong. Check the terminal.');
       router.refresh();
@@ -80,7 +82,7 @@ function useSales(props: Props) {
   const pick = (id: string) => { setSelectedId(id); setMode('view'); setConfirmRefund(false); setNotice(''); setError(''); setOpen(true); };
   const openNew = () => { setMode('new'); setNw(blankNew()); setError(''); setNotice(''); setConfirmRefund(false); setOpen(true); };
   const cancel = () => {
-    if (txn) { terminalCancel(txn); setTxn(''); setWait(''); }
+    if (txn) { terminalCancel(txn); setTxn(''); setWait(''); setBtns([]); }
     setMode('view'); setError(''); setConfirmRefund(false); setOpen(mobile ? mode !== 'new' : false);
   };
   const close = () => { setOpen(false); setMode('view'); setConfirmRefund(false); setError(''); };
@@ -123,7 +125,7 @@ function useSales(props: Props) {
   const sq = query.trim().toLowerCase();
   const list = rows.filter((t) => (filter === 'all' || t.status === filter) && (!sq || (t.client + ' ' + t.ref + ' ' + t.service + ' ' + t.staffName + ' ' + t.status + ' ' + t.method + ' ' + t.total / 100).toLowerCase().includes(sq.replace(/[$,]/g, ''))));
   return { ...props, busy, narrow, rows, list, sel, selectedId, filter, setFilter, query, setQuery, mode, setMode, open, notice, error, setError, confirmRefund, setConfirmRefund,
-    canDiscount: props.canDiscount, pay, setPay, tipPctOf, editAmount, setEditAmount, nw, setNw, txn, wait, pick, openNew, cancel, close, takePayment, payNow, saveEdit, doRefund, receipt, createSale,
+    canDiscount: props.canDiscount, pay, setPay, tipPctOf, editAmount, setEditAmount, nw, setNw, txn, wait, btns, press: (b: { name: string; label: string }) => { terminalPress(txn, b.name, b.label); }, pick, openNew, cancel, close, takePayment, payNow, saveEdit, doRefund, receipt, createSale,
     paidTotal: props.todayTotal, pendingCount: rows.filter((r) => r.status === 'Pending').length };
 }
 type C = ReturnType<typeof useSales>;
@@ -149,7 +151,7 @@ function SaleCheckout({ c, s }: { c: C; s: SaleRow }) {
       co={{ method: c.pay.method, tip: parseInt(c.pay.tip, 10) || 0, code: c.pay.code, disc: c.pay.disc }}
       setCo={(x) => c.setPay({ method: x.method as PayMethod['id'], tip: String(x.tip), code: x.code, disc: x.disc })}
       cfg={{ canDiscount: c.canDiscount, askTip: c.askTip, taxInclusive: s.taxIncl, taxRate: s.taxRate }}
-      lines={lines} gross={s.amount} tipBase={s.lines.some((l) => l.svc) ? s.lines.filter((l) => l.svc).reduce((a, l) => a + l.cents * l.qty, 0) : s.amount} onCharge={c.takePayment} busy={c.busy || !!c.txn} error={c.error} setError={c.setError} wait={c.wait} onClose={c.cancel} />
+      lines={lines} gross={s.amount} tipBase={s.lines.some((l) => l.svc) ? s.lines.filter((l) => l.svc).reduce((a, l) => a + l.cents * l.qty, 0) : s.amount} onCharge={c.takePayment} busy={c.busy || !!c.txn} error={c.error} setError={c.setError} wait={c.wait} buttons={c.btns} onButton={c.press} onClose={c.cancel} />
   );
 }
 
@@ -297,6 +299,7 @@ function Panel({ c, m }: { c: C; m: boolean }) {
           {DL('Service', fmt(svcCents))}{disc ? DL('Discount', '-' + fmt(disc)) : null}{DL('Tip', tipAmt ? fmt(tipAmt) : 'None')}{tax ? DL('Tax', fmt(tax)) : null}{DL('Total', fmt(net + tipAmt + tax), { last: true, bold: true })}
         </dl>
         {!!c.wait && <p role="status" style={S('margin:0;color:#5E6673;font-size:13.5px')}>{c.wait}</p>}
+        {!!c.btns.length && <div style={S('display:flex;gap:10px')}>{c.btns.map((b) => <button key={b.name} onClick={() => c.press(b)} style={S(GHOST(h))}>{b.label}</button>)}</div>}
         {err}
         <div style={S('display:flex;gap:10px')}>
           <button onClick={c.takePayment} disabled={c.busy || !!c.txn} style={S(DARK(h))}>{c.txn ? 'Waiting on terminal…' : 'Take payment'}</button>
