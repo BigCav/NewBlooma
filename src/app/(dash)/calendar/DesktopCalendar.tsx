@@ -3,7 +3,6 @@
 // only the {{ }} holes are real data and handlers are real server actions.
 import { MobileCalendar } from './MobileCalendar';
 import { ClientMatches } from './ClientMatches';
-import { MessageBox } from './MessageBox';
 import { CancelPick } from './CancelPick';
 import { DiscountPick } from './DiscountPick';
 import { BLOCK_KINDS, dayInfo, fmtMin, initials, addDaysYmd } from '@/lib/cal';

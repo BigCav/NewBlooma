@@ -5,7 +5,9 @@ import { requireCtx, friendly } from '@/lib/session';
 import { ymd } from '@/lib/format';
 import { sendCustomMessage } from '@/lib/notify';
 import { dropEmptyThread, ensureThread, logStaffMessage, replyUrl } from '@/lib/conversation';
-import { type ClientRow } from './shared';
+import { channelNote, type ClientRow } from './shared';
+import { emailConfigured, smsConfigured } from '@/lib/notify';
+import { loadThread, type ChatMsg } from './thread';
 
 type R = { error?: string; ok?: boolean };
 
@@ -53,6 +55,14 @@ export async function deleteClient(id: string): Promise<R> {
   if (error) return { error: friendly(error.message) };
   revalidatePath('/clients');
   return { ok: true };
+}
+
+/** The whole conversation with a client, for the message panel wherever it opens. */
+export async function clientThread(clientId: string): Promise<{ messages: ChatMsg[]; note: string }> {
+  const { sb, salon } = await requireCtx();
+  const { data: c } = await sb.from('clients').select('phone,email').eq('id', clientId).maybeSingle();
+  const messages = await loadThread(sb, clientId, salon.timezone);
+  return { messages, note: channelNote({ sms: smsConfigured(), email: emailConfigured() }, c?.phone ?? '', c?.email ?? '') };
 }
 
 export async function sendClientMessage(clientId: string, text: string): Promise<R> {

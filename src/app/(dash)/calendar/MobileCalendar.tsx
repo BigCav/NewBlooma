@@ -7,11 +7,11 @@ import { useState } from 'react';
 import { ClientMatches } from './ClientMatches';
 import { NewApptForm } from './NewApptForm';
 import { LateWizard, BlockWizard, WalkInWizard, CheckoutWizard } from './QuickWizards';
-import { MessageBox } from './MessageBox';
+import { ChatPanel } from '@/components/ChatPanel';
 import { DiscountPick } from './DiscountPick';
 import Link from 'next/link';
 import { dayInfo, fmtMin, initials, addDaysYmd, BLOCK_KINDS } from '@/lib/cal';
-import { cancelBooking, deleteBlock, payNowBooking, setBookingStatus } from './actions';
+import { cancelBooking, deleteBlock, messageBookingClient, payNowBooking, setBookingStatus } from './actions';
 import { sendReceipt } from '../sales/actions';
 import { VisitSheet, MoreButton, QuickActions, QaGroup, QA_ITEM, ICON_TIME, ICON_PERSON } from './VisitSheet';
 import { STATUS_LABEL } from '@/lib/format';
@@ -340,7 +340,9 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
               </>);
             })()}
 
-            {mode === 'message' && cur && <MessageBox name={first(cur.client)} context={cur.services + ', ' + dayInfo(cur.dayYmd).short + ' at ' + fmtMin(cur.start)} value={c.msg} onChange={(v) => { c.setMsg(v); setError(''); }} onSend={c.sendMessage} onBack={backToView} busy={busy} error={hasError ? error : ''} />}
+            {mode === 'message' && cur && (cur.clientId
+              ? <ChatPanel clientId={cur.clientId} first={first(cur.client)} context={cur.services + ', ' + dayInfo(cur.dayYmd).short + ' at ' + fmtMin(cur.start)} send={(t) => messageBookingClient(cur.id, t)} onBack={backToView} />
+              : <p style={S('margin:0;color:#5E6673;font-size:14px')}>This booking has no client to message.</p>)}
 
             {mode === 'blockview' && bvB && (<>
               <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><span style={S('display:inline-block;padding:4px 12px;border-radius:999px;background:#EEF0F3;color:#4A525E;font-size:12.5px;font-weight:500')}>Blocked</span><button onClick={close} aria-label="Close" style={S(CLOSE_BTN)}><CloseX sw={2} /></button></div>

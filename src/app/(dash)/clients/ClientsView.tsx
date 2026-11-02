@@ -11,6 +11,7 @@ import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
 import { BookPanel, type BookData } from './BookPanel';
 import { addNote, createClient, sendClientMessage } from './actions';
+import { ChatPanel } from '@/components/ChatPanel';
 import { ActiveFilter, FilterButton, FilterSheet } from '@/components/FilterBits';
 import { NewClientFlow } from './NewClientFlow';
 import { FILTERS, channelNote, initialsOf, money, type Channels, type ClientRow } from './shared';
@@ -181,15 +182,7 @@ function Panel({ c, m }: { c: C; m: boolean }) {
       )}
     </>)}
     {c.mode === 'book' && sel && <BookPanel data={c.book} client={{ id: sel.id, name: sel.name, first: c.first }} mobile={m} onBooked={c.booked} onCancel={c.cancel} />}
-    {c.mode === 'message' && sel && (
-      <div style={S('display:flex;flex-direction:column;gap:18px')}>
-        <div><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em;overflow-wrap:anywhere')}>Message {c.first}</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px;overflow-wrap:anywhere')}>{channelNote(c.channels, sel.phone, sel.email)}</p></div>
-        <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="msg-text" style={S('font-size:14px;font-weight:600')}>Message</label>
-          <textarea id="msg-text" value={c.msg} onChange={(e) => { c.setMsg(e.target.value); c.setError(''); }} placeholder="Write a message" style={S('box-sizing:border-box;width:100%;min-height:120px;resize:vertical;padding:12px 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;color:#0E1116;background:#FFFFFF')} /></div>
-        {err}
-        <div style={S('display:flex;gap:10px')}><button onClick={c.send} disabled={c.busy} style={S(BTN)}>Send message</button><button className="ghost" onClick={c.cancel} style={S(BTN2)}>Cancel</button></div>
-      </div>
-    )}
+    {c.mode === 'message' && sel && <ChatPanel clientId={sel.id} first={c.first} send={(t) => sendClientMessage(sel.id, t)} onBack={c.cancel} />}
     {c.mode === 'new' && (
       <div style={S('display:flex;flex-direction:column;gap:18px')}>
         <div><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>New client</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>They start with the New tag.</p></div>

@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { MobileTabs } from '@/components/Chrome';
 import { STATUS_LABEL } from '@/lib/format';
 import { S } from '../../calendar/pickers';
+import { ChatBubbles, ChatComposer, ChatPanel } from '@/components/ChatPanel';
 import { addNote, deleteClient, recordPatchTest, removeNote, saveFormula, sendClientMessage, setAllergies, setPatchTest, setPreference, updateClient } from '../actions';
 import { phoneInput } from '@/lib/phone';
 import { channelNote, initialsOf, money, patchInfo, type Channels, type ClientRow } from '../shared';
@@ -379,19 +380,7 @@ function Mobile({ c, initial, drawer }: { c: C; initial?: string; drawer?: boole
     ? <div className="m-cal cal-root m-drawer"><div role="dialog" aria-label={label} style={S(page.replace('position:relative;width:100%;height:100dvh;', 'position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;') + 'background:#F4F5F7')}>{inner}</div></div>
     : <div className="only-m m-cal cal-root" style={S(page + 'background:#F4F5F7')}>{inner}</div>;
   if (c.mode === 'message') {
-    return wrap('Message ' + c.first, (
-      <>
-        <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px')}>
-          <button onClick={() => { c.setMode('view'); c.setError(''); }} aria-label="Back" style={S(RING)}>{BACK}</button>
-          <h1 style={S('margin:0;flex:1 1 auto;font-size:22px;font-weight:600;letter-spacing:-0.025em')}>{'Message ' + c.first}</h1>
-        </header>
-        <main ref={mainRef} className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:8px 20px 20px;display:flex;flex-direction:column;gap:14px')}>
-          <Field label="Message"><textarea value={c.msg} onChange={(e) => { c.setMsg(e.target.value); c.setError(''); }} placeholder="Write a message" rows={7} style={{ ...FIELD_IN, resize: 'none' }} /></Field>
-          <p style={S('margin:0;font-size:13px;color:#5E6673')}>{channelNote(d.channels, row.phone, row.email)}</p>
-        </main>
-        <BottomBar error={c.error}><button onClick={c.sendMsg} disabled={c.busy} style={S(BLACK + ';width:100%;height:52px')}>Send</button></BottomBar>
-      </>
-    ));
+    return wrap('Message ' + c.first, <ChatPanel fill clientId={row.id} first={c.first} initial={thread} send={(t) => sendClientMessage(row.id, t)} onSent={(m) => setThread((x) => [...x, m])} onBack={() => { c.setMode('view'); c.setError(''); }} />);
   }
   if (c.mode === 'edit') {
     return wrap('Edit details', (
@@ -536,21 +525,7 @@ function Mobile({ c, initial, drawer }: { c: C; initial?: string; drawer?: boole
           {appts.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>{apFilter === 'upcoming' ? 'Nothing coming up.' : apFilter === 'past' ? 'No past appointments.' : 'No appointments yet.'}</p>}
         </>)}
 
-        {view === 'messages' && (<>
-          {thread.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No messages yet. Say hello below.</p>}
-          {thread.map((m, i) => {
-            const newDay = i === 0 || thread[i - 1].day !== m.day;
-            return (
-              <div key={m.id} style={S('display:flex;flex-direction:column;gap:6px')}>
-                {newDay && <div style={S('align-self:center;margin:8px 0 2px;font-size:12.5px;color:#5E6673')}>{m.day}</div>}
-                <div style={S('display:flex;flex-direction:column;align-items:' + (m.mine ? 'flex-end' : 'flex-start') + ';gap:3px')}>
-                  <div style={S('max-width:82%;box-sizing:border-box;padding:11px 15px;border-radius:20px;font-size:15px;line-height:1.35;overflow-wrap:anywhere;white-space:pre-wrap;' + (m.mine ? 'background:#0E1116;color:#FFFFFF;border-bottom-right-radius:6px' : 'background:#FFFFFF;color:#0E1116;border:1px solid #E6E8EC;border-bottom-left-radius:6px'))}>{m.text}</div>
-                  <div style={S('font-size:11.5px;color:#8A93A0')}>{(m.mine ? 'You, ' : '') + m.time}</div>
-                </div>
-              </div>
-            );
-          })}
-        </>)}
+        {view === 'messages' && <ChatBubbles thread={thread} />}
 
         {view === 'details' && (<>
           <div style={S(card + ';display:flex;flex-direction:column')} className="sum-rows">
@@ -641,10 +616,7 @@ function Mobile({ c, initial, drawer }: { c: C; initial?: string; drawer?: boole
       </main>
       {view === 'messages' ? (
         <BottomBar error={sendErr}>
-          <div style={S('display:flex;align-items:flex-end;gap:10px')}>
-            <textarea value={draft} onChange={(e) => { setDraft(e.target.value); setSendErr(''); }} placeholder={'Message ' + c.first} rows={1} aria-label={'Message ' + c.first} style={{ ...S('flex:1 1 auto;min-width:0;box-sizing:border-box;max-height:120px;resize:none;padding:13px 16px;border:1px solid #E1E4E9;border-radius:24px;background:#FFFFFF;font:inherit;font-size:15px;color:#0E1116'), minHeight: 48 }} />
-            <button onClick={sendChat} disabled={sending || !draft.trim()} aria-label="Send" style={S('flex:0 0 48px;width:48px;height:48px;border:0;border-radius:999px;background:#0E1116;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:' + (sending || !draft.trim() ? 0.45 : 1))}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg></button>
-          </div>
+          <ChatComposer first={c.first} draft={draft} onDraft={(v) => { setDraft(v); setSendErr(''); }} onSend={sendChat} busy={sending} />
         </BottomBar>
       ) : <MobileTabs active="clients" />}
       {qa && sheet('Quick actions', (

@@ -7,6 +7,7 @@ import { dayInfo } from '@/lib/cal';
 import { sinceText } from '../shared';
 import { niceDate } from '@/lib/forms-shared';
 import { ProfileView, type ProfileData } from './ProfileView';
+import { loadThread } from '../thread';
 
 export const metadata = { title: 'Client' };
 export const dynamic = 'force-dynamic';
@@ -44,15 +45,8 @@ export default async function ClientProfile({ params, searchParams }: { params: 
       when: `${wd} ${D} ${MON[M - 1]}, ${fmtClock(b.starts_at, tz)}`, paid: sale ? `${METHOD[sale.method] ?? 'Paid'}, $${(sale.total_cents / 100).toFixed(sale.total_cents % 100 ? 2 : 0)}` : 'Not recorded',
     };
   });
-  // Every conversation with this client: the one about each booking and the general one, in time order.
-  const { data: threads } = await sb.from('inbox_items').select('id,body,created_at').eq('client_id', id).eq('type', 'message');
-  const tids = ((threads ?? []) as any[]).map((t) => t.id as string);
-  const { data: tmsgs } = tids.length ? await sb.from('inbox_messages').select('id,item_id,mine,body,created_at').in('item_id', tids) : { data: [] as any[] };
-  const msgRows = [
-    ...((threads ?? []) as any[]).filter((t) => t.body).map((t) => ({ id: 'first-' + t.id, mine: false, text: t.body as string, at: t.created_at as string })),
-    ...((tmsgs ?? []) as any[]).map((m) => ({ id: m.id as string, mine: !!m.mine, text: m.body as string, at: m.created_at as string })),
-  ].sort((a, b) => (a.at < b.at ? -1 : 1));
-  const messages: ProfileData['messages'] = msgRows.map((m) => ({ id: m.id, mine: m.mine, text: m.text, day: ymd(m.at, tz) === today ? 'Today' : dayInfo(ymd(m.at, tz)).short, time: fmtClock(m.at, tz) }));
+  // Every conversation with this client, in time order.
+  const messages = await loadThread(sb, id, tz);
   const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const nowIso = new Date().toISOString();
   const money0 = (c: number) => '$' + (c / 100).toFixed(c % 100 ? 2 : 0);
