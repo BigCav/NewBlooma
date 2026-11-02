@@ -12,6 +12,7 @@ import { DiscountPick } from './DiscountPick';
 import Link from 'next/link';
 import { dayInfo, fmtMin, initials, addDaysYmd, BLOCK_KINDS } from '@/lib/cal';
 import { cancelBooking, deleteBlock, payNowBooking, setBookingStatus } from './actions';
+import { sendReceipt } from '../sales/actions';
 import { STATUS_LABEL } from '@/lib/format';
 import { CancelPick } from './CancelPick';
 import { S, ServicePicker, TeamPicker } from './pickers';
@@ -263,8 +264,9 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
                   </button>}
               </div>
-              {sel.b.paid && <div style={S('display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:-6px')}>
+              {(sel.b.paid || sel.b.refunded) && <div style={S('display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:-6px')}>
                 {sel.b.paid && <span style={S('padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{sel.b.paidText}</span>}
+                {sel.b.refunded && <span style={S('padding:4px 12px;border-radius:999px;background:#F1F2F4;color:#4A525E;font-size:12.5px;font-weight:500')}>Refunded</span>}
               </div>}
               <div style={S('display:flex;align-items:center;gap:14px;padding:16px;border:1px solid #E6E8EC;border-radius:22px')}>
                 <div style={S(sel.avatarStyle)}>{initials(sel.b.client)}</div>
@@ -303,8 +305,12 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
               <div style={S('position:sticky;bottom:-40px;margin:auto -20px -40px;padding:14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3;display:flex;flex-direction:column;gap:12px')}>
                 <div style={S('display:flex;flex-direction:column;gap:2px')}>
                   <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px;color:#5E6673;font-size:14px')}><span>Total</span><span>{sel.priceText}</span></div>
-                  <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-weight:600')}><span style={S('font-size:15px')}>{sel.b.paid ? 'Paid' : 'To pay'}</span><span style={S('font-size:20px;letter-spacing:-0.02em')}>{sel.priceText}</span></div>
+                  <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-weight:600')}><span style={S('font-size:15px')}>{sel.b.paid ? 'Paid' : sel.b.refunded ? 'Refunded' : 'To pay'}</span><span style={S('font-size:20px;letter-spacing:-0.02em')}>{sel.priceText}</span></div>
                 </div>
+                {sel.b.paid && sel.b.saleId && <div style={S('display:flex;gap:10px')}>
+                  <button disabled={busy} onClick={() => act(() => sendReceipt(sel.b.saleId!), 'Receipt sent')} style={S(SECOND + ';height:48px')}>Send receipt</button>
+                  <button onClick={() => router.push(`/sales?sale=${sel.b.saleId}`)} style={S(SECOND + ';height:48px')}>Refund</button>
+                </div>}
                 <div style={S('display:flex;gap:10px')}>
                   <button onClick={() => setQa(true)} aria-label="More actions" aria-haspopup="dialog" style={S('flex:0 0 52px;width:52px;height:52px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer')}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="#0E1116"><circle cx="12" cy="5.5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="18.5" r="1.6" /></svg>

@@ -36,7 +36,7 @@ export default async function Calendar({ searchParams }: { searchParams: Promise
     sb.from('products').select('id,name,brand,price_cents,stock').eq('active', true).order('name'),
   ]);
   const ids = (bk ?? []).map((x) => x.id);
-  const { data: sales } = ids.length ? await sb.from('sales').select('id,booking_id,status,total_cents,method').in('booking_id', ids).neq('status', 'refunded') : { data: [] as any[] };
+  const { data: sales } = ids.length ? await sb.from('sales').select('id,booking_id,status,total_cents,method').in('booking_id', ids).order('created_at', { ascending: false }) : { data: [] as any[] };
   const cids = [...new Set((bk ?? []).map((x: any) => x.client_id).filter(Boolean))] as string[];
   const { data: cpk } = cids.length ? await sb.from('client_package_status').select('id,client_id,service_id,name,uses_left,expires_at').in('client_id', cids).eq('sale_status', 'paid').gt('uses_left', 0) : { data: [] as any[] };
   const packages: Record<string, { id: string; serviceId: string; name: string; left: number }[]> = {};
@@ -49,12 +49,14 @@ export default async function Calendar({ searchParams }: { searchParams: Promise
     const cid = lines[0]?.services?.category_id as string | undefined;
     const cname = lines[0]?.services?.service_categories?.name as string | undefined;
     if (cid && !catIdx.has(cid)) catIdx.set(cid, catIdx.size);
-    const sale = (sales ?? []).find((s: any) => s.booking_id === x.id);
+    // A refunded sale only counts when nothing newer is live: the visit then reads "Refunded", not "To pay".
+    const mine = (sales ?? []).filter((s: any) => s.booking_id === x.id);
+    const sale = mine.find((s: any) => s.status !== 'refunded') ?? mine[0];
     return {
       id: x.id, ref: x.ref_no, staffId: x.staff_id, clientId: x.client_id, client: x.clients?.name ?? 'Client',
       services: lines.map((l) => l.services?.name).filter(Boolean).join(' + '),
       dayYmd: ymd(x.starts_at, salon.timezone), start: minutesOfDay(x.starts_at, salon.timezone), end: minutesOfDay(x.ends_at, salon.timezone) || 24 * 60,
-      status: x.status, priceCents: lines.reduce((s, l) => s + l.price_cents, 0), paid: sale?.status === 'paid', paidText: sale?.status === 'paid' ? `Paid ${money2(sale.total_cents / 100).replace(/\.00$/, '')}${sale.method ? ' by ' + ({ card: 'Card', cash: 'Cash', gift_card: 'Gift card', package: 'Package' } as Record<string, string>)[sale.method] : ''}` : '', saleId: sale?.id ?? null, serviceIds: lines.map((l) => l.service_id),
+      status: x.status, priceCents: lines.reduce((s, l) => s + l.price_cents, 0), paid: sale?.status === 'paid', refunded: sale?.status === 'refunded', paidText: sale?.status === 'paid' ? `Paid ${money2(sale.total_cents / 100).replace(/\.00$/, '')}${sale.method ? ' by ' + ({ card: 'Card', cash: 'Cash', gift_card: 'Gift card', package: 'Package' } as Record<string, string>)[sale.method] : ''}` : '', saleId: sale?.id ?? null, serviceIds: lines.map((l) => l.service_id),
       tone: Math.max(0, TONE_LIST.indexOf(toneFor(cname, cid ? catIdx.get(cid)! : 0))), walkin: x.notes === 'Walk-in', notes: x.notes,
       forms: (() => {
         if (!tpls.length || !x.client_id || x.status === 'completed') return null;
