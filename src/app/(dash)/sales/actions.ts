@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireCtx, friendly } from '@/lib/session';
-import { getCreds, releaseOnline, startOnline, startTerminal, terminalInFlight, pollTerminal, pressTerminalButton, cancelTerminal, refundCard } from '@/lib/windcave';
+import { getCreds, releaseOnline, startOnline, startTerminal, terminalInFlight, refundByCard, pollTerminal, pressTerminalButton, cancelTerminal, refundCard } from '@/lib/windcave';
 import { sendCustomMessage } from '@/lib/notify';
 import { mailP } from '@/lib/email-layout';
 import { dateLong } from '@/lib/format';
@@ -77,11 +77,12 @@ export async function setPrice(saleId: string, dollars: string): Promise<Res> {
   revalidatePath('/sales'); return { notice: 'Sale updated' };
 }
 
-export async function refundSale(saleId: string): Promise<Res> {
+export async function refundSale(saleId: string): Promise<Res & { txn?: string }> {
   const { sb, staff } = await requireCtx();
   if (staff.app_role !== 'owner') return { error: 'Only the owner can refund a sale.' };
   const { data: s } = await sb.from('sales').select('method').eq('id', saleId).single();
-  if (s?.method === 'card') { const r = await refundCard(saleId); if (r.error) return { error: r.error }; }
+  // A terminal refund runs on the terminal: hand back the reference to watch instead of waiting here.
+  if (s?.method === 'card') { const r = await refundByCard(saleId, await origin()); if (r.error) return { error: r.error }; if (r.txn) return { txn: r.txn }; }
   else { const { error } = await sb.rpc('refund_sale', { p_sale: saleId }); if (error) return { error: friendly(error.message) }; }
   revalidatePath('/sales'); return { notice: 'Refund issued' };
 }

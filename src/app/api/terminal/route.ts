@@ -6,7 +6,7 @@ import { cancelTerminal, pressTerminalButton } from '@/lib/windcave';
 export async function POST(req: NextRequest) {
   await requireCtx();
   const b = await req.json().catch(() => ({})) as { op?: string; txn?: string; name?: string; label?: string };
-  if (!b.txn || !/^TM[0-9a-f]{18}$/.test(b.txn)) return NextResponse.json({ error: 'bad txn' }, { status: 400 });
+  if (!b.txn || !/^(TM|RF)[0-9a-f]{18}$/.test(b.txn)) return NextResponse.json({ error: 'bad txn' }, { status: 400 });
   if (b.op === 'cancel') await cancelTerminal(b.txn);
   else if (b.op === 'press') await pressTerminalButton(b.txn, String(b.name ?? ''), String(b.label ?? ''));
   else return NextResponse.json({ error: 'bad op' }, { status: 400 });

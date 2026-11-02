@@ -194,11 +194,19 @@ export async function startTerminal(saleId: string, origin?: string): Promise<{ 
   const txn = ref('TM');
   const ins = await sb.from('card_payments').insert({ salon_id: sale.salon_id, sale_id: sale.id, kind: 'terminal', txn_ref: txn, amount_cents: sale.total_cents });
   if (ins.error) return { error: 'Could not record the payment attempt.' };
+  return dispatch(c, { Station: c.station, Amount: dollars(sale.total_cents), Cur: sale.salons.currency, TxnType: 'Purchase', TxnRef: txn, MRef: sale.salons.name.slice(0, 60) }, txn, origin);
+}
+
+/**
+ * Sends a Purchase or Refund to the terminal. Windcave may hold its reply while the terminal waits for a card, so the till is not made to wait:
+ * after a moment the reference is handed back (Cancel works straight away) and the reply is dealt with when it comes.
+ */
+async function dispatch(c: Creds, body: Record<string, string | number>, txn: string, origin?: string): Promise<{ txn?: string; error?: string }> {
+  const sb = supabaseAdmin();
   const fail = async (text: string, code?: string | null) => { await sb.from('card_payments').update({ status: 'error', response_code: code ?? null, response_text: text, resolved_at: new Date().toISOString() }).eq('txn_ref', txn); };
-  const sent = hit(c, { Station: c.station, Amount: dollars(sale.total_cents), Cur: sale.salons.currency, TxnType: 'Purchase', TxnRef: txn, MRef: sale.salons.name.slice(0, 60), HttpTimeout: 10,
-    // Fail-proof result notification: Windcave tells us when the payment ends, even if the browser has been closed. The result is still confirmed with Windcave, never taken from this call.
+  const sent = hit(c, { ...body, HttpTimeout: 10,
+    // Fail-proof result notification: Windcave tells us when it ends, even if the browser has been closed. The result is still confirmed with Windcave, never taken from this call.
     ...(origin ? { UrlSuccess: `${origin}/api/windcave/terminal?t=${txn}`, UrlFail: `${origin}/api/windcave/terminal?t=${txn}` } : {}) }).then((out) => ({ out }), () => ({ out: null as string | null }));
-  // Windcave may hold its reply while the terminal waits for a card. Do not make the till wait for it: after a moment hand the reference back so Cancel works straight away, and deal with the reply when it comes.
   const first = await Promise.race([sent, new Promise<null>((r) => setTimeout(() => r(null), 2500))]);
   const judge = async (out: string | null) => {
     if (out === null) { await fail('Terminal unreachable'); return 'Could not reach the card terminal.'; }
@@ -215,6 +223,7 @@ export async function pollTerminal(txn: string): Promise<{ state: 'pending' | 'a
   const sb = supabaseAdmin();
   const { data: cp } = await sb.from('card_payments').select('*').eq('txn_ref', txn).eq('kind', 'terminal').maybeSingle();
   if (!cp) return { state: 'error' };
+  if (txn.startsWith('RF')) return pollRefund(cp);
   if (cp.status === 'approved') return { state: 'approved' };
   if (cp.status !== 'pending') return { state: cp.status === 'declined' || cp.status === 'cancelled' ? 'declined' : 'error', text: cp.response_text ?? undefined };
   const c = await getCreds(cp.salon_id);
@@ -239,7 +248,8 @@ export async function pollTerminal(txn: string): Promise<{ state: 'pending' | 'a
     await sb.from('card_payments').update({ ...patch, status: 'error', needs_review: true, review_note: `Terminal approved ${paid} cents, sale was ${cp.amount_cents}` }).eq('id', cp.id);
     return { state: 'error', text: 'Amount mismatch. Check with your payment provider.' };
   }
-  await sb.from('card_payments').update({ ...patch, status: 'approved' }).eq('id', cp.id);
+  const { data: won } = await sb.from('card_payments').update({ ...patch, status: 'approved' }).eq('id', cp.id).eq('status', 'pending').select('id');
+  if (!won?.length) return { state: 'approved' }; // another check got here first and finishes the sale
   const { error } = await sb.rpc('finalize_sale', { p_sale: cp.sale_id, p_method: 'card' });
   if (error) await sb.from('card_payments').update({ needs_review: true, review_note: `Approved but sale not finalised: ${error.message}` }).eq('id', cp.id);
   return { state: 'approved' };
@@ -268,32 +278,80 @@ export async function cancelTerminal(txn: string) {
 }
 
 /* ---------------- Refunds ---------------- */
+/** A matched refund on the terminal (spec: Refund with the original DpsTxnRef). Returns the reference to watch, like a payment. */
+export async function startRefund(saleId: string, origin?: string): Promise<{ txn?: string; error?: string }> {
+  const sb = supabaseAdmin();
+  const sale = await loadSale(saleId);
+  if (!sale) return { error: 'Sale not found.' };
+  const open = await terminalInFlight(saleId);
+  if (open) return { txn: open };
+  if (sale.status !== 'paid') return { error: 'Only a paid sale can be refunded.' };
+  const { data: cp } = await sb.from('card_payments').select('*').eq('sale_id', saleId).eq('status', 'approved').eq('kind', 'terminal').maybeSingle();
+  if (!cp || !cp.dps_txn_ref) return { error: 'No approved card payment found for this sale.' };
+  const c = await getCreds(cp.salon_id);
+  if (!c.hitUser || !c.hitKey || !c.station) return { error: 'The card terminal is not set up. Add its details in Settings.' };
+  const txn = ref('RF');
+  const ins = await sb.from('card_payments').insert({ salon_id: cp.salon_id, sale_id: saleId, kind: 'terminal', txn_ref: txn, amount_cents: cp.amount_cents });
+  if (ins.error) return { error: 'Could not record the refund attempt.' };
+  return dispatch(c, { Station: c.station, Amount: dollars(cp.amount_cents), Cur: sale.salons.currency, TxnType: 'Refund', TxnRef: txn, DpsTxnRef: cp.dps_txn_ref, MRef: sale.salons.name.slice(0, 60) }, txn, origin);
+}
+
+type Poll = { state: 'pending' | 'approved' | 'declined' | 'error'; text?: string; buttons?: { name: string; label: string }[] };
+async function pollRefund(cp: any): Promise<Poll> {
+  const sb = supabaseAdmin();
+  if (cp.status === 'refunded') return { state: 'approved' };
+  if (cp.status !== 'pending') return { state: cp.status === 'declined' || cp.status === 'cancelled' ? 'declined' : 'error', text: cp.response_text ?? undefined };
+  const c = await getCreds(cp.salon_id);
+  if (!c.station) return { state: 'error' };
+  let out: string;
+  try { out = await hit(c, { Station: c.station, TxnType: 'Status', TxnRef: cp.txn_ref }); } catch { return { state: 'pending' }; }
+  const bad = hitProblem(out);
+  if (bad) {
+    if ((pick(out, 'ReCo') ?? '').trim() === 'PC') return { state: 'pending', text: bad };
+    await sb.from('card_payments').update({ status: 'error', response_code: pick(out, 'ReCo') ?? null, response_text: bad, resolved_at: new Date().toISOString() }).eq('id', cp.id);
+    return { state: 'error', text: bad };
+  }
+  if (pick(out, 'Complete') !== '1') return { state: 'pending', text: [pick(out, 'DL1'), pick(out, 'DL2')].filter((x) => x && x.trim()).join(' ').trim() || undefined, buttons: hitButtons(out).filter((b) => b.label.toUpperCase() !== 'CANCEL') };
+  const patch = { response_code: pick(out, 'RC') ?? pick(out, 'ReCo') ?? null, response_text: pick(out, 'RT') || pick(out, 'DL1') || null, dps_txn_ref: pick(out, 'TR') ?? null, resolved_at: new Date().toISOString() };
+  if (pick(out, 'AP') !== '1') {
+    await sb.from('card_payments').update({ ...patch, status: 'declined' }).eq('id', cp.id);
+    return { state: 'declined', text: patch.response_text ?? undefined };
+  }
+  // Approved: claim it once, then mark the card payment and the sale refunded.
+  const { data: won } = await sb.from('card_payments').update({ ...patch, status: 'refunded' }).eq('id', cp.id).eq('status', 'pending').select('id');
+  if (!won?.length) return { state: 'approved' };
+  await sb.from('card_payments').update({ status: 'refunded' }).eq('sale_id', cp.sale_id).eq('kind', 'terminal').eq('status', 'approved');
+  const { error } = await sb.rpc('refund_sale_internal', { p_sale: cp.sale_id });
+  if (error) {
+    await sb.from('card_payments').update({ needs_review: true, review_note: `Refunded on the terminal but sale not updated: ${error.message}` }).eq('id', cp.id);
+    return { state: 'error', text: 'The terminal refunded the card, but the sale could not be updated. Contact support.' };
+  }
+  return { state: 'approved' };
+}
+
+/** Refund a card sale: on the terminal it returns the reference to watch, an on-screen payment is refunded at once. */
+export async function refundByCard(saleId: string, origin?: string): Promise<{ txn?: string; ok?: true; error?: string }> {
+  const open = await terminalInFlight(saleId);
+  if (open) return { txn: open };
+  const { data: cp } = await supabaseAdmin().from('card_payments').select('kind').eq('sale_id', saleId).eq('status', 'approved').maybeSingle();
+  if (!cp) return { error: 'No approved card payment found for this sale.' };
+  return cp.kind === 'terminal' ? startRefund(saleId, origin) : refundCard(saleId);
+}
+
+/** Card payments made on screen are refunded through Windcave's online service. Terminal payments use startRefund. */
 export async function refundCard(saleId: string): Promise<{ ok?: true; error?: string }> {
   const sb = supabaseAdmin();
-  const { data: cp } = await sb.from('card_payments').select('*').eq('sale_id', saleId).eq('status', 'approved').maybeSingle();
+  const { data: cp } = await sb.from('card_payments').select('*').eq('sale_id', saleId).eq('status', 'approved').eq('kind', 'online').maybeSingle();
   if (!cp || !cp.dps_txn_ref) return { error: 'No approved card payment found for this sale.' };
   const sale = await loadSale(saleId); if (!sale) return { error: 'Sale not found.' };
   const c = await getCreds(cp.salon_id);
-  const rtxn = ref('RF');
+  const rtxn = ref('RO');
   try {
-    if (cp.kind === 'online') {
-      if (!c.restUser || !c.restKey) return { error: 'Windcave credentials are missing.' };
-      const res = await fetch(`${REST()}/api/v1/transactions`, { method: 'POST', headers: { Authorization: basic(c.restUser, c.restKey), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'refund', amount: dollars(cp.amount_cents), currency: sale.salons.currency, merchantReference: rtxn, parentTransactionId: cp.dps_txn_ref }) });
-      const j = await res.json().catch(() => ({}));
-      if (!res.ok || j.authorised === false) return { error: `Windcave declined the refund${j.responseText ? `: ${j.responseText}` : ''}.` };
-    } else {
-      if (!c.station || !c.hitUser) return { error: 'Terminal credentials are missing.' };
-      const out = await hit(c, { Station: c.station, Amount: dollars(cp.amount_cents), Cur: sale.salons.currency, TxnType: 'Refund', TxnRef: rtxn, DpsTxnRef: cp.dps_txn_ref });
-      for (let i = 0; i < 40; i++) {
-        const st = i === 0 ? out : await hit(c, { Station: c.station, TxnType: 'Status', TxnRef: rtxn });
-        const bad = hitProblem(st);
-        if (bad) return { error: bad };
-        if (pick(st, 'Complete') === '1') { if (pick(st, 'AP') !== '1') return { error: 'The terminal did not approve the refund.' }; break; }
-        if (i === 39) return { error: 'The terminal did not finish the refund in time. Check the terminal before retrying.' };
-        await new Promise((r) => setTimeout(r, 2000));
-      }
-    }
+    if (!c.restUser || !c.restKey) return { error: 'Windcave credentials are missing.' };
+    const res = await fetch(`${REST()}/api/v1/transactions`, { method: 'POST', headers: { Authorization: basic(c.restUser, c.restKey), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'refund', amount: dollars(cp.amount_cents), currency: sale.salons.currency, merchantReference: rtxn, parentTransactionId: cp.dps_txn_ref }) });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok || j.authorised === false) return { error: `Windcave declined the refund${j.responseText ? `: ${j.responseText}` : ''}.` };
   } catch { return { error: 'Could not reach the payment provider.' }; }
   await sb.from('card_payments').update({ status: 'refunded', resolved_at: new Date().toISOString() }).eq('id', cp.id);
   const { error } = await sb.rpc('refund_sale_internal', { p_sale: saleId });

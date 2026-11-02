@@ -36,10 +36,11 @@ function Mark({ phase }: { phase: Exclude<TermPhase, 'idle'> }) {
   );
 }
 
-export function TerminalStatus({ t, amount }: { t: TermView; amount: string }) {
+export function TerminalStatus({ t, amount, refund }: { t: TermView; amount: string; refund?: boolean }) {
   const phase = t.phase === 'idle' ? 'pending' : t.phase;
-  const title = phase === 'pending' ? 'Pending payment' : phase === 'approved' ? 'Payment approved' : 'Payment not taken';
-  const sub = phase === 'approved' ? 'The visit is paid.' : '';
+  const what = refund ? 'refund' : 'payment';
+  const title = phase === 'pending' ? 'Pending ' + what : phase === 'approved' ? (refund ? 'Refund approved' : 'Payment approved') : (refund ? 'Refund not completed' : 'Payment not taken');
+  const sub = phase === 'approved' ? (refund ? 'The sale has been refunded to the card.' : 'The visit is paid.') : '';
   return (
     <div data-pay-lock={phase === 'pending' ? '' : undefined} style={S('display:flex;flex-direction:column;flex:1 1 auto;min-height:0;margin:0 -20px -40px')}>
       <div role="status" aria-live="polite" style={S('flex:1 1 0;min-height:0;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px 28px;text-align:center')}>
@@ -55,7 +56,7 @@ export function TerminalStatus({ t, amount }: { t: TermView; amount: string }) {
         )}
       </div>
       <div style={S('flex:0 0 auto;padding:14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3;display:flex;flex-direction:column;gap:12px')}>
-        {phase === 'pending' && <button onClick={t.onCancel} disabled={!t.hasTxn || t.cancelling} style={S(SECOND + ';opacity:' + (!t.hasTxn || t.cancelling ? 0.45 : 1))}>{t.cancelling ? 'Cancelling' : 'Cancel payment'}</button>}
+        {phase === 'pending' && <button onClick={t.onCancel} disabled={!t.hasTxn || t.cancelling} style={S(SECOND + ';opacity:' + (!t.hasTxn || t.cancelling ? 0.45 : 1))}>{t.cancelling ? 'Cancelling' : 'Cancel ' + what}</button>}
         {phase === 'approved' && <button onClick={t.onDone} style={S(PRIMARY)}>Done</button>}
         {phase === 'failed' && <>
           <button onClick={t.onRetry} style={S(PRIMARY)}>Try again</button>

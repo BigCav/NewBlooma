@@ -16,13 +16,14 @@ import { CheckoutFlow } from '../calendar/CheckoutFlow';
 import { NewSaleFlow } from './NewSaleFlow';
 import { createWalkin, payFlow, refundSale, sendReceipt, setPrice, } from './actions';
 import { useTerminal } from './useTerminal';
+import { TerminalStatus } from '../calendar/TerminalStatus';
 import { DISC_PCTS, FILTERS, NO_DISC, STATUS, TIP_OPTS, discOf, discountCents, fmt, type DiscPick, type PayMethod, type SaleRow, type SvcOpt } from './shared';
 
 type Props = {
   rows: SaleRow[]; bars: { day: string; cents: number; today: boolean }[]; todayTotal: number; paidCount: number; subtitle: string;
   methods: PayMethod[]; services: SvcOpt[]; askTip: boolean; canDiscount: boolean; initial: { sale: string | null; pay: boolean; card: string };
 };
-type Mode = 'view' | 'pay' | 'edit' | 'new';
+type Mode = 'view' | 'pay' | 'edit' | 'new' | 'refund';
 const CARD_MSG: Record<string, string> = { declined: 'The card payment was not completed.', pending: 'Still waiting for the bank. Refresh in a moment.', unknown: 'The card payment could not be confirmed.' };
 
 function useSales(props: Props) {
@@ -61,7 +62,7 @@ function useSales(props: Props) {
   const sel = rows.find((r) => r.id === selectedId) ?? rows[0] ?? null;
 
   // A card payment still running on the terminal for this sale (the page was left or reloaded): pick it up and show it.
-  useEffect(() => { if (sel?.txn && term.phase === 'idle') { term.resume(sel.txn); setMode('pay'); setOpen(true); } }, [sel?.id, sel?.txn, term.phase]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (sel?.txn && term.phase === 'idle') { term.resume(sel.txn); setMode(sel.txn.startsWith('RF') ? 'refund' : 'pay'); setOpen(true); } }, [sel?.id, sel?.txn, term.phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pick = (id: string) => { setSelectedId(id); setMode('view'); setConfirmRefund(false); setNotice(''); setError(''); setOpen(true); };
   const openNew = () => { setMode('new'); setNw(blankNew()); setError(''); setNotice(''); setConfirmRefund(false); setOpen(true); };
@@ -92,7 +93,19 @@ function useSales(props: Props) {
     startT(async () => { setError(''); settle(await payFlow(sel.id, 'online', 0, '', props.canDiscount ? NO_DISC : undefined)); });
   };
   const saveEdit = () => { if (sel) startT(async () => { const r = await setPrice(sel.id, editAmount); if (r.error) { setError(r.error); return; } setMode('view'); setError(''); setNotice(r.notice ?? ''); router.refresh(); }); };
-  const doRefund = () => { if (sel) startT(async () => { const r = await refundSale(sel.id); setConfirmRefund(false); if (r.error) { setError(r.error); return; } setError(''); setNotice(r.notice ?? ''); router.refresh(); }); };
+  // A refund to a card paid on the terminal goes back through the terminal: same pending step, tick or cross as a payment.
+  const doRefund = () => {
+    if (!sel) return;
+    const t = sel.method === 'Card' && props.methods.some((m) => m.id === 'terminal');
+    if (t) { setMode('refund'); setOpen(true); term.begin(); }
+    startT(async () => {
+      const r = await refundSale(sel.id); setConfirmRefund(false);
+      if (r.error) { if (t) term.fail(r.error); else setError(r.error); return; }
+      if (r.txn) { setMode('refund'); setOpen(true); term.start(r.txn); setError(''); return; }
+      if (t) { term.reset(); setMode('view'); }
+      setError(''); setNotice(r.notice ?? ''); router.refresh();
+    });
+  };
   const receipt = () => { if (sel) startT(async () => { const r = await sendReceipt(sel.id); if (r.error) { setError(r.error); setNotice(''); } else { setError(''); setNotice(r.notice ?? ''); } }); };
   const createSale = () => {
     if (!nw.client.trim()) { setError("Add the client's name."); return; }
@@ -113,7 +126,7 @@ function useSales(props: Props) {
   const sq = query.trim().toLowerCase();
   const list = rows.filter((t) => (filter === 'all' || t.status === filter) && (!sq || (t.client + ' ' + t.ref + ' ' + t.service + ' ' + t.staffName + ' ' + t.status + ' ' + t.method + ' ' + t.total / 100).toLowerCase().includes(sq.replace(/[$,]/g, ''))));
   return { ...props, busy, narrow, rows, list, sel, selectedId, filter, setFilter, query, setQuery, mode, setMode, open, notice, error, setError, confirmRefund, setConfirmRefund,
-    canDiscount: props.canDiscount, pay, setPay, tipPctOf, editAmount, setEditAmount, nw, setNw, txn: term.txn, termView: { ...term.view, onDone: () => { term.reset(); setMode('view'); setNotice('Payment taken'); setError(''); router.refresh(); }, onRetry: takePayment, onBack: term.reset }, pick, openNew, cancel, close, takePayment, payNow, saveEdit, doRefund, receipt, createSale,
+    canDiscount: props.canDiscount, pay, setPay, tipPctOf, editAmount, setEditAmount, nw, setNw, txn: term.txn, termView: { ...term.view, onDone: () => { const r = mode === 'refund'; term.reset(); setMode('view'); setNotice(r ? 'Refund issued' : 'Payment taken'); setError(''); router.refresh(); }, onRetry: mode === 'refund' ? doRefund : takePayment, onBack: () => { term.reset(); if (mode === 'refund') setMode('view'); } }, pick, openNew, cancel, close, takePayment, payNow, saveEdit, doRefund, receipt, createSale,
     paidTotal: props.todayTotal, pendingCount: rows.filter((r) => r.status === 'Pending').length };
 }
 type C = ReturnType<typeof useSales>;
@@ -270,6 +283,7 @@ function Panel({ c, m }: { c: C; m: boolean }) {
     </>);
   }
   if (!s) return <p style={S('margin:0;color:#5E6673;font-size:14px')}>No sales yet. Record one with New sale.</p>;
+  if (c.mode === 'refund' && c.termView.phase !== 'idle') return <TerminalStatus t={c.termView} amount={fmt(s.total)} refund />;
   if (m && c.mode === 'pay') return <SaleCheckout c={c} s={s} />;
   if (c.mode === 'pay') {
     const pct = c.askTip ? parseInt(c.pay.tip, 10) || 0 : 0;
