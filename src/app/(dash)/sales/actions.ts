@@ -34,7 +34,7 @@ export async function createWalkin(client: string, clientId: string | null, serv
  * Take payment for an open sale. Cash and gift card settle at once; the terminal returns a transaction to poll;
  * on-screen card returns the hosted payment page to go to.
  */
-export async function payFlow(saleId: string, method: 'terminal' | 'online' | 'cash' | 'gift_card', tipPct: number, code: string, disc?: { kind: string; value: string; note: string }, products?: { productId: string; qty: number }[]): Promise<Res & { txn?: string; url?: string }> {
+export async function payFlow(saleId: string, method: 'terminal' | 'online' | 'cash' | 'gift_card', tipPct: number, code: string, disc?: { kind: string; value: string; note: string }, products?: { productId: string; qty: number }[], services?: string[], packs?: { clientPackageId: string; serviceId: string }[]): Promise<Res & { txn?: string; url?: string }> {
   const { sb, salon } = await requireCtx();
   // With a card terminal switched on, every card payment goes to it, never to the on-screen page.
   if (method === 'online' && (await getCreds(salon.id)).terminalEnabled) method = 'terminal';
@@ -43,10 +43,32 @@ export async function payFlow(saleId: string, method: 'terminal' | 'online' | 'c
   if (open) return { txn: open };
   // A hosted payment page that was closed without paying would otherwise lock the sale.
   await releaseOnline(saleId);
+  // Services changed at the till: only the sale's lines change, never the booking.
+  if (services?.length) {
+    const sv = await sb.rpc('set_sale_services', { p_sale: saleId, p_services: services });
+    if (sv.error) return { error: friendly(sv.error.message) };
+  }
   // Products changed at the till: only the sale's product lines change, before the discount and tip are worked out.
   if (products) {
     const p = await sb.rpc('set_sale_products', { p_sale: saleId, p_items: products.filter((x) => x.qty > 0).map((x) => ({ product_id: x.productId, qty: Math.floor(x.qty) })) });
     if (p.error) return { error: friendly(p.error.message) };
+  }
+  // Visits covered by a package: those service lines become nothing to pay. A sale with nothing left to pay is closed on the spot.
+  if (packs?.length) {
+    // A package already used on this sale (an earlier attempt that did not finish) is not used a second time.
+    const { data: used } = await sb.from('package_uses').select('client_package_id').eq('sale_id', saleId);
+    const todo = packs.filter((x) => !(used ?? []).some((u: any) => u.client_package_id === x.clientPackageId));
+    if (todo.length) {
+      const ap = await sb.rpc('apply_packages_to_sale', { p_sale: saleId, p_uses: todo.map((x) => ({ client_package_id: x.clientPackageId, service_id: x.serviceId })) });
+      if (ap.error) return { error: friendly(ap.error.message) };
+    }
+    const { data: left } = await sb.from('sales').select('total_cents').eq('id', saleId).single();
+    if (left && left.total_cents === 0) {
+      const done = await sb.rpc('complete_sale', { p_sale: saleId, p_method: 'package', p_gift_code: null });
+      if (done.error) return { error: friendly(done.error.message) };
+      revalidatePath('/sales'); revalidatePath('/calendar'); revalidatePath('/packages');
+      return { notice: 'Payment taken' };
+    }
   }
   if (disc) {
     const v = Number(String(disc.value).replace(/[^0-9.]/g, ''));

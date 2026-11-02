@@ -4,6 +4,7 @@ import { ymd, time12 } from '@/lib/format';
 import { addDaysYmd, dayInfo } from '@/lib/cal';
 import { fmt, initialsOf, type PayMethod, type SaleRow } from './shared';
 import { SalesView } from './SalesView';
+import { buildOffers, buildServices } from '../calendar/base';
 
 export const metadata = { title: 'Sales' };
 export const dynamic = 'force-dynamic';
@@ -17,15 +18,22 @@ export default async function Sales({ searchParams }: { searchParams: Promise<{ 
   const since = new Date(Date.now() - 15 * 86400e3).toISOString();
   // A terminal payment finished while nobody was watching still finishes its sale.
   await settleTerminals(salon.id);
-  const [{ data: sales }, { data: svcs }, { data: pay }, { data: flagged }, { data: prods }] = await Promise.all([
-    sb.from('sales').select('id,status,method,subtotal_cents,discount_cents,discount_note,tax_rate,tip_cents,tax_cents,tax_inclusive,total_cents,created_at,paid_at,clients(id,name),staff(name,photo_url),bookings(ref_no,starts_at,ends_at),sale_items(label,qty,price_cents,service_id,product_id)')
+  const [{ data: sales }, { data: svcs }, { data: pay }, { data: flagged }, { data: prods }, { data: sa }, { data: ss }] = await Promise.all([
+    sb.from('sales').select('id,status,method,subtotal_cents,discount_cents,discount_note,tax_rate,tip_cents,tax_cents,tax_inclusive,total_cents,created_at,paid_at,clients(id,name),staff(id,name,photo_url),bookings(ref_no,starts_at,ends_at),sale_items(label,qty,price_cents,service_id,product_id)')
       .or(`created_at.gte.${since},status.eq.pending`).order('created_at', { ascending: false }).limit(300),
-    sb.from('services').select('id,name,price_cents,duration_min,service_categories(name,sort)').eq('active', true).order('name'),
+    sb.from('services').select('id,name,price_cents,duration_min,is_addon,service_categories(name,sort)').eq('active', true).order('name'),
     sb.from('salon_payment_settings').select('online_cards_enabled,terminal_enabled').eq('salon_id', salon.id).maybeSingle(),
     // Card payments the system could not match to a sale cleanly (amount differs, or paid another way as well). Shown for 30 days.
     staff.app_role === 'owner' ? sb.from('card_payments').select('id,review_note,amount_cents,resolved_at,sales(clients(name))').eq('needs_review', true).gte('resolved_at', new Date(Date.now() - 30 * 86400e3).toISOString()).order('resolved_at', { ascending: false }).limit(5) : Promise.resolve({ data: [] as any[] }),
     sb.from('products').select('id,name,brand,price_cents,stock').eq('active', true).order('name'),
+    sb.from('service_addons').select('addon_id,service_id'),
+    sb.from('service_staff').select('service_id,staff_id'),
   ]);
+  // Prepaid packages a client has with visits left: they can cover a service at checkout, as on the calendar.
+  const cids = [...new Set(((sales ?? []) as any[]).filter((s) => s.status === 'pending').map((s) => s.clients?.id).filter(Boolean))] as string[];
+  const { data: cpk } = cids.length ? await sb.from('client_package_status').select('id,client_id,service_id,name,uses_left,expires_at').in('client_id', cids).eq('sale_status', 'paid').gt('uses_left', 0) : { data: [] as any[] };
+  const packages: Record<string, { id: string; serviceId: string; name: string; left: number }[]> = {};
+  for (const x of (cpk ?? []) as any[]) { if (x.expires_at && new Date(x.expires_at).getTime() <= Date.now()) continue; (packages[x.client_id] ??= []).push({ id: x.id, serviceId: x.service_id, name: x.name, left: x.uses_left }); }
   const canEdit = staff.app_role !== 'stylist';
   const { data: openCards } = await sb.from('card_payments').select('sale_id,txn_ref').eq('kind', 'terminal').eq('status', 'pending');
   const openTxn = new Map<string, string>((openCards ?? []).map((x) => [x.sale_id as string, x.txn_ref as string]));
@@ -38,13 +46,13 @@ export default async function Sales({ searchParams }: { searchParams: Promise<{ 
     const when = s.paid_at ?? s.created_at, day = ymd(when, tz);
     const name = s.clients?.name ?? 'Walk-in';
     const row: SaleRow = {
-      id: s.id, ref: s.bookings?.ref_no ? 'B-' + s.bookings.ref_no : '', clientId: s.clients?.id ?? null, bookingDay: s.bookings?.starts_at ? ymd(s.bookings.starts_at, tz) : '', client: name, initials: initialsOf(name), staffName: s.staff?.name ?? 'Unassigned', staffPhoto: s.staff?.photo_url ?? null, firstName: String(s.staff?.name ?? 'Unassigned').split(' ')[0],
+      id: s.id, ref: s.bookings?.ref_no ? 'B-' + s.bookings.ref_no : '', staffId: s.staff?.id ?? null, clientId: s.clients?.id ?? null, bookingDay: s.bookings?.starts_at ? ymd(s.bookings.starts_at, tz) : '', client: name, initials: initialsOf(name), staffName: s.staff?.name ?? 'Unassigned', staffPhoto: s.staff?.photo_url ?? null, firstName: String(s.staff?.name ?? 'Unassigned').split(' ')[0],
       service: first ? `${first.label}${first.qty > 1 ? ` x${first.qty}` : ''}${extra > 0 ? ` +${extra} more` : ''}` : 'Sale',
       time: status === 'Pending' ? 'In progress' : day === today ? hm(when, tz) : dayInfo(day).short,
       method: status === 'Pending' ? 'Not taken yet' : METHOD[s.method] ?? '', status,
       amount: s.subtotal_cents + s.discount_cents, discount: s.discount_cents, discountNote: s.discount_note ?? '', taxRate: Number(s.tax_rate), taxIncl: !!s.tax_inclusive, tip: s.tip_cents, tax: s.tax_inclusive ? 0 : s.tax_cents, total: s.total_cents,
       dayShort: dayInfo(day).short, gst: s.tax_cents, range: s.bookings?.starts_at && s.bookings?.ends_at ? hm(s.bookings.starts_at, tz) + ' – ' + hm(s.bookings.ends_at, tz) : '',
-      lines: items.map((i) => ({ label: i.label as string, qty: i.qty as number, cents: i.price_cents as number, dur: i.service_id ? durOf.get(i.service_id as string) ?? null : null, svc: !!i.service_id, productId: (i.product_id as string | null) ?? null })),
+      lines: items.map((i) => ({ label: i.label as string, qty: i.qty as number, cents: i.price_cents as number, dur: i.service_id ? durOf.get(i.service_id as string) ?? null : null, svc: !!i.service_id, productId: (i.product_id as string | null) ?? null, serviceId: (i.service_id as string | null) ?? null })),
       txn: openTxn.get(s.id),
       canEdit: status === 'Pending' && canEdit && items.filter((i) => i.service_id).length === 1,
     };
@@ -74,6 +82,6 @@ export default async function Sales({ searchParams }: { searchParams: Promise<{ 
       </div>
     )}
     <SalesView canDiscount={canEdit} rows={rows} bars={bars} todayTotal={todayTotal} paidCount={todayPaid.length} subtitle={`${t.weekday}, ${t.num} ${t.month}`}
-      methods={methods} services={services} products={((prods ?? []) as any[]).map((x) => ({ id: x.id as string, name: x.name as string, brand: (x.brand ?? '') as string, priceCents: x.price_cents as number, stock: x.stock as number }))} askTip={st.ask_for_tip} initial={{ sale: sp.sale ?? null, pay: sp.pay === '1', card: sp.card ?? '' }} />
+      methods={methods} services={services} catalog={buildServices(svcs as any[], sa)} offers={buildOffers(ss)} packages={packages} products={((prods ?? []) as any[]).map((x) => ({ id: x.id as string, name: x.name as string, brand: (x.brand ?? '') as string, priceCents: x.price_cents as number, stock: x.stock as number }))} askTip={st.ask_for_tip} initial={{ sale: sp.sale ?? null, pay: sp.pay === '1', card: sp.card ?? '' }} />
   </>;
 }

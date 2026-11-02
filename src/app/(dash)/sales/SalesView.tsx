@@ -6,6 +6,7 @@ import { useNewParam } from '@/components/useNewParam';
 import { decimalInput } from '@/lib/numeric';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { serviceRules, type CalService } from '@/lib/cal';
 import { useEffect, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { ActiveFilter, FilterButton, FilterSheet } from '@/components/FilterBits';
@@ -18,11 +19,11 @@ import { createWalkin, payFlow, refundSale, sendReceipt, setPrice, } from './act
 import { useTerminal } from './useTerminal';
 import { TerminalStatus } from '../calendar/TerminalStatus';
 import { VisitSheet, MoreButton, QuickActions, QaGroup, QA_ITEM, ICON_TIME, ICON_PERSON, ICON_CARD, type VisitDetail } from '../calendar/VisitSheet';
-import { DISC_PCTS, FILTERS, NO_DISC, STATUS, TIP_OPTS, discOf, discountCents, fmt, type CoProduct, type DiscPick, type PayMethod, type SaleRow, type SvcOpt } from './shared';
+import { DISC_PCTS, FILTERS, NO_DISC, STATUS, TIP_OPTS, discOf, discountCents, fmt, type CoPackage, type CoProduct, type DiscPick, type PayMethod, type SaleRow, type SvcOpt } from './shared';
 
 type Props = {
   rows: SaleRow[]; bars: { day: string; cents: number; today: boolean }[]; todayTotal: number; paidCount: number; subtitle: string;
-  methods: PayMethod[]; services: SvcOpt[]; products: CoProduct[]; askTip: boolean; canDiscount: boolean; initial: { sale: string | null; pay: boolean; card: string };
+  methods: PayMethod[]; services: SvcOpt[]; products: CoProduct[]; catalog: CalService[]; offers: Record<string, string[]>; packages: Record<string, CoPackage[]>; askTip: boolean; canDiscount: boolean; initial: { sale: string | null; pay: boolean; card: string };
 };
 type Mode = 'view' | 'pay' | 'edit' | 'new' | 'refund';
 const CARD_MSG: Record<string, string> = { declined: 'The card payment was not completed.', pending: 'Still waiting for the bank. Refresh in a moment.', unknown: 'The card payment could not be confirmed.' };
@@ -68,17 +69,31 @@ function useSales(props: Props) {
   for (const l of sel?.lines ?? []) if (l.productId) onSale[l.productId] = (onSale[l.productId] ?? 0) + l.qty;
   const prodQty = prodEdit && prodEdit.id === sel?.id ? prodEdit.qty : onSale;
   const onQty = (id: string, n: number) => setProdEdit({ id: sel?.id ?? '', qty: { ...prodQty, [id]: Math.max(0, n) } });
+  // Services and packages at checkout, as on the calendar. They work on a sale made from a booking.
+  const [ext, setExt] = useState<{ id: string; svc: string[] | null; pkgs: string[] } | null>(null);
+  const rules = serviceRules(props.catalog, props.offers);
+  const canExtra = !!sel && sel.status === 'Pending' && !!sel.bookingDay;
+  const mine = ext && ext.id === sel?.id ? ext : null;
+  const svcIds = mine?.svc ?? (sel?.lines ?? []).filter((l) => l.serviceId).map((l) => l.serviceId as string);
+  const pkgIds = mine?.pkgs ?? [];
+  const pickSvc = (id: string) => {
+    if (!sel) return;
+    const next = rules.toggle(svcIds, id);
+    if (!next.length) { setError('Keep at least one service on the sale.'); return; }
+    setError(''); setExt({ id: sel.id, svc: next, pkgs: pkgIds });
+  };
+  const togglePack = (id: string) => { if (sel) setExt({ id: sel.id, svc: mine?.svc ?? null, pkgs: pkgIds.includes(id) ? pkgIds.filter((x) => x !== id) : [...pkgIds, id] }); };
 
   // A card payment still running on the terminal for this sale (the page was left or reloaded): pick it up and show it.
   useEffect(() => { if (sel?.txn && term.phase === 'idle') { term.resume(sel.txn); setMode(sel.txn.startsWith('RF') ? 'refund' : 'pay'); setOpen(true); } }, [sel?.id, sel?.txn, term.phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const pick = (id: string) => { setSelectedId(id); setMode('view'); setConfirmRefund(false); setNotice(''); setError(''); setProdEdit(null); setOpen(true); };
+  const pick = (id: string) => { setSelectedId(id); setMode('view'); setConfirmRefund(false); setNotice(''); setError(''); setProdEdit(null); setExt(null); setOpen(true); };
   const openNew = () => { setMode('new'); setNw(blankNew()); setError(''); setNotice(''); setConfirmRefund(false); setOpen(true); };
   const cancel = () => {
     if (term.phase === 'pending') return; // the terminal is working: leave it be
-    setMode('view'); setError(''); setConfirmRefund(false); setProdEdit(null); setOpen(mobile ? mode !== 'new' : false);
+    setMode('view'); setError(''); setConfirmRefund(false); setProdEdit(null); setExt(null); setOpen(mobile ? mode !== 'new' : false);
   };
-  const close = () => { if (term.phase === 'pending') return; setOpen(false); setMode('view'); setConfirmRefund(false); setError(''); setProdEdit(null); };
+  const close = () => { if (term.phase === 'pending') return; setOpen(false); setMode('view'); setConfirmRefund(false); setError(''); setProdEdit(null); setExt(null); };
 
   /** t: this payment was started as a terminal payment, so its result belongs on the terminal's final step. */
   const settle = (r: { error?: string; notice?: string; txn?: string; url?: string }, t = false) => {
@@ -93,7 +108,9 @@ function useSales(props: Props) {
     if (!props.methods.length) { setError('No payment methods are switched on. Turn some on in Settings.'); return; }
     const t = pay.method === 'terminal';
     if (t) term.begin(); // straight to the pending step
-    startT(async () => { setError(''); settle(await payFlow(sel.id, pay.method, parseInt(pay.tip, 10) || 0, pay.code, props.canDiscount ? pay.disc : undefined, prodEdit && prodEdit.id === sel.id ? Object.entries(prodEdit.qty).map(([productId, qty]) => ({ productId, qty })) : undefined), t); });
+    startT(async () => { setError(''); settle(await payFlow(sel.id, pay.method, parseInt(pay.tip, 10) || 0, pay.code, props.canDiscount ? pay.disc : undefined, prodEdit && prodEdit.id === sel.id ? Object.entries(prodEdit.qty).map(([productId, qty]) => ({ productId, qty })) : undefined,
+      mine?.svc ? svcIds : undefined,
+      pkgIds.map((id) => (props.packages[sel.clientId ?? ''] ?? []).find((x) => x.id === id)).filter((x): x is CoPackage => !!x && svcIds.includes(x.serviceId)).map((x) => ({ clientPackageId: x.id, serviceId: x.serviceId }))), t); });
   };
   // Express: card on screen, no tip, no discount, straight to the payment page.
   const payNow = () => {
@@ -133,7 +150,7 @@ function useSales(props: Props) {
 
   const sq = query.trim().toLowerCase();
   const list = rows.filter((t) => (filter === 'all' || t.status === filter) && (!sq || (t.client + ' ' + t.ref + ' ' + t.service + ' ' + t.staffName + ' ' + t.status + ' ' + t.method + ' ' + t.total / 100).toLowerCase().includes(sq.replace(/[$,]/g, ''))));
-  return { ...props, busy, narrow, rows, list, sel, selectedId, filter, setFilter, query, setQuery, mode, setMode, open, notice, error, setError, confirmRefund, setConfirmRefund, qa, setQa, prodQty, onQty,
+  return { ...props, busy, narrow, rows, list, sel, selectedId, filter, setFilter, query, setQuery, mode, setMode, open, notice, error, setError, confirmRefund, setConfirmRefund, qa, setQa, prodQty, onQty, rules, canExtra, svcIds, svcEdited: !!mine?.svc, pickSvc, pkgIds, togglePack,
     canDiscount: props.canDiscount, pay, setPay, tipPctOf, editAmount, setEditAmount, nw, setNw, txn: term.txn, termView: { ...term.view, onDone: () => { const r = mode === 'refund'; term.reset(); setMode('view'); setNotice(r ? 'Refund issued' : 'Payment taken'); setError(''); router.refresh(); }, onRetry: mode === 'refund' ? doRefund : takePayment, onBack: () => { term.reset(); if (mode === 'refund') setMode('view'); } }, pick, openNew, cancel, close, takePayment, payNow, saveEdit, doRefund, receipt, createSale,
     paidTotal: props.todayTotal, pendingCount: rows.filter((r) => r.status === 'Pending').length };
 }
@@ -154,13 +171,23 @@ const Chips = ({ id, label, children }: { id: string; label: string; children: R
 
 /** The phone's checkout for a sale: the same steps as the calendar's checkout. */
 function SaleCheckout({ c, s }: { c: C; s: SaleRow }) {
-  const lines = s.lines.filter((l) => !l.productId).map((l, i) => ({ key: l.label + i, name: l.label + (l.qty > 1 ? ' x' + l.qty : ''), sub: l.dur ? l.dur + ' min' : undefined, cents: l.cents * l.qty }));
+  const found = c.svcIds.map((id) => c.rules.map.get(id)).filter(Boolean) as CalService[];
+  const prodCents = s.lines.filter((l) => l.productId).reduce((a, l) => a + l.cents * l.qty, 0);
+  // Changed here, the services are priced from the menu (as on the calendar); otherwise the sale is shown as it stands.
+  const lines = c.svcEdited
+    ? found.map((v) => ({ key: v.id, name: v.name, sub: v.dur + ' min', cents: v.priceCents }))
+    : s.lines.filter((l) => !l.productId).map((l, i) => ({ key: l.label + i, name: l.label + (l.qty > 1 ? ' x' + l.qty : ''), sub: l.dur ? l.dur + ' min' : undefined, cents: l.cents * l.qty }));
+  const gross = c.svcEdited ? found.reduce((a, v) => a + v.priceCents, 0) : s.amount - prodCents;
   return (
     <CheckoutFlow who={s.client + ', ' + s.lines.map((l) => l.label).join(' + ')} methods={c.methods.map((m) => [m.id, m.label] as const)}
       co={{ method: c.pay.method, tip: parseInt(c.pay.tip, 10) || 0, code: c.pay.code, disc: c.pay.disc }}
       setCo={(x) => c.setPay({ method: x.method as PayMethod['id'], tip: String(x.tip), code: x.code, disc: x.disc })}
       cfg={{ canDiscount: c.canDiscount, askTip: c.askTip, taxInclusive: s.taxIncl, taxRate: s.taxRate }}
-      lines={lines} gross={s.amount - s.lines.filter((l) => l.productId).reduce((a, l) => a + l.cents * l.qty, 0)} tipBase={s.lines.some((l) => l.svc) ? s.lines.filter((l) => l.svc).reduce((a, l) => a + l.cents * l.qty, 0) : undefined} retail={{ products: c.products, qty: c.prodQty, onQty: c.onQty }} onCharge={c.takePayment} busy={c.busy} error={c.error} setError={c.setError} term={c.termView} onClose={c.cancel} />
+      lines={lines} gross={gross} tipBase={c.svcEdited ? gross : s.lines.some((l) => l.svc) ? s.lines.filter((l) => l.svc).reduce((a, l) => a + l.cents * l.qty, 0) : undefined}
+      onCharge={c.takePayment} busy={c.busy} error={c.error} setError={c.setError} term={c.termView} onClose={c.cancel}
+      edit={c.canExtra ? { services: c.catalog, selected: c.svcIds, lock: c.rules.lockFor(c.svcIds), initialCat: found[0]?.cat, onPick: c.pickSvc } : undefined}
+      packs={c.canExtra && s.clientId ? { list: (c.packages[s.clientId] ?? []).filter((x) => c.svcIds.includes(x.serviceId) && (c.svcEdited || s.lines.some((l) => l.serviceId === x.serviceId && l.cents > 0))), chosen: c.pkgIds, onToggle: c.togglePack } : undefined}
+      retail={{ products: c.products, qty: c.prodQty, onQty: c.onQty }} />
   );
 }
 

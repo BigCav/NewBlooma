@@ -49,3 +49,24 @@ export const BLOCK_KINDS: [string, string][] = [['lunch', 'Lunch'], ['break', 'B
 export const BLOCK_DURS: [number, string][] = [[30, '30 min'], [60, '1 hour'], [120, '2 hours'], [180, '3 hours']];
 export const STEP = 30;
 export function slotsBetween(from: number, to: number) { const a: number[] = []; for (let t = from; t + STEP <= to; t += STEP) a.push(t); return a; }
+
+/**
+ * Which services can be picked when a sale is changed at the till: an add-on needs one of its main services chosen, and someone has to offer it.
+ * Shared by the calendar checkout and the Sales checkout so they always agree.
+ */
+export function serviceRules(services: CalService[], offers: Record<string, string[]>) {
+  const map = new Map(services.map((s) => [s.id, s]));
+  const offered = (sid: string, staffId: string) => { const sv = map.get(sid); return sv?.addon ? (sv.parents ?? []).some((pid) => (offers[pid] ?? []).includes(staffId)) : (offers[sid] ?? []).includes(staffId); };
+  const hasProvider = (sid: string) => { const sv = map.get(sid); return sv?.addon ? (sv.parents ?? []).some((pid) => (offers[pid] ?? []).length > 0) : (offers[sid] ?? []).length > 0; };
+  /** Why a service cannot be picked right now (empty when it can). */
+  const lockFor = (chosen: string[]) => (x: CalService) => x.addon
+    ? ((x.parents ?? []).some((pid) => chosen.includes(pid)) ? '' : 'add-on, choose its main service first')
+    : (hasProvider(x.id) ? '' : 'no one offers this yet');
+  /** Picking or dropping one: dropping a main service drops the add-ons that depended on it. */
+  const toggle = (ids: string[], id: string) => {
+    let next = ids.includes(id) ? ids.filter((i) => i !== id) : [...ids, id];
+    next = next.filter((i) => { const sv = map.get(i); return !sv?.addon || (sv.parents ?? []).some((pid) => next.includes(pid)); });
+    return next;
+  };
+  return { map, offered, hasProvider, lockFor, toggle };
+}

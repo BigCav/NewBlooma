@@ -98,7 +98,7 @@ export function BlockWizard({ c }: { c: C }) {
 
 /** The calendar's checkout: the shared steps, charging the booking being looked at. */
 export function CheckoutWizard({ c }: { c: C }) {
-  const { sel, co, setCo, cfg, charge, setError, error, hasError, busy, close, svcMap, lockFor, services, products, packages, term, retryCard, finishCard } = c;
+  const { sel, co, setCo, cfg, charge, setError, error, hasError, busy, close, svcMap, lockFor, services, products, packages, term, retryCard, finishCard, toggleSvc } = c;
   if (!sel) return null;
   // The services on the sale. Changing them here only changes what is charged, never the booking.
   const ids = co.svc ?? sel.b.serviceIds;
@@ -106,8 +106,7 @@ export function CheckoutWizard({ c }: { c: C }) {
   const gross = co.svc ? found.reduce((a, v) => a + v.priceCents, 0) : sel.b.priceCents;
   const lines = found.length ? found.map((v) => ({ key: v.id, name: v.name, sub: v.dur + ' min', cents: v.priceCents })) : [{ key: 'sale', name: sel.b.services, cents: gross }];
   const pickSvc = (id: string) => {
-    let next = ids.includes(id) ? ids.filter((i) => i !== id) : [...ids, id];
-    next = next.filter((i) => { const sv = svcMap.get(i); return !sv?.addon || (sv.parents ?? []).some((pid) => next.includes(pid)); });
+    const next = toggleSvc(ids, id);
     if (!next.length) { setError('Keep at least one service on the sale.'); return; }
     setError(''); setCo({ ...co, svc: next });
   };
