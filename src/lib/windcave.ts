@@ -1,5 +1,6 @@
 import 'server-only';
 import { randomBytes } from 'node:crypto';
+import { after } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { decrypt } from '@/lib/crypto';
 
@@ -193,20 +194,21 @@ export async function startTerminal(saleId: string, origin?: string): Promise<{ 
   const txn = ref('TM');
   const ins = await sb.from('card_payments').insert({ salon_id: sale.salon_id, sale_id: sale.id, kind: 'terminal', txn_ref: txn, amount_cents: sale.total_cents });
   if (ins.error) return { error: 'Could not record the payment attempt.' };
-  try {
-    const out = await hit(c, { Station: c.station, Amount: dollars(sale.total_cents), Cur: sale.salons.currency, TxnType: 'Purchase', TxnRef: txn, MRef: sale.salons.name.slice(0, 60),
-      // Fail-proof result notification: Windcave tells us when the payment ends, even if the browser has been closed. The result is still confirmed with Windcave, never taken from this call.
-      ...(origin ? { UrlSuccess: `${origin}/api/windcave/terminal?t=${txn}`, UrlFail: `${origin}/api/windcave/terminal?t=${txn}` } : {}) });
+  const fail = async (text: string, code?: string | null) => { await sb.from('card_payments').update({ status: 'error', response_code: code ?? null, response_text: text, resolved_at: new Date().toISOString() }).eq('txn_ref', txn); };
+  const sent = hit(c, { Station: c.station, Amount: dollars(sale.total_cents), Cur: sale.salons.currency, TxnType: 'Purchase', TxnRef: txn, MRef: sale.salons.name.slice(0, 60), HttpTimeout: 10,
+    // Fail-proof result notification: Windcave tells us when the payment ends, even if the browser has been closed. The result is still confirmed with Windcave, never taken from this call.
+    ...(origin ? { UrlSuccess: `${origin}/api/windcave/terminal?t=${txn}`, UrlFail: `${origin}/api/windcave/terminal?t=${txn}` } : {}) }).then((out) => ({ out }), () => ({ out: null as string | null }));
+  // Windcave may hold its reply while the terminal waits for a card. Do not make the till wait for it: after a moment hand the reference back so Cancel works straight away, and deal with the reply when it comes.
+  const first = await Promise.race([sent, new Promise<null>((r) => setTimeout(() => r(null), 2500))]);
+  const judge = async (out: string | null) => {
+    if (out === null) { await fail('Terminal unreachable'); return 'Could not reach the card terminal.'; }
     const bad = hitProblem(out);
-    if (bad) {
-      await sb.from('card_payments').update({ status: 'error', response_code: pick(out, 'ReCo') ?? null, response_text: bad, resolved_at: new Date().toISOString() }).eq('txn_ref', txn);
-      return { error: bad };
-    }
-  } catch {
-    await sb.from('card_payments').update({ status: 'error', response_text: 'Terminal unreachable', resolved_at: new Date().toISOString() }).eq('txn_ref', txn);
-    return { error: 'Could not reach the card terminal.' };
-  }
-  return { txn };
+    if (bad) { await fail(bad, pick(out, 'ReCo')); return bad; }
+    return null;
+  };
+  if (first === null) { after(async () => { await judge((await sent).out); }); return { txn }; }
+  const bad = await judge(first.out);
+  return bad ? { error: bad } : { txn };
 }
 
 export async function pollTerminal(txn: string): Promise<{ state: 'pending' | 'approved' | 'declined' | 'error'; text?: string; buttons?: { name: string; label: string }[] }> {
@@ -256,16 +258,13 @@ export async function cancelTerminal(txn: string) {
   const { data: cp } = await sb.from('card_payments').select('*').eq('txn_ref', txn).eq('status', 'pending').maybeSingle();
   if (!cp) return;
   const c = await getCreds(cp.salon_id);
-  try {
-    const st = await hit(c, { Station: c.station!, TxnType: 'Status', TxnRef: txn });
-    // The button Windcave currently labels CANCEL; before the terminal has shown one, try both (spec: Name is B1 or B2, Val is CANCEL).
-    const b = hitButtons(st).find((x) => x.label.toUpperCase() === 'CANCEL');
-    for (const name of b ? [b.name] : ['B2', 'B1']) {
+  // Spec: a button request names the button (B1 or B2) and sends its value. While the terminal waits for a card the CANCEL button is B2; asking for both needs no status call, which Windcave can hold for many seconds.
+  for (const name of ['B2', 'B1']) {
+    try {
       const r = await hit(c, { Station: c.station!, TxnType: 'UI', UiType: 'Bn', Name: name, Val: 'CANCEL', TxnRef: txn });
-      console.log('windcave cancel', name, 'status:', st.replace(/\s+/g, ' ').slice(0, 300), 'reply:', r.replace(/\s+/g, ' ').slice(0, 200));
-      if (pick(r, 'Success') === '1') break;
-    }
-  } catch (e) { console.error('windcave cancel failed', e); /* terminal will time out; poll resolves it */ }
+      console.log('windcave cancel', name, 'reply:', r.replace(/\s+/g, ' ').slice(0, 200));
+    } catch (e) { console.error('windcave cancel failed', name, e); }
+  }
 }
 
 /* ---------------- Refunds ---------------- */
