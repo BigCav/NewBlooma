@@ -250,7 +250,7 @@ function Desktop({ c, initial }: { c: C; initial?: string }) {
           </div>
         </aside>
         <div style={S('flex:1 1 480px;min-width:0;max-width:860px;display:flex;flex-direction:column;gap:16px')}>
-          <div role="tablist" aria-label="Client pages" className="hscroll" style={S('display:flex;gap:8px;overflow-x:auto;padding-bottom:2px')}>
+          <div role="tablist" aria-label="Client pages" style={S('display:flex;flex-wrap:wrap;gap:8px')}>
             {TABS.map(([id, label]) => {
               const on = view === id;
               return (
