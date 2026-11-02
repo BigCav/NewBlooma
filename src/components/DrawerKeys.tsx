@@ -5,6 +5,8 @@ const LIVE = '.m-drawer:not(.m-drawer-out)';
 
 /** Closes the front-most layer of the open desktop drawer the same way its own close button does. */
 function closeFront() {
+  // A card payment is working on the terminal: nothing closes the page it is shown on.
+  if (document.querySelector('[data-pay-lock]')) return false;
   const top = [...document.querySelectorAll<HTMLElement>(`${LIVE} .sheet, ${LIVE} > [role="dialog"]`)].pop();
   if (!top) return false;
   let btn: HTMLElement | null | undefined;
@@ -33,7 +35,14 @@ export function DrawerKeys() {
       const t = e.target as HTMLElement;
       if (t.classList?.contains('m-drawer') && !t.classList.contains('m-drawer-out')) closeFront();
     };
+    // Following a link away while the terminal is working: say what happens first, and stay if the person changes their mind.
+    const leave = (e: MouseEvent) => {
+      if (!document.querySelector('[data-pay-lock]')) return;
+      const a = (e.target as HTMLElement).closest?.('a[href]');
+      if (a && !window.confirm('A card payment is still in progress on the terminal. Leaving this page does not stop it, but you will not see the result here. Leave anyway?')) { e.preventDefault(); e.stopPropagation(); }
+    };
     window.addEventListener('keydown', f);
+    window.addEventListener('click', leave, true);
     window.addEventListener('click', g);
     const wide = window.matchMedia('(min-width:901px)');
     const calm = window.matchMedia('(prefers-reduced-motion:reduce)');
@@ -64,7 +73,7 @@ export function DrawerKeys() {
       }
     });
     mo.observe(document.body, { childList: true, subtree: true });
-    return () => { window.removeEventListener('keydown', f); window.removeEventListener('click', g); mo.disconnect(); };
+    return () => { window.removeEventListener('keydown', f); window.removeEventListener('click', leave, true); window.removeEventListener('click', g); mo.disconnect(); };
   }, []);
   return null;
 }

@@ -1,4 +1,5 @@
 import { requireCtx } from '@/lib/session';
+import { settleTerminals } from '@/lib/windcave';
 import { minutesOfDay, ymd, zonedToUtc } from '@/lib/format';
 import { weekStartOf, addDaysYmd, money2, toneFor, TONE_LIST, type CalBooking, type CalBlock } from '@/lib/cal';
 import { loadSubs, loadTemplates } from '@/lib/forms';
@@ -11,6 +12,9 @@ export const dynamic = 'force-dynamic';
 
 export default async function Calendar({ searchParams }: { searchParams: Promise<{ d?: string; v?: string; s?: string; new?: string; c?: string; b?: string }> }) {
   const { sb, salon, settings, staff } = await requireCtx();
+  // A terminal payment that finished while nobody was watching still finishes its sale.
+  await settleTerminals(salon.id);
+  const { data: payset } = await sb.from('salon_payment_settings').select('terminal_enabled').eq('salon_id', salon.id).maybeSingle();
   const sp = await searchParams;
   const today = ymd(new Date(), salon.timezone);
   const day = /^\d{4}-\d{2}-\d{2}$/.test(sp.d ?? '') ? sp.d! : today;
@@ -71,7 +75,7 @@ export default async function Calendar({ searchParams }: { searchParams: Promise
       day={day} today={today} view={view} nowMin={nowMin} tz={salon.timezone}
       team={(team ?? []).map((t) => ({ id: t.id, name: t.name, role: t.role_title ?? '' }))}
       bookings={bookings} blocks={blocks} hours={hours} closed={closed} services={services}
-      staffFilter={sp.s ?? 'all'} slug={salon.slug} offers={offers} cfg={cfg} recent={recent} packages={packages} products={(pr ?? []).map((x) => ({ id: x.id, name: x.name, brand: x.brand ?? '', priceCents: x.price_cents, stock: x.stock }))} initialNew={sp.new === '1'} initialClient={sp.c ?? ''} initialSel={/^[0-9a-f-]{36}$/i.test(sp.b ?? '') ? sp.b : undefined}
+      staffFilter={sp.s ?? 'all'} slug={salon.slug} offers={offers} cfg={cfg} terminal={!!payset?.terminal_enabled} recent={recent} packages={packages} products={(pr ?? []).map((x) => ({ id: x.id, name: x.name, brand: x.brand ?? '', priceCents: x.price_cents, stock: x.stock }))} initialNew={sp.new === '1'} initialClient={sp.c ?? ''} initialSel={/^[0-9a-f-]{36}$/i.test(sp.b ?? '') ? sp.b : undefined}
     />
   );
 }

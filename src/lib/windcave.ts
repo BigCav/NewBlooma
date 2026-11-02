@@ -170,7 +170,19 @@ export async function testTerminal(salonId: string): Promise<{ ok?: true; error?
   return { error: 'Windcave did not accept the details on either service. ' + notes.join(' | ') };
 }
 
-export async function startTerminal(saleId: string): Promise<{ txn?: string; error?: string }> {
+/** The terminal payment still open for a sale, if any. A sale with one must not be changed, voided or charged another way until it settles. */
+export async function terminalInFlight(saleId: string): Promise<string | null> {
+  const { data } = await supabaseAdmin().from('card_payments').select('txn_ref').eq('sale_id', saleId).eq('kind', 'terminal').eq('status', 'pending').order('created_at', { ascending: false }).limit(1).maybeSingle();
+  return data?.txn_ref ?? null;
+}
+
+/** Asks Windcave about every terminal payment still open for the salon, so one finished while nobody was watching still finishes its sale. */
+export async function settleTerminals(salonId: string) {
+  const { data } = await supabaseAdmin().from('card_payments').select('txn_ref').eq('salon_id', salonId).eq('kind', 'terminal').eq('status', 'pending').gte('created_at', new Date(Date.now() - 6 * 3600e3).toISOString()).limit(10);
+  for (const r of data ?? []) await pollTerminal(r.txn_ref).catch(() => undefined);
+}
+
+export async function startTerminal(saleId: string, origin?: string): Promise<{ txn?: string; error?: string }> {
   const sale = await loadSale(saleId);
   if (!sale || sale.status !== 'pending') return { error: 'This sale is not open.' };
   const c = await getCreds(sale.salon_id);
@@ -182,7 +194,9 @@ export async function startTerminal(saleId: string): Promise<{ txn?: string; err
   const ins = await sb.from('card_payments').insert({ salon_id: sale.salon_id, sale_id: sale.id, kind: 'terminal', txn_ref: txn, amount_cents: sale.total_cents });
   if (ins.error) return { error: 'Could not record the payment attempt.' };
   try {
-    const out = await hit(c, { Station: c.station, Amount: dollars(sale.total_cents), Cur: sale.salons.currency, TxnType: 'Purchase', TxnRef: txn, MRef: sale.salons.name.slice(0, 60) });
+    const out = await hit(c, { Station: c.station, Amount: dollars(sale.total_cents), Cur: sale.salons.currency, TxnType: 'Purchase', TxnRef: txn, MRef: sale.salons.name.slice(0, 60),
+      // Fail-proof result notification: Windcave tells us when the payment ends, even if the browser has been closed. The result is still confirmed with Windcave, never taken from this call.
+      ...(origin ? { UrlSuccess: `${origin}/api/windcave/terminal?t=${txn}`, UrlFail: `${origin}/api/windcave/terminal?t=${txn}` } : {}) });
     const bad = hitProblem(out);
     if (bad) {
       await sb.from('card_payments').update({ status: 'error', response_code: pick(out, 'ReCo') ?? null, response_text: bad, resolved_at: new Date().toISOString() }).eq('txn_ref', txn);

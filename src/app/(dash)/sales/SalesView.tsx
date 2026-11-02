@@ -6,7 +6,7 @@ import { useNewParam } from '@/components/useNewParam';
 import { decimalInput } from '@/lib/numeric';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { ActiveFilter, FilterButton, FilterSheet } from '@/components/FilterBits';
 import { ClientMatches } from '../calendar/ClientMatches';
@@ -14,7 +14,8 @@ import { S } from '../calendar/pickers';
 import { CloseX, CLOSE_BTN } from '../calendar/calUi';
 import { CheckoutFlow } from '../calendar/CheckoutFlow';
 import { NewSaleFlow } from './NewSaleFlow';
-import { createWalkin, payFlow, refundSale, sendReceipt, setPrice, terminalCancel, terminalPoll, terminalPress } from './actions';
+import { createWalkin, payFlow, refundSale, sendReceipt, setPrice, } from './actions';
+import { useTerminal } from './useTerminal';
 import { DISC_PCTS, FILTERS, NO_DISC, STATUS, TIP_OPTS, discOf, discountCents, fmt, type DiscPick, type PayMethod, type SaleRow, type SvcOpt } from './shared';
 
 type Props = {
@@ -53,50 +54,37 @@ function useSales(props: Props) {
   const [pay, setPay] = useState(blankPay(tipPctOf(rows.find((r) => r.id === startSel)), discOf(rows.find((r) => r.id === startSel))));
   const [editAmount, setEditAmount] = useState('');
   const [nw, setNw] = useState(blankNew());
-  const [txn, setTxn] = useState('');
-  const [wait, setWait] = useState('');
-  // Buttons the terminal asks the till to show, such as YES / NO when a signature is needed.
-  const [btns, setBtns] = useState<{ name: string; label: string }[]>([]);
-  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // The card terminal: pending, then a tick or a cross. It keeps going if the page is left, and is picked up again from the sale when it is reopened.
+  const term = useTerminal(() => router.refresh());
   const mobile = true; // desktop edits in the same drawer
 
   const sel = rows.find((r) => r.id === selectedId) ?? rows[0] ?? null;
 
-  // Card terminal: poll the provider until the customer finishes.
-  useEffect(() => {
-    if (!txn) return;
-    let stop = false;
-    const tick = async () => {
-      const r = await terminalPoll(txn);
-      if (stop) return;
-      if (r.state === 'pending') { setWait(r.text || 'Waiting for the customer…'); setBtns(r.buttons ?? []); timer.current = setTimeout(tick, 2000); return; }
-      setTxn(''); setWait(''); setBtns([]);
-      if (r.state === 'approved') { setMode('view'); setNotice('Payment taken'); setError(''); }
-      else setError(r.state === 'declined' ? `Not approved${r.text ? `: ${r.text}` : ''}` : r.text || 'Something went wrong. Check the terminal.');
-      router.refresh();
-    };
-    tick();
-    return () => { stop = true; clearTimeout(timer.current); };
-  }, [txn, router]);
+  // A card payment still running on the terminal for this sale (the page was left or reloaded): pick it up and show it.
+  useEffect(() => { if (sel?.txn && term.phase === 'idle') { term.resume(sel.txn); setMode('pay'); setOpen(true); } }, [sel?.id, sel?.txn, term.phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pick = (id: string) => { setSelectedId(id); setMode('view'); setConfirmRefund(false); setNotice(''); setError(''); setOpen(true); };
   const openNew = () => { setMode('new'); setNw(blankNew()); setError(''); setNotice(''); setConfirmRefund(false); setOpen(true); };
   const cancel = () => {
-    if (txn) { terminalCancel(txn); setTxn(''); setWait(''); setBtns([]); }
+    if (term.phase === 'pending') return; // the terminal is working: leave it be
     setMode('view'); setError(''); setConfirmRefund(false); setOpen(mobile ? mode !== 'new' : false);
   };
-  const close = () => { setOpen(false); setMode('view'); setConfirmRefund(false); setError(''); };
+  const close = () => { if (term.phase === 'pending') return; setOpen(false); setMode('view'); setConfirmRefund(false); setError(''); };
 
-  const settle = (r: { error?: string; notice?: string; txn?: string; url?: string }) => {
-    if (r.error) { setError(r.error); return false; }
+  /** t: this payment was started as a terminal payment, so its result belongs on the terminal's final step. */
+  const settle = (r: { error?: string; notice?: string; txn?: string; url?: string }, t = false) => {
+    if (r.error) { if (t) term.fail(r.error); else setError(r.error); return false; }
     if (r.url) { window.location.href = r.url; return true; }
-    if (r.txn) { setTxn(r.txn); setWait('Sent to the terminal…'); setError(''); return true; }
+    if (r.txn) { setMode('pay'); setOpen(true); term.start(r.txn); setError(''); return true; }
+    if (t) term.reset();
     setMode('view'); setError(''); setNotice(r.notice ?? ''); router.refresh(); return true;
   };
   const takePayment = () => {
     if (!sel) return;
     if (!props.methods.length) { setError('No payment methods are switched on. Turn some on in Settings.'); return; }
-    startT(async () => { setError(''); settle(await payFlow(sel.id, pay.method, parseInt(pay.tip, 10) || 0, pay.code, props.canDiscount ? pay.disc : undefined)); });
+    const t = pay.method === 'terminal';
+    if (t) term.begin(); // straight to the pending step
+    startT(async () => { setError(''); settle(await payFlow(sel.id, pay.method, parseInt(pay.tip, 10) || 0, pay.code, props.canDiscount ? pay.disc : undefined), t); });
   };
   // Express: card on screen, no tip, no discount, straight to the payment page.
   const payNow = () => {
@@ -125,7 +113,7 @@ function useSales(props: Props) {
   const sq = query.trim().toLowerCase();
   const list = rows.filter((t) => (filter === 'all' || t.status === filter) && (!sq || (t.client + ' ' + t.ref + ' ' + t.service + ' ' + t.staffName + ' ' + t.status + ' ' + t.method + ' ' + t.total / 100).toLowerCase().includes(sq.replace(/[$,]/g, ''))));
   return { ...props, busy, narrow, rows, list, sel, selectedId, filter, setFilter, query, setQuery, mode, setMode, open, notice, error, setError, confirmRefund, setConfirmRefund,
-    canDiscount: props.canDiscount, pay, setPay, tipPctOf, editAmount, setEditAmount, nw, setNw, txn, wait, btns, press: (b: { name: string; label: string }) => { terminalPress(txn, b.name, b.label); }, pick, openNew, cancel, close, takePayment, payNow, saveEdit, doRefund, receipt, createSale,
+    canDiscount: props.canDiscount, pay, setPay, tipPctOf, editAmount, setEditAmount, nw, setNw, txn: term.txn, termView: { ...term.view, onDone: () => { term.reset(); setMode('view'); setNotice('Payment taken'); setError(''); router.refresh(); }, onRetry: takePayment, onBack: term.reset }, pick, openNew, cancel, close, takePayment, payNow, saveEdit, doRefund, receipt, createSale,
     paidTotal: props.todayTotal, pendingCount: rows.filter((r) => r.status === 'Pending').length };
 }
 type C = ReturnType<typeof useSales>;
@@ -151,7 +139,7 @@ function SaleCheckout({ c, s }: { c: C; s: SaleRow }) {
       co={{ method: c.pay.method, tip: parseInt(c.pay.tip, 10) || 0, code: c.pay.code, disc: c.pay.disc }}
       setCo={(x) => c.setPay({ method: x.method as PayMethod['id'], tip: String(x.tip), code: x.code, disc: x.disc })}
       cfg={{ canDiscount: c.canDiscount, askTip: c.askTip, taxInclusive: s.taxIncl, taxRate: s.taxRate }}
-      lines={lines} gross={s.amount} tipBase={s.lines.some((l) => l.svc) ? s.lines.filter((l) => l.svc).reduce((a, l) => a + l.cents * l.qty, 0) : s.amount} onCharge={c.takePayment} busy={c.busy || !!c.txn} error={c.error} setError={c.setError} wait={c.wait} buttons={c.btns} onButton={c.press} onClose={c.cancel} />
+      lines={lines} gross={s.amount} tipBase={s.lines.some((l) => l.svc) ? s.lines.filter((l) => l.svc).reduce((a, l) => a + l.cents * l.qty, 0) : s.amount} onCharge={c.takePayment} busy={c.busy} error={c.error} setError={c.setError} term={c.termView} onClose={c.cancel} />
   );
 }
 
@@ -298,11 +286,9 @@ function Panel({ c, m }: { c: C; m: boolean }) {
         <dl style={S('margin:0;display:flex;flex-direction:column')}>
           {DL('Service', fmt(svcCents))}{disc ? DL('Discount', '-' + fmt(disc)) : null}{DL('Tip', tipAmt ? fmt(tipAmt) : 'None')}{tax ? DL('Tax', fmt(tax)) : null}{DL('Total', fmt(net + tipAmt + tax), { last: true, bold: true })}
         </dl>
-        {!!c.wait && <p role="status" style={S('margin:0;color:#5E6673;font-size:13.5px')}>{c.wait}</p>}
-        {!!c.btns.length && <div style={S('display:flex;gap:10px')}>{c.btns.map((b) => <button key={b.name} onClick={() => c.press(b)} style={S(GHOST(h))}>{b.label}</button>)}</div>}
         {err}
         <div style={S('display:flex;gap:10px')}>
-          <button onClick={c.takePayment} disabled={c.busy || !!c.txn} style={S(DARK(h))}>{c.txn ? 'Waiting on terminal…' : 'Take payment'}</button>
+          <button onClick={c.takePayment} disabled={c.busy || !!c.txn} style={S(DARK(h))}>{c.txn ? 'Waiting on terminalâ€¦' : 'Take payment'}</button>
           <button className="ghost" onClick={c.cancel} style={S(GHOST(h))}>{c.txn ? 'Cancel on terminal' : 'Cancel'}</button>
         </div>
       </div>
@@ -387,7 +373,7 @@ function Desktop({ c }: { c: C }) {
                     <span style={S('flex:0 0 40px;width:40px;height:40px;border-radius:999px;background:#EEF0F3;color:#0E1116;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600')}>{t.initials}</span>
                     <span style={S('min-width:0;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.client}</span>
                   </span>
-                  <span style={S('flex:0.8 1 0;min-width:0;white-space:nowrap;color:#5E6673')}>{t.ref || '—'}</span>
+                  <span style={S('flex:0.8 1 0;min-width:0;white-space:nowrap;color:#5E6673')}>{t.ref || 'â€”'}</span>
                   <span style={S('flex:1.6 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.service}</span>
                   <span style={S('flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.firstName}</span>
                   <span style={S('flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.time}</span>
@@ -446,7 +432,7 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
             <span style={S('flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px')}>
               <span style={S('display:flex;align-items:center;justify-content:space-between;gap:10px')}><span style={S('min-width:0;font-size:16px;font-weight:600;letter-spacing:-0.01em;overflow-wrap:anywhere')}>{t.client}</span><span style={S('flex:0 0 auto;font-size:16px;font-weight:600')}>{fmt(t.total)}</span></span>
               <span style={S('font-size:14px;color:#4A525E;overflow-wrap:anywhere')}>{t.service}</span>
-              <span style={S('font-size:12.5px;color:#8A93A0')}>{t.ref ? t.ref + ' · ' : ''}{t.time}</span>
+              <span style={S('font-size:12.5px;color:#8A93A0')}>{t.ref ? t.ref + ' Â· ' : ''}{t.time}</span>
               <span style={S('align-self:flex-start;margin-top:6px;' + statusStyle(t.status) + ';padding:3px 10px;font-size:12px;font-weight:600')}>{t.status}</span>
             </span>
           </button>

@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireCtx, friendly } from '@/lib/session';
-import { getCreds, releaseOnline, startOnline, startTerminal, pollTerminal, pressTerminalButton, cancelTerminal, refundCard } from '@/lib/windcave';
+import { getCreds, releaseOnline, startOnline, startTerminal, terminalInFlight, pollTerminal, pressTerminalButton, cancelTerminal, refundCard } from '@/lib/windcave';
 import { sendCustomMessage } from '@/lib/notify';
 import { mailP } from '@/lib/email-layout';
 import { dateLong } from '@/lib/format';
@@ -38,6 +38,9 @@ export async function payFlow(saleId: string, method: 'terminal' | 'online' | 'c
   const { sb, salon } = await requireCtx();
   // With a card terminal switched on, every card payment goes to it, never to the on-screen page.
   if (method === 'online' && (await getCreds(salon.id)).terminalEnabled) method = 'terminal';
+  // A card payment already on the terminal: watch that one. Starting another, or taking cash, could charge the customer twice.
+  const open = await terminalInFlight(saleId);
+  if (open) return { txn: open };
   // A hosted payment page that was closed without paying would otherwise lock the sale.
   await releaseOnline(saleId);
   if (disc) {
@@ -54,7 +57,7 @@ export async function payFlow(saleId: string, method: 'terminal' | 'online' | 'c
     revalidatePath('/sales'); revalidatePath('/calendar');
     return { notice: 'Payment taken' };
   }
-  if (method === 'terminal') { const r = await startTerminal(saleId); return r.error ? { error: r.error } : { txn: r.txn }; }
+  if (method === 'terminal') { const r = await startTerminal(saleId, await origin()); return r.error ? { error: r.error } : { txn: r.txn }; }
   const r = await startOnline(saleId, await origin());
   return r.error ? { error: r.error } : { url: r.url };
 }
@@ -65,6 +68,7 @@ export async function terminalPress(txn: string, name: string, label: string) { 
 
 export async function setPrice(saleId: string, dollars: string): Promise<Res> {
   const { sb } = await requireCtx();
+  if (await terminalInFlight(saleId)) return { error: 'A card payment is in progress on the terminal for this sale. Wait for it to finish first.' };
   const n = Number(String(dollars).replace(/[^0-9.]/g, ''));
   if (!Number.isFinite(n) || n <= 0) return { error: 'Enter a price above zero, like 45 or 45.50.' };
   await releaseOnline(saleId);

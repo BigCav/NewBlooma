@@ -155,6 +155,17 @@ button.sheet-out,.sheet-out>button[aria-label^="Close"]{animation:drFadeOut .2s 
 }
 @media (prefers-reduced-motion:reduce){.m-drawer .sheet,.m-drawer>div>button{animation:none !important}}
 
+/* Card payment on the terminal: spinner while pending, then a tick or a cross that pops in and draws itself. */
+@keyframes tpSpin{to{transform:rotate(360deg)}}
+@keyframes tpPop{0%{transform:scale(.55);opacity:0}60%{transform:scale(1.08);opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes tpDraw{to{stroke-dashoffset:0}}
+.tp-spin{animation:tpSpin .9s linear infinite}
+.tp-pop{animation:tpPop .5s cubic-bezier(.2,.8,.2,1) both}
+.tp-draw{stroke-dasharray:70;stroke-dashoffset:70;animation:tpDraw .45s .3s ease-out forwards}
+@media (prefers-reduced-motion:reduce){.tp-spin{animation-duration:3s}.tp-pop{animation:none}.tp-draw{animation:none;stroke-dashoffset:0}}
+/* While the terminal is working the blurred area and the corner close button do nothing. */
+@media (min-width:901px){.m-drawer:has([data-pay-lock]) button[aria-label^="Close"]{pointer-events:none}}
+
 .d-cal .s-card:hover{background:#FAFAFB !important;border-color:#D5D9E0 !important}
 
 /* With a submenu open the page sits closer to it (the submenu already leaves its own gap). */

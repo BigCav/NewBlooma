@@ -35,7 +35,7 @@ export type Props = {
   day: string; today: string; view: 'day' | 'week'; nowMin: number; team: CalStaff[]; bookings: CalBooking[]; blocks: CalBlock[]; hours: CalHours[]; services: CalService[];
   /** Days the salon is closed (date to reason), on top of the weekly hours. */
   closed?: Record<string, string>;
-  offers: Record<string, string[]>; cfg: CalSettings; slug: string; tz: string; recent: { id: string; name: string; phone?: string }[]; products?: CoProduct[]; packages?: Record<string, CoPackage[]>; initialNew?: boolean; initialClient?: string; initialSel?: string; staffFilter: string; remoteSearch?: boolean;
+  offers: Record<string, string[]>; cfg: CalSettings; slug: string; tz: string; recent: { id: string; name: string; phone?: string }[]; products?: CoProduct[]; packages?: Record<string, CoPackage[]>; terminal?: boolean; initialNew?: boolean; initialClient?: string; initialSel?: string; staffFilter: string; remoteSearch?: boolean;
   /** Set when the new-appointment sheet is opened from another page: called instead of staying on the calendar. */
   onCreated?: (r: { id?: string; day: string }) => void;
 };

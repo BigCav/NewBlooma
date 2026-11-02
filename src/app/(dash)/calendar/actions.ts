@@ -1,6 +1,6 @@
 'use server';
 import { flushOutbox, sendCustomMessage } from '@/lib/notify';
-import { releaseOnline, startOnline } from '@/lib/windcave';
+import { releaseOnline, startOnline, startTerminal, terminalInFlight } from '@/lib/windcave';
 import { headers } from 'next/headers';
 import { dropEmptyThread, ensureThread, logStaffMessage, replyUrl } from '@/lib/conversation';
 import { revalidatePath } from 'next/cache';
@@ -235,10 +235,12 @@ export async function addWalkIn(name: string, clientId: string | null, serviceId
 
 
 /** Create (or recreate with a new tip) the sale for a booking and take payment. Card returns the sale id for the payment screen. */
-export async function checkoutBooking(bookingId: string, method: 'card' | 'cash' | 'gift_card', tipPct: number, giftCode?: string, disc?: { kind: string; value: string; note: string }, services?: string[], products?: { productId: string; qty: number }[], packs?: { clientPackageId: string; serviceId: string }[]): Promise<R & { saleId?: string; total?: number; paid?: boolean }> {
+export async function checkoutBooking(bookingId: string, method: 'card' | 'cash' | 'gift_card', tipPct: number, giftCode?: string, disc?: { kind: string; value: string; note: string }, services?: string[], products?: { productId: string; qty: number }[], packs?: { clientPackageId: string; serviceId: string }[]): Promise<R & { saleId?: string; total?: number; paid?: boolean; resume?: string }> {
   const { sb } = await requireCtx();
   const { data: ex } = await sb.from('sales').select('id,status').eq('booking_id', bookingId).neq('status', 'refunded').maybeSingle();
   if (ex?.status === 'paid') return { error: 'This appointment is already paid.' };
+  // A card payment is still open on the terminal for this visit (the page was left while it ran): pick it up, never void or recreate the sale under it.
+  if (ex) { const open = await terminalInFlight(ex.id); if (open) return { ok: true, saleId: ex.id, resume: open }; }
   // A card page that was opened and closed without paying would otherwise keep the old sale locked.
   if (ex) await releaseOnline(ex.id);
   if (ex) { const v = await sb.rpc('void_pending_sale', { p_sale: ex.id }); if (v.error) return { error: friendly(v.error.message) }; }
@@ -283,12 +285,15 @@ export async function checkoutBooking(bookingId: string, method: 'card' | 'cash'
 }
 
 /** Open the on-screen Windcave page for a pending sale. With only a card terminal switched on there is no page, so the caller sends the sale to the Sales page. */
-export async function startCardForSale(saleId: string): Promise<R & { url?: string }> {
+export async function startCardForSale(saleId: string): Promise<R & { url?: string; txn?: string }> {
   const { sb, salon } = await requireCtx();
   const { data: pay } = await sb.from('salon_payment_settings').select('online_cards_enabled,terminal_enabled').eq('salon_id', salon.id).maybeSingle();
-  if (pay?.terminal_enabled || !pay?.online_cards_enabled) return { ok: true };
   const h = await headers();
-  const o = await startOnline(saleId, process.env.NEXT_PUBLIC_APP_URL || `https://${h.get('x-forwarded-host') ?? h.get('host')}`);
+  const origin = process.env.NEXT_PUBLIC_APP_URL || `https://${h.get('x-forwarded-host') ?? h.get('host')}`;
+  // With a card terminal switched on, the payment goes straight to it.
+  if (pay?.terminal_enabled) { const t = await startTerminal(saleId, origin); return t.error ? { error: t.error } : { ok: true, txn: t.txn }; }
+  if (!pay?.online_cards_enabled) return { ok: true };
+  const o = await startOnline(saleId, origin);
   return o.error ? { error: o.error } : { ok: true, url: o.url };
 }
 
@@ -296,6 +301,7 @@ export async function startCardForSale(saleId: string): Promise<R & { url?: stri
 export async function payNowBooking(bookingId: string): Promise<R & { saleId?: string; url?: string }> {
   const r = await checkoutBooking(bookingId, 'card', 0);
   if (r.error || !r.saleId) return r;
+  if (r.resume) return { ok: true, saleId: r.saleId };
   const o = await startCardForSale(r.saleId);
   return o.error ? { error: o.error, saleId: r.saleId } : { ok: true, saleId: r.saleId, url: o.url };
 }
