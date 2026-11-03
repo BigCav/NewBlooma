@@ -5,8 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { S } from '../calendar/pickers';
 import { clockToggle, markPaid, setRate } from './actions';
-import { duration } from '@/lib/display';
-import { type PayRow } from './shared';
+import { hrs, type PayRow } from './shared';
 import { PayrollMobile } from './PayrollMobile';
 import { PayrollDesk } from './PayrollDesk';
 
@@ -43,7 +42,7 @@ function usePayroll(props: Props) {
   const [editing, setEditing] = useState<string | null>(null);
   useEffect(() => { setEditing(null); }, [props.w]);
   const hoursTotal = props.rows.reduce((a, r) => a + r.hours, 0);
-  const hoursText = duration(hoursTotal * 60);
+  const hoursText = hrs(hoursTotal);
   const pay = rows.reduce((a, r) => a + r.commission + r.tips, 0);
   return { ...props, editing, setEditing, busy, narrow, tab, setTab: (t: 'time' | 'comm') => { setTab(t); setNotice(''); setError(''); }, notice, error, rows, go, bump, hoursTotal, hoursText, pay,
     clock: (r: PayRow) => run(() => clockToggle(r.id)), pay1: (r: PayRow) => run(() => markPaid(r.id, props.from, props.to)) };

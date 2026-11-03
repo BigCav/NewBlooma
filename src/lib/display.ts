@@ -26,6 +26,12 @@ export const duration = (mins: number) => {
   return h === 0 ? `${m} min` : m === 0 ? `${h} hr` : `${h} hr ${m} min`;
 };
 
+/** Time worked on a timesheet, in the short form: 7hr 30m, 7hr, 45m. */
+export const workedTime = (mins: number) => {
+  const t = Math.max(0, Math.round(mins)), h = Math.floor(t / 60), m = t % 60;
+  return h === 0 && m === 0 ? '0hr' : h === 0 ? `${m}m` : m === 0 ? `${h}hr` : `${h}hr ${m}m`;
+};
+
 /** "1 client", "2 clients". Pass the plural when it is not just an s ("person", "people"). */
 export const plural = (n: number, word: string, pluralWord = word + 's') => `${n} ${n === 1 ? word : pluralWord}`;
 

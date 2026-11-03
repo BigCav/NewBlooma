@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react';
 import { fmtMin } from '@/lib/cal';
 import { findClients, recentClients, type ClientHit } from './actions';
 import { S } from './s';
-import { slotCss, dayCss } from './calUi';
 import { Avatar, avatarCss, BLACK, OUTLINE, RING, BACK, CLOSE, FieldError, dim } from '@/components/ui';
+import { DayStrip, TimeGrid } from '@/components/DayTimePicker';
 
 /* Pieces shared by the phone step-by-step flows (new appointment, walk-in, running late, block time, checkout). */
 
@@ -171,15 +171,11 @@ export function Tiles<T extends string | number>({ options, value, onPick, label
 
 /** A day strip and the times under it. */
 export function DayTimeStep({ days, day, onDay, slots, why, time, onTime }: {
-  days: { ymd: string; abbr: string; num: string | number; full: string; closed: boolean }[]; day: string; onDay: (ymd: string) => void; slots: number[]; why: (t: number) => string; time: number | null; onTime: (t: number) => void;
+  days: { ymd: string; abbr: string; num: string | number; month: string; full: string; closed: boolean }[]; day: string; onDay: (ymd: string) => void; slots: number[]; why: (t: number) => string; time: number | null; onTime: (t: number) => void;
 }) {
   return (<>
-    <div role="group" className="hscroll" aria-label="Day" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
-      {days.map((d) => <button key={d.ymd} onClick={() => { if (!d.closed) onDay(d.ymd); }} disabled={d.closed} aria-pressed={day === d.ymd} aria-label={d.full + (d.closed ? ', closed' : '')} style={S(dayCss(day === d.ymd, d.closed))}><span style={S('font-size:12.5px')}>{d.abbr}</span><span style={S('font-size:17px;font-weight:600')}>{d.num}</span></button>)}
-    </div>
-    <div role="group" aria-label="Time" style={S('display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px')}>
-      {slots.map((t) => { const w = why(t); const on = time === t && !w; return <button key={t} onClick={() => { if (!w) onTime(t); }} disabled={!!w} aria-pressed={on} aria-label={fmtMin(t) + (w ? ', unavailable' : '')} style={S(slotCss(on, !!w))}>{fmtMin(t)}</button>; })}
-    </div>
+    <DayStrip days={days} selected={day} onPick={onDay} />
+    <TimeGrid times={slots.map((min) => ({ min, ok: !why(min) }))} selected={time} onPick={onTime} cols="repeat(3,minmax(0,1fr))" />
     {!slots.length && <div style={S('font-size:14px;color:#5E6673')}>No times to show for this day.</div>}
   </>);
 }

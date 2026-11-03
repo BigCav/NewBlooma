@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's ManageBooking.dc.html and MobileManageBooking.dc.html (the client's appointment page).
 // Markup and style strings are kept as written; the {{ }} holes are the appointment's real data and the handlers are real server actions.
+import { DayStrip, TimeGrid } from '@/components/DayTimePicker';
 import { clock12, duration, makeMoney, timeRange } from '@/lib/display';
 import { addDaysYmd, dayInfo as dayOf } from '@/lib/cal';
 import { TONE } from '@/lib/tones';
@@ -126,18 +127,10 @@ function Picker({ m, cols, dayW, pad }: { m: M; cols: string; dayW: number; pad:
   const hasSlots = !closed && !m.loading && !m.slotErr && m.slots.length > 0;
   const msg = closed ? `We are closed on ${m.days[m.rs.day].name}s. Pick another day.` : m.loading ? 'Checking availability…' : m.slotErr ? m.slotErr : 'No times left on this day. Try another day.';
   return <>
-    <div role="group" className="hscroll" aria-label="Choose a day" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
-      {m.days.map((d, i) => { const on = m.rs.day === i; const shut = !p.hours[d.dow]; const sub = on ? '#D5D9E0' : shut ? '#8A93A0' : '#5E6673';
-        return <button key={d.ymd} onClick={() => m.pickDay(i)} aria-pressed={on} aria-label={d.full + (p.hours[d.dow] ? '' : ', closed')} style={S('flex:0 0 ' + dayW + 'px;height:76px;box-sizing:border-box;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:inherit;padding:0;border:1px solid ' + (on ? '#0E1116' : '#E6E8EC') + ';background:' + (on ? '#0E1116' : shut ? '#F4F5F7' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : shut ? '#8A93A0' : '#0E1116'))}>
-          <span style={S('font-size:12.5px;color:' + sub)}>{d.abbr}</span><span style={S('font-size:17px;font-weight:600')}>{d.num}</span><span style={S('font-size:11.5px;color:' + sub)}>{d.month}</span></button>; })}
-    </div>
+    <DayStrip days={m.days.map((d) => ({ ymd: d.ymd, abbr: d.abbr, num: d.num, month: d.month, full: d.full, closed: !p.hours[d.dow] }))} selected={m.days[m.rs.day].ymd} onPick={(ymd) => m.pickDay(m.days.findIndex((d) => d.ymd === ymd))} width={dayW} pickClosed label="Choose a day" />
     <div style={S(CARD(pad))}>
       <h2 style={S('margin:0;font-size:16px;font-weight:600')}>{m.days[m.rs.day].full}</h2>
-      {hasSlots && <div role="group" aria-label="Available times" style={S('display:grid;grid-template-columns:' + cols + ';gap:8px')}>
-        {m.grid.map((min) => { const iso = m.open.get(min); const ok = !!iso; const curr = m.days[m.rs.day].ymd === m.when.ymd && min === m.when.min; const on = m.rs.time === min && ok;
-          return <button key={min} onClick={() => { if (ok) m.pickTime(min, iso!); }} disabled={!ok} aria-pressed={on} aria-label={clock12(min) + (ok ? '' : ', unavailable') + (curr ? ', your current time' : '')}
-            style={S('width:100%;height:44px;padding:0;border-radius:14px;font-size:14px;font-weight:500;font-family:inherit;border:1px solid ' + (on ? '#0E1116' : (ok ? (curr ? '#5E6673' : '#E1E4E9') : '#EEF0F3')) + ';background:' + (on ? '#0E1116' : (ok ? '#FFFFFF' : '#F4F5F7')) + ';color:' + (on ? '#FFFFFF' : (ok ? '#0E1116' : '#8A93A0')) + (ok ? '' : ';text-decoration:line-through;cursor:default'))}>{clock12(min)}</button>; })}
-      </div>}
+      {hasSlots && <TimeGrid times={m.grid.map((min) => ({ min, ok: !!m.open.get(min) }))} selected={m.rs.time} onPick={(min) => m.pickTime(min, m.open.get(min)!)} cols={cols} current={m.days[m.rs.day].ymd === m.when.ymd ? m.when.min : null} label="Available times" />}
       {!hasSlots && <p style={S('margin:0;color:#5E6673;font-size:14px')}>{msg}</p>}
     </div>
   </>;

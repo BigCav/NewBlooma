@@ -1,5 +1,5 @@
 import { PAYMENT_STATUS } from '@/lib/status';
-import { duration } from '@/lib/display';
+import { workedTime } from '@/lib/display';
 import { TONE, type ToneName } from '@/lib/tones';
 
 export type Cell = { day: string; txt: string; kind: 'done' | 'today' | 'plan' };
@@ -7,8 +7,8 @@ export type PayRow = {
   id: string; name: string; role: string; photo: string | null; cells: Cell[]; total: string; hours: number; planned: string; inSince: string | null; canClock: boolean;
   svc: number; prod: number; tips: number; rate: number; prodPct: number; commission: number; paid: boolean;
 };
-/** Hours worked, written the one way everywhere: 7 hr 30 min. */
-export const hrs = (h: number) => duration(h * 60);
+/** Hours worked, written the one way everywhere: 7hr 30m. */
+export const hrs = (h: number) => workedTime(h * 60);
 /** The colours of a day in the week grid. */
 export const CELL = {
   done: `background:${TONE.grey.bg};color:#0E1116;font-weight:500`,

@@ -23,7 +23,8 @@ import { Chip, FieldError, FilterChip, Notice, RING, CLOSE, DOTS, DANGER, dim } 
 import { CancelPick } from './CancelPick';
 import { TerminalStatus } from './TerminalStatus';
 import { S, ServicePicker } from './pickers';
-import { HATCH, slotCss, dayCss, noteTone, spanText, NoticeBar, PRIMARY, SECOND, H2S, DLROW, Mag } from './calUi';
+import { DayStrip, TimeGrid } from '@/components/DayTimePicker';
+import { HATCH, noteTone, spanText, NoticeBar, PRIMARY, SECOND, H2S, DLROW, Mag } from './calUi';
 import type { useCalendar } from './useCalendar';
 import type { Props } from './calUi';
 
@@ -372,13 +373,9 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
                 <button onClick={close} aria-label="Close" style={S(RING)}>{CLOSE}</button>
               </div>
               <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="rs-day-label" style={S('font-size:14px;font-weight:600')}>{rs.rebook ? 'Day' : 'New day'}</span>
-                <div role="group" className="hscroll" aria-labelledby="rs-day-label" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
-                  {days14.map((d) => <button key={d.ymd} onClick={() => { if (!d.closed) setRs({ ...rs, day: d.ymd, time: null }); setError(''); }} disabled={d.closed} aria-pressed={rs.day === d.ymd} aria-label={d.full + (d.closed ? ', closed' : '')} style={S(dayCss(rs.day === d.ymd, d.closed))}><span style={S('font-size:12.5px')}>{d.abbr}</span><span style={S('font-size:17px;font-weight:600')}>{d.num}</span></button>)}
-                </div></div>
+                <DayStrip days={days14} selected={rs.day} onPick={(ymd) => { setRs({ ...rs, day: ymd, time: null }); setError(''); }} labelledBy="rs-day-label" /></div>
               <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="rs-time-label" style={S('font-size:14px;font-weight:600')}>{rs.rebook ? 'Time' : 'New time'}</span>
-                <div role="group" aria-labelledby="rs-time-label" style={S('display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px')}>
-                  {slotsFor.map((t) => { const why = reason(rs.day, t, cur.end - cur.start); const on = rs.time === t && !why; return <button key={t} onClick={() => { if (!why) { setRs({ ...rs, time: t }); setError(''); } }} disabled={!!why} aria-pressed={on} aria-label={fmtMin(t) + (why ? ', unavailable' : '')} style={S(slotCss(on, !!why))}>{fmtMin(t)}</button>; })}
-                </div></div>
+                <TimeGrid times={slotsFor.map((min) => ({ min, ok: !reason(rs.day, min, cur.end - cur.start) }))} selected={rs.time} onPick={(min) => { setRs({ ...rs, time: min }); setError(''); }} labelledBy="rs-time-label" /></div>
               {errP()}
               <div style={S('display:flex;gap:10px')}>
                 <button onClick={moveBooking} disabled={busy} style={S(PRIMARY + dim(busy))}>{busy ? 'Saving…' : rs.rebook ? 'Book again' : 'Move appointment'}</button>

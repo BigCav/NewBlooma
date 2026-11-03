@@ -6,6 +6,7 @@ import { duration, timeRange } from '@/lib/display';
 import { dollars } from '@/lib/format';
 import { firstName } from '@/lib/people';
 import { BLACK, FieldError, OUTLINE, dim } from '@/components/ui';
+import { DayStrip, TimeGrid } from '@/components/DayTimePicker';
 import { S, ServicePicker, TeamPicker } from '../calendar/pickers';
 import { dayAvailability, createNewAppointment } from '../calendar/actions';
 
@@ -87,9 +88,7 @@ export function BookPanel({ data, client, mobile, onBooked, onCancel }: { data: 
     });
   };
 
-  const h = mobile ? 44 : 40, dw = mobile ? 60 : 64, dh = mobile ? 76 : 72;
-  const dayCss = (on: boolean, closed: boolean) => 'flex:0 0 ' + dw + 'px;height:' + dh + 'px;box-sizing:border-box;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:inherit;border:1px solid ' + (on ? '#0E1116' : '#E6E8EC') + ';background:' + (on ? '#0E1116' : (closed ? '#F4F5F7' : '#FFFFFF')) + ';color:' + (on ? '#FFFFFF' : (closed ? '#8A93A0' : '#0E1116')) + (closed ? ';cursor:default' : '');
-  const slotCss = (on: boolean, w: boolean) => 'width:100%;height:44px;padding:0;border-radius:14px;font-size:14px;font-weight:500;font-family:inherit;border:1px solid ' + (on ? '#0E1116' : (w ? '#EEF0F3' : '#E1E4E9')) + ';background:' + (on ? '#0E1116' : (w ? '#F4F5F7' : '#FFFFFF')) + ';color:' + (on ? '#FFFFFF' : (w ? '#8A93A0' : '#0E1116')) + (w ? ';text-decoration:line-through;cursor:default' : '');
+  const h = mobile ? 44 : 40;
   const summary = p.sel.length ? p.sel.map((x) => x.name).join(' + ') + ', ' + duration(p.mins) + ', ' + dollars(p.priceC) + (b.time !== null && !why(b.time) ? ', ' + dayInfo(b.day).short + ' ' + timeRange(fmtMin(b.time), fmtMin(b.time + p.dur)) : '') : 'Choose a service to see its length and price.';
 
   return (
@@ -100,13 +99,9 @@ export function BookPanel({ data, client, mobile, onBooked, onCancel }: { data: 
       <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="bk-team-label" style={S('font-size:14px;font-weight:600')}>Team member</span>
         <TeamPicker team={team} selected={b.staff} offers={(sid) => !b.services.length || b.services.some((id) => offered(id, sid))} onPick={(id) => { setB({ ...b, staff: id, time: null }); setError(''); }} /></div>
       <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="bk-day-label" style={S('font-size:14px;font-weight:600')}>Day</span>
-        <div role="group" className="hscroll" aria-labelledby="bk-day-label" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
-          {days14.map((d) => <button key={d.ymd} onClick={() => { if (!d.closed) { setB({ ...b, day: d.ymd, time: null }); setError(''); } }} disabled={d.closed} aria-pressed={b.day === d.ymd} aria-label={d.full + (d.closed ? ', closed' : '')} style={S(dayCss(b.day === d.ymd, d.closed))}><span style={S('font-size:12.5px')}>{d.abbr}</span><span style={S('font-size:17px;font-weight:600')}>{d.num}</span></button>)}
-        </div></div>
+        <DayStrip days={days14} selected={b.day} onPick={(ymd) => { setB({ ...b, day: ymd, time: null }); setError(''); }} labelledBy="bk-day-label" /></div>
       <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="bk-time-label" style={S('font-size:14px;font-weight:600')}>Time</span>
-        <div role="group" aria-labelledby="bk-time-label" style={S('display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px')}>
-          {slots.map((t) => { const w = why(t); const on = b.time === t && !w; return <button key={t} onClick={() => { if (!w) { setB({ ...b, time: t }); setError(''); } }} disabled={!!w} aria-pressed={on} aria-label={fmtMin(t) + (w ? ', unavailable' : '')} style={S(slotCss(on, !!w))}>{fmtMin(t)}</button>; })}
-        </div></div>
+        <TimeGrid times={slots.map((min) => ({ min, ok: !why(min) }))} selected={b.time} onPick={(min) => { setB({ ...b, time: min }); setError(''); }} labelledBy="bk-time-label" /></div>
       {!!error && <FieldError>{error}</FieldError>}
       <div style={S('display:flex;gap:10px')}><button onClick={book} disabled={busy} style={S(BLACK + dim(busy))}>{busy ? 'Booking…' : 'Book appointment'}</button><button className="ghost" onClick={onCancel} style={S(OUTLINE)}>Cancel</button></div>
     </div>
