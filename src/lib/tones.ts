@@ -7,4 +7,7 @@ export const TONE = {
   purple: { bg: '#EEEAFE', fg: '#3A2BB5' },
   blue: { bg: '#E9F0FF', fg: '#1B4A8A' },
   grey: { bg: '#EEF0F3', fg: '#4A525E' },
+  /** Happening right now (checked in, in progress, the time marker): the one solid chip. */
+  live: { bg: '#5B3DF5', fg: '#FFFFFF' },
 } as const;
+export type ToneName = keyof typeof TONE;

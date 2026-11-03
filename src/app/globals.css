@@ -180,3 +180,5 @@ button.sheet-out,.sheet-out>button[aria-label^="Close"]{animation:drFadeOut .2s 
 .sk-desk{transition:padding-left .22s cubic-bezier(.4,0,.2,1)}
 .shell:has(.subpanel.open) .sk-desk{padding-left:8px !important}
 }
+/* A labelled box (a label around a borderless input) shows the focus ring on the box, so every field in the app shows where you are typing. */
+label:has(> input:focus-visible),label:has(> textarea:focus-visible),label:has(> select:focus-visible){outline:2px solid #5B3DF5;outline-offset:2px}

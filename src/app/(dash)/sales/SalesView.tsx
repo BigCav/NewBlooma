@@ -288,7 +288,7 @@ function Desktop({ c }: { c: C }) {
                     <span style={S('flex:0 0 40px;width:40px;height:40px;border-radius:999px;background:#EEF0F3;color:#0E1116;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600')}>{t.initials}</span>
                     <span style={S('min-width:0;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.client}</span>
                   </span>
-                  <span style={S('flex:0.8 1 0;min-width:0;white-space:nowrap;color:#5E6673')}>{t.ref || 'â€”'}</span>
+                  <span style={S('flex:0.8 1 0;min-width:0;white-space:nowrap;color:#5E6673')}>{t.ref || '—'}</span>
                   <span style={S('flex:1.6 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.service}</span>
                   <span style={S('flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.firstName}</span>
                   <span style={S('flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.time}</span>
@@ -347,7 +347,7 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
             <span style={S('flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px')}>
               <span style={S('display:flex;align-items:center;justify-content:space-between;gap:10px')}><span style={S('min-width:0;font-size:16px;font-weight:600;letter-spacing:-0.01em;overflow-wrap:anywhere')}>{t.client}</span><span style={S('flex:0 0 auto;font-size:16px;font-weight:600')}>{fmt(t.total)}</span></span>
               <span style={S('font-size:14px;color:#4A525E;overflow-wrap:anywhere')}>{t.service}</span>
-              <span style={S('font-size:12.5px;color:#8A93A0')}>{t.ref ? t.ref + ' Â· ' : ''}{t.time}</span>
+              <span style={S('font-size:12.5px;color:#8A93A0')}>{t.ref ? t.ref + ' · ' : ''}{t.time}</span>
               <span style={S('align-self:flex-start;margin-top:6px;' + statusStyle(t.status) + ';padding:3px 10px;font-size:12px;font-weight:600')}>{t.status}</span>
             </span>
           </button>
