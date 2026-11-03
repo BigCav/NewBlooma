@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation';
 import { requireCtx } from '@/lib/session';
-import { dateLong, time12 } from '@/lib/format';
+import { time12, ymd } from '@/lib/format';
+import { dayInfo } from '@/lib/cal';
+import { firstName } from '@/lib/people';
 import { loadBooking, rowsForBooking, toFill } from '@/lib/forms';
 import { FormFillView } from '@/components/FormFillView';
 import { submitStaffForms } from '../../actions';
@@ -17,9 +19,9 @@ export default async function Fill({ params, searchParams }: { params: Promise<{
   if (!b) notFound();
   const rows = (await rowsForBooking(sb, b, salon.timezone)).filter((r) => r.needed && !r.tpl.isPatch && (r.state === 'missing' || r.state === 'expired') && (!t || r.tpl.id === t));
   const back = `/clients/forms?c=${b.clientId}`;
-  const when = `${dateLong(b.startsAt, salon.timezone)}, ${time12(b.startsAt, salon.timezone)}`;
+  const when = `${dayInfo(ymd(b.startsAt, salon.timezone)).short}, ${time12(b.startsAt, salon.timezone)}`;
   return (
-    <FormFillView mode="staff" salon={salon.name} first={b.clientName.split(' ')[0]} clientName={b.clientName} apptLine={when} svcLine={`${b.services} with ${b.staff}`}
+    <FormFillView mode="staff" salon={salon.name} first={firstName(b.clientName)} clientName={b.clientName} apptLine={when} svcLine={`${b.services} with ${b.staff}`}
       forms={rows.map((r) => toFill(r.tpl))} submit={submitStaffForms.bind(null, bookingId)} links={{ back, backLabel: 'Client forms' }}
       empty={{ title: 'Nothing left to fill in', text: `${b.clientName} has no outstanding forms for this appointment.`, link: { href: back, label: 'Back to client forms' } }} />
   );

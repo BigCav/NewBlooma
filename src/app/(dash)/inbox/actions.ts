@@ -1,13 +1,15 @@
 'use server';
 import { revalidatePath } from 'next/cache';
 import { requireCtx, friendly } from '@/lib/session';
-import { dateLong, time12 } from '@/lib/format';
+import { time12, ymd } from '@/lib/format';
+import { dayInfo } from '@/lib/cal';
+import { firstName } from '@/lib/people';
 import { emailConfigured, flushOutbox, sendCustomMessage } from '@/lib/notify';
 import { dropEmptyThread, ensureThread, logStaffMessage, replyUrl } from '@/lib/conversation';
 
-type R = { error?: string; ok?: boolean; notice?: string };
+type R = { error?: string; ok?: boolean; notice?: string; time?: string };
 const refresh = () => { revalidatePath('/inbox'); revalidatePath('/', 'layout'); };
-const first = (n?: string | null) => String(n ?? 'Client').split(' ')[0];
+const first = (n?: string | null) => firstName(n, 'Client');
 
 export async function markRead(id: string): Promise<R> {
   const { sb } = await requireCtx();
@@ -39,7 +41,7 @@ export async function acceptRequest(id: string): Promise<R> {
   await flushOutbox();
   refresh();
   const c = (it as any).clients;
-  const notice = !c?.email ? `Accepted. ${first(c?.name)} has no email on file, so no confirmation was sent.` : emailConfigured() ? `Accepted. ${first(c.name)} will get a confirmation email.` : 'Accepted. Email is not set up yet, so no confirmation was sent.';
+  const notice = !c?.email ? `Approved. ${first(c?.name)} has no email on file, so no confirmation was sent.` : emailConfigured() ? `Approved. ${first(c.name)} will get a confirmation email.` : 'Approved. Email is not set up yet, so no confirmation was sent.';
   return { ok: true, notice };
 }
 
@@ -57,8 +59,8 @@ export async function declineRequest(id: string, reason: string): Promise<R> {
   await sb.from('inbox_items').update({ status: 'declined', unread: false }).eq('id', id);
   refresh();
   const svc = (b?.booking_services ?? []).map((l: any) => l.services?.name).filter(Boolean).join(' + ') || 'your booking';
-  const text = `Hi ${first(c?.name)}, sorry, we can't take your booking for ${svc} on ${dateLong(b.starts_at, salon.timezone)} at ${time12(b.starts_at, salon.timezone)}: ${REASON_TEXT[reason]}. Please pick another time on our booking page.`;
-  const r = await sendCustomMessage(salon.id, c ?? {}, text, { subject: `About your booking request at ${salon.name}`, heading: 'We could not take your booking' }, { label: 'Book another time', url: `${process.env.NEXT_PUBLIC_APP_URL ?? ''}/b/${salon.slug}` });
+  const text = `Hi ${first(c?.name)}, sorry, we can't take your booking for ${svc} on ${dayInfo(ymd(b.starts_at, salon.timezone)).short} at ${time12(b.starts_at, salon.timezone)}: ${REASON_TEXT[reason]}. Please pick another time on our booking page.`;
+  const r = await sendCustomMessage(salon.id, c ?? {}, text, { subject: `About your booking request at ${salon.name}`, heading: 'We could not take your booking' }, { label: 'Book again', url: `${process.env.NEXT_PUBLIC_APP_URL ?? ''}/b/${salon.slug}` });
   return { ok: true, notice: r.ok ? `Declined. ${first(c?.name)} has been told.` : `Declined. ${first(c?.name)} was not told: ${r.error}` };
 }
 
@@ -76,5 +78,5 @@ export async function replyToItem(id: string, text: string): Promise<R> {
   await logStaffMessage(salon.id, th.id, text);
   await sb.from('inbox_items').update({ unread: false }).eq('id', id);
   refresh();
-  return { ok: true, notice: it.type === 'message' ? 'Reply sent' : `Message sent to ${first(c?.name)}. The conversation is under Messages.` };
+  return { ok: true, time: time12(new Date(), salon.timezone), notice: it.type === 'message' ? 'Reply sent' : `Message sent to ${first(c?.name)}. The conversation is under Messages.` };
 }

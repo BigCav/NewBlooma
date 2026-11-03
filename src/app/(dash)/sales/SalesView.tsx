@@ -6,26 +6,28 @@ import { ConfirmBox } from '@/components/ConfirmBox';
 import { rootCls } from '@/components/drawer';
 import { useNewParam } from '@/components/useNewParam';
 import { decimalInput } from '@/lib/numeric';
+import { Avatar, BLACK, CLOSE, Chip, FIELD_IN, FieldError, FilterChip, Notice, OUTLINE, RING, dim } from '@/components/ui';
+import { Field } from '../settings/forms/FormPage';
+import { dollars } from '@/lib/format';
+import { duration, refDigits } from '@/lib/display';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { serviceRules, type CalService } from '@/lib/cal';
 import { useEffect, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { ActiveFilter, FilterButton, FilterSheet } from '@/components/FilterBits';
-import { ClientMatches } from '../calendar/ClientMatches';
 import { S } from '../calendar/pickers';
-import { CloseX, CLOSE_BTN } from '../calendar/calUi';
 import { CheckoutFlow } from '../calendar/CheckoutFlow';
 import { NewSaleFlow } from './NewSaleFlow';
 import { createWalkin, payFlow, refundSale, sendReceipt, setPrice, } from './actions';
 import { useTerminal } from './useTerminal';
 import { TerminalStatus } from '../calendar/TerminalStatus';
 import { VisitSheet, MoreButton, QuickActions, QaGroup, QA_ITEM, ICON_TIME, ICON_PERSON, ICON_CARD, type VisitDetail } from '../calendar/VisitSheet';
-import { FILTERS, NO_DISC, STATUS, discOf, fmt, type CoPackage, type CoProduct, type DiscPick, type PayMethod, type SaleRow, type SvcOpt } from './shared';
+import { FILTERS, NO_DISC, STATUS, discOf, type CoPackage, type CoProduct, type DiscPick, type PayMethod, type SaleRow, type SvcOpt } from './shared';
 
 type Props = {
   rows: SaleRow[]; bars: { day: string; cents: number; today: boolean }[]; todayTotal: number; paidCount: number; subtitle: string;
-  methods: PayMethod[]; services: SvcOpt[]; products: CoProduct[]; catalog: CalService[]; offers: Record<string, string[]>; packages: Record<string, CoPackage[]>; askTip: boolean; canDiscount: boolean; initial: { sale: string | null; pay: boolean; card: string };
+  methods: PayMethod[]; acceptCard: boolean; services: SvcOpt[]; products: CoProduct[]; catalog: CalService[]; offers: Record<string, string[]>; packages: Record<string, CoPackage[]>; askTip: boolean; canDiscount: boolean; initial: { sale: string | null; pay: boolean; card: string };
 };
 type Mode = 'view' | 'pay' | 'edit' | 'new' | 'refund';
 const CARD_MSG: Record<string, string> = { declined: 'The card payment was not completed.', pending: 'Still waiting for the bank. Refresh in a moment.', unknown: 'The card payment could not be confirmed.' };
@@ -151,7 +153,7 @@ function useSales(props: Props) {
   };
 
   const sq = query.trim().toLowerCase();
-  const list = rows.filter((t) => (filter === 'all' || t.status === filter) && (!sq || (t.client + ' ' + t.ref + ' ' + t.service + ' ' + t.staffName + ' ' + t.status + ' ' + t.method + ' ' + t.total / 100).toLowerCase().includes(sq.replace(/[$,]/g, ''))));
+  const list = rows.filter((t) => (filter === 'all' || t.status === filter) && (!sq || (t.client + ' ' + t.ref + ' ' + t.ref.replace('-', '') + ' ' + t.service + ' ' + t.staffName + ' ' + t.status + ' ' + t.method + ' ' + t.total / 100).toLowerCase().includes(sq.replace(/[$,]/g, '')) || (/^\d+$/.test(refDigits(sq)) && t.ref.slice(2).includes(refDigits(sq)))));
   return { ...props, busy, narrow, rows, list, sel, selectedId, filter, setFilter, query, setQuery, mode, setMode, open, notice, error, setError, confirmRefund, setConfirmRefund, qa, setQa, prodQty, onQty, rules, canExtra, svcIds, svcEdited: !!mine?.svc, pickSvc, pkgIds, togglePack,
     canDiscount: props.canDiscount, pay, setPay, tipPctOf, editAmount, setEditAmount, nw, setNw, txn: term.txn, termView: { ...term.view, onDone: () => { const r = mode === 'refund'; term.reset(); setMode('view'); setNotice(r ? 'Refund issued' : 'Payment taken'); setError(''); router.refresh(); }, onRetry: mode === 'refund' ? doRefund : takePayment, onBack: () => { term.reset(); if (mode === 'refund') setMode('view'); } }, pick, openNew, cancel, close, takePayment, payNow, saveEdit, doRefund, receipt, createSale,
     paidTotal: props.todayTotal, pendingCount: rows.filter((r) => r.status === 'Pending').length };
@@ -159,18 +161,14 @@ function useSales(props: Props) {
 type C = ReturnType<typeof useSales>;
 export type SalesCtl = C;
 
-const GHOST = (h: number) => `flex:1 1 0;height:${h}px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500`;
-const DARK = (h: number) => `flex:1 1 0;height:${h}px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500`;
-const statusStyle = (s: SaleRow['status']) => 'display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;background:' + STATUS[s][0] + ';color:' + STATUS[s][1];
-
 /** The phone's checkout for a sale: the same steps as the calendar's checkout. */
 function SaleCheckout({ c, s }: { c: C; s: SaleRow }) {
   const found = c.svcIds.map((id) => c.rules.map.get(id)).filter(Boolean) as CalService[];
   const prodCents = s.lines.filter((l) => l.productId).reduce((a, l) => a + l.cents * l.qty, 0);
   // Changed here, the services are priced from the menu (as on the calendar); otherwise the sale is shown as it stands.
   const lines = c.svcEdited
-    ? found.map((v) => ({ key: v.id, name: v.name, sub: v.dur + ' min', cents: v.priceCents }))
-    : s.lines.filter((l) => !l.productId).map((l, i) => ({ key: l.label + i, name: l.label + (l.qty > 1 ? ' x' + l.qty : ''), sub: l.dur ? l.dur + ' min' : undefined, cents: l.cents * l.qty }));
+    ? found.map((v) => ({ key: v.id, name: v.name, sub: duration(v.dur), cents: v.priceCents }))
+    : s.lines.filter((l) => !l.productId).map((l, i) => ({ key: l.label + i, name: l.label + (l.qty > 1 ? ' x' + l.qty : ''), sub: l.dur ? duration(l.dur) : undefined, cents: l.cents * l.qty }));
   const gross = c.svcEdited ? found.reduce((a, v) => a + v.priceCents, 0) : s.amount - prodCents;
   return (
     <CheckoutFlow who={s.client + ', ' + s.lines.map((l) => l.label).join(' + ')} methods={c.methods.map((m) => [m.id, m.label] as const)}
@@ -194,35 +192,33 @@ function MobileSale({ c, s }: { c: C; s: SaleRow }) {
     ...(pending ? [] : [{ label: 'Payment', value: s.method, icon: ICON_CARD }]),
   ];
   const extra: [string, string][] = [
-    ...(s.discount ? [['Discount' + (s.discountNote ? ' (' + s.discountNote + ')' : ''), '-' + fmt(s.discount)] as [string, string]] : []),
-    ...(s.tip ? [['Tip', fmt(s.tip)] as [string, string]] : []),
-    ...(!pending && s.gst ? [[s.taxIncl ? 'Includes ' + s.taxRate + '% GST' : 'GST ' + s.taxRate + '%', fmt(s.gst)] as [string, string]] : []),
+    ...(s.discount ? [['Discount' + (s.discountNote ? ' (' + s.discountNote + ')' : ''), '-' + dollars(s.discount)] as [string, string]] : []),
+    ...(s.tip ? [['Tip', dollars(s.tip)] as [string, string]] : []),
+    ...(!pending && s.gst ? [[s.taxIncl ? 'Includes ' + s.taxRate + '% GST' : 'GST ' + s.taxRate + '%', dollars(s.gst)] as [string, string]] : []),
   ];
-  const online = c.methods.some((m) => m.id === 'online');
-  const BTN = 'height:52px;border-radius:999px;font-size:14.5px;font-weight:500;cursor:pointer';
   const startCheckout = () => { c.setPay({ method: c.methods[0]?.id ?? 'cash', tip: c.tipPctOf(s), code: '', disc: discOf(s) }); c.setMode('pay'); c.setError(''); };
   return (
     <VisitSheet onClose={c.close} title={s.dayShort}
-      status={<span style={S(statusStyle(s.status) + ';flex:0 0 auto;font-size:14px;padding:8px 16px')}>{s.status}</span>}
-      avatar={s.initials} name={s.client} sub={s.ref ? 'Booking ' + s.ref : 'Sale'}
+      status={<Chip tone={STATUS[s.status]} size="lg">{s.status}</Chip>}
+      name={s.client} sub={s.ref ? 'Booking ' + s.ref : 'Sale'}
       details={details} extra={extra}
-      lines={s.lines.map((l, i) => ({ key: l.label + i, name: l.label + (l.qty > 1 ? ' x' + l.qty : ''), sub: l.dur ? l.dur + ' min' : undefined, price: fmt(l.cents * l.qty) }))}
-      total={fmt(s.total)} label={pending ? 'To pay' : s.status}
+      lines={s.lines.map((l, i) => ({ key: l.label + i, name: l.label + (l.qty > 1 ? ' x' + l.qty : ''), sub: l.dur ? duration(l.dur) : undefined, price: dollars(l.cents * l.qty) }))}
+      total={dollars(s.total)} label={pending ? 'To pay' : s.status}
       message={<>
-        {!!c.notice && <span role="status" style={S('align-self:flex-start;padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.notice}</span>}
-        {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
+        {!!c.notice && <Notice>{c.notice}</Notice>}
+        {!!c.error && <FieldError>{c.error}</FieldError>}
       </>}
       actions={c.confirmRefund ? (
-        <ConfirmBox label="Confirm refund" title={'Refund ' + fmt(s.total) + '?'} body="The sale is marked as refunded and removed from today's sales." action="Refund" keep="Cancel" onAction={c.doRefund} busy={c.busy} onKeep={() => c.setConfirmRefund(false)} />
+        <ConfirmBox label="Confirm refund" title={'Refund ' + dollars(s.total) + '?'} body="The sale is marked as refunded and removed from today's sales." action="Refund" onAction={c.doRefund} busy={c.busy} onKeep={() => c.setConfirmRefund(false)} />
       ) : (
         <div style={S('display:flex;gap:10px')}>
           <MoreButton onClick={() => c.setQa(true)} />
           {pending ? (<>
-            {online && <button onClick={c.payNow} disabled={c.busy} style={S('flex:1 1 0;border:1px solid #E1E4E9;background:#FFFFFF;color:#0E1116;' + BTN)}>Pay now</button>}
-            <button onClick={startCheckout} disabled={c.busy} style={S('flex:1 1 0;border:0;background:#0E1116;color:#FFFFFF;' + BTN)}>Checkout</button>
+            {c.acceptCard && <button onClick={c.payNow} disabled={c.busy} style={S(OUTLINE + dim(c.busy))}>Pay now</button>}
+            <button onClick={startCheckout} disabled={c.busy} style={S(BLACK + dim(c.busy))}>Checkout</button>
           </>) : (<>
-            {s.status === 'Paid' && <button className="ghost" onClick={() => c.setConfirmRefund(true)} style={S('flex:1 1 0;border:1px solid #E1E4E9;background:#FFFFFF;color:#0E1116;' + BTN)}>Refund</button>}
-            <button onClick={c.receipt} disabled={c.busy} style={S('flex:1 1 0;border:0;background:#0E1116;color:#FFFFFF;' + BTN)}>Send receipt</button>
+            {s.status === 'Paid' && <button className="ghost" onClick={() => c.setConfirmRefund(true)} style={S(OUTLINE)}>Refund</button>}
+            <button onClick={c.receipt} disabled={c.busy} style={S(BLACK + dim(c.busy))}>Send receipt</button>
           </>)}
         </div>
       )}
@@ -233,18 +229,16 @@ function MobileSale({ c, s }: { c: C; s: SaleRow }) {
 /** What the sale sheet shows: the sale itself, its checkout, the terminal's refund step, or the price editor. */
 function Panel({ c }: { c: C }) {
   const s = c.sel;
-  const err = !!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>;
+  const err = !!c.error && <FieldError>{c.error}</FieldError>;
   if (!s) return <p style={S('margin:0;color:#5E6673;font-size:14px')}>No sales yet. Record one with New sale.</p>;
-  if (c.mode === 'refund' && c.termView.phase !== 'idle') return <TerminalStatus t={c.termView} amount={fmt(s.total)} refund />;
+  if (c.mode === 'refund' && c.termView.phase !== 'idle') return <TerminalStatus t={c.termView} amount={dollars(s.total)} refund />;
   if (c.mode === 'pay') return <SaleCheckout c={c} s={s} />;
   if (c.mode === 'edit') return (
     <div style={S('display:flex;flex-direction:column;gap:18px')}>
       <div><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Edit sale</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px;overflow-wrap:anywhere')}>{s.client}, {s.service}</p></div>
-      <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="sale-amount" style={S('font-size:14px;font-weight:600')}>Service price</label>
-        <div style={S('display:flex;align-items:center;gap:6px;box-sizing:border-box;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;background:#FFFFFF')}><span style={S('color:#5E6673')}>$</span>
-          <input id="sale-amount" type="text" inputMode="decimal" value={c.editAmount} onChange={(e) => { c.setEditAmount(decimalInput(e.target.value)); c.setError(''); }} style={{ ...S('flex:1 1 auto;min-width:0;border:0;outline:none;background:transparent;font:inherit;color:#0E1116'), padding: 0, minHeight: 0, width: 'auto', borderRadius: 0 }} /></div></div>
+      <Field label="Service price in dollars" htmlFor="sale-amount"><input id="sale-amount" type="text" inputMode="decimal" value={c.editAmount} onChange={(e) => { c.setEditAmount(decimalInput(e.target.value)); c.setError(''); }} style={FIELD_IN} /></Field>
       {err}
-      <div style={S('display:flex;gap:10px')}><button onClick={c.saveEdit} disabled={c.busy} style={S(DARK(48))}>Save sale</button><button className="ghost" onClick={c.cancel} style={S(GHOST(48))}>Cancel</button></div>
+      <div style={S('display:flex;gap:10px')}><button onClick={c.saveEdit} disabled={c.busy} style={S(BLACK + dim(c.busy))}>{c.busy ? 'Saving…' : 'Save changes'}</button><button className="ghost" onClick={c.cancel} style={S(OUTLINE)}>Cancel</button></div>
     </div>
   );
   return <MobileSale c={c} s={s} />;
@@ -257,15 +251,15 @@ function Desktop({ c }: { c: C }) {
   return (
     <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <PageHeader title="Sales" subtitle={c.subtitle} query={c.query} onQuery={c.setQuery} placeholder="Search sales" actionLabel="New sale" onAction={c.openNew} />
-      <section aria-label="Sales at a glance" style={S('display:flex;flex-wrap:wrap;gap:20px 64px')}>{stat('Sales today', fmt(c.todayTotal))}{stat('Paid sales', String(c.paidCount))}{stat('Average sale', fmt(c.paidCount ? Math.round(c.todayTotal / c.paidCount) : 0))}</section>
+      <section aria-label="Sales at a glance" style={S('display:flex;flex-wrap:wrap;gap:20px 64px')}>{stat('Sales today', dollars(c.todayTotal))}{stat('Paid sales', String(c.paidCount))}{stat('Average sale', dollars(c.paidCount ? Math.round(c.todayTotal / c.paidCount) : 0))}</section>
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
         <div style={S('flex:999 1 620px;min-width:0;display:flex;flex-direction:column;gap:20px')}>
           <section aria-label="Last 7 days" style={S('background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px')}>
-            <div style={S('display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px')}><h2 style={S('margin:0;font-size:16px;font-weight:600')}>Last 7 days</h2><span style={S('color:#5E6673;font-size:13.5px')}>{fmt(week)} in total</span></div>
+            <div style={S('display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px')}><h2 style={S('margin:0;font-size:16px;font-weight:600')}>Last 7 days</h2><span style={S('color:#5E6673;font-size:13.5px')}>{dollars(week)} in total</span></div>
             <div role="group" aria-label="Daily sales for the last 7 days" style={S('margin-top:20px;display:flex;align-items:flex-end;gap:16px;height:186px')}>
               {c.bars.map((b, i) => (
-                <div key={i} role="img" aria-label={b.day + ', ' + fmt(b.cents)} style={S('flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:8px')}>
-                  <span style={S('font-size:12.5px;color:#5E6673')}>{fmt(b.cents)}</span>
+                <div key={i} role="img" aria-label={b.day + ', ' + dollars(b.cents)} style={S('flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:8px')}>
+                  <span style={S('font-size:12.5px;color:#5E6673')}>{dollars(b.cents)}</span>
                   <div style={S('width:100%;height:' + Math.max(6, Math.round(b.cents / max * 130)) + 'px;border-radius:10px;background:' + (b.today ? '#0E1116' : '#DADDE4'))} />
                   <span style={S('font-size:12.5px;font-weight:500')}>{b.day}</span>
                 </div>
@@ -274,7 +268,7 @@ function Desktop({ c }: { c: C }) {
           </section>
           <section aria-label="Sales list" style={S('min-width:0;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;overflow:hidden')}>
             <div style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid #E6E8EC')}>
-              <div role="group" aria-label="Filter sales" style={S('display:flex;flex-wrap:wrap;gap:8px')}>{FILTERS.map((f) => <button key={f.id} onClick={() => c.setFilter(f.id)} aria-pressed={c.filter === f.id} style={S('height:40px;padding:0 16px;border-radius:999px;font-size:13.5px;font-weight:500;border:1px solid ' + (c.filter === f.id ? '#0E1116' : '#E1E4E9') + ';background:' + (c.filter === f.id ? '#0E1116' : '#FFFFFF') + ';color:' + (c.filter === f.id ? '#FFFFFF' : '#0E1116'))}>{f.label}</button>)}</div>
+              <div role="group" aria-label="Filter sales" style={S('display:flex;flex-wrap:wrap;gap:8px')}>{FILTERS.map((f) => <FilterChip key={f.id} on={c.filter === f.id} onClick={() => c.setFilter(f.id)}>{f.label}</FilterChip>)}</div>
               <span style={S('color:#5E6673;font-size:13.5px')}>{`Showing ${c.list.length} of ${c.rows.length}`}</span>
             </div>
             <div style={S('overflow-x:auto')}><div style={S('min-width:880px')}>
@@ -282,18 +276,18 @@ function Desktop({ c }: { c: C }) {
                 {([['2.2', 'Client'], ['0.8', 'Booking'], ['1.6', 'Service'], ['1', 'Staff'], ['1', 'Time'], ['0.9', 'Total'], ['1', 'Status']] as const).map(([f, l]) => <div key={l} style={S(`flex:${f} 1 0;min-width:0`)}>{l}</div>)}
               </div>
               {c.list.map((t) => (
-                <button key={t.id} className="s-row" onClick={() => c.pick(t.id)} aria-label={`${t.client}, ${t.service}, ${fmt(t.total)}, ${t.status}`}
+                <button key={t.id} className="s-row" onClick={() => c.pick(t.id)} aria-label={`${t.client}, ${t.service}, ${dollars(t.total)}, ${t.status}`}
                   style={S('display:flex;align-items:center;gap:16px;width:100%;box-sizing:border-box;min-height:64px;padding:8px 20px;border:0;border-bottom:1px solid #EEF0F3;text-align:left;font:inherit;font-size:14px;color:#0E1116;background:' + (c.open && c.selectedId === t.id ? '#F4F5F7' : 'transparent'))}>
                   <span style={S('flex:2.2 1 0;min-width:0;display:flex;align-items:center;gap:12px')}>
-                    <span style={S('flex:0 0 40px;width:40px;height:40px;border-radius:999px;background:#EEF0F3;color:#0E1116;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600')}>{t.initials}</span>
+                    <Avatar name={t.client} size="md" />
                     <span style={S('min-width:0;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.client}</span>
                   </span>
                   <span style={S('flex:0.8 1 0;min-width:0;white-space:nowrap;color:#5E6673')}>{t.ref || '—'}</span>
                   <span style={S('flex:1.6 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.service}</span>
                   <span style={S('flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.firstName}</span>
                   <span style={S('flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.time}</span>
-                  <span style={S('flex:0.9 1 0;min-width:0;font-weight:500')}>{fmt(t.total)}</span>
-                  <span style={S('flex:1 1 0;min-width:0')}><span style={S(statusStyle(t.status))}>{t.status}</span></span>
+                  <span style={S('flex:0.9 1 0;min-width:0;font-weight:500')}>{dollars(t.total)}</span>
+                  <span style={S('flex:1 1 0;min-width:0')}><Chip tone={STATUS[t.status]}>{t.status}</Chip></span>
                 </button>
               ))}
             </div></div>
@@ -315,10 +309,10 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
     <div className={rootCls(drawer)} style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <MobileHeader title="Sales" subtitle={c.subtitle} query={c.query} onQuery={c.setQuery} placeholder="Search sales" />
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:14px')}>
-        <section aria-label="Sales at a glance" style={S('display:flex;gap:12px')}>{stat('Sales today', fmt(c.todayTotal))}{stat('Pending', String(c.pendingCount), c.pendingCount > 0)}</section>
+        <section aria-label="Sales at a glance" style={S('display:flex;gap:12px')}>{stat('Sales today', dollars(c.todayTotal))}{stat('Pending', String(c.pendingCount), c.pendingCount > 0)}</section>
         <div style={S('display:flex;gap:12px')}>
           <FilterButton onClick={() => setFopen(true)} active={c.filter !== 'all'} label="Filter sales" />
-          <button onClick={c.openNew} style={S('flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:8px;height:52px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;cursor:pointer')}>
+          <button onClick={c.openNew} style={S(BLACK + ';gap:8px')}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
             New sale
           </button>
@@ -330,10 +324,10 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
           </Link>
         )}
         <section aria-label="Last 7 days" style={S('background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:20px')}>
-          <div style={S('display:flex;align-items:baseline;justify-content:space-between;gap:8px')}><h2 style={S('margin:0;font-size:16px;font-weight:600')}>Last 7 days</h2><span style={S('color:#5E6673;font-size:13px')}>{fmt(c.bars.reduce((a, b) => a + b.cents, 0))}</span></div>
+          <div style={S('display:flex;align-items:baseline;justify-content:space-between;gap:8px')}><h2 style={S('margin:0;font-size:16px;font-weight:600')}>Last 7 days</h2><span style={S('color:#5E6673;font-size:13px')}>{dollars(c.bars.reduce((a, b) => a + b.cents, 0))}</span></div>
           <div role="group" aria-label="Daily sales for the last 7 days" style={S('margin-top:16px;display:flex;align-items:flex-end;gap:8px;height:128px')}>
             {c.bars.map((b, i) => (
-              <div key={i} role="img" aria-label={b.day + ', ' + fmt(b.cents)} style={S('flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:8px')}>
+              <div key={i} role="img" aria-label={b.day + ', ' + dollars(b.cents)} style={S('flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:8px')}>
                 <div style={S('width:100%;height:' + Math.max(6, Math.round(b.cents / max * 96)) + 'px;border-radius:10px;background:' + (b.today ? '#0E1116' : '#DADDE4'))} />
                 <span style={S('font-size:12px;font-weight:500')}>{b.day}</span>
               </div>
@@ -342,13 +336,13 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
         </section>
         {c.filter !== 'all' && <ActiveFilter label={fl} onClear={() => c.setFilter('all')} />}
         {c.list.map((t) => (
-          <button key={t.id} onClick={() => c.pick(t.id)} aria-label={`${t.client}, ${t.service}, ${fmt(t.total)}, ${t.status}`} style={S('display:flex;align-items:flex-start;gap:14px;width:100%;box-sizing:border-box;padding:16px;border-radius:22px;text-align:left;font:inherit;color:#0E1116;cursor:pointer;border:1px solid ' + (t.status === 'Pending' ? '#F6D9A8' : '#E6E8EC') + ';background:' + (t.status === 'Pending' ? '#FFF4E5' : '#FFFFFF'))}>
-            <span style={S('flex:0 0 48px;width:48px;height:48px;border-radius:999px;background:#EEEAFE;color:#3A2BB5;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600')}>{t.initials}</span>
+          <button key={t.id} onClick={() => c.pick(t.id)} aria-label={`${t.client}, ${t.service}, ${dollars(t.total)}, ${t.status}`} style={S('display:flex;align-items:flex-start;gap:14px;width:100%;box-sizing:border-box;padding:16px;border-radius:22px;text-align:left;font:inherit;color:#0E1116;cursor:pointer;border:1px solid ' + (t.status === 'Pending' ? '#F6D9A8' : '#E6E8EC') + ';background:' + (t.status === 'Pending' ? '#FFF4E5' : '#FFFFFF'))}>
+            <Avatar name={t.client} size="lg" />
             <span style={S('flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px')}>
-              <span style={S('display:flex;align-items:center;justify-content:space-between;gap:10px')}><span style={S('min-width:0;font-size:16px;font-weight:600;letter-spacing:-0.01em;overflow-wrap:anywhere')}>{t.client}</span><span style={S('flex:0 0 auto;font-size:16px;font-weight:600')}>{fmt(t.total)}</span></span>
+              <span style={S('display:flex;align-items:center;justify-content:space-between;gap:10px')}><span style={S('min-width:0;font-size:16px;font-weight:600;letter-spacing:-0.01em;overflow-wrap:anywhere')}>{t.client}</span><span style={S('flex:0 0 auto;font-size:16px;font-weight:600')}>{dollars(t.total)}</span></span>
               <span style={S('font-size:14px;color:#4A525E;overflow-wrap:anywhere')}>{t.service}</span>
               <span style={S('font-size:12.5px;color:#8A93A0')}>{t.ref ? t.ref + ' · ' : ''}{t.time}</span>
-              <span style={S('align-self:flex-start;margin-top:6px;' + statusStyle(t.status) + ';padding:3px 10px;font-size:12px;font-weight:600')}>{t.status}</span>
+              <span style={S('align-self:flex-start;margin-top:6px')}><Chip tone={STATUS[t.status]}>{t.status}</Chip></span>
             </span>
           </button>
         ))}
@@ -359,7 +353,7 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
       {c.open && (
         <BottomSheet label="Sale details" onClose={c.close} backdropLabel="Close details" maxHeight="86%">
             {c.mode === 'new' ? <NewSaleFlow c={c} /> : (<>
-              {((c.mode !== 'view' && c.mode !== 'pay') || !c.sel) && <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Sale</h2><button onClick={c.close} aria-label="Close" style={S('flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer')}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg></button></div>}
+              {((c.mode !== 'view' && c.mode !== 'pay') || !c.sel) && <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Sale</h2><button onClick={c.close} aria-label="Close" style={S(RING)}>{CLOSE}</button></div>}
               <Panel c={c} />
             </>)}
           </BottomSheet>
@@ -367,10 +361,10 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
       {c.qa && c.open && c.mode === 'view' && c.sel && (() => {
         const q = c.sel;
         return (
-          <QuickActions onClose={() => c.setQa(false)}>
+          <QuickActions title="More actions" onClose={() => c.setQa(false)}>
             {(!!q.clientId || !!q.bookingDay) && <QaGroup first>
-              {!!q.clientId && <Link href={'/clients/' + q.clientId} style={S(QA_ITEM)}>Open client profile</Link>}
-              {!!q.bookingDay && <Link href={'/calendar?d=' + q.bookingDay + '&v=day'} style={S(QA_ITEM)}>Open booking in calendar</Link>}
+              {!!q.clientId && <Link href={'/clients/' + q.clientId} style={S(QA_ITEM)}>Open profile</Link>}
+              {!!q.bookingDay && <Link href={'/calendar?d=' + q.bookingDay + '&v=day&b=' + q.bookingId} style={S(QA_ITEM)}>View in calendar</Link>}
             </QaGroup>}
             <QaGroup first={!q.clientId && !q.bookingDay}>
               {q.status === 'Pending' && q.canEdit && <button onClick={() => { c.setQa(false); c.setEditAmount(String(q.amount / 100)); c.setMode('edit'); c.setError(''); }} style={S(QA_ITEM)}>Edit sale price</button>}

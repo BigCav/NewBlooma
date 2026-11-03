@@ -12,10 +12,11 @@ function closeFront() {
   let btn: HTMLElement | null | undefined;
   if (top.classList.contains('sheet')) {
     const back = top.previousElementSibling;
-    btn = back instanceof HTMLButtonElement && (back.getAttribute('aria-label') ?? '').startsWith('Close') ? back : top.querySelector<HTMLElement>('button[aria-label^="Close"]');
+    // The sheet's backdrop carries data-close (the old wording check stays as a fallback for anything that does not yet).
+    btn = back instanceof HTMLButtonElement && (back.hasAttribute('data-close') || (back.getAttribute('aria-label') ?? '').startsWith('Close')) ? back : top.querySelector<HTMLElement>('[data-close], button[aria-label^="Close"]');
   } else {
     // A page-style drawer: its Close (X) button, or its Back button when it has no X on this step.
-    btn = [...top.querySelectorAll<HTMLElement>('button[aria-label="Close"]')].find((b) => !b.closest('.sheet')) ?? top.querySelector<HTMLElement>('button[aria-label="Back"]');
+    btn = [...top.querySelectorAll<HTMLElement>('[data-close], button[aria-label="Close"]')].find((b) => !b.closest('.sheet')) ?? top.querySelector<HTMLElement>('button[aria-label="Back"]');
   }
   if (!btn) return false;
   btn.click();
@@ -62,7 +63,7 @@ export function DrawerKeys() {
           // A sheet (such as the triple-dot menu) or its backdrop closing inside an open drawer: put it back where it was and play it out.
           const host = m.target instanceof HTMLElement ? m.target : null;
           if (!host || !host.isConnected || !host.closest(LIVE) || n.querySelector('.m-drawer')) return;
-          const backdrop = n.tagName === 'BUTTON' && (n.getAttribute('aria-label') ?? '').startsWith('Close');
+          const backdrop = n.tagName === 'BUTTON' && (n.hasAttribute('data-close') || (n.getAttribute('aria-label') ?? '').startsWith('Close'));
           if (!backdrop && !n.matches('.sheet') && !n.querySelector('.sheet')) return;
           const ghost = n.cloneNode(true) as HTMLElement;
           ghost.classList.add('sheet-out');

@@ -2,6 +2,7 @@
 // 1:1 conversion of the prototype's Team.dc.html and MobileTeam.dc.html. Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
 import { BottomSheet } from '@/components/BottomSheet';
+import { Avatar, BLACK, Chip, FilterChip, Notice } from '@/components/ui';
 import { rootCls } from '@/components/drawer';
 import { useNewParam } from '@/components/useNewParam';
 import Link from 'next/link';
@@ -13,7 +14,7 @@ import { ActiveFilter, FilterButton, FilterSheet } from '@/components/FilterBits
 import { TeamFlow } from './TeamFlow';
 import { OwnerStar } from './OwnerStar';
 import { inviteMember, removeMember, removePhoto, saveMember, uploadPhoto } from './actions';
-import { DAYS, DAY_FULL, FILTERS, SHIFTS, initialsOf, photoCss, squarePhoto, type TeamRow } from './shared';
+import { DAYS, FILTERS, SHIFTS, squarePhoto, type TeamRow } from './shared';
 
 type Props = { rows: TeamRow[]; cats: string[]; todayWd: number; owner: boolean };
 type Draft = { name: string; role: string; cats: string[]; days: number[]; times: [string, string][]; shift: string | null; online: boolean };
@@ -107,14 +108,6 @@ function useTeam(props: Props) {
 type C = ReturnType<typeof useTeam>;
 export type TeamCtl = C;
 
-const chipD = (on: boolean) => 'height:40px;padding:0 16px;border-radius:999px;font-size:13.5px;font-weight:500;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
-const chipM = (on: boolean) => 'flex:0 0 auto;height:44px;padding:0 18px;border-radius:999px;font-size:14px;font-weight:500;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
-const formChip = (on: boolean, m: boolean) => m
-  ? 'flex:0 0 auto;white-space:nowrap;height:44px;padding:0 16px;border-radius:999px;font-size:14px;font-weight:500;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116')
-  : 'flex:0 0 auto;white-space:nowrap;height:36px;padding:0 14px;border-radius:999px;font-size:13px;font-weight:500;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
-const onlinePill = (on: boolean) => 'display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;white-space:nowrap;background:' + (on ? '#DDF3EA' : '#EEF0F3') + ';color:' + (on ? '#14624A' : '#4A525E');
-const inp = (h: number): React.CSSProperties => ({ ...S(`box-sizing:border-box;width:100%;height:${h}px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;color:#0E1116;background:#FFFFFF`), padding: '0 14px', minHeight: 0 });
-
 
 const EMPTY = (c: C) => (c.query.trim() ? `Nothing matches "${c.query.trim()}".` : 'No team members yet.');
 
@@ -128,16 +121,17 @@ function Desktop({ c }: { c: C }) {
       <section aria-label="Team at a glance" style={S('display:flex;flex-wrap:wrap;gap:20px 64px')}>
         {stat('Team members', c.items.length)}{stat('Working today', c.items.filter((m) => m.todayOn).length)}{stat('Bookable online', c.items.filter((m) => m.online).length)}
       </section>
+      {!!c.notice && !c.open && <Notice>{c.notice}</Notice>}
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
         <section aria-label="Team schedule" style={S('flex:999 1 620px;min-width:0;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;overflow:hidden')}>
           <div style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid #E6E8EC')}>
             <div role="group" aria-label="Filter team" style={S('display:flex;flex-wrap:wrap;gap:8px')}>
-              {FILTERS.map((f) => <button key={f.id} onClick={() => c.setFilter(f.id)} aria-pressed={c.filter === f.id} style={S(chipD(c.filter === f.id))}>{f.label}</button>)}
+              {FILTERS.map((f) => <FilterChip key={f.id} on={c.filter === f.id} onClick={() => c.setFilter(f.id)}>{f.label}</FilterChip>)}
             </div>
             <span style={S('color:#5E6673;font-size:13.5px')}>{`Showing ${c.list.length} of ${c.items.length}`}</span>
           </div>
           <div style={S('overflow-x:auto')}>
-            <div style={S('min-width:860px')}>
+            <div style={S('min-width:1000px')}>
               <div style={S('display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid #EEF0F3;color:#5E6673;font-size:12.5px;font-weight:500')}>
                 <div style={S('flex:2.6 1 0;min-width:0')}>Team member</div>
                 {DAYS.map((n, i) => <div key={n} style={S('flex:1 1 0;min-width:0;text-align:center;' + (i === c.todayWd ? 'color:#0E1116;font-weight:600' : ''))}>{n}</div>)}
@@ -147,14 +141,14 @@ function Desktop({ c }: { c: C }) {
                 <button key={m.id} className="s-row" onClick={() => c.select(m.id)} aria-label={`${m.name}, ${m.role}, ${m.todayOn ? 'working today' : 'off today'}, ${m.online ? 'bookable online' : 'hidden online'}`}
                   style={S('display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:64px;padding:8px 20px;border:0;border-bottom:1px solid #EEF0F3;text-align:left;font:inherit;font-size:14px;color:#0E1116;background:' + (c.open && c.mode === 'edit' && c.selectedId === m.id ? '#F4F5F7' : 'transparent'))}>
                   <span style={S('flex:2.6 1 0;min-width:0;display:flex;align-items:center;gap:12px')}>
-                    <span style={S('flex:0 0 40px;width:40px;height:40px;border-radius:999px;background:#EEF0F3;color:#0E1116;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600' + photoCss(m.photo))}>{m.photo ? '' : initialsOf(m.name)}</span>
+                    <Avatar name={m.name} photo={m.photo} size="md" />
                     <span style={S('min-width:0')}>
                       <span style={S('display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{m.name}</span>
                       <span style={S('display:block;font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{m.role}</span>
                     </span>
                   </span>
                   {m.cells.map((t, i) => <span key={i} style={S('flex:1 1 0;min-width:0;text-align:center;font-size:13px;font-weight:' + (t !== 'Off' ? 500 : 400) + ';color:' + (t !== 'Off' ? '#0E1116' : '#8A93A0'))}>{t}</span>)}
-                  <span style={S('flex:1.1 1 0;min-width:0;text-align:right')}><span style={S(onlinePill(m.online))}>{m.online ? 'Online' : 'Hidden'}</span></span>
+                  <span style={S('flex:1.1 1 0;min-width:0;text-align:right')}><Chip tone={m.online ? 'green' : 'grey'}>{m.online ? 'Online' : 'Hidden'}</Chip></span>
                 </button>
               ))}
             </div>
@@ -177,9 +171,10 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
       <MobileHeader title="Team" subtitle="Who works when, and what they offer" query={c.query} onQuery={c.setQuery} placeholder="Search team" />
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:20px')}>
         <section aria-label="Team at a glance" style={S('display:flex;gap:40px')}>{stat('Team members', c.items.length)}{stat('Working today', c.items.filter((m) => m.todayOn).length)}</section>
+        {!!c.notice && !c.open && <Notice>{c.notice}</Notice>}
         <div style={S('display:flex;gap:10px')}>
           <FilterButton onClick={() => setFopen(true)} active={c.filter !== 'all'} label="Filter team" />
-          <button onClick={c.startNew} style={S('flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:8px;height:52px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500')}>
+          <button onClick={c.startNew} style={S(BLACK + ';gap:8px')}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
             New team member
           </button>
@@ -190,9 +185,9 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
             <li key={m.id}>
               <button onClick={() => c.select(m.id)} aria-label={`${m.name}, ${m.role}, ${m.todayOn ? 'working today' : 'off today'}, ${m.online ? 'bookable online' : 'hidden online'}`}
                 style={S('display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:68px;padding:10px 16px;border:0;border-bottom:1px solid #EEF0F3;background:transparent;text-align:left;font:inherit;color:#0E1116;cursor:pointer')}>
-                <span style={S('flex:0 0 44px;width:44px;height:44px;border-radius:999px;background:#EEF0F3;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600' + photoCss(m.photo))}>{m.photo ? '' : initialsOf(m.name)}</span>
+                <Avatar name={m.name} photo={m.photo} size="lg" />
                 <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{m.name}{m.isOwner && <OwnerStar />}</span><span style={S('display:block;font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{m.role}, {m.todayOn ? 'Today, ' + m.todayLabel : 'Off today'}</span></span>
-                <span style={S('flex:0 0 auto')}><span style={S(onlinePill(m.online))}>{m.online ? 'Online' : 'Hidden'}</span></span>
+                <span style={S('flex:0 0 auto')}><Chip tone={m.online ? 'green' : 'grey'}>{m.online ? 'Online' : 'Hidden'}</Chip></span>
               </button>
             </li>
           ))}

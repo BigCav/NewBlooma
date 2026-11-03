@@ -1,6 +1,8 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { sendClientReply } from './actions';
+import { S } from '@/app/(dash)/calendar/pickers';
+import { BLACK, FieldError, dim } from '@/components/ui';
 
 type Msg = { mine: boolean; text: string; at: string };
 const card: React.CSSProperties = { boxSizing: 'border-box', background: '#FFFFFF', border: '1px solid #E6E8EC', borderRadius: 24, padding: 24, display: 'flex', flexDirection: 'column', gap: 16 };
@@ -10,7 +12,7 @@ export function ReplyView({ token, salon, first, context, thread }: { token: str
   const listRef = useRef<HTMLUListElement>(null);
   useEffect(() => { const el = listRef.current; if (el) el.scrollTop = el.scrollHeight; }, [msgs.length]);
   const send = async () => {
-    const t = text.trim(); if (!t) { setError('Write your reply first.'); return; }
+    const t = text.trim(); if (!t) { setError('Write a message first.'); return; }
     setBusy(true); setError('');
     const r = await sendClientReply(token, t).catch(() => ({ error: 'Something went wrong. Please try again.' } as { error?: string; ok?: boolean }));
     setBusy(false);
@@ -34,9 +36,9 @@ export function ReplyView({ token, salon, first, context, thread }: { token: str
             ))}
           </ul>
           <label htmlFor="reply" style={{ fontSize: 14, fontWeight: 600 }}>Your reply</label>
-          <textarea id="reply" value={text} onChange={(e) => { setText(e.target.value); setError(''); }} rows={4} maxLength={600} placeholder="Write a reply" style={{ boxSizing: 'border-box', width: '100%', padding: '12px 14px', border: '1px solid #E1E4E9', borderRadius: 14, font: 'inherit', resize: 'vertical' }} />
-          {!!error && <p role="alert" style={{ margin: 0, color: '#B42318', fontSize: 13.5, fontWeight: 500 }}>{error}</p>}
-          <button onClick={send} disabled={busy} style={{ height: 48, border: 0, borderRadius: 999, background: '#0E1116', color: '#FFFFFF', fontSize: 14.5, fontWeight: 500, fontFamily: 'inherit', cursor: 'pointer' }}>{busy ? 'Sending…' : 'Send reply'}</button>
+          <textarea id="reply" value={text} onChange={(e) => { setText(e.target.value); setError(''); }} rows={4} maxLength={600} placeholder="Write a reply" style={{ boxSizing: 'border-box', width: '100%', padding: '12px 14px', border: '1px solid #E1E4E9', borderRadius: 14, font: 'inherit', fontSize: 16, resize: 'vertical' }} />
+          {!!error && <FieldError>{error}</FieldError>}
+          <button onClick={send} disabled={busy} style={S(BLACK + ';flex:0 0 auto' + dim(busy))}>{busy ? 'Sending…' : 'Send reply'}</button>
           <p style={{ margin: 0, color: '#5E6673', fontSize: 13 }}>{salon} will see this in their inbox and may reply by email or text.</p>
         </section>
       </div>

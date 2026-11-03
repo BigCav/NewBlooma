@@ -14,7 +14,7 @@ export default async function Preview({ searchParams }: { searchParams: Promise<
   if (!t) notFound();
   async function noop() { 'use server'; return {}; }
   return (
-    <FormFillView mode="preview" salon={salon.name} first="there" clientName="" apptLine="Your appointment date and time" svcLine="Your service with your stylist"
+    <FormFillView mode="preview" salon={salon.name} first="there" clientName="" apptLine="Your appointment date and time" svcLine="Your service with your team member"
       forms={[toFill(t)]} submit={noop} links={{ back: `/settings/forms?f=${t.id}`, backLabel: 'Forms' }} />
   );
 }

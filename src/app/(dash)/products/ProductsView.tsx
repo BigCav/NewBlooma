@@ -4,7 +4,10 @@
 import { BottomSheet } from '@/components/BottomSheet';
 import { rootCls } from '@/components/drawer';
 import { useNewParam } from '@/components/useNewParam';
-import { decimalInput } from '@/lib/numeric';
+import { dollars } from '@/lib/format';
+import { plural } from '@/lib/display';
+import { initialsOf } from '@/lib/people';
+import { BLACK, Chip, FilterChip, Notice } from '@/components/ui';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
@@ -12,11 +15,10 @@ import { S } from '../calendar/pickers';
 import { ActiveFilter, FilterButton, FilterSheet } from '@/components/FilterBits';
 import { adjustStock, createProduct, removeProduct, saveProduct } from './actions';
 import { ProductBody } from './ProductFlow';
-import { FILTERS, STATUS, initialsOf, money, toneOf, type ProductRow } from './shared';
+import { FILTERS, STATUS, toneOf, type ProductRow } from './shared';
 
 type Props = { rows: ProductRow[]; cats: string[] };
 type Mode = 'view' | 'restock' | 'edit' | 'new';
-const QTYS = [6, 12, 24, 48];
 
 function useProducts(props: Props) {
   const router = useRouter();
@@ -56,7 +58,7 @@ function useProducts(props: Props) {
     setStock((s) => ({ ...s, [p.id]: next }));
     startT(async () => { const r = await adjustStock(p.id, d); if (r.error) { setError(r.error); setStock((s) => { const y = { ...s }; delete y[p.id]; return y; }); } else router.refresh(); });
   };
-  const restock = () => { if (!sel) return; startT(async () => { const r = await adjustStock(sel.id, qty, `Added ${qty} units`); if (r.error) { setError(r.error); return; } setMode('view'); setError(''); setNotice(r.notice ?? ''); router.refresh(); }); };
+  const restock = () => { if (!sel) return; startT(async () => { const r = await adjustStock(sel.id, qty, `Added ${plural(qty, 'unit')}`); if (r.error) { setError(r.error); return; } setMode('view'); setError(''); setNotice(r.notice ?? ''); router.refresh(); }); };
   const saveEdit = () => { if (!sel) return; startT(async () => { const r = await saveProduct(sel.id, ef); if (r.error) { setError(r.error); return; } setMode('view'); setError(''); setNotice(r.notice ?? ''); router.refresh(); }); };
   const create = () => startT(async () => {
     const r = await createProduct(nf);
@@ -77,15 +79,7 @@ function useProducts(props: Props) {
 type C = ReturnType<typeof useProducts>;
 export type ProductsCtl = C;
 
-const GHOST = (h: number) => `flex:1 1 0;height:${h}px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500`;
-const DARK = (h: number) => `flex:1 1 0;height:${h}px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500`;
-const statusStyle = (s: ProductRow['status']) => 'display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;white-space:nowrap;background:' + STATUS[s].bg + ';color:' + STATUS[s].fg;
-const pill = (on: boolean, m: boolean) => `flex:0 0 auto;height:${m ? 44 : 40}px;padding:0 16px;border-radius:999px;font-size:${m ? 14 : 13.5}px;font-weight:500;border:1px solid ` + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
-const inputS: React.CSSProperties = { ...S('box-sizing:border-box;width:100%;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;color:#0E1116;background:#FFFFFF'), padding: '0 14px', minHeight: 0 };
-const bareInput: React.CSSProperties = { ...S('flex:1 1 auto;min-width:0;border:0;outline:none;background:transparent;font:inherit;color:#0E1116'), padding: 0, minHeight: 0, width: 'auto', borderRadius: 0 };
 const tile = (c: C, cat: string, size: number, r: number, fs: number) => { const t = toneOf(c.cats, cat); return `flex:0 0 ${size}px;width:${size}px;height:${size}px;border-radius:${r}px;display:flex;align-items:center;justify-content:center;font-size:${fs}px;font-weight:600;background:${t.bg};color:${t.fg}`; };
-const Field = ({ id, label, children }: { id: string; label: string; children: React.ReactNode }) => <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor={id} style={S('font-size:14px;font-weight:600')}>{label}</label>{children}</div>;
-const Dollar = ({ id, v, on }: { id: string; v: string; on: (v: string) => void }) => <div style={S('display:flex;align-items:center;gap:6px;box-sizing:border-box;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;background:#FFFFFF')}><span style={S('color:#5E6673')}>$</span><input id={id} type="text" inputMode="decimal" value={v} onChange={(e) => on(decimalInput(e.target.value))} placeholder="0" style={bareInput} /></div>;
 
 
 function Desktop({ c }: { c: C }) {
@@ -94,10 +88,11 @@ function Desktop({ c }: { c: C }) {
     <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <PageHeader title="Products" subtitle="Retail and backbar stock" query={c.query} onQuery={c.setQuery} placeholder="Search products" actionLabel="New product" onAction={c.openNew} />
       <section aria-label="Stock at a glance" style={S('display:flex;flex-wrap:wrap;gap:20px 64px')}>{stat('Products', c.rows.length)}{stat('Low stock', c.low)}{stat('Out of stock', c.out)}</section>
+      {!!c.notice && !c.open && <Notice>{c.notice}</Notice>}
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
         <section aria-label="Product list" style={S('flex:999 1 620px;min-width:0;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;overflow:hidden')}>
           <div style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid #E6E8EC')}>
-            <div role="group" aria-label="Filter products" style={S('display:flex;flex-wrap:wrap;gap:8px')}>{FILTERS.map((f) => <button key={f.id} onClick={() => c.setFilter(f.id)} aria-pressed={c.filter === f.id} style={S('height:40px;padding:0 16px;border-radius:999px;font-size:13.5px;font-weight:500;border:1px solid ' + (c.filter === f.id ? '#0E1116' : '#E1E4E9') + ';background:' + (c.filter === f.id ? '#0E1116' : '#FFFFFF') + ';color:' + (c.filter === f.id ? '#FFFFFF' : '#0E1116'))}>{f.label}</button>)}</div>
+            <div role="group" aria-label="Filter products" style={S('display:flex;flex-wrap:wrap;gap:8px')}>{FILTERS.map((f) => <FilterChip key={f.id} on={c.filter === f.id} onClick={() => c.setFilter(f.id)}>{f.label}</FilterChip>)}</div>
             <span style={S('color:#5E6673;font-size:13.5px')}>{`Showing ${c.list.length} of ${c.rows.length}`}</span>
           </div>
           <div style={S('overflow-x:auto')}><div style={S('min-width:780px')}>
@@ -112,10 +107,10 @@ function Desktop({ c }: { c: C }) {
                   <span style={S('min-width:0')}><span style={S('display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{p.name}</span><span style={S('display:block;font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{p.brand}</span></span>
                 </span>
                 <span style={S('flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{p.cat}</span>
-                <span style={S('flex:0.8 1 0;min-width:0')}>{money(p.priceCents)}</span>
+                <span style={S('flex:0.8 1 0;min-width:0')}>{dollars(p.priceCents)}</span>
                 <span style={S('flex:0.8 1 0;min-width:0;font-weight:500')}>{p.stock}</span>
                 <span style={S('flex:1 1 0;min-width:0')}>{p.sold}</span>
-                <span style={S('flex:1.1 1 0;min-width:0')}><span style={S(statusStyle(p.status))}>{p.status}</span></span>
+                <span style={S('flex:1.1 1 0;min-width:0')}><Chip tone={STATUS[p.status].tone}>{p.status}</Chip></span>
               </button>
             ))}
           </div></div>
@@ -135,9 +130,10 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
       <MobileHeader title="Products" subtitle="Retail and backbar stock" query={c.query} onQuery={c.setQuery} placeholder="Search products" />
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:20px')}>
         <section aria-label="Stock at a glance" style={S('display:flex;gap:40px')}>{stat('Products', c.rows.length)}{stat('Low stock', c.low)}{stat('Out of stock', c.out)}</section>
+        {!!c.notice && !c.open && <Notice>{c.notice}</Notice>}
         <div style={S('display:flex;gap:10px')}>
           <FilterButton onClick={() => setFopen(true)} active={c.filter !== 'all'} label="Filter products" />
-          <button onClick={c.openNew} style={S('flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:8px;height:52px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500')}>
+          <button onClick={c.openNew} style={S(BLACK + ';gap:8px')}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
             New product
           </button>
@@ -149,8 +145,8 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
               <li key={p.id}>
                 <button onClick={() => c.pick(p.id)} aria-label={`${p.name}, ${p.brand}, ${p.stock} in stock, ${p.status}`} style={S('display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:68px;padding:10px 16px;border:0;border-bottom:1px solid #EEF0F3;background:transparent;text-align:left;font:inherit;color:#0E1116;cursor:pointer')}>
                   <span style={S(tile(c, p.cat, 40, 12, 13))}>{initialsOf(p.name)}</span>
-                  <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{p.name}</span><span style={S('display:block;font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{p.brand}, {money(p.priceCents)}</span></span>
-                  <span style={S('flex:0 0 auto;text-align:right')}><span style={S('display:block;font-size:14.5px;font-weight:600')}>{p.stock}</span><span style={S('display:block;margin-top:2px')}><span style={S(statusStyle(p.status))}>{p.status}</span></span></span>
+                  <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{p.name}</span><span style={S('display:block;font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{p.brand}, {dollars(p.priceCents)}</span></span>
+                  <span style={S('flex:0 0 auto;text-align:right')}><span style={S('display:block;font-size:14.5px;font-weight:600')}>{p.stock}</span><span style={S('display:block;margin-top:2px')}><Chip tone={STATUS[p.status].tone}>{p.status}</Chip></span></span>
                 </button>
               </li>
             ))}

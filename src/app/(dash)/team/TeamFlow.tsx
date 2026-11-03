@@ -1,22 +1,19 @@
 'use client';
-import { FIELD_IN } from '@/components/ui';
+import { FIELD_IN, Avatar, BLACK, CLOSE, DOTS, MENU_ROW, Chip, Notice, RING, dim } from '@/components/ui';
 import { BottomSheet } from '@/components/BottomSheet';
 import { ConfirmBox } from '@/components/ConfirmBox';
+import { clockStr, timeRange } from '@/lib/display';
+import { firstName } from '@/lib/people';
+import { Field } from '../settings/forms/FormPage';
 import { useState } from 'react';
 import { S } from '../calendar/pickers';
-import { CLOSE_BTN as RING_BTN, CloseX } from '../calendar/calUi';
 import { ROW, TICK, ICONS, StepShell, useSteps, Tiles, DetailRows } from '../calendar/wizardUi';
 import { OwnerStar } from './OwnerStar';
-import { DAYS, DAY_FULL, SHIFTS, clock24, initialsOf, photoCss } from './shared';
+import { DAYS, DAY_FULL, SHIFTS } from './shared';
 import type { TeamCtl } from './TeamView';
 
 const TIME_IN = { ...S('box-sizing:border-box;flex:1 1 0;min-width:0;max-width:150px;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF'), minHeight: 0 } as const;
 
-function Field({ label, children, htmlFor }: { label: string; children: React.ReactNode; htmlFor?: string }) {
-  return <label htmlFor={htmlFor} style={S('display:block;box-sizing:border-box;padding:10px 16px 12px;border:1px solid #E1E4E9;border-radius:16px;background:#FFFFFF')}><span style={S('display:block;font-size:12.5px;color:#5E6673')}>{label}</span>{children}</label>;
-}
-
-const AVATAR = 'flex:0 0 72px;width:72px;height:72px;border-radius:999px;background:#EEF0F3;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600';
 const PILL = 'display:inline-flex;align-items:center;justify-content:center;height:44px;padding:0 18px;border-radius:999px;border:1px solid #E1E4E9;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;cursor:pointer';
 
 /**
@@ -44,15 +41,15 @@ export function TeamFlow({ c }: { c: TeamCtl }) {
 
   const days = d.days.slice().sort((a, b) => a - b);
   const same = days.length > 0 && days.every((x) => d.times[x][0] === d.times[days[0]][0] && d.times[x][1] === d.times[days[0]][1]);
-  const hoursText = !days.length ? 'No working days' : same ? clock24(d.times[days[0]][0]) + ' to ' + clock24(d.times[days[0]][1]) : 'Hours vary by day';
+  const hoursText = !days.length ? 'No working days' : same ? timeRange(clockStr(d.times[days[0]][0]), clockStr(d.times[days[0]][1])) : 'Hours vary by day';
   const daysText = !days.length ? 'No working days' : days.length === 7 ? 'Every day' : days.map((x) => DAYS[x]).join(', ');
-  const first = (cur?.name ?? d.name).split(' ')[0] || 'them';
+  const first = firstName(cur?.name ?? d.name, 'them');
   const canRemove = !isNew && !!cur && !cur.isOwner;
 
   const summaryBar = (
     <div style={S('display:flex;gap:10px')}>
-      {canRemove && <button type="button" onClick={() => setMenu(true)} aria-label="More actions" aria-haspopup="dialog" style={S(RING_BTN + ';flex:0 0 52px;width:52px;height:52px')}><svg width="20" height="20" viewBox="0 0 24 24" fill="#0E1116"><circle cx="12" cy="5.5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="18.5" r="1.6" /></svg></button>}
-      <button type="button" onClick={c.save} disabled={busy} style={S('flex:1 1 0;height:52px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;cursor:pointer')}>{isNew ? 'Add team member' : 'Save changes'}</button>
+      {canRemove && <button type="button" onClick={() => setMenu(true)} aria-label="More actions" aria-haspopup="dialog" style={S(RING + ';flex:0 0 52px;width:52px;height:52px')}>{DOTS}</button>}
+      <button type="button" onClick={c.save} disabled={busy} style={S(BLACK + dim(busy))}>{busy ? (isNew ? 'Adding…' : 'Saving…') : isNew ? 'Add team member' : 'Save changes'}</button>
     </div>
   );
 
@@ -63,7 +60,7 @@ export function TeamFlow({ c }: { c: TeamCtl }) {
       <div style={S('display:flex;flex-direction:column;gap:14px')}>
         {kind === 'details' && (<>
           <div style={S('display:flex;align-items:center;gap:16px')}>
-            <span aria-hidden="true" style={S(AVATAR + photoCss(cur?.photo ?? null))}>{cur?.photo ? '' : initialsOf(d.name || '?')}</span>
+            <Avatar name={d.name} photo={cur?.photo} size="xxl" />
             {isNew ? <span style={S('font-size:13px;color:#5E6673')}>Save the team member first, then add a photo.</span> : (
               <div style={S('display:flex;flex-wrap:wrap;gap:8px')}>
                 <label style={S(PILL)}>
@@ -74,9 +71,10 @@ export function TeamFlow({ c }: { c: TeamCtl }) {
               </div>
             )}
           </div>
-          {c.askPhoto && <ConfirmBox label="Confirm removal" title="Remove this photo?" body="The initials show instead until you add another." action="Remove photo" onAction={() => { c.setAskPhoto(false); c.dropPhoto(); }} onKeep={() => c.setAskPhoto(false)} busy={c.photoBusy} />}
+          {!!c.notice && <Notice>{c.notice}</Notice>}
+          {c.askPhoto && <ConfirmBox label="Confirm removal" title="Remove this photo?" body="The initials show instead until you add another." action="Remove photo" keep="Keep photo" onAction={() => { c.setAskPhoto(false); c.dropPhoto(); }} onKeep={() => c.setAskPhoto(false)} busy={c.photoBusy} />}
           <Field label="Name" htmlFor="tm-name"><input id="tm-name" type="text" value={d.name} onChange={(e) => c.setDraft('name', e.target.value)} placeholder="Full name" style={FIELD_IN} /></Field>
-          <Field label="Role (optional)" htmlFor="tm-role"><input id="tm-role" type="text" value={d.role} onChange={(e) => c.setDraft('role', e.target.value)} placeholder="For example, Senior stylist" style={FIELD_IN} /></Field>
+          <Field label="Role (optional)" htmlFor="tm-role"><input id="tm-role" type="text" value={d.role} onChange={(e) => c.setDraft('role', e.target.value)} placeholder="For example, Senior colourist" style={FIELD_IN} /></Field>
         </>)}
 
         {kind === 'services' && (<>
@@ -126,7 +124,7 @@ export function TeamFlow({ c }: { c: TeamCtl }) {
 
         {kind === 'summary' && (<>
           <div style={S('display:flex;align-items:center;gap:14px;box-sizing:border-box;padding:14px 16px;border:1px solid #E6E8EC;border-radius:20px;background:#FAFAFB')}>
-            <span aria-hidden="true" style={S(AVATAR.replace(/72px/g, '56px') + photoCss(cur?.photo ?? null))}>{cur?.photo ? '' : initialsOf(d.name || '?')}</span>
+            <Avatar name={d.name} photo={cur?.photo} size="xl" />
             <div style={S('flex:1 1 auto;min-width:0')}>
               <div style={S('font-size:16px;font-weight:600;overflow-wrap:anywhere')}>{d.name.trim() || 'Name'}{cur?.isOwner && <OwnerStar />}</div>
               <div style={S('font-size:13px;color:#5E6673;overflow-wrap:anywhere')}>{d.role.trim() || 'No role'}</div>
@@ -143,7 +141,7 @@ export function TeamFlow({ c }: { c: TeamCtl }) {
             <div style={S('display:flex;flex-direction:column;gap:8px;margin-top:6px')}>
               <span style={S('font-size:14px;font-weight:600')}>Sign-in</span>
               {cur.linked
-                ? <span style={S('font-size:13.5px;color:#14624A')}>They have their own login.</span>
+                ? <span><Chip tone="green">Has their own login</Chip></span>
                 : c.invite
                   ? (<>
                       <input readOnly aria-label="Invite link" value={c.invite} onFocus={(e) => e.currentTarget.select()} style={{ ...S('box-sizing:border-box;width:100%;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF'), minHeight: 0 }} />
@@ -159,13 +157,13 @@ export function TeamFlow({ c }: { c: TeamCtl }) {
     </StepShell>
     {menu && (
       <BottomSheet label="More actions" onClose={() => { setMenu(false); setConfirm(false); }} z={6} gap={0} handleGap={12}>
-          <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px')}><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>More actions</h2><button onClick={() => { setMenu(false); setConfirm(false); }} aria-label="Close" style={S(RING_BTN)}><CloseX /></button></div>
+          <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px')}><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>More actions</h2><button onClick={() => { setMenu(false); setConfirm(false); }} aria-label="Close" style={S(RING)}>{CLOSE}</button></div>
           {!confirm ? (
             <div style={S('display:flex;flex-direction:column;padding:4px 0;border-top:1px solid #EEF0F3')}>
-              <button type="button" onClick={() => setConfirm(true)} style={S('display:flex;align-items:center;width:100%;min-height:54px;box-sizing:border-box;padding:0;border:0;background:transparent;font:inherit;font-size:16px;text-align:left;color:#B42318;cursor:pointer')}>Remove team member</button>
+              <button type="button" onClick={() => setConfirm(true)} style={S(MENU_ROW + ';color:#B42318')}>Remove team member</button>
             </div>
           ) : (
-            <ConfirmBox label="Confirm removal" title="Remove this team member?" body="They will no longer appear on the calendar or in online booking." error={error} action="Remove" onAction={c.remove} busy={busy} onKeep={() => { setConfirm(false); setMenu(false); }} />
+            <ConfirmBox label="Confirm removal" title={'Remove ' + (cur?.name ?? 'this team member') + '?'} body="They will no longer appear on the calendar or in online booking." error={error} action="Remove team member" keep="Keep team member" onAction={c.remove} busy={busy} onKeep={() => { setConfirm(false); setMenu(false); }} />
           )}
         </BottomSheet>
     )}

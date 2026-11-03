@@ -1,6 +1,7 @@
 'use server';
 import { revalidatePath } from 'next/cache';
 import { requireOwner, friendly } from '@/lib/session';
+import { toCents } from '@/lib/format';
 
 export type SvcInput = { id?: string; name: string; categoryId: string; dur: number; price: string; desc: string; online: boolean; staffIds: string[]; addon: boolean; parentIds: string[] };
 
@@ -36,9 +37,9 @@ export async function deleteCategory(id: string): Promise<{ error?: string }> {
 export async function saveService(i: SvcInput): Promise<{ error?: string; id?: string; created?: boolean }> {
   const { sb, salon } = await requireOwner();
   const name = i.name.trim();
-  const price = parseFloat(i.price);
+  const cents = toCents(i.price);
   if (!name) return { error: 'Give the service a name.' };
-  if (isNaN(price) || Math.round(price * 100) < 1) return { error: 'Enter a price above zero, like 45 or 45.50.' };
+  if (cents < 1) return { error: 'Enter a price above zero, like 45 or 45.50.' };
   // An add-on has no category of its own: it sits with the first service it is offered with.
   let categoryId = i.categoryId;
   if (i.addon) {
@@ -49,7 +50,7 @@ export async function saveService(i: SvcInput): Promise<{ error?: string; id?: s
   if (!(i.dur > 0)) return { error: 'Choose how long it takes.' };
   if (i.addon && !i.parentIds.length) return { error: 'Choose at least one service this add-on goes with.' };
   if (!i.addon && !i.staffIds.length) return { error: 'Choose who does this service, so clients can book it.' };
-  const row = { salon_id: salon.id, category_id: categoryId, name, description: i.desc.trim() || null, duration_min: i.dur, price_cents: Math.round(price * 100), online_bookable: i.online, is_addon: i.addon };
+  const row = { salon_id: salon.id, category_id: categoryId, name, description: i.desc.trim() || null, duration_min: i.dur, price_cents: cents, online_bookable: i.online, is_addon: i.addon };
   let id = i.id;
   if (id) {
     const { error } = await sb.from('services').update(row).eq('id', id); if (error) return { error: friendly(error.message) };

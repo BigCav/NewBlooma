@@ -1,5 +1,15 @@
 import 'server-only';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { dayInfo } from '@/lib/cal';
+import { time12, ymd as ymdOf } from '@/lib/format';
+
+/** "Tue 3 Nov" for an instant, in the salon's timezone: the one short date shape (the year is added when it is not this year). */
+export function dateShort(iso: string | Date, tz: string) {
+  const y = ymdOf(iso, tz);
+  return dayInfo(y).short + (y.slice(0, 4) === ymdOf(new Date(), tz).slice(0, 4) ? '' : ' ' + y.slice(0, 4));
+}
+/** "Tue 3 Nov, 2:00pm". */
+export const whenShort = (iso: string | Date, tz: string) => `${dateShort(iso, tz)}, ${time12(iso, tz)}`;
 
 export async function getPublicSalon(slug: string) {
   const sb = supabaseAdmin();
@@ -46,6 +56,6 @@ export async function nextAvailableLabel(salonId: string, tz: string, serviceIds
   const day = ymd(best);
   const time = new Intl.DateTimeFormat('en-NZ', { timeZone: tz, hour: 'numeric', minute: '2-digit', hour12: true }).format(best).replace(/\s/g, '').toLowerCase();
   const tomorrow = ymd(new Date(now.getTime() + 864e5));
-  const when = day === from ? 'Today' : day === tomorrow ? 'Tomorrow' : new Intl.DateTimeFormat('en-GB', { timeZone: tz, weekday: 'short', day: 'numeric', month: 'short' }).format(best).replace(',', '');
+  const when = day === from ? 'Today' : day === tomorrow ? 'Tomorrow' : dayInfo(day).short;
   return `${when}, ${time}`;
 }

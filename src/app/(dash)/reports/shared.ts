@@ -1,9 +1,10 @@
-// Shapes the report_dashboard RPC output into the view model the Reports screens render.
+// Shapes the report_dashboard RPC output into the view model the Reports screens render. All money is in cents, as on Sales.
+import { clock12 } from '@/lib/display';
 export type Dir = 'up' | 'down' | 'flat';
 export type Period = {
   id: 'today' | 'week' | 'month' | 'year'; label: string; prev: string; sentence: string;
   revenue: number; appts: number; rebook: number; d: { revenue: [string, Dir]; appts: [string, Dir]; avg: [string, Dir]; rebook: [string, Dir] };
-  hi: number; bars: [string, number][]; services: [string, number, number][]; team: [string, number, number][]; fresh: number; hasClients: boolean;
+  hi: number; bars: [string, number][]; services: [string, number, number][]; /** name, cents, percent of time booked, staff id (empty when the report does not send one) */ team: [string, number, number, string][]; fresh: number; hasClients: boolean;
 };
 export type Heat = { label: string; values: number[] }[];
 export const PERIOD_DEFS = [
@@ -18,6 +19,8 @@ const parse = (s: string) => { const [y, m, d] = s.split('-').map(Number); retur
 const iso = (t: number) => new Date(t).toISOString().slice(0, 10);
 const utc = (s: string) => { const { y, m, d } = parse(s); return Date.UTC(y, m - 1, d); };
 export const addD = (s: string, n: number) => iso(utc(s) + n * 86400000);
+/** An hour of the day as a 12-hour label, 14 becomes "2pm". */
+const hourLabel = (h: number) => clock12(h * 60).replace(':00', '');
 const wd = (s: string) => (new Date(utc(s)).getUTCDay() + 6) % 7;
 
 export function ranges(today: string) {
@@ -52,28 +55,28 @@ export function buildPeriod(def: (typeof PERIOD_DEFS)[number], r: any, from: str
   if (def.id === 'today') {
     const hrs: Record<number, number> = {}; for (const x of r.by_hour) hrs[x.hour] = Number(x.cents);
     const keys = Object.keys(hrs).map(Number);
-    if (keys.length) { const lo = Math.min(...keys), hiH = Math.max(...keys); for (let h = lo; h <= hiH; h++) bars.push([String(h), hrs[h] ?? 0]); }
-    hi = Math.max(0, bars.findIndex((b) => b[0] === String(nowHour)));
-    if (!bars.some((b) => b[0] === String(nowHour))) hi = bars.length - 1;
+    if (keys.length) { const lo = Math.min(...keys), hiH = Math.max(...keys); for (let h = lo; h <= hiH; h++) bars.push([hourLabel(h), hrs[h] ?? 0]); }
+    hi = Math.max(0, bars.findIndex((b) => b[0] === hourLabel(nowHour)));
+    if (!bars.some((b) => b[0] === hourLabel(nowHour))) hi = bars.length - 1;
   } else if (def.id === 'week') {
     for (let i = 0; i < 7; i++) { const s = addD(from, i); bars.push([DOW[wd(s)], day[s] ?? 0]); }
     hi = 6;
   } else if (def.id === 'month') {
-    for (let b = 0; b < 6; b++) { let t = 0; for (let i = 0; i < 5; i++) t += day[addD(from, b * 5 + i)] ?? 0; const p = parse(addD(from, b * 5)); bars.push([`${MON[p.m - 1]} ${p.d}`, t]); }
+    for (let b = 0; b < 6; b++) { let t = 0; for (let i = 0; i < 5; i++) t += day[addD(from, b * 5 + i)] ?? 0; const p = parse(addD(from, b * 5)); bars.push([`${p.d} ${MON[p.m - 1]}`, t]); }
     hi = 5;
   } else {
     const mo: number[] = Array(12).fill(0); for (const k of Object.keys(day)) mo[parse(k).m - 1] += day[k];
     for (let i = 0; i < parse(to).m; i++) bars.push([MON[i], mo[i]]);
     hi = bars.length - 1;
   }
-  const team: [string, number, number][] = (r.team as any[]).map((t) => [t.name, Number(t.cents), t.avail_min ? Math.min(100, Math.round(t.booked_min / t.avail_min * 100)) : 0]);
+  const team: [string, number, number, string][] = (r.team as any[]).map((t) => [t.name, Number(t.cents), t.avail_min ? Math.min(100, Math.round(t.booked_min / t.avail_min * 100)) : 0, String(t.staff_id ?? t.id ?? '')]);
   const clients = Number(cur.clients);
   return {
-    id: def.id, label: def.label, prev: def.prev, sentence: def.sentence, revenue: Math.round(rev / 100), appts, rebook: rate(cur),
+    id: def.id, label: def.label, prev: def.prev, sentence: def.sentence, revenue: rev, appts, rebook: rate(cur),
     d: { revenue: pctText(rev, prevRev), appts: pctText(appts, prevAppts), avg: pctText(Math.round(avg), Math.round(prevAvg)), rebook: ptsText(rate(cur), rate(prev)) },
-    hi, bars: bars.map(([l, c]) => [l, Math.round(c / 100)] as [string, number]),
-    services: (r.services as any[]).map((s) => [s.name, s.count, Math.round(Number(s.cents) / 100)] as [string, number, number]),
-    team: team.map(([n, c, u]) => [n, Math.round(c / 100), u] as [string, number, number]),
+    hi, bars,
+    services: (r.services as any[]).map((s) => [s.name, s.count, Number(s.cents)] as [string, number, number]),
+    team,
     fresh: clients ? Math.round(Number(cur.new_clients) / clients * 100) : 0, hasClients: clients > 0,
   };
 }

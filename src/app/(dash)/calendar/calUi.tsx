@@ -1,40 +1,54 @@
-import { TONE } from '@/lib/tones';
-import { BLACK as PRIMARY, OUTLINE as SECOND } from '@/components/ui';
+import { TONE, type ToneName } from '@/lib/tones';
+import { BLACK as PRIMARY, OUTLINE as SECOND, RING, CLOSE, Notice } from '@/components/ui';
 export { PRIMARY, SECOND };
-import { dollars } from '@/lib/format';
+import { bookingStatus } from '@/lib/status';
+import { duration, timeRange } from '@/lib/display';
+import { S } from './pickers';
 import type { CoPackage, CoProduct } from '../sales/shared';
-import { type CalBlock, type CalBooking, type CalHours, type CalService, type CalSettings, type CalStaff } from '@/lib/cal';
+import { fmtMin, type CalBlock, type CalBooking, type CalHours, type CalService, type CalSettings, type CalStaff } from '@/lib/cal';
 export const HATCH = 'repeating-linear-gradient(135deg,#F7F8FA 0,#F7F8FA 8px,#ECEEF2 8px,#ECEEF2 16px)';
-export const first = (n: string) => n.split(' ')[0];
-export const usd = dollars;
-export const m2 = dollars;
-export const BLOCK_DURS_M: [number, string][] = [[30, '30 min'], [60, '1 hour'], [120, '2 hours'], [180, '3 hours'], [-1, 'All day']];
+export const BLOCK_DURS_M: [number, string][] = [[30, duration(30)], [60, duration(60)], [120, duration(120)], [180, duration(180)], [-1, 'All day']];
 export const METHODS: [string, string][] = [['card', 'Card'], ['cash', 'Cash'], ['gift_card', 'Gift card']];
 export const TIP_OPTS: [number, string][] = [[0, 'No tip'], [10, '10%'], [15, '15%'], [20, '20%']];
 export const STEP = 30;
 
-export const chipTone: Record<string, { t: string; bg: string; fg: string }> = {
-  live: { t: 'In progress', bg: '#5B3DF5', fg: '#FFFFFF' }, confirmed: { t: 'Confirmed', ...TONE.green }, done: { t: 'Completed', ...TONE.grey },
-  pending: { t: 'Needs approval', ...TONE.amber },
-};
+/** @deprecated Status chips come from `bookingStatus()` in lib/status. Kept for one release so the inbox keeps compiling; it now reads that table. */
+const kindStatus = { live: 'in_progress', confirmed: 'confirmed', done: 'completed', pending: 'pending' } as const;
+export const chipTone: Record<string, { t: string; bg: string; fg: string }> = Object.fromEntries(
+  Object.entries(kindStatus).map(([k, st]) => { const b = bookingStatus(st); return [k, { t: b.label, ...TONE[b.tone] }]; }),
+);
+/** A short text for a start and end in minutes: "2:00pm to 3:30pm". */
+export const spanText = (a: number, b: number) => timeRange(fmtMin(a), fmtMin(b));
+/** A note box in the colours of a tone (green good news, red a problem, purple a heads-up). */
+export const noteTone = (t: ToneName) => note(TONE[t].bg, TONE[t].fg);
 export const kindOf = (s: CalBooking['status']) => (s === 'checked_in' || s === 'in_progress' ? 'live' : s === 'completed' ? 'done' : s === 'pending' ? 'pending' : 'confirmed');
-export const chip = (on: boolean, off = false) => 'flex:0 0 auto;height:44px;padding:0 16px;border-radius:999px;font-size:14px;font-weight:500;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : (off ? '#F4F5F7' : '#FFFFFF')) + ';color:' + (on ? '#FFFFFF' : (off ? '#8A93A0' : '#0E1116')) + (off ? ';cursor:default' : '');
 export const slotCss = (on: boolean, why: boolean) => 'width:100%;height:44px;padding:0;border-radius:14px;font-size:14px;font-weight:500;font-family:inherit;border:1px solid ' + (on ? '#0E1116' : (why ? '#EEF0F3' : '#E1E4E9')) + ';background:' + (on ? '#0E1116' : (why ? '#F4F5F7' : '#FFFFFF')) + ';color:' + (on ? '#FFFFFF' : (why ? '#8A93A0' : '#0E1116')) + (why ? ';text-decoration:line-through;cursor:default' : '');
 export const dayCss = (on: boolean, closed: boolean) => 'flex:0 0 60px;height:76px;box-sizing:border-box;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:inherit;border:1px solid ' + (on ? '#0E1116' : '#E6E8EC') + ';background:' + (on ? '#0E1116' : (closed ? '#F4F5F7' : '#FFFFFF')) + ';color:' + (on ? '#FFFFFF' : (closed ? '#8A93A0' : '#0E1116')) + (closed ? ';cursor:default' : '');
 export const note = (bg: string, fg: string) => 'border-radius:16px;background:' + bg + ';color:' + fg + ';padding:12px 14px;font-size:13.5px;font-weight:500';
-export const CLOSE_BTN = 'flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer';
+/** @deprecated Use RING from components/ui. */
+export const CLOSE_BTN = RING;
 export const H2S = 'margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em';
-export const ERR = 'margin:0;color:#B42318;font-size:13.5px;font-weight:500';
 export const DLROW = 'display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #EEF0F3';
 
-export function CloseX({ sw = 1.9 }: { sw?: number }) {
-  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth={sw} strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>;
+/** @deprecated Use CLOSE from components/ui. */
+export function CloseX() { return CLOSE; }
+
+/** A success message that can be dismissed: under the header on the calendar, or inside an open sheet. */
+export function NoticeBar({ text, onDismiss }: { text: string; onDismiss: () => void }) {
+  return (
+    <div style={S('display:flex;align-items:center;gap:4px;flex:0 0 auto')}>
+      <Notice>{text}</Notice>
+      <button onClick={onDismiss} aria-label="Dismiss message" style={S('flex:0 0 44px;width:44px;height:44px;border:0;border-radius:999px;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer')}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
+    </div>
+  );
 }
 export const Mag = ({ size, color }: { size: number; color: string }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></svg>;
 
+/** A booking as the calendar page builds it: the usual fields plus what its sale came to (tip and discount included), for the refund. */
+export type CalBk = CalBooking & { saleCents?: number };
 export type Avail = { key: string; busy: { s: number; e: number }[]; open: boolean; from: number; to: number } | null;
 export type Props = {
-  day: string; today: string; view: 'day' | 'week'; nowMin: number; team: CalStaff[]; bookings: CalBooking[]; blocks: CalBlock[]; hours: CalHours[]; services: CalService[];
+  day: string; today: string; view: 'day' | 'week'; nowMin: number; team: CalStaff[]; bookings: CalBk[]; blocks: CalBlock[]; hours: CalHours[]; services: CalService[];
   /** Days the salon is closed (date to reason), on top of the weekly hours. */
   closed?: Record<string, string>;
   offers: Record<string, string[]>; cfg: CalSettings; slug: string; tz: string; recent: { id: string; name: string; phone?: string }[]; products?: CoProduct[]; packages?: Record<string, CoPackage[]>; terminal?: boolean; initialNew?: boolean; initialClient?: string; initialSel?: string; staffFilter: string; remoteSearch?: boolean;

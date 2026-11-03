@@ -5,10 +5,15 @@ import { NO_DISC, discountCents, type DiscPick } from '../sales/shared';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { useTerminal } from '../sales/useTerminal';
-import { TONE_LIST, addDaysYmd, dayInfo, fmtMin, initials, weekStartOf, type CalBlock, type CalBooking, type CalHours, type CalService, type CalSettings, type CalStaff, BLOCK_KINDS, slotsBetween, serviceRules } from '@/lib/cal';
+import { TONE_LIST, addDaysYmd, dayInfo, fmtMin, weekStartOf, type CalBlock, type CalBooking, type CalHours, type CalService, type CalSettings, type CalStaff, BLOCK_KINDS, slotsBetween, serviceRules } from '@/lib/cal';
 import { delayStaffDay, noShowBooking, messageBookingClient, addWalkIn, approveBooking, cancelBooking, checkInBooking, checkoutBooking, createBlock, dayAvailability, deleteBlock, editBooking, rebookBooking, rescheduleBooking, walkinPlan, createNewAppointment, startCardForSale, payNowBooking, searchBookings, type SearchHit } from './actions';
 
-import { first, usd, m2, BLOCK_DURS_M, METHODS, TIP_OPTS, STEP, chipTone, kindOf, note, HATCH, type Avail, type Props } from './calUi';
+import { STEP, kindOf, note, noteTone, spanText, type Avail, type CalBk, type Props } from './calUi';
+import { refundSale } from '../sales/actions';
+import { dollars } from '@/lib/format';
+import { duration, plural, refDigits } from '@/lib/display';
+import { bookingStatus } from '@/lib/status';
+import { firstName } from '@/lib/people';
 export function useCalendar(props: Props) {
   const { day, today, view, tz, team, bookings, blocks, hours, services, offers, cfg } = props;
   const router = useRouter();
@@ -20,7 +25,7 @@ export function useCalendar(props: Props) {
   const [query, setQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<'view' | 'new' | 'checkout' | 'edit' | 'blockview' | 'block' | 'late' | 'walkin' | 'resched' | 'message'>('view');
+  const [mode, setMode] = useState<'view' | 'new' | 'checkout' | 'edit' | 'blockview' | 'block' | 'late' | 'walkin' | 'resched' | 'message' | 'refund'>('view');
   const [selId, setSelId] = useState<string | null>(null);
   const [blockId, setBlockId] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
@@ -39,7 +44,8 @@ export function useCalendar(props: Props) {
   const hrsOf = (ymd: string) => { const h = hours[dayInfo(ymd).wd]; return ymd in closedDays ? { ...h, open: false } : h; };
   const closedWhy = (ymd: string) => closedDays[ymd];
   const [cancelAsk, setCancelAsk] = useState(false);
-  useEffect(() => { setCancelAsk(false); }, [selId, mode]);
+  const [confirmRefund, setConfirmRefund] = useState(false);
+  useEffect(() => { setCancelAsk(false); setConfirmRefund(false); }, [selId, mode]);
   const go = (d: string, v: 'day' | 'week' = view) => { setNotice(''); setOpen(false); setMode('view'); startT(() => router.push(`/calendar?d=${d}&v=${v}`)); };
   const refresh = () => router.refresh();
 
@@ -80,19 +86,19 @@ export function useCalendar(props: Props) {
   }, [mode, wi.svc, wi.pro]);
 
   /* ---------- view-models ---------- */
-  const vm = (b: CalBooking) => {
-    const k = kindOf(b.status), ct = chipTone[k], tone = TONE_LIST[b.tone % 4];
-    const time = fmtMin(b.start) + ' – ' + fmtMin(b.end);
-    const f = first(staffName(b.staffId));
+  const vm = (b: CalBk) => {
+    const k = kindOf(b.status), status = bookingStatus(b.status), tone = TONE_LIST[b.tone % 4];
+    const time = spanText(b.start, b.end);
+    const f = firstName(staffName(b.staffId), '');
     return {
       b, k, tone, time, f,
       line: b.services + ' with ' + f + ', ' + (k === 'live' ? 'until ' + fmtMin(b.end) : time),
-      sub: b.services + ' with ' + f, priceText: usd(b.priceCents),
+      sub: b.services + ' with ' + f, priceText: dollars(b.priceCents),
       label: b.client + ', ' + b.services + ', ' + time,
-      chipText: ct.t, chipStyle: 'display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;background:' + ct.bg + ';color:' + ct.fg,
-      avatarStyle: 'flex:0 0 52px;width:52px;height:52px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;background:' + tone.bg + ';color:' + tone.fg,
+      // One label and one colour per status, from lib/status: the card and the sheet say the same thing.
+      status,
       primaryLabel: k === 'live' ? 'Start checkout' : k === 'confirmed' ? 'Check in' : k === 'pending' ? 'Approve' : b.saleId ? 'View sale' : 'Done',
-      secondaryLabel: k === 'done' ? 'Rebook' : 'Reschedule',
+      secondaryLabel: k === 'done' ? 'Book again' : 'Reschedule',
       canEdit: k !== 'done',
       style: 'flex:1 1 0;min-width:0;min-height:64px;box-sizing:border-box;padding:10px 16px;border:0;border-radius:18px;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;background:' + tone.bg + ';color:' + tone.fg,
     };
@@ -103,21 +109,21 @@ export function useCalendar(props: Props) {
     setNotice((r && r.note) || ok); done?.(); refresh();
   });
   const started = (b: { dayYmd: string; start: number }) => b.dayYmd < today || (b.dayYmd === today && b.start <= now);
-  const markNoShow = (b: { id: string; client: string }) => act(() => noShowBooking(b.id), first(b.client) + ' marked as a no-show', () => { setOpen(false); setMode('view'); });
+  const markNoShow = (b: { id: string; client: string }) => act(() => noShowBooking(b.id), firstName(b.client, '') + ' marked as a no-show', () => { setOpen(false); setMode('view'); });
   const [msg, setMsg] = useState('');
   const startMessage = () => { setMsg(''); setMode('message'); setError(''); setNotice(''); };
   const sendMessage = () => { if (!cur) return; if (!msg.trim()) { setError('Write a message first.'); return; } act(() => messageBookingClient(cur.id, msg), 'Message sent', () => { setMode('view'); setMsg(''); }); };
   const openBooking = (id: string) => { setSelId(id); setOpen(true); setMode('view'); setError(''); setNotice(''); };
   const openBlock = (id: string) => { setBlockId(id); setOpen(true); setMode('blockview'); setError(''); setNotice(''); };
   const startCheckout = (id: string) => { setSelId(id); setOpen(true); setMode('checkout'); setCo({ method: 'card', tip: cfg.askTip ? cfg.tipDefault : 0, code: '', disc: NO_DISC, svc: null, prods: {}, pkgs: [] }); setError(''); setNotice(''); };
-  const primary = (b: CalBooking) => {
+  const primary = (b: CalBk) => {
     const k = kindOf(b.status);
-    if (k === 'confirmed') { if (b.dayYmd > today) { setError('You can check someone in on the day of their appointment.'); return; } act(() => checkInBooking(b.id), first(b.client) + ' checked in'); }
-    else if (k === 'pending') act(() => approveBooking(b.id), first(b.client) + ' approved');
+    if (k === 'confirmed') { if (b.dayYmd > today) { setError('You can check someone in on the day of their appointment.'); return; } act(() => checkInBooking(b.id), firstName(b.client, '') + ' checked in'); }
+    else if (k === 'pending') act(() => approveBooking(b.id), firstName(b.client, '') + ' approved');
     else if (k === 'live') startCheckout(b.id);
     else if (b.saleId) router.push(`/sales?sale=${b.saleId}`);
   };
-  const startResched = (b: CalBooking, rebook: boolean) => {
+  const startResched = (b: CalBk, rebook: boolean) => {
     let d = rebook ? addDaysYmd(b.dayYmd, 7) : b.dayYmd;
     if (d < today) d = today;
     if (!hrsOf(d)?.open) for (let i = 1; i < 8; i++) { const n = addDaysYmd(d, i); if (hrsOf(n)?.open) { d = n; break; } }
@@ -125,7 +131,9 @@ export function useCalendar(props: Props) {
   };
 
   /* ---------- derived lists (as Mobile.dc.html renderVals) ---------- */
-  const todayList = dayB.filter((b) => !sq || (b.client + ' ' + b.services + ' ' + (b.ref ?? '')).toLowerCase().includes(sq)).sort((a, b) => a.start - b.start).map(vm);
+  // "B-1048" is how a booking is shown everywhere, so the search takes it as well as the bare number.
+  const sqRef = refDigits(sq);
+  const todayList = dayB.filter((b) => !sq || (b.client + ' ' + b.services + ' ' + (b.ref ?? '')).toLowerCase().includes(sq) || (/^\d+$/.test(sqRef) && String(b.ref ?? '').includes(sqRef))).sort((a, b) => a.start - b.start).map(vm);
   const activeCards = todayList.filter((x) => x.k === 'live');
   const upcoming = todayList.filter((x) => x.k !== 'done' && x.k !== 'live');
   const cards = activeCards.length ? activeCards : upcoming.slice(0, 1);
@@ -133,8 +141,8 @@ export function useCalendar(props: Props) {
   const doneBk = todayList.filter((x) => x.k === 'done');
   const blockRows = blocks.filter((b) => b.dayYmd === day && (day !== today || b.end > now) && !sq).map((b) => ({
     start: b.start, startText: fmtMin(b.start), client: BLOCK_KINDS.find((k) => k[0] === b.kind)?.[1] ?? 'Blocked', priceText: '',
-    sub: first(staffName(b.staffId)) + ', until ' + fmtMin(b.end),
-    label: (BLOCK_KINDS.find((k) => k[0] === b.kind)?.[1] ?? 'Blocked') + ', ' + first(staffName(b.staffId)) + ', ' + fmtMin(b.start) + ' to ' + fmtMin(b.end),
+    sub: firstName(staffName(b.staffId), '') + ', until ' + fmtMin(b.end),
+    label: (BLOCK_KINDS.find((k) => k[0] === b.kind)?.[1] ?? 'Blocked') + ', ' + firstName(staffName(b.staffId), '') + ', ' + fmtMin(b.start) + ' to ' + fmtMin(b.end),
     id: b.id, isBlock: true as const,
   }));
   const row = (x: (typeof todayList)[number]) => ({ start: x.b.start, startText: fmtMin(x.b.start), client: x.b.client, sub: x.sub, priceText: x.priceText, label: x.label, id: x.b.id, style: x.style, isBlock: false as const });
@@ -145,7 +153,7 @@ export function useCalendar(props: Props) {
   const later = [...laterLate, ...laterUp, ...laterDone];
 
   const dayHrs = hrsOf(day);
-  const statCount = dayB.length, statRevenue = usd(dayB.reduce((a, b) => a + b.priceCents, 0));
+  const statCount = dayB.length, statRevenue = dollars(dayB.reduce((a, b) => a + b.priceCents, 0));
   let statNext = dayHrs?.open ? 'None left' : 'Closed';
   if (dayHrs?.open) {
     for (let t = Math.max(dayHrs.from, day === today ? Math.ceil(now / STEP) * STEP : 0); t + STEP <= dayHrs.to; t += STEP) {
@@ -159,7 +167,7 @@ export function useCalendar(props: Props) {
   const wkTitle = ws === thisWs ? 'This week' : ws === addDaysYmd(thisWs, 7) ? 'Next week' : ws === addDaysYmd(thisWs, -7) ? 'Last week' : weekDays[0].short;
   const wkRange = weekDays[0].short + ' to ' + weekDays[6].short;
   const pageTitle = view === 'week' ? wkTitle : day === today ? 'Today' : di.weekday;
-  const pageSubtitle = view === 'week' ? wkRange : di.weekday + ', ' + di.num + ' ' + di.month;
+  const pageSubtitle = view === 'week' ? wkRange : di.full;
   const strip = weekDays;
 
   /* ---------- checkout math ---------- */
@@ -167,7 +175,7 @@ export function useCalendar(props: Props) {
     const disc = cfg.canDiscount ? discountCents(grossC, co.disc) : 0, priceC = grossC - disc;
     const tip = cfg.askTip ? Math.round(grossC * co.tip / 100) : 0;
     const taxAmt = cfg.taxInclusive ? Math.round(priceC * cfg.taxRate / (100 + cfg.taxRate)) : Math.round(priceC * cfg.taxRate / 100);
-    return { disc, net: priceC, tip, taxAmt, total: priceC + tip + (cfg.taxInclusive ? 0 : taxAmt), taxLabel: (cfg.taxInclusive ? 'Includes ' : 'Tax ') + cfg.taxRate + '%' };
+    return { disc, net: priceC, tip, taxAmt, total: priceC + tip + (cfg.taxInclusive ? 0 : taxAmt) };
   };
   // A card payment on the EFTPOS terminal: its own final step with the result.
   const term = useTerminal(() => router.refresh());
@@ -182,6 +190,20 @@ export function useCalendar(props: Props) {
   };
   const retryCard = () => { if (!cardSale.current) return; term.begin(); startT(async () => { await sendToTerminal(cardSale.current); }); };
   const finishCard = () => { term.reset(); setMode('view'); setNotice(''); refresh(); };
+  // Refund of a paid appointment: asked first (the same box Sales uses), and a card paid on the terminal goes back through the terminal.
+  const doRefund = (retry = false) => {
+    const saleId = cur?.saleId; if (!saleId) return;
+    if (retry) term.begin();
+    startT(async () => {
+      setError('');
+      const r = await refundSale(saleId); setConfirmRefund(false);
+      if (r.error) { if (retry) term.fail(r.error); else setError(r.error); return; }
+      if (r.txn) { setMode('refund'); setOpen(true); term.start(r.txn); return; }
+      setNotice(r.notice ?? 'Refund issued'); refresh();
+    });
+  };
+  const finishRefund = () => { term.reset(); setMode('view'); setNotice('Refund issued'); setError(''); refresh(); };
+  const backFromRefund = () => { term.reset(); setMode('view'); };
   // Express card payment: the same pending step, tick or cross as checkout, without leaving the calendar.
   const payNow = (id: string) => {
     setSelId(id); setOpen(true); setMode('checkout'); setError(''); setNotice('');
@@ -249,17 +271,17 @@ export function useCalendar(props: Props) {
         at = slots.find((t) => t >= mainEnd && free(t)) ?? slots.find((t) => t + svc.dur <= start && free(t));
         if (at !== undefined) taken.push({ s: sid, start: at, end: at + svc.dur });
       }
-      return { svc, sid, member: sid ? staffName(sid) : '', f: sid ? first(staffName(sid)) : '', at };
+      return { svc, sid, member: sid ? staffName(sid) : '', f: sid ? firstName(staffName(sid), '') : '', at };
     });
-    return { removed, added, extras, dur, priceC, start, problem, alts, mainEnd, f: first(staffName(cur.staffId)), empty: dur <= 0 };
+    return { removed, added, extras, dur, priceC, start, problem, alts, mainEnd, f: firstName(staffName(cur.staffId), ''), empty: dur <= 0 };
   };
   const saveEdit = () => {
     const pl = editPlan(); if (!pl || !cur) return;
-    if (pl.empty) { setError('Keep at least one service on the booking.'); return; }
+    if (pl.empty) { setError('Keep at least one service on the appointment.'); return; }
     if (pl.problem) { setError('The extra time does not fit yet. Pick one of the start times above, or remove a service.'); return; }
     const bad = pl.extras.find((x) => x.at === undefined);
     if (bad) { setError(bad.sid ? bad.f + ' has no free time for ' + bad.svc.name + ' that day. Remove it or pick another day first.' : 'No one offers ' + bad.svc.name + ' yet, so it cannot be added. Remove it first.'); return; }
-    const msg = pl.extras.length ? 'Updated, ' + pl.extras.map((x) => x.svc.name + ' with ' + x.f + ' at ' + fmtMin(x.at!)).join(', ') : first(cur.client) + "'s booking updated";
+    const msg = pl.extras.length ? 'Updated, ' + pl.extras.map((x) => x.svc.name + ' with ' + x.f + ' at ' + fmtMin(x.at!)).join(', ') : firstName(cur.client, '') + "'s appointment updated";
     act(() => editBooking(cur.id, cur.dayYmd, pl.start, pl.removed, pl.added, pl.extras.map((x) => ({ serviceId: x.svc.id, staffId: x.sid!, startMin: x.at! }))), msg, () => { setOpen(false); setMode('view'); });
   };
 
@@ -280,7 +302,7 @@ export function useCalendar(props: Props) {
     if (bf.start === null) { setError('Choose a start time from the list.'); return; }
     if (reason(bf.day, bf.start, bfDur)) { setError('That time is not free. Pick another from the list.'); return; }
     const label = BLOCK_KINDS.find((k) => k[0] === bf.kind)![1];
-    act(() => createBlock(bf.s, bf.day, bf.start!, bfDur, bf.kind), label + ' blocked for ' + first(staffName(bf.s)), () => { setOpen(false); setMode('view'); });
+    act(() => createBlock(bf.s, bf.day, bf.start!, bfDur, bf.kind), label + ' blocked for ' + firstName(staffName(bf.s), ''), () => { setOpen(false); setMode('view'); });
   };
 
   /* ---------- reschedule ---------- */
@@ -289,16 +311,16 @@ export function useCalendar(props: Props) {
     if (rs.time === null) { setError('Choose a new time from the list.'); return; }
     if (reason(rs.day, rs.time, cur.end - cur.start)) { setError('That time is no longer free. Pick another from the list.'); return; }
     const when = dayInfo(rs.day).short + ', ' + fmtMin(rs.time);
-    if (rs.rebook) act(() => rebookBooking(cur.id, rs.day, rs.time!), first(cur.client) + ' rebooked for ' + when, () => { setOpen(false); setMode('view'); });
-    else act(() => rescheduleBooking(cur.id, rs.day, rs.time!), first(cur.client) + ' moved to ' + when, () => { setOpen(false); setMode('view'); });
+    if (rs.rebook) act(() => rebookBooking(cur.id, rs.day, rs.time!), firstName(cur.client, '') + ' booked again for ' + when, () => { setOpen(false); setMode('view'); });
+    else act(() => rescheduleBooking(cur.id, rs.day, rs.time!), firstName(cur.client, '') + ' moved to ' + when, () => { setOpen(false); setMode('view'); });
   };
 
   /* ---------- walk-in ---------- */
   const wiSvc = wi.svc ? svcMap.get(wi.svc) ?? null : null;
   let wiPlanText = 'Pick a service to see who is free.', wiPlanCss = note('#F4F5F7', '#5E6673');
   if (wiSvc && plan) {
-    if ('startsAt' in plan) { wiPlanText = first(plan.staff) + ' is free ' + (plan.nowish ? 'now' : 'from ' + plan.label) + '. ' + plan.label + ' to ' + fmtMin(minutesFromIso(plan.startsAt!) + wiSvc.dur) + ', ' + wiSvc.dur + ' min, ' + usd(wiSvc.priceCents) + '.'; wiPlanCss = note('#DDF3EA', '#14624A'); }
-    else if ('none' in plan) { wiPlanText = 'No free time today for ' + wiSvc.name + (wi.pro === 'any' ? '.' : ' with that team member.'); wiPlanCss = note('#FDECEA', '#B42318'); }
+    if ('startsAt' in plan) { wiPlanText = firstName(plan.staff, '') + ' is free ' + (plan.nowish ? 'now' : 'from ' + plan.label) + '. ' + plan.label + ' to ' + fmtMin(minutesFromIso(plan.startsAt!) + wiSvc.dur) + ', ' + duration(wiSvc.dur) + ', ' + dollars(wiSvc.priceCents) + '.'; wiPlanCss = noteTone('green'); }
+    else if ('none' in plan) { wiPlanText = 'No free time today for ' + wiSvc.name + (wi.pro === 'any' ? '.' : ' with that team member.'); wiPlanCss = noteTone('red'); }
   }
   function minutesFromIso(iso: string) {
     const p = new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', hour: '2-digit', minute: '2-digit' }).formatToParts(new Date(iso));
@@ -444,14 +466,14 @@ export function useCalendar(props: Props) {
     const revenue = bk.reduce((a, b) => a + b.priceCents, 0), booked = bk.reduce((a, b) => a + (b.end - b.start), 0);
     const rows = [
       ...bk.map((b) => { const v = vm(b); return { start: b.start, startText: fmtMin(b.start), client: b.client, sub: b.services + ' with ' + v.f + (b.walkin ? ', walk-in' : ''), priceText: v.priceText, dot: v.tone.fg, isBlock: false, pick: () => openBooking(b.id) }; }),
-      ...blocks.filter((b) => b.dayYmd === d.ymd).map((b) => ({ start: b.start, startText: fmtMin(b.start), client: BLOCK_KINDS.find((k) => k[0] === b.kind)?.[1] ?? 'Blocked', sub: first(staffName(b.staffId)) + ', until ' + fmtMin(b.end), priceText: '', dot: '#B5BBC5', isBlock: true, pick: () => openBlock(b.id) })),
+      ...blocks.filter((b) => b.dayYmd === d.ymd).map((b) => ({ start: b.start, startText: fmtMin(b.start), client: BLOCK_KINDS.find((k) => k[0] === b.kind)?.[1] ?? 'Blocked', sub: firstName(staffName(b.staffId), '') + ', until ' + fmtMin(b.end), priceText: '', dot: '#B5BBC5', isBlock: true, pick: () => openBlock(b.id) })),
     ].sort((a, b) => a.start - b.start);
     const cap = hrs?.open ? Math.max(1, team.length) * (hrs.to - hrs.from) : 0;
     const util = cap ? Math.min(100, Math.round(booked / cap * 100)) : 0;
     const isOpen = !!wkOpen[d.ymd], limit = 5;
-    return { d, hrs, rows, shown: isOpen ? rows : rows.slice(0, limit), util, isOpen, limit, summary: !hrs?.open ? 'Closed' : bk.length + ' appointments, ' + usd(revenue) };
+    return { d, hrs, rows, shown: isOpen ? rows : rows.slice(0, limit), util, isOpen, limit, summary: !hrs?.open ? 'Closed' : plural(bk.length, 'appointment') + ', ' + dollars(revenue) };
   }) : [];
 
   const nLock = lockFor(nf.services), edLock = lockFor(ed.ids);
-  return { laterUp, laterLate, laterDone, nLock, edLock, lockFor, HOUR_PX, act, activeCards, addWalkin, amap, av, avail, availKey, backToView, bf, bfDur, blank, blockId, blockRows, blocks, bookings, busy, bvB, cards, cfg, charge, chk, close, co, coMath, createNew, cur, day, dayB, dayHrs, days14, di, doneBk, ed, editPlan, error, firstOpenDay, gEnd, gHours, gStart, go, hasError, hours, hrsOf, closedWhy, cancelAsk, setCancelAsk, later, laterBk, minutesFromIso, mode, moveBooking, nFirstSvc, nKeyStr, nKeys, nOffers, nPickSvc, nPlan, nSlots, nWhy, nf, notice, now, nowTop, offered, offers, open, openBlock, openBooking, openDays, openNew, pageSubtitle, pageTitle, pendingSel, plan, primary, query, reason, refresh, router, row, rs, saveBlock, saveEdit, searchOpen, seg, sel, selId, services, setAmap, setAvail, setBf, setBlockId, setCo, setEd, setError, setMode, setNf, setNotice, setNow, setOpen, setPendingSel, setPlan, setQuery, setRs, setSearchOpen, setSelId, setSres, setStaffSel, setWi, setWkOpen, slotsFor, sq, sres, staffName, staffSel, startCheckout, startResched, startT, statCount, statRevenue, statNext, strip, svcMap, team, today, todayList, tz, upcoming, view, viewEvents, vm, weekDays, wi, wiPlanText, wiPlanCss, wiSvc, wkCards, wkOpen, wkRange, wkStaff, wkTitle, ws, msg, setMsg, startMessage, sendMessage, started, markNoShow, lf, setLf, openLate, lateList, saveLate, products: props.products ?? [], packages: props.packages ?? {}, term, retryCard, finishCard, payNow, toggleSvc };
+  return { laterUp, laterLate, laterDone, nLock, edLock, lockFor, HOUR_PX, act, activeCards, addWalkin, amap, av, avail, availKey, backToView, bf, bfDur, blank, blockId, blockRows, blocks, bookings, busy, bvB, cards, cfg, charge, chk, close, co, coMath, createNew, cur, day, dayB, dayHrs, days14, di, doneBk, ed, editPlan, error, firstOpenDay, gEnd, gHours, gStart, go, hasError, hours, hrsOf, closedWhy, cancelAsk, setCancelAsk, later, laterBk, minutesFromIso, mode, moveBooking, nFirstSvc, nKeyStr, nKeys, nOffers, nPickSvc, nPlan, nSlots, nWhy, nf, notice, now, nowTop, offered, offers, open, openBlock, openBooking, openDays, openNew, pageSubtitle, pageTitle, pendingSel, plan, primary, query, reason, refresh, router, row, rs, saveBlock, saveEdit, searchOpen, seg, sel, selId, services, setAmap, setAvail, setBf, setBlockId, setCo, setEd, setError, setMode, setNf, setNotice, setNow, setOpen, setPendingSel, setPlan, setQuery, setRs, setSearchOpen, setSelId, setSres, setStaffSel, setWi, setWkOpen, slotsFor, sq, sres, staffName, staffSel, startCheckout, startResched, startT, statCount, statRevenue, statNext, strip, svcMap, team, today, todayList, tz, upcoming, view, viewEvents, vm, weekDays, wi, wiPlanText, wiPlanCss, wiSvc, wkCards, wkOpen, wkRange, wkStaff, wkTitle, ws, msg, setMsg, startMessage, sendMessage, started, markNoShow, lf, setLf, openLate, lateList, saveLate, confirmRefund, setConfirmRefund, doRefund, finishRefund, backFromRefund, products: props.products ?? [], packages: props.packages ?? {}, term, retryCard, finishCard, payNow, toggleSvc };
 }

@@ -1,5 +1,8 @@
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { dateLong, time12 } from '@/lib/format';
+import { time12, ymd } from '@/lib/format';
+import { dayInfo } from '@/lib/cal';
+import { firstName } from '@/lib/people';
+import { CardText, PrimaryLink, PublicCard } from '@/app/b/[slug]/PublicCard';
 import { clientPending, loadBooking, rowsForBooking, toFill } from '@/lib/forms';
 import { FormFillView } from '@/components/FormFillView';
 import { submitPublicForms } from './actions';
@@ -8,7 +11,7 @@ export const metadata = { title: 'Before your visit' };
 export const dynamic = 'force-dynamic';
 
 const Card = ({ title, text, link }: { title: string; text: string; link?: { href: string; label: string } }) => (
-  <div className="auth"><div className="card"><h1>{title}</h1><p className="muted">{text}</p>{link && <p><a className="btn primary" href={link.href}>{link.label}</a></p>}</div></div>
+  <PublicCard title={title}><CardText>{text}</CardText>{link && <PrimaryLink href={link.href}>{link.label}</PrimaryLink>}</PublicCard>
 );
 
 export default async function FormPage({ params }: { params: Promise<{ token: string }> }) {
@@ -23,10 +26,9 @@ export default async function FormPage({ params }: { params: Promise<{ token: st
   const [rows, { data: mt }] = await Promise.all([rowsForBooking(sb, b, salon.timezone), sb.from('booking_tokens').select('token').eq('booking_id', b.id).eq('purpose', 'manage_booking').maybeSingle()]);
   const manage = mt ? `/manage/${mt.token}` : undefined;
   const pend = clientPending(rows);
-  const when = new Intl.DateTimeFormat('en-NZ', { timeZone: salon.timezone, weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(b.startsAt)) + ', ' + time12(b.startsAt, salon.timezone);
-  void dateLong;
+  const when = dayInfo(ymd(b.startsAt, salon.timezone)).full + ', ' + time12(b.startsAt, salon.timezone);
   return (
-    <FormFillView mode="public" salon={salon.name} first={b.clientName.split(' ')[0]} clientName={b.clientName} apptLine={when} svcLine={`${b.services} with ${b.staff}`}
+    <FormFillView mode="public" salon={salon.name} first={firstName(b.clientName)} clientName={b.clientName} apptLine={when} svcLine={`${b.services} with ${b.staff}`}
       forms={pend.map((r) => toFill(r.tpl))} submit={submitPublicForms.bind(null, token)} links={{ manage, home: `/b/${salon.slug}` }}
       empty={{ title: 'You are all set', text: 'There are no forms for you to complete before this appointment. Thank you.', link: manage ? { href: manage, label: 'Manage booking' } : { href: `/b/${salon.slug}`, label: 'Back to ' + salon.name } }} />
   );

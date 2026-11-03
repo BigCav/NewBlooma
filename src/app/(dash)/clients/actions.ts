@@ -2,7 +2,7 @@
 import { checkPhone } from '@/lib/phone';
 import { revalidatePath } from 'next/cache';
 import { requireCtx, friendly } from '@/lib/session';
-import { ymd } from '@/lib/format';
+import { time12, ymd } from '@/lib/format';
 import { sendCustomMessage } from '@/lib/notify';
 import { dropEmptyThread, ensureThread, logStaffMessage, replyUrl } from '@/lib/conversation';
 import { channelNote, type ClientRow } from './shared';
@@ -65,7 +65,7 @@ export async function clientThread(clientId: string): Promise<{ messages: ChatMs
   return { messages, note: channelNote({ sms: smsConfigured(), email: emailConfigured() }, c?.phone ?? '', c?.email ?? '') };
 }
 
-export async function sendClientMessage(clientId: string, text: string): Promise<R> {
+export async function sendClientMessage(clientId: string, text: string): Promise<R & { time?: string }> {
   const { sb, salon } = await requireCtx();
   text = text.trim(); if (!text) return { error: 'Write a message first.' };
   if (text.length > 600) return { error: 'Keep the message under 600 characters.' };
@@ -75,7 +75,8 @@ export async function sendClientMessage(clientId: string, text: string): Promise
   const r = await sendCustomMessage(salon.id, c, text, undefined, replyUrl(th.token));
   if (!r.ok) { if (th.created) await dropEmptyThread(th.id); return { error: r.error }; }
   await logStaffMessage(salon.id, th.id, text);
-  return { ok: true };
+  // The sent time in the salon's timezone, the same way the saved thread shows it.
+  return { ok: true, time: time12(new Date(), salon.timezone) };
 }
 
 export async function addNote(clientId: string, text: string): Promise<R & { id?: string }> {

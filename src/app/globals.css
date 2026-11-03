@@ -1,7 +1,7 @@
 :root{--bg:#F4F5F7;--card:#fff;--ink:#0E1116;--muted:#5E6673;--line:#E6E8EC;--line2:#E1E4E9;--accent:#5B3DF5;--accent-ink:#fff;--ok:#12805C;--okbg:#E7F6EF;--warn:#B25E09;--warnbg:#FFF4E5;--bad:#B42318;--badbg:#FDECEA;--r:24px}
 *{box-sizing:border-box}html,body{margin:0}body{background:var(--bg);color:var(--ink);font:15px/1.45 'Geist',ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
 a{color:inherit;text-decoration:none}h1{font-size:26px;letter-spacing:-.02em;margin:0}h2{font-size:17px;margin:0}h3{font-size:15px;margin:0}
-.muted{color:var(--muted)}.small{font-size:13px}.row{display:flex;align-items:center;gap:12px}.between{justify-content:space-between}.wrap{flex-wrap:wrap}.grow{flex:1}.stack{display:flex;flex-direction:column;gap:12px}.right{text-align:right}
+.muted{color:var(--muted)}.small{font-size:13px}.row{display:flex;align-items:center;gap:12px}
 .shell{display:flex;min-height:100dvh}
 .rail{position:sticky;top:0;height:100dvh;width:72px;flex:0 0 72px;box-sizing:border-box;padding:24px 0;display:flex;flex-direction:column;align-items:center;gap:8px;background:#F4F5F7}
 .rail-link:hover{background:#E8EAEE !important}
@@ -20,8 +20,9 @@ a{color:inherit;text-decoration:none}h1{font-size:26px;letter-spacing:-.02em;mar
 .only-m{display:none}
 .cal-root button{font-family:inherit;cursor:pointer}
 .cal-root button:disabled{opacity:.45;cursor:default}
+button:disabled{cursor:default}
 .hscroll{scrollbar-width:none}.hscroll::-webkit-scrollbar{display:none}
-.main{padding:28px 32px 64px 8px;flex:1 1 0;min-width:0}.main:has(.cal-root){padding:0}.page-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:22px;flex-wrap:wrap}
+.main{padding:28px 32px 64px 8px;flex:1 1 0;min-width:0}.main:has(.cal-root){padding:0}
 .tabs-bar{display:none}
 .subpanel{position:sticky;top:0;height:100dvh;flex:0 0 auto;width:0;overflow:hidden;background:#F4F5F7;transition:width .22s cubic-bezier(.4,0,.2,1),margin-right .22s cubic-bezier(.4,0,.2,1)}.subpanel.open{width:217px;margin-right:16px}
 .subpanel-in{box-sizing:border-box;width:217px;height:100%;padding:28px 12px 24px;border-right:1px solid #E6E8EC;display:flex;flex-direction:column;gap:2px;opacity:0;visibility:hidden;transform:translateX(-8px);transition:opacity .16s ease,transform .22s cubic-bezier(.4,0,.2,1),visibility 0s .22s}
@@ -32,26 +33,19 @@ a{color:inherit;text-decoration:none}h1{font-size:26px;letter-spacing:-.02em;mar
 @media (prefers-reduced-motion:reduce){.subpanel,.subpanel-in,.subpanel.open .subpanel-in{transition:none}}
 .sum-rows>*+*{border-top:1px solid #EEF0F3}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:22px}.card+.card{margin-top:16px}
-.grid{display:grid;gap:16px}.g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line2);background:var(--card);color:var(--ink);padding:10px 18px;border-radius:999px;font:inherit;font-weight:600;cursor:pointer;min-height:42px}
-.btn:hover{border-color:var(--ink)}.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}.btn.dark{background:var(--ink);color:var(--bg);border-color:var(--ink)}.btn.danger{color:var(--bad)}.btn[disabled]{opacity:.5;cursor:not-allowed}.btn.sm{padding:6px 14px;min-height:34px;font-size:13px}
-.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}.field>label,.lbl{font-size:13px;font-weight:600;color:var(--muted)}
+.btn:hover{border-color:var(--ink)}.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}.btn[disabled]{opacity:.5;cursor:not-allowed}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}.field>label{font-size:13px;font-weight:600;color:var(--muted)}
+/* .field is for a label/div wrapper; on the control itself it must not turn the input into a flex box with a margin. */
+input.field,textarea.field,select.field{display:revert;margin:0}
 input,select,textarea{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line2);border-radius:14px;padding:10px 14px;min-height:42px;width:100%}input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
 input[type=checkbox],input[type=radio]{width:auto;min-height:0}
-.pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;background:var(--bg);color:var(--muted);border:1px solid var(--line)}.pill.ok{background:var(--okbg);color:var(--ok);border-color:transparent}.pill.warn{background:var(--warnbg);color:var(--warn);border-color:transparent}.pill.bad{background:var(--badbg);color:var(--bad);border-color:transparent}
-.notice{border-radius:16px;padding:12px 16px;font-weight:500;margin-bottom:16px}.notice.ok{background:var(--okbg);color:var(--ok)}.notice.err{background:var(--badbg);color:var(--bad)}
-table{width:100%;border-collapse:collapse}th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}td{padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:middle}tr:last-child td{border-bottom:0}
-.empty{padding:40px 16px;text-align:center;color:var(--muted)}.big{font-size:30px;font-weight:700;letter-spacing:-.02em}
 .auth{max-width:420px;margin:8vh auto;padding:0 16px}
-.slot{padding:8px 14px;border-radius:999px;border:1px solid var(--line2);background:var(--card);font-weight:600;cursor:pointer}.slot:hover{border-color:var(--accent)}
-.cal{display:grid;gap:0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--card)}
-.appt{border-left:3px solid var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--card));border-radius:10px;padding:6px 10px;font-size:13px}
 @media (max-width:900px){
  .rail{display:none}.only-d{display:none !important}.only-m{display:flex}.main{padding:18px 16px 110px}h1{font-size:22px}
  .subpanel{display:none}
- .g2,.g3,.g4{grid-template-columns:1fr}.card{padding:18px;border-radius:20px}
+ .card{padding:18px;border-radius:20px}
  .tabs-bar{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center;justify-items:center;position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #E6E8EC;box-sizing:border-box;padding:10px 8px 22px;z-index:20}
- table.stack-m thead{display:none}table.stack-m tr{display:block;padding:10px 0;border-bottom:1px solid var(--line)}table.stack-m td{display:flex;justify-content:space-between;border:0;padding:4px 0}
 }
 
 .m-cal button:disabled{opacity:1}
@@ -66,7 +60,7 @@ table{width:100%;border-collapse:collapse}th{font-size:12px;text-transform:upper
 @media (max-width:900px){body:has(.m-cal) .tabs-bar{display:none !important}.main:has(.m-cal){padding:0}}
 /* Desktop calendar (Main.dc.html): disabled buttons keep full opacity except the ghost nav arrows. */
 .d-cal button:disabled{opacity:1}
-.d-cal .ghost:hover{background:#F4F5F7}
+@media (hover:hover){.ghost:hover:not(:disabled){background:#F4F5F7}}
 .d-cal .ghost:disabled{opacity:.4;cursor:default}
 .d-cal .search:focus-within{outline:2px solid #5B3DF5;outline-offset:2px}
 .d-cal input:focus{outline:2px solid #5B3DF5;outline-offset:2px}
@@ -78,7 +72,6 @@ table{width:100%;border-collapse:collapse}th{font-size:12px;text-transform:upper
 .d-cal .s-row:last-child{border-bottom:0 !important}
 .m-cal li:last-child>button{border-bottom:0 !important}
 .m-cal input:focus,.m-cal textarea:focus,.d-cal textarea:focus{outline:2px solid #5B3DF5;outline-offset:2px}
-.d-cal .fw:focus-within,.m-cal .fw:focus-within{outline:2px solid #5B3DF5;outline-offset:2px}
 .d-cal fieldset:disabled button,.m-cal fieldset:disabled button{cursor:default}
 
 .bk-flow>*{flex:0 0 auto}
@@ -118,7 +111,8 @@ html::-webkit-scrollbar,body::-webkit-scrollbar{display:none;width:0;height:0}
 /* Night mode: the dashboard colours are set inline, so the page is inverted as a whole and pictures are turned back. */
 html[data-theme=dark]{filter:invert(.93) hue-rotate(180deg);background:#fff}
 html[data-theme=dark] img,html[data-theme=dark] video,html[data-theme=dark] iframe,html[data-theme=dark] [data-keep]{filter:hue-rotate(180deg) invert(.93)}
-#ap-client:focus,#ap-client:focus-visible{outline:none;box-shadow:none}
+/* Fallback for any photo still drawn as a CSS background image. */
+html[data-theme=dark] [style*="background-image"]{filter:hue-rotate(180deg) invert(.93)}
 .sk{background:linear-gradient(90deg,#E9ECF0 25%,#F4F5F7 50%,#E9ECF0 75%);background-size:200% 100%;animation:skm 1.2s ease-in-out infinite;border-radius:16px}
 @keyframes skm{from{background-position:200% 0}to{background-position:-200% 0}}
 .sk-page{display:flex;flex-direction:column;gap:14px;max-width:720px}
@@ -128,12 +122,11 @@ html[data-theme=dark] img,html[data-theme=dark] video,html[data-theme=dark] ifra
 @media (prefers-reduced-motion:reduce){.sk{animation:none}}
 
 /* Desktop drawer: the phone overlays of a page, shown as a panel sliding in from the right over a softly blurred page. */
-.m-drawer-esc{display:none}
 @media (min-width:901px){
 .m-drawer{position:fixed !important;left:0;right:0;top:0;bottom:0;width:auto !important;height:auto !important;z-index:50;display:block !important;background:transparent !important;overflow:visible !important;pointer-events:none}
 .m-drawer>header,.m-drawer>main,.m-drawer>nav{display:none !important}
 .m-drawer>div{pointer-events:auto;z-index:50 !important}
-.m-drawer>div>button[aria-label^="Close"]{background:rgba(14,17,22,.22) !important;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);animation:drFade .2s ease-out}
+.m-drawer>div>button[aria-label^="Close"],.m-drawer>div>button[data-close]{background:rgba(14,17,22,.22) !important;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);animation:drFade .2s ease-out}
 .m-drawer>[role="dialog"]{left:auto !important;right:0 !important;width:min(520px,100vw) !important;box-shadow:-16px 0 48px rgba(14,17,22,.16);animation:drIn .26s cubic-bezier(.2,.8,.2,1);pointer-events:auto}
 .m-drawer:has(>[role="dialog"]){pointer-events:auto;background:rgba(14,17,22,.22) !important;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);animation:drFade .2s ease-out}
 html:has(.m-drawer:not(.m-drawer-out)){overflow:hidden;scrollbar-gutter:stable}
@@ -148,10 +141,10 @@ html:has(.m-drawer:not(.m-drawer-out)){overflow:hidden;scrollbar-gutter:stable}
 @media (min-width:901px){
 .m-drawer-out,.m-drawer-out *{pointer-events:none !important}
 .m-drawer-out .sheet,.m-drawer-out>[role="dialog"]{animation:drOut .2s cubic-bezier(.4,0,1,1) forwards !important}
-.m-drawer-out>div>button[aria-label^="Close"],.m-drawer-out:has(>[role="dialog"]){animation:drFadeOut .2s ease-in forwards !important}
+.m-drawer-out>div>button[aria-label^="Close"],.m-drawer-out>div>button[data-close],.m-drawer-out:has(>[role="dialog"]){animation:drFadeOut .2s ease-in forwards !important}
 .sheet-out,.sheet-out *{pointer-events:none !important}
 .sheet-out.sheet,.sheet-out .sheet{animation:drOut .2s cubic-bezier(.4,0,1,1) forwards !important}
-button.sheet-out,.sheet-out>button[aria-label^="Close"]{animation:drFadeOut .2s ease-in forwards !important}
+button.sheet-out,.sheet-out>button[aria-label^="Close"],.sheet-out>button[data-close]{animation:drFadeOut .2s ease-in forwards !important}
 }
 @media (prefers-reduced-motion:reduce){.m-drawer .sheet,.m-drawer>div>button{animation:none !important}}
 
@@ -164,7 +157,7 @@ button.sheet-out,.sheet-out>button[aria-label^="Close"]{animation:drFadeOut .2s 
 .tp-draw{stroke-dasharray:70;stroke-dashoffset:70;animation:tpDraw .45s .3s ease-out forwards}
 @media (prefers-reduced-motion:reduce){.tp-spin{animation-duration:3s}.tp-pop{animation:none}.tp-draw{animation:none;stroke-dashoffset:0}}
 /* While the terminal is working the blurred area and the corner close button do nothing. */
-@media (min-width:901px){.m-drawer:has([data-pay-lock]) button[aria-label^="Close"]{pointer-events:none}}
+@media (min-width:901px){.m-drawer:has([data-pay-lock]) button[aria-label^="Close"],.m-drawer:has([data-pay-lock]) [data-close]{pointer-events:none}}
 
 .d-cal .s-card:hover{background:#FAFAFB !important;border-color:#D5D9E0 !important}
 

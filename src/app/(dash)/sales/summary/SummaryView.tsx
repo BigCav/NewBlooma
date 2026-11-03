@@ -4,9 +4,13 @@ import { BottomSheet } from '@/components/BottomSheet';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { CloseX, CLOSE_BTN } from '../../calendar/calUi';
+import { dayInfo } from '@/lib/cal';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../../calendar/pickers';
-import { fmt } from '../shared';
+import { dollars } from '@/lib/format';
+import { plural } from '@/lib/display';
+import { BACK, BLACK, FIELD_IN, FieldError, filterChipCss, RING } from '@/components/ui';
+import { Field } from '../../settings/forms/FormPage';
 import { TillForm, type Till } from './TillForm';
 
 type Preset = { id: string; label: string; from: string; to: string };
@@ -21,7 +25,8 @@ type Summary = {
 };
 
 const METHOD: Record<string, string> = { card: 'Card', cash: 'Cash', gift_card: 'Gift card', package: 'Package' };
-const dayText = (d: string) => new Date(d + 'T00:00:00Z').toLocaleDateString('en-NZ', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+/** A date in the one house style; the year only when it is not this year. */
+const withYear = (d: string, text: string, today: string) => (d.slice(0, 4) !== today.slice(0, 4) ? text + ' ' + d.slice(0, 4) : text);
 const CARD = 'box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:22px 24px;min-width:0';
 const NOTE = 'margin:0;padding-top:12px;font-size:13px;line-height:1.5;color:#5E6673';
 
@@ -43,19 +48,16 @@ function Card({ title, label, children }: { title: string; label: string; childr
   );
 }
 
-const BACK_ICON = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 6l-6 6 6 6" /></svg>;
-const DATE_IN = { ...S('box-sizing:border-box;width:100%;margin-top:2px;padding:0;border:0;outline:none;background:transparent;font:inherit;font-size:16px;color:#0E1116'), minHeight: 0, borderRadius: 0 } as const;
 
 /** Phone: back, then one button showing the days you are looking at. It opens a sheet to pick another run of days. */
 function Period({ from, to, today, presets }: { from: string; to: string; today: string; presets: Preset[] }) {
   const [open, setOpen] = useState(false);
   const cur = presets.find((p) => p.from === from && p.to === to);
-  const short = (d: string) => new Date(d + 'T00:00:00Z').toLocaleDateString('en-NZ', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+  const short = (d: string) => withYear(d, dayInfo(d).short, today);
   const label = cur ? cur.label : from === to ? short(from) : short(from) + ' to ' + short(to);
-  const field = 'display:block;box-sizing:border-box;padding:10px 16px 12px;border:1px solid #E1E4E9;border-radius:16px;background:#FFFFFF';
   return (<>
     <div style={S('display:flex;gap:12px')}>
-      <Link href="/sales" aria-label="Back to sales" style={S('flex:0 0 52px;width:52px;height:52px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;text-decoration:none')}>{BACK_ICON}</Link>
+      <Link href="/sales" aria-label="Back to sales" style={S(RING + ';align-self:center')}>{BACK}</Link>
       <button onClick={() => setOpen(true)} aria-haspopup="dialog" style={S('flex:1 1 0;min-width:0;display:flex;align-items:center;gap:10px;height:52px;padding:0 18px;border:1px solid #E6E8EC;border-radius:999px;background:#FFFFFF;font:inherit;font-size:15px;font-weight:500;color:#0E1116;cursor:pointer;text-align:left')}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg>
         <span style={S('flex:1 1 auto;min-width:0')}>{label}</span>
@@ -78,9 +80,9 @@ function Period({ from, to, today, presets }: { from: string; to: string; today:
           </div>
           <h3 style={S('margin:14px 0 10px;font-size:15px;font-weight:600;color:#5E6673')}>Or pick the dates</h3>
           <form method="get" action="/sales/summary" style={S('display:flex;flex-direction:column;gap:10px')}>
-            <label style={S(field)}><span style={S('display:block;font-size:12.5px;color:#5E6673')}>From</span><input type="date" name="from" aria-label="From" defaultValue={from} max={today} required style={DATE_IN} /></label>
-            <label style={S(field)}><span style={S('display:block;font-size:12.5px;color:#5E6673')}>To</span><input type="date" name="to" aria-label="To" defaultValue={to} max={today} required style={DATE_IN} /></label>
-            <button type="submit" style={S('height:52px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font:inherit;font-size:14.5px;font-weight:500;cursor:pointer')}>Show</button>
+            <Field label="From"><input type="date" name="from" aria-label="From" defaultValue={from} max={today} required style={FIELD_IN} /></Field>
+            <Field label="To"><input type="date" name="to" aria-label="To" defaultValue={to} max={today} required style={FIELD_IN} /></Field>
+            <button type="submit" style={S(BLACK + ';flex:0 0 auto')}>Show</button>
           </form>
         </BottomSheet>
     )}
@@ -91,7 +93,7 @@ function Body({ d, from, to, today, presets, m }: { d: Summary; from: string; to
   const one = from === to;
   const added = d.tax_by_rate.filter((t) => !t.inclusive).reduce((a, t) => a + t.tax_cents, 0);
   const net = d.total_cents - d.refund_cents;
-  const chip = (on: boolean) => 'display:inline-flex;align-items:center;height:' + (m ? 44 : 40) + 'px;padding:0 18px;border-radius:999px;font-size:13.5px;font-weight:500;text-decoration:none;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
+  const chip = (on: boolean) => filterChipCss(on, m) + ';display:inline-flex;align-items:center;text-decoration:none';
   const stat = (label: string, v: string, last?: boolean) => (
     <div style={S('flex:1 1 ' + (m ? '40%' : '0') + ';min-width:0;padding:' + (m ? '4px 0' : '2px 28px') + ';' + (!m && !last ? 'border-right:1px solid #EEF0F3;' : ''))}>
       <div style={S('color:#5E6673;font-size:13.5px')}>{label}</div>
@@ -106,32 +108,32 @@ function Body({ d, from, to, today, presets, m }: { d: Summary; from: string; to
     return (<>
       <Period from={from} to={to} today={today} presets={presets} />
       <section aria-label="At a glance" style={S('display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px')}>
-        {stat('Taken', fmt(d.total_cents))}{stat('Refunded', fmt(d.refund_cents))}{stat('Net', fmt(net))}{stat('Sales', String(d.sales_count))}
+        {stat('Taken', dollars(d.total_cents))}{stat('Refunded', dollars(d.refund_cents))}{stat('Net', dollars(net))}{stat('Sales', String(d.sales_count))}
       </section>
       {card('Takings', 'Takings', (
         <div className="sum-rows">
-          <Row label="Services" value={fmt(d.services_cents)} />
-          {d.products_cents > 0 && <Row label="Products" value={fmt(d.products_cents)} />}
-          {d.discount_cents > 0 && <Row label="Discounts" value={'-' + fmt(d.discount_cents)} />}
-          <Row label="Sales" value={fmt(d.sales_cents)} strong sub="Before tips, and before any tax added on top" />
-          {d.tips_cents > 0 && <Row label="Tips" value={fmt(d.tips_cents)} />}
-          {added > 0 && <Row label="Tax added at checkout" value={fmt(added)} />}
-          <Row label="Total taken" value={fmt(d.total_cents)} strong />
-          {d.refund_cents > 0 && <Row label={`Refunds (${d.refund_count})`} value={'-' + fmt(d.refund_cents)} />}
-          <Row label="Net takings" value={fmt(net)} strong />
+          <Row label="Services" value={dollars(d.services_cents)} />
+          {d.products_cents > 0 && <Row label="Products" value={dollars(d.products_cents)} />}
+          {d.discount_cents > 0 && <Row label="Discounts" value={'-' + dollars(d.discount_cents)} />}
+          <Row label="Sales" value={dollars(d.sales_cents)} strong sub="Before tips, and before any tax added on top" />
+          {d.tips_cents > 0 && <Row label="Tips" value={dollars(d.tips_cents)} />}
+          {added > 0 && <Row label="Tax added at checkout" value={dollars(added)} />}
+          <Row label="Total taken" value={dollars(d.total_cents)} strong />
+          {d.refund_cents > 0 && <Row label={`Refunds (${d.refund_count})`} value={'-' + dollars(d.refund_cents)} />}
+          <Row label="Net takings" value={dollars(net)} strong />
         </div>
       ))}
       {card('How it was paid', 'Payments', (<>
         {d.by_method.length === 0 ? <p style={S(NOTE)}>No payments in this time.</p>
           : <div className="sum-rows">
-            {d.by_method.map((x) => <Row key={x.method} label={METHOD[x.method] ?? x.method} value={fmt(x.cents - x.refund_cents)} sub={`${x.count} sale${x.count === 1 ? '' : 's'}${x.refund_cents ? `, ${fmt(x.refund_cents)} refunded` : ''}`} />)}
-            <Row label="Net takings" value={fmt(net)} strong />
+            {d.by_method.map((x) => <Row key={x.method} label={METHOD[x.method] ?? x.method} value={dollars(x.cents - x.refund_cents)} sub={`${plural(x.count, 'sale')}${x.refund_cents ? `, ${dollars(x.refund_cents)} refunded` : ''}`} />)}
+            <Row label="Net takings" value={dollars(net)} strong />
           </div>}
-        {d.gift_cards_sold.count > 0 && <p style={S(NOTE)}>{d.gift_cards_sold.count} gift card{d.gift_cards_sold.count === 1 ? '' : 's'} sold for {fmt(d.gift_cards_sold.cents)}. Gift card sales are not in the figures above, because how they were paid is not recorded.</p>}
+        {d.gift_cards_sold.count > 0 && <p style={S(NOTE)}>{plural(d.gift_cards_sold.count, 'gift card')} sold for {dollars(d.gift_cards_sold.cents)}. Gift card sales are not in the figures above, because how they were paid is not recorded.</p>}
       </>))}
       {card('Cash drawer', 'Cash drawer', (
         <div>
-          <Row label="Cash that should be in the drawer" value={fmt(d.cash_expected_cents)} strong sub="Cash taken, less cash refunded" />
+          <Row label="Cash that should be in the drawer" value={dollars(d.cash_expected_cents)} strong sub="Cash taken, less cash refunded" />
           {one
             ? <div style={S('padding-top:8px')}><TillForm key={d.till?.closed_at ?? 'open'} day={from} expected={d.cash_expected_cents} till={d.till} mobile /></div>
             : <p style={S(NOTE)}>Choose a single day to count the drawer and close the till.</p>}
@@ -140,13 +142,13 @@ function Body({ d, from, to, today, presets, m }: { d: Summary; from: string; to
       {card('Tax', 'Tax', (
         d.tax_by_rate.length === 0 ? <p style={S(NOTE)}>No tax in this time.</p>
           : <div className="sum-rows">
-            {d.tax_by_rate.map((t, i) => <Row key={i} label={`${t.rate}% ${t.inclusive ? 'included in prices' : 'added at checkout'}`} value={fmt(t.tax_cents)} sub={`On ${fmt(t.sales_cents)} of sales`} />)}
-            <Row label="Tax collected" value={fmt(d.tax_cents)} strong />
+            {d.tax_by_rate.map((t, i) => <Row key={i} label={`${t.rate}% ${t.inclusive ? 'included in prices' : 'added at checkout'}`} value={dollars(t.tax_cents)} sub={`On ${dollars(t.sales_cents)} of sales`} />)}
+            <Row label="Tax collected" value={dollars(d.tax_cents)} strong />
           </div>
       ))}
       {card('Team', 'Team', (
         d.by_staff.length === 0 ? <p style={S(NOTE)}>No sales in this time.</p>
-          : <div className="sum-rows">{d.by_staff.map((x, i) => <Row key={i} label={x.name} value={fmt(x.sales_cents)} sub={`${x.count} sale${x.count === 1 ? '' : 's'}${x.tips_cents ? `, ${fmt(x.tips_cents)} in tips` : ''}`} />)}</div>
+          : <div className="sum-rows">{d.by_staff.map((x, i) => <Row key={i} label={x.name} value={dollars(x.sales_cents)} sub={`${plural(x.count, 'sale')}${x.tips_cents ? `, ${dollars(x.tips_cents)} in tips` : ''}`} />)}</div>
       ))}
       {card('Appointments', 'Appointments', (
         <div className="sum-rows">
@@ -172,27 +174,27 @@ function Body({ d, from, to, today, presets, m }: { d: Summary; from: string; to
     </section>
 
     <section aria-label="At a glance" style={S(CARD + ';display:flex;flex-wrap:wrap;gap:' + (m ? '16px 12px' : '0') + ';padding:' + (m ? '20px' : '24px 0'))}>
-      {stat('Taken', fmt(d.total_cents))}{stat('Refunded', fmt(d.refund_cents))}{stat('Net', fmt(net))}{stat('Sales', String(d.sales_count), true)}
+      {stat('Taken', dollars(d.total_cents))}{stat('Refunded', dollars(d.refund_cents))}{stat('Net', dollars(net))}{stat('Sales', String(d.sales_count), true)}
     </section>
 
     <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
       <div style={S(col)}>
         <Card title="Takings" label="Takings">
           <div className="sum-rows">
-            <Row label="Services" value={fmt(d.services_cents)} />
-            {d.products_cents > 0 && <Row label="Products" value={fmt(d.products_cents)} />}
-            {d.discount_cents > 0 && <Row label="Discounts" value={'-' + fmt(d.discount_cents)} />}
-            <Row label="Sales" value={fmt(d.sales_cents)} strong sub="Before tips, and before any tax added on top" />
-            {d.tips_cents > 0 && <Row label="Tips" value={fmt(d.tips_cents)} />}
-            {added > 0 && <Row label="Tax added at checkout" value={fmt(added)} />}
-            <Row label="Total taken" value={fmt(d.total_cents)} strong />
-            {d.refund_cents > 0 && <Row label={`Refunds (${d.refund_count})`} value={'-' + fmt(d.refund_cents)} />}
-            <Row label="Net takings" value={fmt(net)} strong />
+            <Row label="Services" value={dollars(d.services_cents)} />
+            {d.products_cents > 0 && <Row label="Products" value={dollars(d.products_cents)} />}
+            {d.discount_cents > 0 && <Row label="Discounts" value={'-' + dollars(d.discount_cents)} />}
+            <Row label="Sales" value={dollars(d.sales_cents)} strong sub="Before tips, and before any tax added on top" />
+            {d.tips_cents > 0 && <Row label="Tips" value={dollars(d.tips_cents)} />}
+            {added > 0 && <Row label="Tax added at checkout" value={dollars(added)} />}
+            <Row label="Total taken" value={dollars(d.total_cents)} strong />
+            {d.refund_cents > 0 && <Row label={`Refunds (${d.refund_count})`} value={'-' + dollars(d.refund_cents)} />}
+            <Row label="Net takings" value={dollars(net)} strong />
           </div>
         </Card>
         <Card title="Team" label="Team">
           {d.by_staff.length === 0 ? <p style={S(NOTE)}>No sales in this time.</p>
-            : <div className="sum-rows">{d.by_staff.map((x, i) => <Row key={i} label={x.name} value={fmt(x.sales_cents)} sub={`${x.count} sale${x.count === 1 ? '' : 's'}${x.tips_cents ? `, ${fmt(x.tips_cents)} in tips` : ''}`} />)}</div>}
+            : <div className="sum-rows">{d.by_staff.map((x, i) => <Row key={i} label={x.name} value={dollars(x.sales_cents)} sub={`${plural(x.count, 'sale')}${x.tips_cents ? `, ${dollars(x.tips_cents)} in tips` : ''}`} />)}</div>}
         </Card>
         <Card title="Appointments" label="Appointments">
           <div className="sum-rows">
@@ -208,14 +210,14 @@ function Body({ d, from, to, today, presets, m }: { d: Summary; from: string; to
         <Card title="How it was paid" label="Payments">
           {d.by_method.length === 0 ? <p style={S(NOTE)}>No payments in this time.</p>
             : <div className="sum-rows">
-              {d.by_method.map((x) => <Row key={x.method} label={METHOD[x.method] ?? x.method} value={fmt(x.cents - x.refund_cents)} sub={`${x.count} sale${x.count === 1 ? '' : 's'}${x.refund_cents ? `, ${fmt(x.refund_cents)} refunded` : ''}`} />)}
-              <Row label="Net takings" value={fmt(net)} strong />
+              {d.by_method.map((x) => <Row key={x.method} label={METHOD[x.method] ?? x.method} value={dollars(x.cents - x.refund_cents)} sub={`${plural(x.count, 'sale')}${x.refund_cents ? `, ${dollars(x.refund_cents)} refunded` : ''}`} />)}
+              <Row label="Net takings" value={dollars(net)} strong />
             </div>}
-          {d.gift_cards_sold.count > 0 && <p style={S(NOTE)}>{d.gift_cards_sold.count} gift card{d.gift_cards_sold.count === 1 ? '' : 's'} sold for {fmt(d.gift_cards_sold.cents)}. Gift card sales are not in the figures above, because how they were paid is not recorded.</p>}
+          {d.gift_cards_sold.count > 0 && <p style={S(NOTE)}>{plural(d.gift_cards_sold.count, 'gift card')} sold for {dollars(d.gift_cards_sold.cents)}. Gift card sales are not in the figures above, because how they were paid is not recorded.</p>}
         </Card>
         <Card title="Cash drawer" label="Cash drawer">
           <div className="sum-rows">
-            <Row label="Cash that should be in the drawer" value={fmt(d.cash_expected_cents)} strong sub="Cash taken, less cash refunded" />
+            <Row label="Cash that should be in the drawer" value={dollars(d.cash_expected_cents)} strong sub="Cash taken, less cash refunded" />
             {one
               ? <div style={S('padding-top:16px')}><TillForm key={d.till?.closed_at ?? 'open'} day={from} expected={d.cash_expected_cents} till={d.till} mobile={m} /></div>
               : <p style={S(NOTE)}>Choose a single day to count the drawer and close the till.</p>}
@@ -224,8 +226,8 @@ function Body({ d, from, to, today, presets, m }: { d: Summary; from: string; to
         <Card title="Tax" label="Tax">
           {d.tax_by_rate.length === 0 ? <p style={S(NOTE)}>No tax in this time.</p>
             : <div className="sum-rows">
-              {d.tax_by_rate.map((t, i) => <Row key={i} label={`${t.rate}% ${t.inclusive ? 'included in prices' : 'added at checkout'}`} value={fmt(t.tax_cents)} sub={`On ${fmt(t.sales_cents)} of sales`} />)}
-              <Row label="Tax collected" value={fmt(d.tax_cents)} strong />
+              {d.tax_by_rate.map((t, i) => <Row key={i} label={`${t.rate}% ${t.inclusive ? 'included in prices' : 'added at checkout'}`} value={dollars(t.tax_cents)} sub={`On ${dollars(t.sales_cents)} of sales`} />)}
+              <Row label="Tax collected" value={dollars(d.tax_cents)} strong />
             </div>}
         </Card>
       </div>
@@ -241,8 +243,8 @@ export function SummaryView({ data, from, to, today, presets, dayLabel }: { data
     f(); mq.addEventListener('change', f);
     return () => mq.removeEventListener('change', f);
   }, []);
-  const sub = from === to ? dayLabel : dayText(from) + ' to ' + dayText(to);
-  const fail = <p role="alert" style={S('margin:0;color:#B42318;font-size:14px;font-weight:500')}>Could not load the summary. Try again in a moment.</p>;
+  const sub = from === to ? withYear(from, dayLabel, today) : withYear(from, dayInfo(from).full, today) + ' to ' + withYear(to, dayInfo(to).full, today);
+  const fail = <FieldError>Could not load the summary. Try again in a moment.</FieldError>;
   return (<>
     {narrow !== false && (
       <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>

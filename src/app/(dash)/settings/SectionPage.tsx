@@ -7,28 +7,17 @@ import { decimalInput } from '@/lib/numeric';
 import { useNightMode } from '@/components/Theme';
 import { S } from '../calendar/pickers';
 import { addClosedPeriod, removeClosedPeriod } from './actions';
-import { BACK, FIELD_IN, RING } from '@/components/ui';
+import { BACK, BLACK, FIELD_IN, FieldError, Notice, OUTLINE, RING, Switch, SwitchRow, dim } from '@/components/ui';
+import { dayInfo } from '@/lib/cal';
 import { BAR, CARD, Field, PAGE, PickSheet, SettingRow } from './forms/FormPage';
 import { DAY_FULL, GROUPS, SECTIONS, type Values } from './shared';
 import type { SettingsCtl } from './SettingsView';
 
-const swStyle = (on: boolean) => 'position:relative;flex:0 0 52px;width:52px;height:32px;padding:0;border:0;border-radius:999px;cursor:pointer;background:' + (on ? '#0E1116' : '#D5D9E0');
-const swKnob = (on: boolean) => 'position:absolute;top:3px;left:' + (on ? 23 : 3) + 'px;width:26px;height:26px;border-radius:999px;background:#FFFFFF';
 const TIME = { ...S('box-sizing:border-box;flex:1 1 0;min-width:0;width:100%;height:44px;padding:0 10px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF'), minHeight: 0 } as const;
-const dayText = (d: string) => new Date(d + 'T00:00:00Z').toLocaleDateString('en-NZ', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
-const PILL_DARK = 'height:52px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font:inherit;font-size:14.5px;font-weight:500;cursor:pointer';
+/** "Tue 3 Nov", with the year only when it is not this year. */
+const dayText = (d: string) => dayInfo(d).short + (d.slice(0, 4) === String(new Date().getFullYear()) ? '' : ' ' + d.slice(0, 4));
 const H3 = 'margin:6px 0 0;font-size:17px;font-weight:600;letter-spacing:-0.01em';
 const NOTE = 'margin:0;font-size:13px;color:#5E6673;overflow-wrap:anywhere';
-
-/** A switch line inside a card. */
-function SwLine({ id, title, sub, on, toggle, last }: { id: string; title: string; sub?: string; on: boolean; toggle: () => void; last?: boolean }) {
-  return (
-    <div style={S('display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:' + (last ? '0' : '1px solid #EEF0F3'))}>
-      <div style={S('min-width:0')}><div id={id} style={S('font-size:15px;font-weight:500')}>{title}</div>{sub && <div style={S('margin-top:2px;font-size:13px;color:#5E6673')}>{sub}</div>}</div>
-      <button role="switch" aria-checked={on} aria-labelledby={id} onClick={toggle} style={S(swStyle(on))}><span style={S(swKnob(on))} /></button>
-    </div>
-  );
-}
 
 function Text({ id, label, c, k, type, mode, ph }: { id: string; label: string; c: SettingsCtl; k: 'bizName' | 'bizPhone' | 'bizEmail' | 'bizAddress' | 'slug' | 'tax'; type: string; mode?: string; ph: string }) {
   return (
@@ -59,14 +48,14 @@ function Closed({ c }: { c: SettingsCtl }) {
   });
   return (<>
     <div><h3 style={S(H3)}>Closed dates</h3><p style={S('margin:2px 0 0;' + NOTE)}>Holidays and other days you are shut, even though the weekly hours say open. Nothing is offered online on these days.</p></div>
-    {(() => { const x = c.closed.find((y) => y.id === ask); return x ? <ConfirmBox label="Confirm removal" title={'Open ' + (x.from === x.to ? dayText(x.from) : dayText(x.from) + ' to ' + dayText(x.to)) + ' again?'} body="Those days follow your weekly hours again." action="Remove" onAction={() => { setAsk(null); remove(x.id); }} onKeep={() => setAsk(null)} busy={busy} /> : null; })()}
+    {(() => { const x = c.closed.find((y) => y.id === ask); return x ? <ConfirmBox label="Confirm removal" title={'Open ' + (x.from === x.to ? dayText(x.from) : dayText(x.from) + ' to ' + dayText(x.to)) + ' again?'} body="Those days follow your weekly hours again." action="Remove closed dates" keep="Keep closed dates" onAction={() => { setAsk(null); remove(x.id); }} onKeep={() => setAsk(null)} busy={busy} /> : null; })()}
     {c.closed.map((x) => (
       <div key={x.id} style={S('display:flex;align-items:center;gap:12px;box-sizing:border-box;padding:14px 16px;border:1px solid #E6E8EC;border-radius:22px;background:#FFFFFF')}>
         <div style={S('flex:1 1 auto;min-width:0')}>
           <div style={S('font-size:15px;font-weight:600')}>{x.from === x.to ? dayText(x.from) : dayText(x.from) + ' to ' + dayText(x.to)}</div>
           {x.reason && <div style={S('font-size:13px;color:#5E6673;overflow-wrap:anywhere')}>{x.reason}</div>}
         </div>
-        <button onClick={() => setAsk(x.id)} disabled={busy} aria-label={'Remove closed dates ' + dayText(x.from)} style={S('flex:0 0 auto;height:40px;padding:0 16px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#B42318;font:inherit;font-size:13.5px;font-weight:500;cursor:pointer')}>Remove</button>
+        <button onClick={() => setAsk(x.id)} disabled={busy} aria-label={'Remove closed dates ' + dayText(x.from)} className="ghost" style={S('flex:0 0 auto;height:40px;padding:0 16px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#B42318;font:inherit;font-size:13.5px;font-weight:500;cursor:pointer' + dim(busy))}>Remove</button>
       </div>
     ))}
     {c.closed.length === 0 && <p style={S(NOTE)}>No closed dates coming up.</p>}
@@ -74,8 +63,8 @@ function Closed({ c }: { c: SettingsCtl }) {
       <Field label="First day" htmlFor="cd-from"><input id="cd-from" type="date" value={from} onChange={(e) => { setFrom(e.target.value); setMsg(null); }} style={FIELD_IN} /></Field>
       <Field label="Last day (optional)" htmlFor="cd-to"><input id="cd-to" type="date" value={to} min={from || undefined} onChange={(e) => { setTo(e.target.value); setMsg(null); }} style={FIELD_IN} /></Field>
       <Field label="Reason (optional)" htmlFor="cd-why"><input id="cd-why" type="text" maxLength={80} value={why} onChange={(e) => { setWhy(e.target.value); setMsg(null); }} placeholder="For example, Christmas" style={FIELD_IN} /></Field>
-      {msg && <p role={msg.ok ? 'status' : 'alert'} style={S('margin:0;font-size:13.5px;font-weight:500;color:' + (msg.ok ? '#14624A' : '#B42318'))}>{msg.text}</p>}
-      <button onClick={add} disabled={busy || !from} className="ghost" style={S('height:52px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font:inherit;font-size:14.5px;font-weight:500;cursor:pointer;opacity:' + (busy || !from ? 0.5 : 1))}>Add closed dates</button>
+      {msg && (msg.ok ? <Notice>{msg.text}</Notice> : <FieldError>{msg.text}</FieldError>)}
+      <button onClick={add} disabled={busy || !from} className="ghost" style={S(OUTLINE + ';flex:0 0 auto' + dim(busy || !from))}>{busy ? 'Adding…' : 'Add closed dates'}</button>
     </section>
   </>);
 }
@@ -117,7 +106,7 @@ export function SectionPage({ c, inline }: { c: SettingsCtl; inline?: boolean })
               <div key={i} style={S('display:flex;flex-direction:column;gap:10px;padding:14px 0;border-bottom:' + (i === 6 ? '0' : '1px solid #EEF0F3'))}>
                 <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
                   <div><div style={S('font-size:15px;font-weight:600')}>{DAY_FULL[i]}</div>{!r.open && <div style={S('font-size:13px;color:#5E6673')}>Closed</div>}</div>
-                  <button role="switch" aria-checked={r.open} aria-label={DAY_FULL[i] + ' open'} onClick={() => c.setHour(i, 'open', !r.open)} style={S(swStyle(r.open))}><span style={S(swKnob(r.open))} /></button>
+                  <Switch on={r.open} label={DAY_FULL[i] + ' open'} onToggle={() => c.setHour(i, 'open', !r.open)} />
                 </div>
                 {r.open && (
                   <div style={S('display:flex;align-items:center;gap:8px')}>
@@ -133,7 +122,7 @@ export function SectionPage({ c, inline }: { c: SettingsCtl; inline?: boolean })
         </>)}
 
         {s === 'booking' && (<>
-          <section style={S(CARD)}><SwLine id="st-online" title="Accept online bookings" sub="Clients can book services you have set to bookable online." on={v.online} toggle={() => c.set('online', !v.online)} last /></section>
+          <section style={S(CARD)}><SwitchRow id="st-online" title="Accept online bookings" sub="Clients can book services you have set to bookable online." on={v.online} toggle={() => c.set('online', !v.online)} last /></section>
           <section style={S(CARD)} aria-label="Booking rules">
             <SettingRow label="Book up to" value={nameOf('window', v.window)} onClick={() => setPick('window')} />
             <SettingRow label="Minimum notice" value={nameOf('notice', v.notice)} onClick={() => setPick('notice')} />
@@ -144,12 +133,12 @@ export function SectionPage({ c, inline }: { c: SettingsCtl; inline?: boolean })
 
         {s === 'payments' && (<>
           <section style={S(CARD)} aria-label="Payment methods">
-            <SwLine id="st-card" title="Card payments" on={v.card} toggle={() => c.set('card', !v.card)} />
-            <SwLine id="st-cash" title="Cash" on={v.cash} toggle={() => c.set('cash', !v.cash)} />
-            <SwLine id="st-gift" title="Gift cards" on={v.gift} toggle={() => c.set('gift', !v.gift)} last />
+            <SwitchRow id="st-card" title="Card payments" on={v.card} toggle={() => c.set('card', !v.card)} />
+            <SwitchRow id="st-cash" title="Cash" on={v.cash} toggle={() => c.set('cash', !v.cash)} />
+            <SwitchRow id="st-gift" title="Gift cards" on={v.gift} toggle={() => c.set('gift', !v.gift)} last />
           </section>
           <section style={S(CARD)} aria-label="Tips">
-            <SwLine id="st-tips" title="Ask for a tip at checkout" sub="Show tip options when you take payment." on={v.tips} toggle={() => c.set('tips', !v.tips)} />
+            <SwitchRow id="st-tips" title="Ask for a tip at checkout" sub="Show tip options when you take payment." on={v.tips} toggle={() => c.set('tips', !v.tips)} />
             <SettingRow label="Suggested tip" value={nameOf('tipDefault', v.tipDefault)} onClick={() => setPick('tipDefault')} last />
           </section>
           <Text id="st-tax" label="Sales tax rate (%)" c={c} k="tax" type="text" mode="decimal" ph="0" />
@@ -161,24 +150,24 @@ export function SectionPage({ c, inline }: { c: SettingsCtl; inline?: boolean })
 
         {s === 'notifications' && (
           <section style={S(CARD)} aria-label="Notifications">
-            <SwLine id="st-confirmEmail" title="Booking confirmation emails" sub="Sent to clients as soon as they book." on={v.confirmEmail} toggle={() => c.set('confirmEmail', !v.confirmEmail)} />
-            <SwLine id="st-remind24" title="Reminder 24 hours before" sub="Email reminder for the day before." on={v.remind24} toggle={() => c.set('remind24', !v.remind24)} />
-            <SwLine id="st-remind2" title="Reminder 2 hours before" sub="A short text reminder on the day." on={v.remind2} toggle={() => c.set('remind2', !v.remind2)} />
-            <SwLine id="st-newBooking" title="Tell me about new online bookings" on={v.newBooking} toggle={() => c.set('newBooking', !v.newBooking)} />
-            <SwLine id="st-cancelled" title="Tell me about cancellations" on={v.cancelled} toggle={() => c.set('cancelled', !v.cancelled)} last />
+            <SwitchRow id="st-confirmEmail" title="Booking confirmation emails" sub="Sent to clients as soon as they book." on={v.confirmEmail} toggle={() => c.set('confirmEmail', !v.confirmEmail)} />
+            <SwitchRow id="st-remind24" title="Reminder 24 hours before" sub="Email reminder for the day before." on={v.remind24} toggle={() => c.set('remind24', !v.remind24)} />
+            <SwitchRow id="st-remind2" title="Reminder 2 hours before" sub="A short text reminder on the day." on={v.remind2} toggle={() => c.set('remind2', !v.remind2)} />
+            <SwitchRow id="st-newBooking" title="Tell me about new online bookings" on={v.newBooking} toggle={() => c.set('newBooking', !v.newBooking)} />
+            <SwitchRow id="st-cancelled" title="Tell me about cancellations" on={v.cancelled} toggle={() => c.set('cancelled', !v.cancelled)} last />
           </section>
         )}
 
         {s === 'appearance' && (
-          <section style={S(CARD)}><SwLine id="st-night" title="Night mode" sub="Darker colours for the dashboard. Saved on this device." on={night} toggle={() => setNight(!night)} last /></section>
+          <section style={S(CARD)}><SwitchRow id="st-night" title="Night mode" sub="Darker colours for the dashboard. Saved on this device." on={night} toggle={() => setNight(!night)} last /></section>
         )}
       </main>
       {showBar && (
         <div style={S(BAR)}>
-          {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
+          {!!c.error && <FieldError>{c.error}</FieldError>}
           <div style={S('display:flex;gap:10px')}>
-            {c.dirty && <button type="button" className="ghost" onClick={c.discard} style={S('flex:1 1 0;height:52px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font:inherit;font-size:14.5px;font-weight:500;cursor:pointer')}>Discard</button>}
-            <button type="button" onClick={c.save} disabled={!c.dirty || c.busy} style={S('flex:2 1 0;' + PILL_DARK + ';background:' + (c.dirty ? '#0E1116' : '#E9ECF0') + ';color:' + (c.dirty ? '#FFFFFF' : '#5E6673') + ';cursor:' + (c.dirty ? 'pointer' : 'default'))}>{c.busy ? 'Saving' : c.dirty ? 'Save changes' : 'Saved'}</button>
+            {c.dirty && <button type="button" className="ghost" onClick={c.discard} style={S(OUTLINE)}>Discard</button>}
+            <button type="button" onClick={c.save} disabled={!c.dirty || c.busy} style={S(BLACK + ';flex:2 1 0' + (c.dirty ? '' : ';background:#E9ECF0;color:#5E6673;cursor:default') + dim(c.busy))}>{c.busy ? 'Saving…' : c.dirty ? 'Save changes' : 'Saved'}</button>
           </div>
         </div>
       )}

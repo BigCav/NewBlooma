@@ -7,19 +7,23 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { ActiveFilter, FilterButton, FilterSheet } from '@/components/FilterBits';
+import { Avatar, Chip, FilterChip, dim, filterChipCss } from '@/components/ui';
+import { TONE } from '@/lib/tones';
+import { firstName } from '@/lib/people';
 import { S } from '../calendar/pickers';
 import { MobileItem } from './MobileItem';
 import { acceptRequest, declineRequest, markAllRead, markDone, markRead } from './actions';
-import { FILTERS, REASONS, STATUS, TYPES, initialsOf, isAction, isInfo, type InboxItem } from './shared';
+import { FILTERS, REASONS, STATUS, TYPES, isInfo, needsAction, type InboxItem } from './shared';
 
 const PER_PAGE = 15;
 
 type Mode = 'view' | 'decline' | 'compose';
-const typeStyle = (t: InboxItem['type']) => 'flex:0 0 auto;display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;white-space:nowrap;background:' + TYPES[t].bg + ';color:' + TYPES[t].fg;
-const statusStyle = (k: Exclude<InboxItem['status'], 'new'>) => 'flex:0 0 auto;display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;white-space:nowrap;background:' + STATUS[k].bg + ';color:' + STATUS[k].fg;
-const statusText = (i: InboxItem) => (i.cancelled ? 'Booking cancelled' : i.status === 'new' ? '' : STATUS[i.status].t);
 const hasChip = (i: InboxItem) => i.cancelled || (!isInfo(i.type) && i.status !== 'new');
-const chipStyle = (i: InboxItem) => statusStyle(i.cancelled || i.status === 'new' ? 'declined' : i.status);
+/** The two chips under an item: what it is, and (once handled) what happened to it. */
+function Chips({ i }: { i: InboxItem }) {
+  const st = i.cancelled ? { t: 'Booking cancelled', tone: 'red' as const } : i.status === 'new' ? null : STATUS[i.status];
+  return <span style={S('display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap')}><Chip tone={TYPES[i.type].tone}>{TYPES[i.type].label}</Chip>{hasChip(i) && st && <Chip tone={st.tone}>{st.t}</Chip>}</span>;
+}
 
 function useInbox(props: { items: InboxItem[] }) {
   const router = useRouter();
@@ -53,10 +57,10 @@ function useInbox(props: { items: InboxItem[] }) {
     markAllRead().then((r) => { if (r.error) setError(r.error); router.refresh(); });
   };
   const done = (fn: () => Promise<{ error?: string; notice?: string }>, ok: (n?: string) => void) => startT(async () => { const r = await fn(); if (r.error) { setError(r.error); return; } setError(''); ok(r.notice); router.refresh(); });
-  const accept = () => sel && done(() => acceptRequest(sel.id), (n) => { patch(sel.id, { status: 'accepted', unread: false }); setNotice(n ?? 'Accepted'); });
+  const accept = () => sel && done(() => acceptRequest(sel.id), (n) => { patch(sel.id, { status: 'accepted', unread: false }); setNotice(n ?? 'Approved'); });
   const sendDecline = () => {
     if (!sel) return;
-    if (!reason) { setError('Choose a reason so we can tell ' + sel.client.split(' ')[0] + '.'); return; }
+    if (!reason) { setError('Choose a reason so we can tell ' + firstName(sel.client) + '.'); return; }
     done(() => declineRequest(sel.id, reason), (n) => { patch(sel.id, { status: 'declined', unread: false }); setMode('view'); setReason(null); setNotice(n ?? 'Declined'); });
   };
   /** The conversation panel sent a reply: keep the list in step. */
@@ -70,7 +74,7 @@ function useInbox(props: { items: InboxItem[] }) {
 
   const q = query.trim().toLowerCase();
   const rows = items.filter((i) =>
-    (filter === 'all' || (filter === 'action' && isAction(i.type) && i.status === 'new' && !i.cancelled) || (filter === 'message' && i.type === 'message') || (filter === 'cancellation' && i.type === 'cancellation'))
+    (filter === 'all' || (filter === 'action' && needsAction(i)) || (filter === 'message' && i.type === 'message') || (filter === 'cancellation' && i.type === 'cancellation'))
     && (!q || (i.client + ' ' + i.summary + ' ' + TYPES[i.type].label).toLowerCase().includes(q)));
   const pages = Math.max(1, Math.ceil(rows.length / PER_PAGE)), pageNo = Math.min(page, pages - 1);
   const pageRows = rows.slice(pageNo * PER_PAGE, (pageNo + 1) * PER_PAGE);
@@ -79,7 +83,7 @@ function useInbox(props: { items: InboxItem[] }) {
   const setFilterP = (f: string) => { setFilter(f); setPage(0); };
   const setQueryP = (v: string) => { setQuery(v); setPage(0); };
   const compose = () => { setMode('compose'); setError(''); setNotice(''); };
-  const needs = items.filter((i) => isAction(i.type) && i.status === 'new' && !i.cancelled).length;
+  const needs = items.filter(needsAction).length;
   const unread = items.filter((i) => i.unread).length;
   const handled = items.filter((i) => hasChip(i)).length;
   return { items, narrow, selectedId, filter, setFilter: setFilterP, query, setQuery: setQueryP, pageRows, pageNo, pages, goPage, compose, mode, setMode, reason, setReason, notice, setNotice, error, setError, open, setOpen, sel, rows, needs, unread, handled, markAll, select, accept, sendDecline, replied, finish, cancel, busy };
@@ -108,11 +112,11 @@ function Row({ c, i, m }: { c: C; i: InboxItem; m: boolean }) {
     : 'display:flex;align-items:center;gap:14px;width:100%;box-sizing:border-box;min-height:76px;padding:12px 20px;border:0;border-bottom:1px solid #EEF0F3;text-align:left;font:inherit;color:#0E1116;background:' + (on ? '#F4F5F7' : 'transparent');
   return (
     <button className="s-row" onClick={() => c.select(i.id)} aria-label={`${i.client}, ${TYPES[i.type].label}, ${i.summary}${i.unread ? ', unread' : ''}`} style={S(st)}>
-      <span style={S('flex:0 0 44px;width:44px;height:44px;border-radius:999px;background:#EEF0F3;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600')}>{initialsOf(i.client)}</span>
+      <Avatar name={i.client} size="md" />
       <span style={S('flex:1 1 auto;min-width:0')}>
         <span style={S('display:flex;align-items:center;gap:8px;min-width:0')}><span style={S('min-width:0;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{i.client}</span>{i.unread && <span aria-hidden="true" style={S('flex:0 0 8px;width:8px;height:8px;border-radius:999px;background:#5B3DF5')} />}</span>
         <span style={S('display:block;margin-top:2px;font-size:13px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{i.summary}</span>
-        <span style={S('display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap')}><span style={S(typeStyle(i.type))}>{TYPES[i.type].label}</span>{hasChip(i) && <span style={S(chipStyle(i))}>{statusText(i)}</span>}</span>
+        <Chips i={i} />
       </span>
       <span style={S('flex:0 0 auto;align-self:flex-start;margin-top:4px;font-size:12.5px;color:#5E6673')}>{i.time}</span>
     </button>
@@ -121,24 +125,23 @@ function Row({ c, i, m }: { c: C; i: InboxItem; m: boolean }) {
 
 /** A phone list row: its own card, so each request or message reads on its own. Needs-action items are tinted. */
 function MRow({ c, i }: { c: C; i: InboxItem }) {
-  const need = isAction(i.type) && i.status === 'new' && !i.cancelled;
+  const need = needsAction(i);
   return (
-    <button className="s-row" onClick={() => c.select(i.id)} aria-label={`${i.client}, ${TYPES[i.type].label}, ${i.summary}${i.unread ? ', unread' : ''}`} style={S('display:flex;align-items:flex-start;gap:14px;width:100%;box-sizing:border-box;padding:16px;border-radius:22px;text-align:left;font:inherit;color:#0E1116;cursor:pointer;' + (need ? 'background:#FFF4E5;border:1px solid #F6D9A8' : 'background:#FFFFFF;border:1px solid #E6E8EC'))}>
-      <span style={S('flex:0 0 48px;width:48px;height:48px;border-radius:999px;background:#EEEAFE;color:#3A2BB5;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600')}>{initialsOf(i.client)}</span>
+    <button className="s-row" onClick={() => c.select(i.id)} aria-label={`${i.client}, ${TYPES[i.type].label}, ${i.summary}${i.unread ? ', unread' : ''}`} style={S('display:flex;align-items:flex-start;gap:14px;width:100%;box-sizing:border-box;padding:16px;border-radius:22px;text-align:left;font:inherit;color:#0E1116;cursor:pointer;' + (need ? 'background:' + TONE.amber.bg + ';border:1px solid #F6D9A8' : 'background:#FFFFFF;border:1px solid #E6E8EC'))}>
+      <Avatar name={i.client} size="lg" />
       <span style={S('flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:3px')}>
         <span style={S('display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0')}>
           <span style={S('display:flex;align-items:center;gap:8px;min-width:0')}><span style={S('min-width:0;font-size:16px;font-weight:600;letter-spacing:-0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{i.client}</span>{i.unread && <span aria-hidden="true" style={S('flex:0 0 9px;width:9px;height:9px;border-radius:999px;background:#5B3DF5')} />}</span>
           <span style={S('flex:0 0 auto;font-size:12.5px;color:#5E6673')}>{i.time}</span>
         </span>
         <span style={S('display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;font-size:14px;color:#4A525E;font-weight:' + (i.unread ? 500 : 400))}>{i.summary}</span>
-        <span style={S('display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap')}><span style={S(typeStyle(i.type))}>{TYPES[i.type].label}</span>{hasChip(i) && <span style={S(chipStyle(i))}>{statusText(i)}</span>}</span>
+        <Chips i={i} />
       </span>
     </button>
   );
 }
 
 function Desktop({ c }: { c: C }) {
-  const chipS = (on: boolean) => 'height:40px;padding:0 16px;border-radius:999px;font-size:13.5px;font-weight:500;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
   const big = (l: string, v: number) => <div key={l}><div style={S('color:#5E6673;font-size:13.5px')}>{l}</div><div style={S('margin-top:4px;font-size:38px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{String(v)}</div></div>;
   return (
     <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
@@ -148,11 +151,11 @@ function Desktop({ c }: { c: C }) {
         <section aria-label="Inbox list" style={S('flex:999 1 620px;min-width:0;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;overflow:hidden')}>
           <div style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid #E6E8EC')}>
             <div role="group" aria-label="Filter inbox" style={S('display:flex;flex-wrap:wrap;gap:8px')}>
-              {FILTERS.map((f) => <button key={f.id} onClick={() => c.setFilter(f.id)} aria-pressed={c.filter === f.id} style={S(chipS(c.filter === f.id))}>{f.label}</button>)}
+              {FILTERS.map((f) => <FilterChip key={f.id} on={c.filter === f.id} onClick={() => c.setFilter(f.id)}>{f.label}</FilterChip>)}
             </div>
             <span style={S('display:flex;align-items:center;gap:16px;color:#5E6673;font-size:13.5px')}>
               {c.rows.length === c.items.length ? `${c.items.length} in total` : `${c.rows.length} of ${c.items.length}`}
-              <button onClick={c.markAll} disabled={c.unread === 0} style={S(chipS(false) + ';' + (c.unread === 0 ? 'opacity:.5;cursor:default' : ''))}>Mark all as read</button>
+              <button onClick={c.markAll} disabled={c.unread === 0} style={S(filterChipCss(false) + dim(c.unread === 0))}>Mark all as read</button>
             </span>
           </div>
           {c.pageRows.map((i) => <Row key={i.id} c={c} i={i} m={false} />)}
@@ -174,11 +177,11 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
     <div className={rootCls(drawer)} style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <MobileHeader title="Inbox" subtitle="Requests, cancellations and messages" query={c.query} onQuery={c.setQuery} placeholder="Search inbox" />
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:14px')}>
-        <section aria-label="Inbox at a glance" style={S('display:flex;gap:12px')}>{card('Needs action', c.needs, c.needs > 0 ? '#FFF4E5' : undefined)}{card('Unread', c.unread)}</section>
+        <section aria-label="Inbox at a glance" style={S('display:flex;gap:12px')}>{card('Needs action', c.needs, c.needs > 0 ? TONE.amber.bg : undefined)}{card('Unread', c.unread)}</section>
         <div style={S('display:flex;align-items:center;gap:12px')}>
           <FilterButton onClick={() => setFopen(true)} active={c.filter !== 'all'} label="Filter inbox" />
           <span style={S('flex:1 1 auto;min-width:0;color:#5E6673;font-size:14px')}>{c.rows.length === c.items.length ? `${c.items.length} in total` : `${c.rows.length} of ${c.items.length}`}</span>
-          <button onClick={c.markAll} disabled={c.unread === 0} style={S('flex:0 0 auto;height:44px;padding:0 16px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;font:inherit;font-size:14px;font-weight:500;color:#0E1116;' + (c.unread === 0 ? 'opacity:.5' : ''))}>Mark all as read</button>
+          <button onClick={c.markAll} disabled={c.unread === 0} style={S(filterChipCss(false, true) + dim(c.unread === 0))}>Mark all as read</button>
         </div>
         {c.filter !== 'all' && <ActiveFilter label={fl} onClear={() => c.setFilter('all')} />}
         {c.pageRows.map((i) => <MRow key={i.id} c={c} i={i} />)}

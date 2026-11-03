@@ -4,18 +4,20 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../../calendar/pickers';
+import { filterChipCss } from '@/components/ui';
+import type { ToneName } from '@/lib/tones';
 import { Done, FormsMain, FormsOverlay, Upcoming } from './FormsMobile';
 import type { FormState, How } from '@/lib/forms-shared';
 import { recordPatchTest, sendFormLinks } from './actions';
 
 export type RowVM = { tplId: string; name: string; how: How; isPatch: boolean; needed: boolean; state: FormState; line: string; canSend: boolean; canFill: boolean; canRecord: boolean; answers: { k: string; v: string }[] };
-export type ClientCard = { id: string; clientId: string; dayYmd: string; ref: string; time: string; name: string; init: string; email: string; bookingId: string; when: string; svc: string; who: string; level: 'ok' | 'todo' | 'alert'; todoCount: number; banner: { title: string; text: string }; rows: RowVM[]; sendable: number };
+export type ClientCard = { id: string; clientId: string; dayYmd: string; ref: string; time: string; name: string; email: string; bookingId: string; when: string; svc: string; who: string; level: 'ok' | 'todo' | 'alert'; todoCount: number; banner: { title: string; text: string }; rows: RowVM[]; sendable: number };
 export type DoneRow = { id: string; clientId: string; client: string; form: string; date: string; ref: string; by: string; flagged: boolean; answers: { k: string; v: string }[] };
 type Props = { cards: ClientCard[]; done: DoneRow[]; initial: string; hasForms: boolean; owner: boolean; today: string };
 
-const STAT: Record<FormState, { t: string; bg: string; fg: string }> = {
-  valid: { t: 'Valid', bg: '#DDF3EA', fg: '#14624A' }, expired: { t: 'Expired', bg: '#FDECEA', fg: '#B42318' }, missing: { t: 'Not completed', bg: '#FFF4E5', fg: '#7A4204' },
-  na: { t: 'Not needed yet', bg: '#EEF0F3', fg: '#4A525E' }, reaction: { t: 'Reaction', bg: '#FDECEA', fg: '#B42318' },
+const STAT: Record<FormState, { t: string; tone: ToneName }> = {
+  valid: { t: 'Valid', tone: 'green' }, expired: { t: 'Expired', tone: 'red' }, missing: { t: 'Not completed', tone: 'amber' },
+  na: { t: 'Not needed yet', tone: 'grey' }, reaction: { t: 'Reaction', tone: 'red' },
 };
 
 function useClientForms(props: Props) {
@@ -47,7 +49,6 @@ function useClientForms(props: Props) {
 type C = ReturnType<typeof useClientForms>;
 export type FormsCtl = C;
 
-const chipD = (on: boolean) => 'height:40px;padding:0 16px;border-radius:999px;font:inherit;font-size:13.5px;font-weight:500;cursor:pointer;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
 const bigD = (l: string, v: number) => <div key={l}><div style={S('color:#5E6673;font-size:13.5px')}>{l}</div><div style={S('margin-top:4px;font-size:38px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{String(v)}</div></div>;
 
 /** Desktop: the same cards as the phone, in a grid. A visit or a completed form opens in the right-hand drawer. */
@@ -58,7 +59,7 @@ function Desktop({ c }: { c: C }) {
       <PageHeader title="Client forms" subtitle="Forms for upcoming appointments" query={c.query} onQuery={c.setQuery} placeholder="Search client forms" showAction={false} />
       <section aria-label="Client forms at a glance" style={S('display:flex;flex-wrap:wrap;gap:20px 64px')}>{bigD('Upcoming visits', c.cards.length)}{bigD('Forms needed', needed)}{bigD('Completed forms', c.done.length)}</section>
       <div role="tablist" aria-label="Client forms view" style={S('display:flex;gap:8px')}>
-        {([['upcoming', 'Upcoming visits'], ['done', 'Completed']] as const).map(([id, label]) => <button key={id} role="tab" aria-selected={c.tab === id} onClick={() => c.setTab(id)} style={S(chipD(c.tab === id))}>{label}</button>)}
+        {([['upcoming', 'Upcoming visits'], ['done', 'Completed']] as const).map(([id, label]) => <button key={id} role="tab" aria-selected={c.tab === id} onClick={() => c.setTab(id)} style={S(filterChipCss(c.tab === id))}>{label}</button>)}
       </div>
       {c.tab === 'done'
         ? <div style={S('display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:12px')}><Done c={c} /></div>

@@ -2,8 +2,15 @@
 import { useState } from 'react';
 import { decimalInput } from '@/lib/numeric';
 import type { CalService } from '@/lib/cal';
-import { S, ServicePicker } from './pickers';
-import { m2, TIP_OPTS } from './calUi';
+import { S } from './s';
+import { ServicePicker } from './pickers';
+import { TIP_OPTS } from './calUi';
+import { dollars, toCents } from '@/lib/format';
+import { plural } from '@/lib/display';
+import { TONE } from '@/lib/tones';
+import { dim } from '@/components/ui';
+import { Field } from '../settings/forms/FormPage';
+import { FIELD_IN } from '@/components/ui';
 import { DISC_PCTS, NO_DISC, discountCents, type CoPackage, type CoProduct, type DiscPick } from '../sales/shared';
 import { TerminalStatus, type TermView } from './TerminalStatus';
 import { StepShell, useSteps, Tiles, DetailRows, ICONS, ROW, TICK } from './wizardUi';
@@ -14,7 +21,7 @@ export type CoRetail = { products: CoProduct[]; qty: Record<string, number>; onQ
 export type CoLine = { key: string; name: string; sub?: string; cents: number };
 export type CoCfg = { canDiscount: boolean; askTip: boolean; taxInclusive: boolean; taxRate: number };
 
-const FIELD = 'box-sizing:border-box;width:100%;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF';
+const FIELD = 'box-sizing:border-box;width:100%;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:16px;color:#0E1116;background:#FFFFFF';
 
 /**
  * Checkout as steps, shared by the calendar and the Sales page: payment method, discount and tip when switched on,
@@ -63,15 +70,15 @@ export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCha
   const canNext = kind === 'method' ? (co.method !== 'gift_card' || !!co.code.trim()) : true;
 
   // Cash: exact, or a different amount handed over with the change to give back.
-  const gotCents = cashHow === 'exact' ? total : Math.round((Number(got) || 0) * 100);
+  const gotCents = cashHow === 'exact' ? total : toCents(got);
   const cashReady = cashHow === 'exact' || (cashHow === 'partial' && gotCents >= total);
 
   // The last step of a card payment: pending on the terminal, then a tick or a cross.
-  if (term && term.phase !== 'idle') return <TerminalStatus t={term} amount={m2(total)} />;
+  if (term && term.phase !== 'idle') return <TerminalStatus t={term} amount={dollars(total)} />;
 
   if (editing && edit) return (
     <StepShell plain step={0} titles={['Edit services']} onBack={() => { setError(''); setEditing(false); }} onClose={onClose} error={error}
-      summary={<div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px')}><span style={S('color:#5E6673;font-size:14px')}>{lines.length + (lines.length === 1 ? ' service' : ' services')}</span><span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{m2(gross)}</span></div>}
+      summary={<div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px')}><span style={S('color:#5E6673;font-size:14px')}>{plural(lines.length, 'service')}</span><span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{dollars(gross)}</span></div>}
       actions={[{ label: 'Done', onClick: () => { setError(''); setEditing(false); } }]}>
       <p style={S('margin:0;color:#5E6673;font-size:14px')}>This only changes what is charged. The booking and its time stay as they were.</p>
       <ServicePicker lock={edit.lock} services={edit.services} selected={edit.selected} initialCat={edit.initialCat} chipHeight={44} onPick={edit.onPick} />
@@ -87,10 +94,10 @@ export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCha
       for (const p of retail.products) { const was = before[p.id] ?? 0; if ((retail.qty[p.id] ?? 0) !== was) retail.onQty(p.id, was); }
       close();
     };
-    const stepBtn = (dis: boolean) => 'flex:0 0 auto;width:40px;height:40px;padding:0;border-radius:999px;border:1px solid #E1E4E9;background:#FFFFFF;font:inherit;font-size:20px;line-height:1;color:#0E1116;cursor:pointer;opacity:' + (dis ? 0.35 : 1);
+    const stepBtn = (dis: boolean) => 'flex:0 0 auto;width:40px;height:40px;padding:0;border-radius:999px;border:1px solid #E1E4E9;background:#FFFFFF;font:inherit;font-size:20px;line-height:1;color:#0E1116;cursor:pointer' + dim(dis);
     return (
       <StepShell plain step={0} titles={['Add products']} onBack={discard} onClose={onClose} error={error}
-        summary={<div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px')}><span style={S('color:#5E6673;font-size:14px')}>{count + (count === 1 ? ' product' : ' products')}</span><span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{m2(prodTotal)}</span></div>}
+        summary={<div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px')}><span style={S('color:#5E6673;font-size:14px')}>{plural(count, 'product')}</span><span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{dollars(prodTotal)}</span></div>}
         actions={[{ label: 'Done', onClick: close }]}>
         <p style={S('margin:0;color:#5E6673;font-size:14px')}>Products are charged with the visit and come off your stock when it is paid.</p>
         <input aria-label="Search products" value={find} onChange={(e) => setFind(e.target.value)} placeholder="Search products" style={{ ...S(FIELD), minHeight: 0 }} />
@@ -102,7 +109,7 @@ export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCha
             <div key={p.id} style={S('display:flex;align-items:center;gap:12px;box-sizing:border-box;min-height:56px;padding:10px 16px;border-radius:16px;opacity:' + (out ? 0.55 : 1) + ';border:1px solid ' + (n > 0 ? '#0E1116' : '#E1E4E9') + ';background:' + (n > 0 ? '#F4F5F7' : '#FFFFFF') + (n > 0 ? ';box-shadow:inset 0 0 0 1px #0E1116' : ''))}>
               <span style={S('flex:1 1 auto;min-width:0')}>
                 <span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{p.name}</span>
-                <span style={S('display:block;font-size:13px;color:#5E6673')}>{(p.brand ? p.brand + ', ' : '') + m2(p.priceCents) + ', ' + (out ? 'out of stock' : p.stock + ' in stock')}</span>
+                <span style={S('display:block;font-size:13px;color:#5E6673')}>{(p.brand ? p.brand + ', ' : '') + dollars(p.priceCents) + ', ' + (out ? 'out of stock' : p.stock + ' in stock')}</span>
               </span>
               {n > 0 ? (
                 <span style={S('flex:0 0 auto;display:flex;align-items:center;gap:10px')}>
@@ -111,7 +118,7 @@ export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCha
                   <button onClick={() => retail.onQty(p.id, n + 1)} disabled={n >= p.stock} aria-label={'Add one ' + p.name} style={S(stepBtn(n >= p.stock))}>+</button>
                 </span>
               ) : (
-                <button onClick={() => retail.onQty(p.id, 1)} disabled={out} style={S('flex:0 0 auto;height:40px;padding:0 18px;border-radius:999px;border:1px solid #E1E4E9;background:#FFFFFF;font:inherit;font-size:14px;font-weight:500;color:#0E1116;cursor:pointer;opacity:' + (out ? 0.35 : 1))}>Add</button>
+                <button onClick={() => retail.onQty(p.id, 1)} disabled={out} style={S('flex:0 0 auto;height:40px;padding:0 18px;border-radius:999px;border:1px solid #E1E4E9;background:#FFFFFF;font:inherit;font-size:14px;font-weight:500;color:#0E1116;cursor:pointer' + dim(out))}>Add</button>
               )}
             </div>
           );
@@ -123,27 +130,27 @@ export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCha
   return (
     <StepShell step={step} titles={kinds.map((k) => titles[k])} onBack={back} onClose={onClose} error={error}
       actions={[
-        kind === 'summary' ? { label: total === 0 ? 'Complete visit' : 'Charge ' + m2(total), onClick: cash ? forward : onCharge, disabled: busy }
-        : kind === 'cash' ? { label: 'Confirm sale', onClick: onCharge, disabled: busy || !cashReady }
+        kind === 'summary' ? { label: busy ? 'Charging…' : total === 0 ? 'Complete visit' : 'Charge ' + dollars(total), onClick: cash ? forward : onCharge, disabled: busy }
+        : kind === 'cash' ? { label: busy ? 'Saving…' : 'Confirm sale', onClick: onCharge, disabled: busy || !cashReady }
         : { label: 'Continue', onClick: () => { if (!canNext) { setError('Enter the gift card code.'); return; } forward(); }, disabled: !canNext },
       ]}>
       <p style={S('margin:0;color:#5E6673;font-size:14px;overflow-wrap:anywhere')}>{who}</p>
       {kind === 'method' && (<>
         <Tiles label="Payment method" options={methods} value={co.method} onPick={(m) => setCo({ ...co, method: m })} />
-        {co.method === 'gift_card' && <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="co-code" style={S('font-size:14px;font-weight:600')}>Gift card code</label><input id="co-code" type="text" value={co.code} onChange={(e) => setCo({ ...co, code: e.target.value })} placeholder="Code" style={{ ...S(FIELD), minHeight: 0 }} /></div>}
+        {co.method === 'gift_card' && <Field label="Gift card code" htmlFor="co-code"><input id="co-code" type="text" value={co.code} onChange={(e) => setCo({ ...co, code: e.target.value })} placeholder="Code" style={FIELD_IN} /></Field>}
       </>)}
       {kind === 'discount' && (<>
         <Tiles label="Discount" value={discKey} options={[['none', 'None'], ...DISC_PCTS.map((v) => ['p' + v, v + '%'] as const), ['amt', '$ off']] as const}
           onPick={(k) => setCo({ ...co, disc: k === 'none' ? NO_DISC : k === 'amt' ? { ...co.disc, kind: 'amount', value: co.disc.kind === 'amount' ? co.disc.value : '' } : { ...co.disc, kind: 'percent', value: k.slice(1) } })} />
-        {co.disc.kind === 'amount' && <input aria-label="Discount amount in dollars" inputMode="decimal" value={co.disc.value} onChange={(e) => setCo({ ...co, disc: { ...co.disc, value: decimalInput(e.target.value) } })} placeholder="Amount off, like 10 or 7.50" style={{ ...S(FIELD), minHeight: 0 }} />}
-        {co.disc.kind !== 'none' && <input aria-label="Discount reason" maxLength={60} value={co.disc.note} onChange={(e) => setCo({ ...co, disc: { ...co.disc, note: e.target.value } })} placeholder="Reason (optional), e.g. Staff discount" style={{ ...S(FIELD), minHeight: 0 }} />}
+        {co.disc.kind === 'amount' && <Field label="Amount off"><input aria-label="Discount amount in dollars" inputMode="decimal" value={co.disc.value} onChange={(e) => setCo({ ...co, disc: { ...co.disc, value: decimalInput(e.target.value) } })} placeholder="Amount off, like 10 or 7.50" style={FIELD_IN} /></Field>}
+        {co.disc.kind !== 'none' && <Field label="Reason (optional)"><input aria-label="Discount reason" maxLength={60} value={co.disc.note} onChange={(e) => setCo({ ...co, disc: { ...co.disc, note: e.target.value } })} placeholder="e.g. Staff discount" style={FIELD_IN} /></Field>}
       </>)}
       {kind === 'tip' && <Tiles label="Tip" options={TIP_OPTS} value={co.tip} onPick={(p) => setCo({ ...co, tip: p })} />}
       {kind === 'summary' && (<>
         <DetailRows go={jump} rows={[
           { icon: ICONS.tag, text: methodLabel + (co.method === 'gift_card' && co.code ? ', ' + co.code : ''), step: 0 },
           ...(cfg.canDiscount ? [{ icon: ICONS.tag, text: discLabel, step: stepOf('discount') }] : []),
-          ...(cfg.askTip ? [{ icon: ICONS.tag, text: tip ? 'Tip ' + m2(tip) : 'No tip', step: stepOf('tip') }] : []),
+          ...(cfg.askTip ? [{ icon: ICONS.tag, text: tip ? 'Tip ' + dollars(tip) : 'No tip', step: stepOf('tip') }] : []),
         ]} />
         <div style={S('display:flex;flex-direction:column;gap:10px')}>
           <div style={S('display:flex;align-items:center;justify-content:space-between')}><h3 style={S('margin:0;font-size:17px;font-weight:600;letter-spacing:-0.01em')}>Services</h3>{edit && <button onClick={() => { setError(''); setEditing(true); }} style={S('border:0;background:transparent;font:inherit;font-size:14px;font-weight:500;text-decoration:underline;cursor:pointer;color:#0E1116')}>Edit</button>}</div>
@@ -151,7 +158,7 @@ export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCha
             <div key={v.key} style={S('display:flex;align-items:center;gap:12px')}>
               <span style={S('flex:0 0 4px;align-self:stretch;border-radius:999px;background:#B9AEFB')} />
               <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{v.name}</span>{!!v.sub && <span style={S('display:block;font-size:13px;color:#5E6673')}>{v.sub}</span>}</span>
-              <span style={S('flex:0 0 auto;font-size:14.5px;font-weight:500')}>{packLines.includes(v) ? 'Package' : m2(v.cents)}</span>
+              <span style={S('flex:0 0 auto;font-size:14.5px;font-weight:500')}>{packLines.includes(v) ? 'Package' : dollars(v.cents)}</span>
             </div>
           ))}
         </div>
@@ -161,7 +168,7 @@ export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCha
             <div role="group" aria-label="Packages" style={S('display:flex;flex-direction:column')}>
               {packs.list.map((x) => { const on = packs.chosen.includes(x.id); return (
                 <button key={x.id} onClick={() => packs.onToggle(x.id)} aria-pressed={on} style={S(ROW(on))}>
-                  <span style={S('flex:1 1 auto;min-width:0;text-align:left')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{x.name}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{x.left + (x.left === 1 ? ' visit left' : ' visits left')}</span></span>
+                  <span style={S('flex:1 1 auto;min-width:0;text-align:left')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{x.name}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{plural(x.left, 'visit') + ' left'}</span></span>
                   <span style={S('flex:0 0 auto;font-size:14px;color:#5E6673')}>{on ? 'Using' : 'Use'}</span>
                   {on && TICK}
                 </button>
@@ -176,25 +183,25 @@ export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCha
             {prodLines.map((l) => (
               <div key={l.p.id} style={S('display:flex;align-items:center;gap:12px')}>
                 <span style={S('flex:0 0 4px;align-self:stretch;border-radius:999px;background:#9ED9C0')} />
-                <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{l.p.name}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{l.n > 1 ? l.n + ' x ' + m2(l.p.priceCents) : (l.p.brand || 'Retail')}</span></span>
-                <span style={S('flex:0 0 auto;font-size:14.5px;font-weight:500')}>{m2(l.cents)}</span>
+                <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{l.p.name}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{l.n > 1 ? l.n + ' x ' + dollars(l.p.priceCents) : (l.p.brand || 'Retail')}</span></span>
+                <span style={S('flex:0 0 auto;font-size:14.5px;font-weight:500')}>{dollars(l.cents)}</span>
               </div>
             ))}
           </div>
         )}
         <div className="sum-rows" style={S('padding:2px 16px;border:1px solid #E6E8EC;border-radius:22px')}>
-          {([...(disc > 0 ? [['Discount', '-' + m2(disc)]] : []), ...(tip ? [['Tip', m2(tip)]] : []), [gst, m2(taxAmt)]] as [string, string][]).map(([l, v]) => (
+          {([...(disc > 0 ? [['Discount', '-' + dollars(disc)]] : []), ...(tip ? [['Tip', dollars(tip)]] : []), [gst, dollars(taxAmt)]] as [string, string][]).map(([l, v]) => (
             <div key={l} style={S('display:flex;justify-content:space-between;gap:12px;padding:13px 0;font-size:15px')}><span style={S('color:#5E6673')}>{l}</span><span style={S('font-weight:500;white-space:nowrap')}>{v}</span></div>
           ))}
-          <div style={S('display:flex;justify-content:space-between;gap:12px;padding:15px 0;font-size:18px;font-weight:600')}><span>Total</span><span>{m2(total)}</span></div>
+          <div style={S('display:flex;justify-content:space-between;gap:12px;padding:15px 0;font-size:18px;font-weight:600')}><span>Total</span><span>{dollars(total)}</span></div>
         </div>
       </>)}
       {kind === 'cash' && (<>
-        <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:16px;border:1px solid #E6E8EC;border-radius:22px')}><span style={S('color:#5E6673;font-size:14px')}>To pay</span><span style={S('font-size:24px;font-weight:600;letter-spacing:-0.02em')}>{m2(total)}</span></div>
+        <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:16px;border:1px solid #E6E8EC;border-radius:22px')}><span style={S('color:#5E6673;font-size:14px')}>To pay</span><span style={S('font-size:24px;font-weight:600;letter-spacing:-0.02em')}>{dollars(total)}</span></div>
         <Tiles label="Cash received" options={[['exact', 'Exact'], ['partial', 'Partial']] as const} value={cashHow} onPick={(v) => setCashHow(v)} />
         {cashHow === 'partial' && (<>
-          <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="co-got" style={S('font-size:14px;font-weight:600')}>Amount received</label><input id="co-got" inputMode="decimal" value={got} onChange={(e) => setGot(decimalInput(e.target.value))} placeholder={'Cash received, ' + (total / 100).toFixed(2)} style={{ ...S(FIELD), minHeight: 0 }} /></div>
-          <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:16px;border-radius:22px;background:' + (gotCents >= total ? '#DDF3EA' : '#FDECEA') + ';color:' + (gotCents >= total ? '#14624A' : '#B42318'))}><span style={S('font-size:14px;font-weight:500')}>{gotCents >= total ? 'Change to give back' : 'Still to receive'}</span><span style={S('font-size:22px;font-weight:600')}>{m2(Math.abs(gotCents - total))}</span></div>
+          <Field label="Amount received" htmlFor="co-got"><input id="co-got" inputMode="decimal" value={got} onChange={(e) => setGot(decimalInput(e.target.value))} placeholder={'Cash received, ' + dollars(total)} style={FIELD_IN} /></Field>
+          <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:16px;border-radius:22px;background:' + (gotCents >= total ? TONE.green.bg : TONE.red.bg) + ';color:' + (gotCents >= total ? TONE.green.fg : TONE.red.fg))}><span style={S('font-size:14px;font-weight:500')}>{gotCents >= total ? 'Change to give back' : 'Still to receive'}</span><span style={S('font-size:22px;font-weight:600')}>{dollars(Math.abs(gotCents - total))}</span></div>
         </>)}
       </>)}
     </StepShell>

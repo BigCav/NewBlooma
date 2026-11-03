@@ -4,6 +4,7 @@ import { requireCtx, friendly } from '@/lib/session';
 import { sendCustomMessage } from '@/lib/notify';
 import { mailP, mailButton } from '@/lib/email-layout';
 import { ymd } from '@/lib/format';
+import { firstName } from '@/lib/people';
 import { ensureFormToken, formUrl, loadBooking, loadTemplates, rowsForBooking, saveForms } from '@/lib/forms';
 import { niceDate, type FormInput } from '@/lib/forms-shared';
 
@@ -21,7 +22,7 @@ export async function sendFormLinks(bookingId: string): Promise<Res> {
   if (!pend.length) return { error: 'Nothing is waiting for this client to fill in.' };
   if (!b.clientEmail) return { error: 'This client has no email address. Use Fill in at the salon, or add their email on their profile.' };
   const url = formUrl(await ensureFormToken(b.id, b.salonId, b.startsAt));
-  const first = b.clientName.split(' ')[0];
+  const first = firstName(b.clientName);
   const names = pend.map((r) => r.tpl.name);
   const text = `Hi ${first}, before your visit please complete ${names.join(' and ')}. It takes about two minutes: ${url}`;
   const html = mailP(`Hi ${first},`) + mailP(`Before your visit, please complete: ${names.join(', ')}. It takes about two minutes.`) + mailButton('Complete your form', url);

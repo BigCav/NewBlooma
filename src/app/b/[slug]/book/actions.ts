@@ -11,7 +11,7 @@ import { outstandingForBooking } from '@/lib/forms';
 
 export type Slot = { key: string; min: number };
 
-/** Open start times for one day. With "any professional" each start time appears once. */
+/** Open start times for one day. With "any team member" each start time appears once. */
 export async function publicSlots(slug: string, date: string, serviceIds: string[], staffId: string): Promise<{ slots: Slot[]; error?: string }> {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !serviceIds.length || serviceIds.length > 12) return { slots: [] };
   if (!(await allow('slots:' + (await clientIp()), 240, 600))) return { slots: [], error: 'Too many requests from here for now. Please try again in a few minutes.' };

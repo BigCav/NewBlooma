@@ -1,8 +1,9 @@
 import { minutesOfDay, time12, ymd } from '@/lib/format';
 import type { Ctx } from '@/lib/session';
-import { initialsOf, type ClientRow, type Tag } from './shared';
+import { MONTHS_FULL } from '@/lib/cal';
+import type { ClientRow, Tag } from './shared';
 
-const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MON = MONTHS_FULL.map((m) => m.slice(0, 3));
 export function fmtDay(iso: string, tz: string, today: string) {
   const y = ymd(iso, tz);
   if (y === today) return 'Today';
@@ -35,4 +36,3 @@ export async function loadOverview(ctx: Pick<Ctx, 'sb' | 'salon'>): Promise<Over
   });
   return { rows, count: rows.length, newThisMonth: newMonth, rebookRate: withVisit ? Math.round((rebooked / withVisit) * 100) + '%' : '0%', recentIds: rows.map((r) => r.id) };
 }
-export { initialsOf };

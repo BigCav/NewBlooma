@@ -2,6 +2,7 @@
 import { emailConfigured, flushOutbox } from '@/lib/notify';
 import { revalidatePath } from 'next/cache';
 import { requireCtx, friendly } from '@/lib/session';
+import { plural } from '@/lib/display';
 
 type Res = { error?: string; notice?: string };
 
@@ -27,6 +28,6 @@ export async function requestReviews(): Promise<Res> {
   if (error) return { error: friendly(error.message) };
   await flushOutbox();
   revalidatePath('/reviews');
-  const n = `${data} client${data === 1 ? '' : 's'}`;
+  const n = plural(data, 'client');
   return { notice: data === 0 ? 'No one new to ask right now' : emailConfigured() ? `Review requests sent to ${n} from the last two weeks` : `Review requests are ready for ${n}, but email is not set up yet so nothing was sent` };
 }

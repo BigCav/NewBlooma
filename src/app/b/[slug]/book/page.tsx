@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { getPublicSalon } from '@/lib/public';
 import { emailConfigured } from '@/lib/notify';
 import { ymd } from '@/lib/format';
+import { CardText, PublicCard } from '../PublicCard';
 import { BookingView } from './BookingView';
 import { clientMe } from './actions';
 
@@ -18,7 +19,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const d = await getPublicSalon(slug);
   if (!d) notFound();
   const { salon, settings } = d;
-  if (!settings.online_booking) return <div className="auth"><div className="card"><h1>{salon.name}</h1><p className="muted">Online booking is not available right now. Please contact the salon{salon.phone ? ` on ${salon.phone}` : ''}.</p></div></div>;
+  if (!settings.online_booking) return <PublicCard title={salon.name}><CardText>Online booking is not available right now. Please contact the salon{salon.phone ? ` on ${salon.phone}` : ''}.</CardText></PublicCard>;
   const account = await clientMe(slug);
   const now = new Date();
   const parts = new Intl.DateTimeFormat('en-GB', { timeZone: salon.timezone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(now);

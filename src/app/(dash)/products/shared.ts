@@ -1,9 +1,15 @@
-import { dollars } from '@/lib/format';
+import { toneFor } from '@/lib/cal';
+import { TONE, type ToneName } from '@/lib/tones';
+
 export type ProductRow = { id: string; name: string; brand: string; cat: string; sku: string; priceCents: number; stock: number; reorder: number; sold: number; status: 'In stock' | 'Low stock' | 'Out of stock' };
-export const STATUS = { 'In stock': { bg: '#DDF3EA', fg: '#14624A', bar: '#2FB985' }, 'Low stock': { bg: '#FFEBD0', fg: '#7A4204', bar: '#F0A044' }, 'Out of stock': { bg: '#FCE3E3', fg: '#9B1C1C', bar: '#E5484D' } } as const;
+/** The chip tone of each stock state, and the colour of the stock bar. */
+export const STATUS: Record<ProductRow['status'], { tone: ToneName; bar: string }> = {
+  'In stock': { tone: 'green', bar: '#2FB985' },
+  'Low stock': { tone: 'amber', bar: '#F0A044' },
+  'Out of stock': { tone: 'red', bar: '#E5484D' },
+};
 export const FILTERS = [{ id: 'all', label: 'All products' }, { id: 'In stock', label: 'In stock' }, { id: 'Low stock', label: 'Low stock' }, { id: 'Out of stock', label: 'Out of stock' }];
-const TONES = [{ bg: '#EEEAFE', fg: '#3A2BB5' }, { bg: '#FFEBD0', fg: '#7A4204' }, { bg: '#DDF3EA', fg: '#14624A' }, { bg: '#E9F0FF', fg: '#1B4A8A' }];
-export const toneOf = (cats: string[], cat: string) => { const i = cats.indexOf(cat); return i < 0 ? { bg: '#EEF0F3', fg: '#0E1116' } : TONES[i % TONES.length]; };
+/** The colour of a category tile (a square, not a person): the same source as the calendar blocks, so a category is one colour everywhere. Services and products both use this. */
+export const categoryTone = (name: string | null | undefined, index = 0): { bg: string; fg: string } => { const t = toneFor(name, Math.max(0, index)); return { bg: t.bg, fg: t.fg }; };
+export const toneOf = (cats: string[], cat: string) => { const i = cats.indexOf(cat); return i < 0 ? TONE.grey : categoryTone(cat, i); };
 export const statusOf = (stock: number, reorder: number) => (stock === 0 ? 'Out of stock' : stock <= reorder ? 'Low stock' : 'In stock') as ProductRow['status'];
-export const money = dollars;
-export const initialsOf = (n: string) => n.split(' ').slice(0, 2).map((w) => w[0]).join('');

@@ -5,16 +5,12 @@ import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/Chrome';
 import { S } from '../../calendar/pickers';
-import { BACK as BACK_ICON, FIELD_IN, RING } from '@/components/ui';
+import { BACK as BACK_ICON, BLACK, FIELD_IN, FieldError, Notice, OUTLINE, RING, SwitchRow, dim } from '@/components/ui';
 import { BAR, CARD, Field as CardField, PAGE } from '../forms/FormPage';
 import { checkTerminal, savePayments } from './actions';
 
 type Props = { taxInclusive: boolean; online: boolean; terminal: boolean; station: string; saved: { online_user: boolean; online_key: boolean; hit_user: boolean; hit_key: boolean } };
 
-const INPUT = 'box-sizing:border-box;width:100%;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;color:#0E1116;background:#FFFFFF';
-const swStyle = (on: boolean) => 'position:relative;flex:0 0 52px;width:52px;height:32px;padding:0;border:0;border-radius:999px;cursor:pointer;background:' + (on ? '#0E1116' : '#D5D9E0');
-const swKnob = (on: boolean) => 'position:absolute;top:3px;left:' + (on ? 23 : 3) + 'px;width:26px;height:26px;border-radius:999px;background:#FFFFFF';
-const noMin = { minHeight: 0 } as const;
 
 function useForm(p: Props) {
   const router = useRouter();
@@ -51,16 +47,11 @@ function useForm(p: Props) {
 }
 type C = ReturnType<typeof useForm>;
 
-const SECTIONS = [
-  ['business', 'Business details', 'Name, contact and address'], ['hours', 'Opening hours', 'When the salon is open'], ['booking', 'Online booking', 'Booking rules for clients'],
-  ['payments', 'Payments', 'Methods, tips and tax'], ['notifications', 'Notifications', 'Emails and reminders'],
-] as const;
-const Chevron = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')}><path d="M9.5 6l6 6-6 6" /></svg>;
 
 function Desktop({ c }: { c: C }) {
   return (
     <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
-      <PageHeader title="Settings" subtitle="Business details and booking rules" showSearch={false} showAction={false} />
+      <PageHeader title="Card payments" subtitle="Windcave setup and tax mode" showSearch={false} showAction={false} />
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
         <div style={S('flex:999 1 520px;min-width:0;max-width:760px')}><Mobile c={c} inline /></div>
       </div>
@@ -68,14 +59,6 @@ function Desktop({ c }: { c: C }) {
   );
 }
 
-function SwLine({ id, title, sub, on, toggle, last }: { id: string; title: string; sub?: string; on: boolean; toggle: () => void; last?: boolean }) {
-  return (
-    <div style={S('display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:' + (last ? '0' : '1px solid #EEF0F3'))}>
-      <div style={S('min-width:0')}><div id={id} style={S('font-size:15px;font-weight:500')}>{title}</div>{sub && <div style={S('margin-top:2px;font-size:13px;color:#5E6673')}>{sub}</div>}</div>
-      <button role="switch" aria-checked={on} aria-labelledby={id} onClick={toggle} style={S(swStyle(on))}><span style={S(swKnob(on))} /></button>
-    </div>
-  );
-}
 
 function Key({ id, label, value, set, secret, saved, ph }: { id: string; label: string; value: string; set: (v: string) => void; secret?: boolean; saved?: boolean; ph?: string }) {
   return (
@@ -96,8 +79,8 @@ function Mobile({ c, inline }: { c: C; inline?: boolean }) {
       <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px;border-bottom:1px solid #E6E8EC')}>
         <Link href="/settings?section=payments" aria-label="Back to payments" style={S(RING + ';text-decoration:none')}>{BACK_ICON}</Link>
         <div style={S('flex:1 1 auto;min-width:0')}>
-          <div style={S('font-size:18px;font-weight:600;letter-spacing:-0.02em')}>Card payments</div>
-          <div style={S('font-size:13px;color:#5E6673')}>Windcave setup and tax mode</div>
+          <div style={S('font-size:18px;font-weight:600;letter-spacing:-0.02em')}>{inline ? 'Payments' : 'Card payments'}</div>
+          <div style={S('font-size:13px;color:#5E6673')}>{inline ? 'Back to payments settings' : 'Windcave setup and tax mode'}</div>
         </div>
       </header>
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:16px 20px 24px;display:flex;flex-direction:column;gap:14px')}>
@@ -108,22 +91,22 @@ function Mobile({ c, inline }: { c: C; inline?: boolean }) {
         </div>
 
         <div><h3 style={S(H3)}>Card payments on screen</h3><p style={S(NOTE)}>Opens Windcave's secure payment page for the client to enter their card.</p></div>
-        <section style={S(CARD)}><SwLine id="wc-online" title="Take card payments on screen" on={v.online} toggle={() => set('online', !v.online)} last /></section>
+        <section style={S(CARD)}><SwitchRow id="wc-online" title="Take card payments on screen" on={v.online} toggle={() => set('online', !v.online)} last /></section>
         <Key id="wc-ou" label="Windcave REST user" value={v.online_user} set={(x) => set('online_user', x)} saved={saved.online_user} />
         <Key id="wc-ok" label="Windcave REST key" value={v.online_key} set={(x) => set('online_key', x)} saved={saved.online_key} secret />
 
         <div><h3 style={S(H3)}>Card terminal</h3><p style={S(NOTE)}>Windcave HIT. Sends the amount to your terminal.</p></div>
-        <section style={S(CARD)}><SwLine id="wc-term" title="Use a card terminal" on={v.terminal} toggle={() => set('terminal', !v.terminal)} last /></section>
+        <section style={S(CARD)}><SwitchRow id="wc-term" title="Use a card terminal" on={v.terminal} toggle={() => set('terminal', !v.terminal)} last /></section>
         <Key id="wc-st" label="Terminal station ID" value={v.station} set={(x) => set('station', x)} />
         <Key id="wc-hu" label="HIT user" value={v.hit_user} set={(x) => set('hit_user', x)} saved={saved.hit_user} />
         <Key id="wc-hk" label="HIT key" value={v.hit_key} set={(x) => set('hit_key', x)} saved={saved.hit_key} secret />
         <p style={S(NOTE)}>Save first, then test. Testing asks Windcave about a made-up payment, so nothing is charged.</p>
-        <button onClick={c.test} disabled={c.busy} style={S('height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font:inherit;font-size:14.5px;font-weight:500;cursor:pointer;opacity:' + (c.busy ? 0.6 : 1))}>Test terminal connection</button>
+        <button onClick={c.test} disabled={c.busy} className="ghost" style={S(OUTLINE + ';flex:0 0 auto' + dim(c.busy))}>Test terminal connection</button>
       </main>
       <div style={S(BAR)}>
-        {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
-        {!!c.notice && <p role="status" style={S('margin:0;color:#14624A;font-size:13.5px;font-weight:500')}>{c.notice}</p>}
-        <button onClick={c.save} disabled={c.busy} style={S('height:52px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font:inherit;font-size:14.5px;font-weight:500;cursor:pointer;opacity:' + (c.busy ? 0.6 : 1))}>{c.busy ? 'Saving' : 'Save payment settings'}</button>
+        {!!c.error && <FieldError>{c.error}</FieldError>}
+        {!!c.notice && <Notice>{c.notice}</Notice>}
+        <button onClick={c.save} disabled={c.busy} style={S(BLACK + ';flex:0 0 auto' + dim(c.busy))}>{c.busy ? 'Saving…' : 'Save payment settings'}</button>
       </div>
     </div>
   );

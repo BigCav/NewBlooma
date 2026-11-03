@@ -1,5 +1,6 @@
 'use server';
 import { clock12 } from '@/lib/display';
+import { firstName } from '@/lib/people';
 import { revalidatePath } from 'next/cache';
 import { requireCtx, friendly } from '@/lib/session';
 import { minutesOfDay, ymd, zonedToUtc } from '@/lib/format';
@@ -8,8 +9,7 @@ import { processOutbox } from '@/lib/notify';
 import type { WlSlot } from './shared';
 
 type R = { error?: string; ok?: boolean; notice?: string };
-const first = (n?: string | null) => String(n ?? 'Client').split(' ')[0];
-const clock = clock12;
+const first = (n?: string | null) => firstName(n, 'Client');
 
 export async function findTimes(entryId: string): Promise<{ error?: string; slots?: WlSlot[] }> {
   const { sb, salon } = await requireCtx();
@@ -17,7 +17,7 @@ export async function findTimes(entryId: string): Promise<{ error?: string; slot
   if (error) return { error: friendly(error.message) };
   const slots = ((data ?? []) as any[]).slice(0, 6).map((m) => ({
     staffId: m.staff_id as string, startsAt: m.starts_at as string,
-    label: `${dayInfo(ymd(m.starts_at, salon.timezone)).short}, ${clock(minutesOfDay(m.starts_at, salon.timezone))} with ${first((team ?? []).find((t) => t.id === m.staff_id)?.name)}`,
+    label: `${dayInfo(ymd(m.starts_at, salon.timezone)).short}, ${clock12(minutesOfDay(m.starts_at, salon.timezone))} with ${first((team ?? []).find((t) => t.id === m.staff_id)?.name)}`,
   }));
   return { slots };
 }

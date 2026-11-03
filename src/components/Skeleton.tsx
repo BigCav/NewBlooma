@@ -79,7 +79,7 @@ function InboxCard() {
       <Bar n={4} right={<div style={{ display: 'flex', alignItems: 'center', gap: 16 }}><B w={80} h={14} /><B w={140} h={40} r={999} /></div>} />
       {Array.from({ length: 6 }, (_, i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: '18px 20px', borderBottom: i === 5 ? undefined : LINE }}>
-          <B w={44} h={44} r={999} />
+          <B w={40} h={40} r={999} />
           <div style={{ flex: '1 1 auto', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 9 }}><B w={110} h={15} /><B w={`${35 + (i % 4) * 12}%`} h={12} /><div style={{ display: 'flex', gap: 8 }}><B w={76} h={24} r={999} /><B w={56} h={24} r={999} /></div></div>
           <B w={44} h={12} />
         </div>

@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { S } from '@/app/(dash)/calendar/pickers';
 import { checkForm, tickMany, type FillForm, type FormInput, type Question } from '@/lib/forms-shared';
+import { BACK, BLACK, FieldError, OUTLINE, dim } from '@/components/ui';
+import { TONE } from '@/lib/tones';
 
 type Submit = (inputs: { templateId: string; input: FormInput }[]) => Promise<{ error?: string; errors?: Record<string, Record<string, string>> }>;
 export type FillProps = {
@@ -19,16 +21,15 @@ export type FillProps = {
 
 const blank = (): FormInput => ({ answers: {}, details: {}, agree: false, photos: false, sign: '' });
 const CARD = 'box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;display:flex;flex-direction:column;gap:18px;';
-const INPUT = 'box-sizing:border-box;width:100%;height:52px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15.5px;color:#0E1116;background:#FFFFFF';
-const ERR = 'margin:0;color:#B42318;font-size:13.5px;font-weight:500';
+const INPUT = 'box-sizing:border-box;width:100%;height:52px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:16px;color:#0E1116;background:#FFFFFF';
 const noMin = { minHeight: 0 } as const;
-const pickCss = (on: boolean, wide = true) => (wide ? 'flex:1 1 0;' : 'width:100%;text-align:left;display:flex;align-items:center;gap:12px;') + 'box-sizing:border-box;min-height:52px;padding:8px 16px 8px 14px;border-radius:14px;font:inherit;font-size:15px;font-weight:500;cursor:pointer;border:1px solid ' + (on ? '#5B3DF5' : '#E1E4E9') + ';background:' + (on ? '#EEEAFE' : '#FFFFFF') + ';color:' + (on ? '#3A2BB5' : '#0E1116');
+const pickCss = (on: boolean, wide = true) => (wide ? 'flex:1 1 0;' : 'width:100%;text-align:left;display:flex;align-items:center;gap:12px;') + 'box-sizing:border-box;min-height:52px;padding:8px 16px 8px 14px;border-radius:14px;font:inherit;font-size:15px;font-weight:500;cursor:pointer;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#F4F5F7' : '#FFFFFF') + ';color:#0E1116' + (on ? ';box-shadow:inset 0 0 0 1px #0E1116' : '');
 const ynCss = (on: boolean) => 'flex:1 1 0;height:52px;border-radius:14px;font:inherit;font-size:15px;font-weight:500;cursor:pointer;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
 
 function Tick({ on }: { on: boolean }) {
   return (
-    <span aria-hidden="true" style={S('flex:0 0 20px;width:20px;height:20px;border-radius:6px;border:1.5px solid ' + (on ? '#5B3DF5' : '#B9BFC9') + ';background:#FFFFFF;display:flex;align-items:center;justify-content:center;margin-top:1px')}>
-      {on && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5B3DF5" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>}
+    <span aria-hidden="true" style={S('flex:0 0 20px;width:20px;height:20px;border-radius:6px;border:1.5px solid ' + (on ? '#0E1116' : '#B9BFC9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';display:flex;align-items:center;justify-content:center;margin-top:1px')}>
+      {on && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>}
     </span>
   );
 }
@@ -75,15 +76,15 @@ export function FormFillView(p: FillProps) {
           {ans === 'yes' && !!q.detailPrompt && (
             <div style={S('display:flex;flex-direction:column;gap:6px')}>
               <label htmlFor={'d-' + q.id} style={S('font-size:14px;font-weight:600')}>{q.detailPrompt}</label>
-              <input id={'d-' + q.id} className="field" type="text" maxLength={200} value={v.details[q.id] ?? ''} onChange={(ev) => patch(f.id, (s) => ({ ...s, details: { ...s.details, [q.id]: ev.target.value } }))} style={{ ...S(INPUT), ...noMin }} />
+              <input id={'d-' + q.id} type="text" maxLength={200} value={v.details[q.id] ?? ''} onChange={(ev) => patch(f.id, (s) => ({ ...s, details: { ...s.details, [q.id]: ev.target.value } }))} style={{ ...S(INPUT), ...noMin }} />
             </div>
           )}
         </>)}
-        {q.type === 'short' && <><label htmlFor={'a-' + q.id} style={{ position: 'absolute', left: -9999 }}>{q.label}</label><input id={'a-' + q.id} className="field" type="text" maxLength={200} value={typeof ans === 'string' ? ans : ''} onChange={(ev) => set(ev.target.value)} style={{ ...S(INPUT), ...noMin }} /></>}
-        {q.type === 'long' && <><label htmlFor={'a-' + q.id} style={{ position: 'absolute', left: -9999 }}>{q.label}</label><textarea id={'a-' + q.id} className="field" rows={4} maxLength={2000} value={typeof ans === 'string' ? ans : ''} onChange={(ev) => set(ev.target.value)} style={{ ...S('box-sizing:border-box;width:100%;min-height:96px;padding:12px 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15.5px;color:#0E1116;background:#FFFFFF;resize:vertical'), ...noMin }} /></>}
+        {q.type === 'short' && <><label htmlFor={'a-' + q.id} style={{ position: 'absolute', left: -9999 }}>{q.label}</label><input id={'a-' + q.id} type="text" maxLength={200} value={typeof ans === 'string' ? ans : ''} onChange={(ev) => set(ev.target.value)} style={{ ...S(INPUT), ...noMin }} /></>}
+        {q.type === 'long' && <><label htmlFor={'a-' + q.id} style={{ position: 'absolute', left: -9999 }}>{q.label}</label><textarea id={'a-' + q.id} rows={4} maxLength={2000} value={typeof ans === 'string' ? ans : ''} onChange={(ev) => set(ev.target.value)} style={{ ...S('box-sizing:border-box;width:100%;min-height:96px;padding:12px 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:16px;color:#0E1116;background:#FFFFFF;resize:vertical'), ...noMin }} /></>}
         {q.type === 'one' && (
           <div role="radiogroup" aria-label={q.label} style={S('display:flex;flex-direction:column;gap:8px')}>
-            {q.options.map((o) => <button key={o} type="button" role="radio" aria-checked={ans === o} onClick={() => set(o)} style={S(pickCss(ans === o, false))}><span aria-hidden="true" style={S('flex:0 0 20px;width:20px;height:20px;border-radius:999px;border:1.5px solid ' + (ans === o ? '#5B3DF5' : '#B9BFC9') + ';background:' + (ans === o ? '#5B3DF5' : '#FFFFFF') + ';box-shadow:inset 0 0 0 4px #FFFFFF')} />{o}</button>)}
+            {q.options.map((o) => <button key={o} type="button" role="radio" aria-checked={ans === o} onClick={() => set(o)} style={S(pickCss(ans === o, false))}><span aria-hidden="true" style={S('flex:0 0 20px;width:20px;height:20px;border-radius:999px;border:1.5px solid ' + (ans === o ? '#0E1116' : '#B9BFC9') + ';background:' + (ans === o ? '#0E1116' : '#FFFFFF') + ';box-shadow:inset 0 0 0 4px #FFFFFF')} />{o}</button>)}
           </div>
         )}
         {q.type === 'many' && (
@@ -91,7 +92,7 @@ export function FormFillView(p: FillProps) {
             {q.options.map((o) => { const on = Array.isArray(ans) && ans.includes(o); return <button key={o} type="button" aria-pressed={on} onClick={() => set(tickMany(Array.isArray(ans) ? ans : [], o))} style={S(pickCss(on, false))}><Tick on={on} />{o}</button>; })}
           </div>
         )}
-        {!!e[q.id] && <p role="alert" style={S(ERR)}>{e[q.id]}</p>}
+        {!!e[q.id] && <FieldError>{e[q.id]}</FieldError>}
       </section>
     );
   };
@@ -103,14 +104,14 @@ export function FormFillView(p: FillProps) {
       <section key={f.id + '-consent'} style={S(CARD + 'padding:clamp(20px,5vw,28px)')}>
         <h2 style={S('margin:0;font-size:17px;font-weight:600;letter-spacing:-0.02em')}>{f.consentText && f.askPhotos ? 'Consent and photos' : f.consentText ? 'Consent' : 'Photos'}</h2>
         {!!f.consentText && <p style={S('margin:0;padding:14px 16px;border-radius:14px;background:#F4F5F7;color:#2B323C;font-size:14.5px;line-height:1.5;overflow-wrap:anywhere;white-space:pre-wrap')}>{f.consentText}</p>}
-        {!!f.consentText && <button type="button" aria-pressed={v.agree} onClick={() => patch(f.id, (s) => ({ ...s, agree: !s.agree }))} style={S(pickCss(v.agree, false) + (e.agree ? ';border-color:#D92D20' : ''))}><Tick on={v.agree} /><span>I agree to the statement above</span></button>}
-        {!!e.agree && <p role="alert" style={S(ERR)}>{e.agree}</p>}
+        {!!f.consentText && <button type="button" aria-pressed={v.agree} onClick={() => patch(f.id, (s) => ({ ...s, agree: !s.agree }))} style={S(pickCss(v.agree, false) + (e.agree ? ';border-color:#B42318' : ''))}><Tick on={v.agree} /><span>I agree to the statement above</span></button>}
+        {!!e.agree && <FieldError>{e.agree}</FieldError>}
         {f.askPhotos && <button type="button" aria-pressed={v.photos} onClick={() => patch(f.id, (s) => ({ ...s, photos: !s.photos }))} style={S(pickCss(v.photos, false))}><Tick on={v.photos} /><span>It is OK to take before and after photos for my client record</span></button>}
         {!!f.consentText && (
           <div style={S('display:flex;flex-direction:column;gap:6px')}>
             <label htmlFor={'sg-' + f.id} style={S('font-size:14px;font-weight:600')}>Type your full name to sign</label>
-            <input id={'sg-' + f.id} className="field" type="text" autoComplete="name" maxLength={80} value={v.sign} onChange={(ev) => patch(f.id, (s) => ({ ...s, sign: ev.target.value }))} style={{ ...S(INPUT + ';border-color:' + (e.sign ? '#D92D20' : '#E1E4E9')), ...noMin }} />
-            {!!e.sign && <p role="alert" style={S(ERR)}>{e.sign}</p>}
+            <input id={'sg-' + f.id} type="text" autoComplete="name" maxLength={80} value={v.sign} onChange={(ev) => patch(f.id, (s) => ({ ...s, sign: ev.target.value }))} style={{ ...S(INPUT + ';border-color:' + (e.sign ? '#B42318' : '#E1E4E9')), ...noMin }} />
+            {!!e.sign && <FieldError>{e.sign}</FieldError>}
           </div>
         )}
       </section>
@@ -121,7 +122,7 @@ export function FormFillView(p: FillProps) {
     <header style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
       {p.mode === 'public'
         ? <span style={S('display:flex;align-items:center;min-height:44px;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{p.salon}</span>
-        : <Link href={p.links.back ?? '/clients/forms'} style={S('display:flex;align-items:center;min-height:44px;color:#0E1116;text-decoration:none;font-size:14px;font-weight:500')}>&larr; {p.links.backLabel ?? 'Client forms'}</Link>}
+        : <Link href={p.links.back ?? '/clients/forms'} style={S('display:flex;align-items:center;gap:6px;min-height:44px;color:#0E1116;text-decoration:none;font-size:14px;font-weight:500')}>{BACK}{p.links.backLabel ?? 'Client forms'}</Link>}
     </header>
   );
 
@@ -129,7 +130,7 @@ export function FormFillView(p: FillProps) {
     <div className="page" style={S("max-width:680px;margin:0 auto;box-sizing:border-box;padding:40px 20px;display:flex;flex-direction:column;gap:12px;font-family:'Geist',system-ui,sans-serif;color:#0E1116")}>
       <h1 style={S('margin:0;font-size:26px;font-weight:600;letter-spacing:-0.02em')}>{p.empty.title}</h1>
       <p style={S('margin:0;color:#5E6673;font-size:15.5px')}>{p.empty.text}</p>
-      {p.empty.link && <div><Link href={p.empty.link.href} style={S('display:inline-flex;align-items:center;height:48px;padding:0 24px;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:15px;font-weight:500;text-decoration:none')}>{p.empty.link.label}</Link></div>}
+      {p.empty.link && <div><Link href={p.empty.link.href} style={S(BLACK + ';flex:0 0 auto;display:inline-flex;padding:0 24px')}>{p.empty.link.label}</Link></div>}
     </div>
   );
 
@@ -142,15 +143,15 @@ export function FormFillView(p: FillProps) {
     <div className="page" style={S("max-width:680px;margin:0 auto;box-sizing:border-box;padding:16px 20px 56px;display:flex;flex-direction:column;gap:24px;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4;color:#0E1116")}>
       {header}
       <section role="status" style={S(CARD + 'padding:clamp(20px,5vw,28px);align-items:flex-start')}>
-        <span aria-hidden="true" style={S('width:56px;height:56px;border-radius:999px;background:#DDF3EA;color:#14624A;display:flex;align-items:center;justify-content:center')}><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
+        <span aria-hidden="true" style={S('width:56px;height:56px;border-radius:999px;background:' + TONE.green.bg + ';color:' + TONE.green.fg + ';display:flex;align-items:center;justify-content:center')}><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
         <div>
-          <h1 style={S('margin:0;font-size:24px;font-weight:600;letter-spacing:-0.02em')}>{p.mode === 'preview' ? 'This is what clients see when they finish' : p.mode === 'staff' ? 'Saved for ' + p.first : 'Thanks, ' + p.first}</h1>
+          <h1 style={S('margin:0;font-size:30px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>{p.mode === 'preview' ? 'This is what clients see when they finish' : p.mode === 'staff' ? 'Saved for ' + p.first : 'Thanks, ' + p.first}</h1>
           <p style={S('margin:6px 0 0;color:#4A525E;font-size:15.5px')}>{p.mode === 'preview' ? 'Nothing was saved. This was only a preview.' : p.mode === 'staff' ? 'The answers are on their record.' : `Your ${multi ? 'forms are' : 'form is'} saved. We will see ${multi ? 'them' : 'it'} before your appointment on ${p.apptLine}.`}</p>
         </div>
         <div style={S('display:flex;flex-wrap:wrap;gap:10px;width:100%')}>
-          {p.mode === 'public' && p.links.manage && <a href={p.links.manage} style={S('flex:1 1 180px;height:52px;box-sizing:border-box;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none')}>Manage booking</a>}
-          {p.mode === 'public' && p.links.home && <a href={p.links.home} className="ghost" style={S('flex:1 1 180px;height:52px;box-sizing:border-box;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none')}>Back to {p.salon}</a>}
-          {p.mode !== 'public' && <Link href={p.links.back ?? '/clients/forms'} style={S('flex:1 1 180px;height:52px;box-sizing:border-box;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none')}>{p.links.backLabel ? 'Back to ' + p.links.backLabel.toLowerCase() : 'Back to client forms'}</Link>}
+          {p.mode === 'public' && p.links.manage && <a href={p.links.manage} style={S(BLACK + ';flex:1 1 180px')}>Manage booking</a>}
+          {p.mode === 'public' && p.links.home && <a href={p.links.home} className="ghost" style={S(OUTLINE + ';flex:1 1 180px')}>Back to {p.salon}</a>}
+          {p.mode !== 'public' && <Link href={p.links.back ?? '/clients/forms'} style={S(BLACK + ';flex:1 1 180px')}>{p.links.backLabel ? 'Back to ' + p.links.backLabel.toLowerCase() : 'Back to client forms'}</Link>}
         </div>
       </section>
       {forms.map((f) => (
@@ -171,18 +172,18 @@ export function FormFillView(p: FillProps) {
   return (
     <div className="page" style={S("max-width:680px;margin:0 auto;box-sizing:border-box;padding:16px 20px 56px;display:flex;flex-direction:column;gap:24px;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4;color:#0E1116")}>
       {header}
-      {p.mode === 'preview' && <p role="note" style={S('margin:0;padding:12px 16px;border-radius:14px;background:#EEEAFE;color:#3A2BB5;font-size:14px;font-weight:600')}>Preview. This is what clients see. Nothing you enter here is saved.</p>}
+      {p.mode === 'preview' && <p role="note" style={S('margin:0;padding:12px 16px;border-radius:14px;background:' + TONE.purple.bg + ';color:' + TONE.purple.fg + ';font-size:14px;font-weight:600')}>Preview. This is what clients see. Nothing you enter here is saved.</p>}
       <div style={S('display:flex;flex-direction:column;gap:16px')}>
         <div style={S('display:flex;flex-direction:column;gap:8px')}>
-          <h1 style={S('margin:0;font-size:36px;line-height:1.1;font-weight:600;letter-spacing:-0.03em')}>{title}</h1>
+          <h1 style={S('margin:0;font-size:30px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>{title}</h1>
           <p style={S('margin:0;color:#4A525E;font-size:16px;line-height:1.5')}>{sub}</p>
         </div>
         <div style={S('display:flex;align-items:center;gap:12px;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:18px;padding:14px 16px')}>
-          <span aria-hidden="true" style={S('flex:0 0 40px;width:40px;height:40px;border-radius:12px;background:#EEEAFE;color:#5B3DF5;display:flex;align-items:center;justify-content:center')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="3" /><path d="M8 3v4M16 3v4M3.5 10h17" /></svg></span>
+          <span aria-hidden="true" style={S('flex:0 0 40px;width:40px;height:40px;border-radius:12px;background:' + TONE.purple.bg + ';color:' + TONE.purple.fg + ';display:flex;align-items:center;justify-content:center')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="3" /><path d="M8 3v4M16 3v4M3.5 10h17" /></svg></span>
           <span style={S('min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{p.apptLine}</span><span style={S('display:block;color:#5E6673;font-size:14px;overflow-wrap:anywhere')}>{p.svcLine}</span></span>
         </div>
       </div>
-      {tried && total > 0 && <p role="alert" style={S('margin:0;padding:12px 16px;border-radius:14px;background:#FDECEA;color:#B42318;font-size:14px;font-weight:600')}>{total === 1 ? 'There is 1 thing to fix below.' : 'There are ' + total + ' things to fix below.'}</p>}
+      {tried && total > 0 && <p role="alert" style={S('margin:0;padding:12px 16px;border-radius:14px;background:' + TONE.red.bg + ';color:' + TONE.red.fg + ';font-size:14px;font-weight:600')}>{total === 1 ? 'There is 1 thing to fix below.' : 'There are ' + total + ' things to fix below.'}</p>}
       {forms.map((f) => {
         const e = errs(f);
         return (
@@ -193,8 +194,8 @@ export function FormFillView(p: FillProps) {
           </div>
         );
       })}
-      {!!error && <p role="alert" style={S(ERR)}>{error}</p>}
-      <button type="button" onClick={submit} disabled={busy} style={S('height:56px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font:inherit;font-size:16px;font-weight:500;cursor:pointer;opacity:' + (busy ? 0.6 : 1))}>{p.mode === 'staff' ? 'Save form' : multi ? 'Submit forms' : 'Submit form'}</button>
+      {!!error && <FieldError>{error}</FieldError>}
+      <button type="button" onClick={submit} disabled={busy} style={S(BLACK + ';flex:0 0 auto' + dim(busy))}>{busy ? (p.mode === 'staff' ? 'Saving…' : 'Sending…') : p.mode === 'staff' ? 'Save form' : multi ? 'Submit forms' : 'Submit form'}</button>
     </div>
   );
 }

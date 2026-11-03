@@ -1,3 +1,5 @@
+import { clockStr, timeRange } from '@/lib/display';
+
 export const STEPS = ['Your salon', 'Services', 'Opening hours', 'Team', 'Ready'];
 export const CATS = ['Hair', 'Colour', 'Nails', 'Barber', 'Brows & lashes', 'Massage', 'Skin'];
 // Starter services offered for each category: [name, minutes, price in whole currency units].
@@ -11,7 +13,8 @@ export const STARTERS: Record<string, [string, number, number][]> = {
   'Skin': [['Signature facial', 60, 100], ['Express facial', 30, 60]],
 };
 export const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-export const PRESETS: [string, string, string, string, string][] = [['std', 'Standard', '8:00 – 18:00', '08:00', '18:00'], ['early', 'Early', '7:00 – 15:00', '07:00', '15:00'], ['late', 'Late', '10:00 – 20:00', '10:00', '20:00']];
+const preset = (id: string, label: string, from: string, to: string): [string, string, string, string, string] => [id, label, timeRange(clockStr(from), clockStr(to)), from, to];
+export const PRESETS: [string, string, string, string, string][] = [preset('std', 'Standard', '08:00', '18:00'), preset('early', 'Early', '07:00', '15:00'), preset('late', 'Late', '10:00', '20:00')];
 export const ROLES = ['Stylist', 'Barber', 'Nail tech', 'Colourist', 'Other'];
 export type SetupInput = { name: string; phone: string; address: string; cats: string[]; preset: string; open: Record<string, boolean>; team: { name: string; role: string }[]; timezone: string };
 export const slugOf = (n: string) => (n || 'your-salon').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'your-salon';

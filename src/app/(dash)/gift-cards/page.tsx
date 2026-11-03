@@ -17,7 +17,7 @@ export default async function GiftCards() {
     for (const s of (sales ?? []).filter((x) => x.gift_card_id === g.id)) {
       const label = ((s.sale_items as any[]) ?? []).map((i) => i.label).join(' + ') || 'Sale';
       if (s.paid_at) hist.push({ d: ymd(s.paid_at, tz), label: `${label}, redeemed at checkout`, a: -s.total_cents });
-      if (s.status === 'refunded' && s.refunded_at) hist.push({ d: ymd(s.refunded_at, tz), label: `${label}, refunded to the card`, a: s.total_cents });
+      if (s.status === 'refunded' && s.refunded_at) hist.push({ d: ymd(s.refunded_at, tz), label: `${label}, refunded`, a: s.total_cents });
     }
     if (g.voided_at) hist.push({ d: ymd(g.voided_at, tz), label: 'Voided by the salon', a: -g.voided_cents });
     hist.sort((a, b) => (a.d < b.d ? 1 : a.d > b.d ? -1 : 0));

@@ -5,13 +5,14 @@ import { useEffect, useState } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { FilterSheet } from '@/components/FilterBits';
 import { S } from '../calendar/pickers';
-import { photoCss } from '../team/shared';
+import { Avatar, FieldError, FilterChip } from '@/components/ui';
+import { dollars } from '@/lib/format';
+import { plural } from '@/lib/display';
 import type { Heat, Period } from './shared';
 
-type Props = { periods: Period[]; heat: Heat; currency: string; error?: string; photos?: Record<string, string> };
+type Props = { periods: Period[]; heat: Heat; error?: string; photos?: Record<string, string> };
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const DAY_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-const initialsOf = (n: string) => n.split(' ').map((w) => w[0]).join('');
 const CARD = (pad: number) => `box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:${pad}px;display:flex;flex-direction:column;gap:18px`;
 const HEAD = 'display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px';
 
@@ -29,53 +30,50 @@ function useReports(props: Props) {
   }, []);
   const [pid, setPid] = useState('week');
   const p = props.periods.find((x) => x.id === pid) ?? props.periods[0];
-  const fmt = new Intl.NumberFormat('en-NZ', { style: 'currency', currency: props.currency || 'NZD', currencyDisplay: 'narrowSymbol', maximumFractionDigits: 0 });
-  const money = (n: number) => fmt.format(n);
-  return { ...props, narrow, pid, setPid, p, money };
+  return { ...props, narrow, pid, setPid, p };
 }
 type C = ReturnType<typeof useReports>;
 
 function Body({ c, m }: { c: C; m: boolean }) {
   const [fopen, setFopen] = useState(false);
-  const p = c.p, money = c.money;
-  const chipStyle = (on: boolean) => (m ? 'flex:0 0 auto;height:44px;padding:0 18px;font-size:14px;' : 'height:40px;padding:0 16px;font-size:13.5px;') + 'border-radius:999px;font-weight:500;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
+  const p = c.p;
   const barMax = m ? 96 : 140, cellH = m ? 36 : 44, pad = m ? 20 : 24;
   const max = p.bars.reduce((x, b) => Math.max(x, b[1]), 0);
   const peak = p.bars.reduce((best, b) => (b[1] > best[1] ? b : best), p.bars[0] ?? ['', 0]);
-  const avg = p.appts ? Math.round(p.revenue / p.appts) : 0;
+  const avg = p.appts ? p.revenue / p.appts : 0;
   const dstyle = (dir: string) => 'font-size:13px;font-weight:500;color:' + (dir === 'up' ? '#14624A' : dir === 'down' ? '#B42318' : '#5E6673');
   const kpis = [
-    ['Booked revenue', money(p.revenue), p.d.revenue], ['Appointments', p.appts.toLocaleString('en-US'), p.d.appts],
-    ['Average sale', money(avg), p.d.avg], ['Rebook rate', p.rebook + '%', p.d.rebook],
+    ['Booked revenue', dollars(p.revenue), p.d.revenue], ['Appointments', p.appts.toLocaleString('en-US'), p.d.appts],
+    ['Average per appointment', dollars(avg), p.d.avg], ['Rebook rate', p.rebook + '%', p.d.rebook],
   ] as const;
   const smax = p.services.reduce((x, s) => Math.max(x, s[2]), 0);
   const chips = (
     <div role="group" className={m ? 'hscroll' : undefined} aria-label="Report period" style={S(m ? 'display:flex;gap:8px;overflow-x:auto' : 'display:flex;flex-wrap:wrap;gap:8px')}>
-      {c.periods.map((x) => <button key={x.id} onClick={() => c.setPid(x.id)} aria-pressed={x.id === p.id} style={S(chipStyle(x.id === p.id))}>{x.label}</button>)}
+      {c.periods.map((x) => <FilterChip key={x.id} on={x.id === p.id} phone={m} onClick={() => c.setPid(x.id)}>{x.label}</FilterChip>)}
     </div>
   );
   const revenue = (
-    <section style={S(CARD(pad))}><Head title="Booked revenue" right={money(p.revenue) + ' ' + p.sentence} />
+    <section style={S(CARD(pad))}><Head title="Booked revenue" right={dollars(p.revenue) + ' ' + p.sentence} />
       <div role="group" aria-label="Booked revenue chart" style={S(`display:flex;align-items:flex-end;gap:${m ? 6 : 14}px;height:${m ? 128 : 200}px`)}>
         {p.bars.map((b, i) => (
-          <div key={b[0]} role="img" aria-label={b[0] + ', ' + money(b[1])} style={S('flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:8px')}>
-            {!m && <span style={S('font-size:12px;color:#5E6673;white-space:nowrap')}>{money(b[1])}</span>}
+          <div key={b[0]} role="img" aria-label={b[0] + ', ' + dollars(b[1])} style={S('flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:8px')}>
+            {!m && <span style={S('font-size:12px;color:#5E6673;white-space:nowrap')}>{dollars(b[1])}</span>}
             <div style={S('width:100%;height:' + Math.max(4, Math.round(max ? b[1] / max * barMax : 0)) + 'px;border-radius:10px;background:' + (i === p.hi ? '#0E1116' : '#DADDE4'))} />
             <span style={S('font-size:12px;font-weight:500;white-space:nowrap')}>{b[0]}</span>
           </div>
         ))}
       </div>
-      <span style={S('color:#5E6673;font-size:13px')}>{max ? 'Best ' + (p.id === 'today' ? 'hour' : 'period') + ': ' + peak[0] + (p.id === 'today' ? ':00' : '') + ', ' + money(peak[1]) : 'No bookings in this period'}</span></section>
+      <span style={S('color:#5E6673;font-size:13px')}>{max ? 'Best ' + (p.id === 'today' ? 'hour' : 'period') + ': ' + peak[0] + ', ' + dollars(peak[1]) : 'No appointments in this period'}</span></section>
   );
   const services = (
     <section style={S(CARD(pad))}><Head title="Top services" right="By revenue" />
-      {p.services.length === 0 && <span style={S('color:#5E6673;font-size:13.5px')}>No bookings in this period.</span>}
+      {p.services.length === 0 && <span style={S('color:#5E6673;font-size:13.5px')}>No appointments in this period.</span>}
       <ol style={S('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:16px')}>
         {p.services.map((s) => (
           <li key={s[0]} style={S('display:flex;flex-direction:column;gap:8px')}>
-            <div style={S('display:flex;align-items:baseline;justify-content:space-between;gap:12px')}><span style={S('min-width:0;font-size:14.5px;font-weight:600;overflow-wrap:anywhere')}>{s[0]}</span><span style={S('flex:0 0 auto;font-size:14.5px;font-weight:600')}>{money(s[2])}</span></div>
+            <div style={S('display:flex;align-items:baseline;justify-content:space-between;gap:12px')}><span style={S('min-width:0;font-size:14.5px;font-weight:600;overflow-wrap:anywhere')}>{s[0]}</span><span style={S('flex:0 0 auto;font-size:14.5px;font-weight:600')}>{dollars(s[2])}</span></div>
             <div style={S('height:8px;border-radius:999px;background:#EEF0F3;overflow:hidden')}><div style={S('height:100%;border-radius:999px;background:#0E1116;width:' + (smax ? Math.round(s[2] / smax * 100) : 0) + '%')} /></div>
-            <span style={S('font-size:12.5px;color:#5E6673')}>{s[1].toLocaleString('en-US') + (s[1] === 1 ? ' booking' : ' bookings')}</span>
+            <span style={S('font-size:12.5px;color:#5E6673')}>{plural(s[1], 'appointment')}</span>
           </li>
         ))}
       </ol></section>
@@ -85,9 +83,9 @@ function Body({ c, m }: { c: C; m: boolean }) {
       <ol style={S('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:16px')}>
         {p.team.map((t) => (
           <li key={t[0]} style={S('display:flex;align-items:center;gap:12px')}>
-            <span style={S('flex:0 0 40px;width:40px;height:40px;border-radius:999px;background:#EEF0F3;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600' + photoCss(c.photos?.[t[0]] ?? null))}>{c.photos?.[t[0]] ? '' : initialsOf(t[0])}</span>
+            <Avatar name={t[0]} photo={(t[3] && c.photos?.[t[3]]) || c.photos?.['n:' + t[0]] || null} size="md" />
             <div style={S('flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:6px')}>
-              <div style={S('display:flex;align-items:baseline;justify-content:space-between;gap:12px')}><span style={S('min-width:0;font-size:14.5px;font-weight:600;overflow-wrap:anywhere')}>{t[0]}</span><span style={S('flex:0 0 auto;font-size:14.5px;font-weight:600')}>{money(t[1])}</span></div>
+              <div style={S('display:flex;align-items:baseline;justify-content:space-between;gap:12px')}><span style={S('min-width:0;font-size:14.5px;font-weight:600;overflow-wrap:anywhere')}>{t[0]}</span><span style={S('flex:0 0 auto;font-size:14.5px;font-weight:600')}>{dollars(t[1])}</span></div>
               <div style={S('height:8px;border-radius:999px;background:#EEF0F3;overflow:hidden')}><div style={S('height:100%;border-radius:999px;background:#0E1116;width:' + t[2] + '%')} /></div>
               <span style={S('font-size:12.5px;color:#5E6673')}>{t[2] + '% of available time booked'}</span>
             </div>
@@ -163,13 +161,11 @@ function Body({ c, m }: { c: C; m: boolean }) {
   </>);
 }
 
-function Err({ text }: { text: string }) { return <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{text}</p>; }
-
 function Desktop({ c }: { c: C }) {
   return (
     <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <PageHeader title="Reports" subtitle="How the business is doing" showSearch={false} showAction={false} />
-      {c.error || !c.p ? <Err text={c.error ?? 'Could not load the report.'} /> : <Body c={c} m={false} />}
+      {c.error || !c.p ? <FieldError>{c.error ?? 'Could not load the report.'}</FieldError> : <Body c={c} m={false} />}
     </div>
   );
 }
@@ -178,7 +174,7 @@ function Mobile({ c }: { c: C }) {
     <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <MobileHeader title="Reports" subtitle="How the business is doing" showSearch={false} />
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:14px')}>
-        {c.error || !c.p ? <Err text={c.error ?? 'Could not load the report.'} /> : <Body c={c} m={true} />}
+        {c.error || !c.p ? <FieldError>{c.error ?? 'Could not load the report.'}</FieldError> : <Body c={c} m={true} />}
       </main>
       <MobileTabs active="more" />
     </div>

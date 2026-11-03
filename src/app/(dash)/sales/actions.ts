@@ -3,11 +3,12 @@ import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireCtx, friendly } from '@/lib/session';
-import { getCreds, releaseOnline, startOnline, startTerminal, terminalInFlight, refundByCard, pollTerminal, pressTerminalButton, cancelTerminal, refundCard } from '@/lib/windcave';
+import { getCreds, releaseOnline, startOnline, startTerminal, terminalInFlight, refundByCard, pollTerminal, pressTerminalButton, cancelTerminal } from '@/lib/windcave';
 import { sendCustomMessage } from '@/lib/notify';
 import { mailP } from '@/lib/email-layout';
-import { dateLong } from '@/lib/format';
-import { fmt } from './shared';
+import { dateLong, dollars, toCents } from '@/lib/format';
+import { bookingRef } from '@/lib/display';
+import { firstName } from '@/lib/people';
 
 type Res = { error?: string; notice?: string };
 async function origin() { const h = await headers(); return process.env.NEXT_PUBLIC_APP_URL || `https://${h.get('x-forwarded-host') ?? h.get('host')}`; }
@@ -72,7 +73,7 @@ export async function payFlow(saleId: string, method: 'terminal' | 'online' | 'c
   }
   if (disc) {
     const v = Number(String(disc.value).replace(/[^0-9.]/g, ''));
-    const d = await sb.rpc('set_sale_discount', { p_sale: saleId, p_kind: disc.kind, p_value: disc.kind === 'amount' ? Math.round(v * 100) : v || 0, p_note: disc.note });
+    const d = await sb.rpc('set_sale_discount', { p_sale: saleId, p_kind: disc.kind, p_value: disc.kind === 'amount' ? toCents(disc.value) : v || 0, p_note: disc.note });
     if (d.error) return { error: friendly(d.error.message) };
   }
   const t = await sb.rpc('set_sale_tip', { p_sale: saleId, p_pct: tipPct });
@@ -93,13 +94,13 @@ export async function terminalPoll(txn: string) { await requireCtx(); return pol
 export async function terminalCancel(txn: string) { await requireCtx(); await cancelTerminal(txn); }
 export async function terminalPress(txn: string, name: string, label: string) { await requireCtx(); await pressTerminalButton(txn, name, label); }
 
-export async function setPrice(saleId: string, dollars: string): Promise<Res> {
+export async function setPrice(saleId: string, amount: string): Promise<Res> {
   const { sb } = await requireCtx();
   if (await terminalInFlight(saleId)) return { error: 'A card payment is in progress on the terminal for this sale. Wait for it to finish first.' };
-  const n = Number(String(dollars).replace(/[^0-9.]/g, ''));
-  if (!Number.isFinite(n) || n <= 0) return { error: 'Enter a price above zero, like 45 or 45.50.' };
+  const cents = toCents(amount);
+  if (cents < 1) return { error: 'Enter a price above zero, like 45 or 45.50.' };
   await releaseOnline(saleId);
-  const { error } = await sb.rpc('set_sale_service_price', { p_sale: saleId, p_cents: Math.round(n * 100) });
+  const { error } = await sb.rpc('set_sale_service_price', { p_sale: saleId, p_cents: cents });
   if (error) return { error: friendly(error.message) };
   revalidatePath('/sales'); return { notice: 'Sale saved' };
 }
@@ -120,25 +121,25 @@ export async function sendReceipt(saleId: string): Promise<Res> {
   if (!s) return { error: 'Sale not found.' };
   const c: any = s.clients;
   if (!c) return { error: 'This sale has no client to send a receipt to.' };
-  const first = String(c.name).split(' ')[0];
-  const lines = (s.sale_items as any[]).map((i) => `${i.label}${i.qty > 1 ? ` x${i.qty}` : ''} ${fmt(i.price_cents * i.qty)}`);
-  if (s.discount_cents) lines.push(`Discount${s.discount_note ? ` (${s.discount_note})` : ''} -${fmt(s.discount_cents)}`);
-  if (s.tip_cents) lines.push(`Tip ${fmt(s.tip_cents)}`);
-  if (!s.tax_inclusive && s.tax_cents) lines.push(`Tax ${fmt(s.tax_cents)}`);
+  const first = firstName(c.name);
+  const lines = (s.sale_items as any[]).map((i) => `${i.label}${i.qty > 1 ? ` x${i.qty}` : ''} ${dollars(i.price_cents * i.qty)}`);
+  if (s.discount_cents) lines.push(`Discount${s.discount_note ? ` (${s.discount_note})` : ''} -${dollars(s.discount_cents)}`);
+  if (s.tip_cents) lines.push(`Tip ${dollars(s.tip_cents)}`);
+  if (!s.tax_inclusive && s.tax_cents) lines.push(`Tax ${dollars(s.tax_cents)}`);
   const how = s.method === 'gift_card' ? 'gift card' : s.method;
-  const text = `Hi ${first}, here is your receipt${s.paid_at ? ` from ${dateLong(s.paid_at, salon.timezone)}` : ''}.\n${lines.join('\n')}\nTotal ${fmt(s.total_cents)}${how ? `, paid by ${how}` : ''}. Thank you!`;
+  const text = `Hi ${first}, here is your receipt${s.paid_at ? ` from ${dateLong(s.paid_at, salon.timezone)}` : ''}.\n${lines.join('\n')}\nTotal ${dollars(s.total_cents)}${how ? `, paid by ${how}` : ''}. Thank you!`;
   const e = (x: string) => x.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]!));
   const row = (l: string, v: string, bold = false, top = false) => `<tr><td style="padding:${top ? '12px' : '6px'} 0 6px;${top ? 'border-top:1px solid #E6E8EC;' : ''}font-size:${bold ? 16 : 14.5}px;font-weight:${bold ? 600 : 400};color:${bold ? '#0E1116' : '#3A414B'}">${e(l)}</td><td style="padding:${top ? '12px' : '6px'} 0 6px;${top ? 'border-top:1px solid #E6E8EC;' : ''}text-align:right;white-space:nowrap;font-size:${bold ? 16 : 14.5}px;font-weight:${bold ? 600 : 400}">${e(v)}</td></tr>`;
   const rows = [
-    ...(s.sale_items as any[]).map((i) => row(`${i.label}${i.qty > 1 ? ` × ${i.qty}` : ''}`, fmt(i.price_cents * i.qty))),
-    ...(s.discount_cents ? [row(`Discount${s.discount_note ? ` (${s.discount_note})` : ''}`, '-' + fmt(s.discount_cents))] : []),
-    ...(s.tip_cents ? [row('Tip', fmt(s.tip_cents))] : []),
-    ...(!s.tax_inclusive && s.tax_cents ? [row('Tax', fmt(s.tax_cents))] : []),
-    row('Total', fmt(s.total_cents), true, true),
-    ...(s.tax_inclusive && s.tax_cents ? [`<tr><td colspan="2" style="padding:0 0 4px;font-size:12.5px;color:#5E6673">Includes ${e(fmt(s.tax_cents))} tax</td></tr>`] : []),
+    ...(s.sale_items as any[]).map((i) => row(`${i.label}${i.qty > 1 ? ` × ${i.qty}` : ''}`, dollars(i.price_cents * i.qty))),
+    ...(s.discount_cents ? [row(`Discount${s.discount_note ? ` (${s.discount_note})` : ''}`, '-' + dollars(s.discount_cents))] : []),
+    ...(s.tip_cents ? [row('Tip', dollars(s.tip_cents))] : []),
+    ...(!s.tax_inclusive && s.tax_cents ? [row('Tax', dollars(s.tax_cents))] : []),
+    row('Total', dollars(s.total_cents), true, true),
+    ...(s.tax_inclusive && s.tax_cents ? [`<tr><td colspan="2" style="padding:0 0 4px;font-size:12.5px;color:#5E6673">Includes ${e(dollars(s.tax_cents))} tax</td></tr>`] : []),
   ].join('');
   const when = s.paid_at ? dateLong(s.paid_at, salon.timezone) : '';
   const html = mailP(`Hi ${first}, thanks for visiting. Here is your receipt.`) + `<div style="font-size:13px;color:#5E6673;margin:-6px 0 14px">${[when, how ? 'Paid by ' + e(how) : ''].filter(Boolean).join(' · ')}</div><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse">${rows}</table>`;
-  const r = await sendCustomMessage(salon.id, { phone: c.phone, email: c.email }, text, { subject: `Your receipt from ${salon.name}`, heading: 'Your receipt', html, footer: (s as any).bookings?.ref_no ? `${salon.name} · Booking B-${(s as any).bookings.ref_no}` : undefined });
+  const r = await sendCustomMessage(salon.id, { phone: c.phone, email: c.email }, text, { subject: `Your receipt from ${salon.name}`, heading: 'Your receipt', html, footer: (s as any).bookings?.ref_no ? `${salon.name} · Booking ${bookingRef((s as any).bookings.ref_no)}` : undefined });
   return r.ok ? { notice: `Receipt sent to ${first}` } : { error: r.error };
 }

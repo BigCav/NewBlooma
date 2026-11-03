@@ -1,14 +1,17 @@
 'use client';
 // "Book appointment" panel from Clients.dc.html (aside) and MobileClients.dc.html (sheet). Availability and booking are real.
 import { useEffect, useMemo, useState, useTransition } from 'react';
-import { addDaysYmd, dayInfo, slotsBetween, type CalHours, type CalService, type CalStaff } from '@/lib/cal';
+import { addDaysYmd, dayInfo, fmtMin, slotsBetween, type CalHours, type CalService, type CalStaff } from '@/lib/cal';
+import { duration, timeRange } from '@/lib/display';
+import { dollars } from '@/lib/format';
+import { firstName } from '@/lib/people';
+import { BLACK, FieldError, OUTLINE, dim } from '@/components/ui';
 import { S, ServicePicker, TeamPicker } from '../calendar/pickers';
 import { dayAvailability, createNewAppointment } from '../calendar/actions';
 
 export type BookData = { services: CalService[]; team: CalStaff[]; offers: Record<string, string[]>; hours: CalHours[]; today: string; tz: string };
 type Av = { busy: { s: number; e: number }[]; open: boolean; from: number; to: number };
 
-const fmtMin = (m: number) => Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0');
 const nowMinIn = (tz: string) => { const p = new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', hour: '2-digit', minute: '2-digit' }).formatToParts(new Date()); return Number(p.find((x) => x.type === 'hour')!.value) * 60 + Number(p.find((x) => x.type === 'minute')!.value); };
 
 export function BookPanel({ data, client, mobile, onBooked, onCancel }: { data: BookData; client: { id: string; name: string; first: string }; mobile: boolean; onBooked: (when: string) => void; onCancel: () => void }) {
@@ -84,18 +87,16 @@ export function BookPanel({ data, client, mobile, onBooked, onCancel }: { data: 
     });
   };
 
-  const h = mobile ? 44 : 40, bh = mobile ? 48 : 44, dw = mobile ? 60 : 64, dh = mobile ? 76 : 72;
+  const h = mobile ? 44 : 40, dw = mobile ? 60 : 64, dh = mobile ? 76 : 72;
   const dayCss = (on: boolean, closed: boolean) => 'flex:0 0 ' + dw + 'px;height:' + dh + 'px;box-sizing:border-box;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:inherit;border:1px solid ' + (on ? '#0E1116' : '#E6E8EC') + ';background:' + (on ? '#0E1116' : (closed ? '#F4F5F7' : '#FFFFFF')) + ';color:' + (on ? '#FFFFFF' : (closed ? '#8A93A0' : '#0E1116')) + (closed ? ';cursor:default' : '');
   const slotCss = (on: boolean, w: boolean) => 'width:100%;height:44px;padding:0;border-radius:14px;font-size:14px;font-weight:500;font-family:inherit;border:1px solid ' + (on ? '#0E1116' : (w ? '#EEF0F3' : '#E1E4E9')) + ';background:' + (on ? '#0E1116' : (w ? '#F4F5F7' : '#FFFFFF')) + ';color:' + (on ? '#FFFFFF' : (w ? '#8A93A0' : '#0E1116')) + (w ? ';text-decoration:line-through;cursor:default' : '');
-  const BTN = 'flex:1 1 0;height:' + bh + 'px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500';
-  const BTN2 = 'flex:1 1 0;height:' + bh + 'px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500';
-  const summary = p.sel.length ? p.sel.map((x) => x.name).join(' + ') + ', ' + p.mins + ' min, $' + (p.priceC / 100).toLocaleString('en-US') + (b.time !== null && !why(b.time) ? ', ' + dayInfo(b.day).short + ' ' + fmtMin(b.time) + ' to ' + fmtMin(b.time + p.dur) : '') : 'Choose a service to see its length and price.';
+  const summary = p.sel.length ? p.sel.map((x) => x.name).join(' + ') + ', ' + duration(p.mins) + ', ' + dollars(p.priceC) + (b.time !== null && !why(b.time) ? ', ' + dayInfo(b.day).short + ' ' + timeRange(fmtMin(b.time), fmtMin(b.time + p.dur)) : '') : 'Choose a service to see its length and price.';
 
   return (
     <div style={S('display:flex;flex-direction:column;gap:18px')}>
       <div><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em;overflow-wrap:anywhere')}>Book {client.first}</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px')}>{summary}</p></div>
       <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="bk-service-label" style={S('font-size:14px;font-weight:600')}>Service</span>
-        <ServicePicker lock={lock} services={services} selected={b.services} initialCat={firstSvc?.cat} chipHeight={h} onPick={pick} note={(x) => (b.staff && !offered(x.id, b.staff) ? ((offers[x.id] ?? [])[0] ? 'separate booking with ' + staffName(offers[x.id][0]).split(' ')[0] : 'no one offers this') : '')} /></div>
+        <ServicePicker lock={lock} services={services} selected={b.services} initialCat={firstSvc?.cat} chipHeight={h} onPick={pick} note={(x) => (b.staff && !offered(x.id, b.staff) ? ((offers[x.id] ?? [])[0] ? 'separate booking with ' + firstName(staffName(offers[x.id][0])) : 'no one offers this') : '')} /></div>
       <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="bk-team-label" style={S('font-size:14px;font-weight:600')}>Team member</span>
         <TeamPicker team={team} selected={b.staff} offers={(sid) => !b.services.length || b.services.some((id) => offered(id, sid))} onPick={(id) => { setB({ ...b, staff: id, time: null }); setError(''); }} /></div>
       <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="bk-day-label" style={S('font-size:14px;font-weight:600')}>Day</span>
@@ -106,8 +107,8 @@ export function BookPanel({ data, client, mobile, onBooked, onCancel }: { data: 
         <div role="group" aria-labelledby="bk-time-label" style={S('display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px')}>
           {slots.map((t) => { const w = why(t); const on = b.time === t && !w; return <button key={t} onClick={() => { if (!w) { setB({ ...b, time: t }); setError(''); } }} disabled={!!w} aria-pressed={on} aria-label={fmtMin(t) + (w ? ', unavailable' : '')} style={S(slotCss(on, !!w))}>{fmtMin(t)}</button>; })}
         </div></div>
-      {!!error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{error}</p>}
-      <div style={S('display:flex;gap:10px')}><button onClick={book} disabled={busy} style={S(BTN)}>Book appointment</button><button className="ghost" onClick={onCancel} style={S(BTN2)}>Cancel</button></div>
+      {!!error && <FieldError>{error}</FieldError>}
+      <div style={S('display:flex;gap:10px')}><button onClick={book} disabled={busy} style={S(BLACK + dim(busy))}>{busy ? 'Booking…' : 'Book appointment'}</button><button className="ghost" onClick={onCancel} style={S(OUTLINE)}>Cancel</button></div>
     </div>
   );
 }

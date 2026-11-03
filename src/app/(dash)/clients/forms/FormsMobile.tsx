@@ -1,28 +1,23 @@
 'use client';
-import { RING, BACK, FIELD_IN, CHEV } from '@/components/ui';
+import { Avatar, BACK, BLACK, CHEV, Chip, FIELD_IN, FieldError, Notice, OUTLINE, RING, dim } from '@/components/ui';
+import { TONE, type ToneName } from '@/lib/tones';
+import { BAR, Field, PAGE } from '../../settings/forms/FormPage';
 import Link from 'next/link';
 import { addMonthsYmd, niceDate } from '@/lib/forms-shared';
 import { S } from '../../calendar/pickers';
 import { DetailRows, ICONS, Tiles } from '../../calendar/wizardUi';
 import type { ClientCard, FormsCtl } from './ClientFormsView';
 
-const FORM_ICON = <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3A2BB5" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="2.5" /><path d="M9 9h6M9 13h6M9 17h3" /></svg>;
-const BLACK = 'height:52px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font:inherit;font-size:14.5px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;text-decoration:none;box-sizing:border-box;width:100%';
-const OUTLINE = 'height:52px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font:inherit;font-size:14.5px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;text-decoration:none;box-sizing:border-box;width:100%';
-const LEVEL = { ok: { t: 'All set', bg: '#DDF3EA', fg: '#14624A' }, todo: { t: '', bg: '#FFF4E5', fg: '#7A4204' }, alert: { t: 'Reaction', bg: '#FDECEA', fg: '#B42318' } } as const;
-const PAGE = "position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;display:flex;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4";
-const BAR = 'flex:0 0 auto;padding:14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3;display:flex;flex-direction:column;gap:10px';
-const AVATAR = (px: number, fs: number) => 'flex:0 0 ' + px + 'px;width:' + px + 'px;height:' + px + 'px;border-radius:999px;background:#EEEAFE;color:#3A2BB5;display:flex;align-items:center;justify-content:center;font-size:' + fs + 'px;font-weight:600';
-
-function Field({ label, children, htmlFor }: { label: string; children: React.ReactNode; htmlFor?: string }) {
-  return <label htmlFor={htmlFor} style={S('display:block;box-sizing:border-box;padding:10px 16px 12px;border:1px solid #E1E4E9;border-radius:16px;background:#FFFFFF')}><span style={S('display:block;font-size:12.5px;color:#5E6673')}>{label}</span>{children}</label>;
-}
+const FORM_ICON = <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={TONE.purple.fg} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="2.5" /><path d="M9 9h6M9 13h6M9 17h3" /></svg>;
+/** The big button alone on its own line (the bars here stack their buttons). */
+const FULL = ';flex:0 0 auto;width:100%';
+const LEVEL: Record<ClientCard['level'], { t: string; tone: ToneName }> = { ok: { t: 'All set', tone: 'green' }, todo: { t: '', tone: 'amber' }, alert: { t: 'Reaction', tone: 'red' } };
 
 function Header({ title, onBack, avatar }: { title: string; onBack: () => void; avatar?: string }) {
   return (
     <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px;border-bottom:1px solid #E6E8EC')}>
       <button onClick={onBack} aria-label="Back" style={S(RING)}>{BACK}</button>
-      {avatar && <div style={S(AVATAR(36, 13))}>{avatar}</div>}
+      {avatar && <Avatar name={avatar} size="sm" />}
       <div style={S('flex:1 1 auto;min-width:0;font-size:18px;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{title}</div>
     </header>
   );
@@ -30,20 +25,20 @@ function Header({ title, onBack, avatar }: { title: string; onBack: () => void; 
 
 function levelChip(k: ClientCard) {
   const l = LEVEL[k.level];
-  return { t: k.level === 'todo' ? k.todoCount + ' needed' : l.t, bg: l.bg, fg: l.fg };
+  return { t: k.level === 'todo' ? k.todoCount + ' needed' : l.t, tone: l.tone };
 }
 
 /** A form as the profile shows it: purple tile, name, a line of detail, an optional status chip, a chevron. */
-function FormCard({ name, line, tag, flagged, onOpen }: { name: string; line: React.ReactNode; tag?: { t: string; bg: string; fg: string }; flagged?: boolean; onOpen: () => void }) {
+function FormCard({ name, line, tag, flagged, onOpen }: { name: string; line: React.ReactNode; tag?: { t: string; tone: ToneName }; flagged?: boolean; onOpen: () => void }) {
   return (
-    <button onClick={onOpen} style={S('display:flex;align-items:center;gap:14px;width:100%;box-sizing:border-box;padding:16px;border:1px solid ' + (flagged ? '#F4C7C2' : '#E6E8EC') + ';border-radius:22px;background:#FFFFFF;text-align:left;font:inherit;color:#0E1116;cursor:pointer')}>
-      <span style={S('flex:0 0 44px;width:44px;height:44px;border-radius:14px;background:#EEEAFE;display:flex;align-items:center;justify-content:center')}>{FORM_ICON}</span>
+    <button onClick={onOpen} style={S('display:flex;align-items:center;gap:14px;width:100%;box-sizing:border-box;padding:16px;border:1px solid ' + (flagged ? TONE.red.bg : '#E6E8EC') + ';border-radius:22px;background:#FFFFFF;text-align:left;font:inherit;color:#0E1116;cursor:pointer')}>
+      <span style={S('flex:0 0 44px;width:44px;height:44px;border-radius:14px;background:' + TONE.purple.bg + ';display:flex;align-items:center;justify-content:center')}>{FORM_ICON}</span>
       <span style={S('flex:1 1 auto;min-width:0')}>
         <span style={S('display:block;font-size:16px;font-weight:600;letter-spacing:-0.01em;overflow-wrap:anywhere')}>{name}</span>
         <span style={S('display:block;margin-top:2px;font-size:13px;color:#5E6673;overflow-wrap:anywhere')}>{line}</span>
         {(tag || flagged) && <span style={S('display:flex;flex-wrap:wrap;gap:6px;margin-top:8px')}>
-          {tag && <span style={S('padding:3px 10px;border-radius:999px;background:' + tag.bg + ';color:' + tag.fg + ';font-size:12px;font-weight:600')}>{tag.t}</span>}
-          {flagged && <span style={S('padding:3px 10px;border-radius:999px;background:#FDECEA;color:#B42318;font-size:12px;font-weight:600')}>Reaction noted</span>}
+          {tag && <Chip tone={tag.tone}>{tag.t}</Chip>}
+          {flagged && <Chip tone="red">Reaction noted</Chip>}
         </span>}
       </span>
       {CHEV}
@@ -72,13 +67,13 @@ export function Done({ c }: { c: FormsCtl }) {
   return (<>
     {list.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14.5px')}>{q ? `Nothing matches "${c.query.trim()}".` : 'No forms have been completed yet. When a client or a team member fills one in, it appears here.'}</p>}
     {list.map((r) => (
-      <button key={r.id} onClick={() => c.setAns({ name: r.form, sub: r.client + ' · ' + r.date, flagged: r.flagged, answers: r.answers, clientId: r.clientId })} style={S('display:flex;align-items:center;gap:14px;width:100%;box-sizing:border-box;padding:16px;border:1px solid ' + (r.flagged ? '#F4C7C2' : '#E6E8EC') + ';border-radius:22px;background:#FFFFFF;text-align:left;font:inherit;color:#0E1116;cursor:pointer')}>
-        <span style={S('flex:0 0 44px;width:44px;height:44px;border-radius:14px;background:#EEEAFE;display:flex;align-items:center;justify-content:center')}>{FORM_ICON}</span>
+      <button key={r.id} onClick={() => c.setAns({ name: r.form, sub: r.client + ' · ' + r.date, flagged: r.flagged, answers: r.answers, clientId: r.clientId })} style={S('display:flex;align-items:center;gap:14px;width:100%;box-sizing:border-box;padding:16px;border:1px solid ' + (r.flagged ? TONE.red.bg : '#E6E8EC') + ';border-radius:22px;background:#FFFFFF;text-align:left;font:inherit;color:#0E1116;cursor:pointer')}>
+        <span style={S('flex:0 0 44px;width:44px;height:44px;border-radius:14px;background:' + TONE.purple.bg + ';display:flex;align-items:center;justify-content:center')}>{FORM_ICON}</span>
         <span style={S('flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px')}>
           <span style={S('font-size:16px;font-weight:600;letter-spacing:-0.01em;overflow-wrap:anywhere')}>{r.client}</span>
           <span style={S('font-size:14px;color:#4A525E;overflow-wrap:anywhere')}>{r.form}</span>
-          <span style={S('font-size:12.5px;color:#8A93A0;overflow-wrap:anywhere')}>{r.date}{r.ref ? ' · ' + r.ref.replace('Booking ', '') : ''}</span>
-          {r.flagged && <span style={S('align-self:flex-start;margin-top:6px;padding:3px 10px;border-radius:999px;background:#FDECEA;color:#B42318;font-size:12px;font-weight:600')}>Reaction noted</span>}
+          <span style={S('font-size:12.5px;color:#8A93A0;overflow-wrap:anywhere')}>{r.date}{r.ref ? ' · ' + r.ref : ''}</span>
+          {r.flagged && <span style={S('align-self:flex-start;margin-top:6px')}><Chip tone="red">Reaction noted</Chip></span>}
         </span>
         {CHEV}
       </button>
@@ -93,7 +88,7 @@ export function Upcoming({ c, wide }: { c: FormsCtl; wide?: boolean }) {
     <section style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:20px;display:flex;flex-direction:column;gap:10px')}>
       <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{c.hasForms ? 'No upcoming appointments' : 'No forms set up yet'}</h2>
       <p style={S('margin:0;color:#5E6673;font-size:14.5px')}>{c.hasForms ? 'Clients with an appointment coming up appear here with the forms they still need.' : c.owner ? 'Set up the forms clients fill in before a visit, then they show here for each appointment.' : 'Ask the owner to set up forms in Settings.'}</p>
-      {!c.hasForms && c.owner && <Link href="/settings/forms" style={S(BLACK)}>Set up forms</Link>}
+      {!c.hasForms && c.owner && <Link href="/settings/forms" style={S(BLACK + FULL)}>Set up forms</Link>}
     </section>
   );
   if (!list.length) return <p style={S('margin:0;color:#5E6673;font-size:14.5px')}>{`Nothing matches "${c.query.trim()}".`}</p>;
@@ -107,13 +102,13 @@ export function Upcoming({ c, wide }: { c: FormsCtl; wide?: boolean }) {
         {g.items.map((k) => {
           const t = levelChip(k);
           return (
-            <button key={k.id} onClick={() => c.openBooking(k.id)} aria-label={`${k.name}, ${k.time}, ${k.svc}, ${t.t}`} style={S('display:flex;align-items:center;gap:14px;width:100%;box-sizing:border-box;padding:16px;border-radius:22px;background:#FFFFFF;text-align:left;font:inherit;color:#0E1116;cursor:pointer;border:1px solid ' + (k.level === 'ok' ? '#E6E8EC' : k.level === 'todo' ? '#F3D9AE' : '#F4C7C2'))}>
-              <span style={S(AVATAR(48, 15))}>{k.init}</span>
+            <button key={k.id} onClick={() => c.openBooking(k.id)} aria-label={`${k.name}, ${k.time}, ${k.svc}, ${t.t}`} style={S('display:flex;align-items:center;gap:14px;width:100%;box-sizing:border-box;padding:16px;border-radius:22px;background:#FFFFFF;text-align:left;font:inherit;color:#0E1116;cursor:pointer;border:1px solid ' + (k.level === 'ok' ? '#E6E8EC' : k.level === 'todo' ? TONE.amber.bg : TONE.red.bg))}>
+              <Avatar name={k.name} size="lg" />
               <span style={S('flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px')}>
                 <span style={S('font-size:16px;font-weight:600;letter-spacing:-0.01em;overflow-wrap:anywhere')}>{k.name}</span>
                 <span style={S('font-size:14px;color:#4A525E;overflow-wrap:anywhere')}>{k.svc}{k.who ? ' with ' + k.who : ''}</span>
                 <span style={S('font-size:12.5px;color:#8A93A0')}>{k.time} · {k.ref}</span>
-                <span style={S('align-self:flex-start;margin-top:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;background:' + t.bg + ';color:' + t.fg)}>{t.t}</span>
+                <span style={S('align-self:flex-start;margin-top:6px')}><Chip tone={t.tone}>{t.t}</Chip></span>
               </span>
               {CHEV}
             </button>
@@ -133,12 +128,12 @@ export function FormsOverlay({ c }: { c: FormsCtl }) {
   const row = k && c.fm ? k.rows.find((r) => r.tplId === c.fm) ?? null : null;
   const wasSent = !!(k && c.sent[k.bookingId]);
 
-  const err = c.error && !rec ? <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p> : null;
+  const err = c.error && !rec ? <FieldError>{c.error}</FieldError> : null;
 
   return (<>
     {c.bk && k && (
       <div role="dialog" aria-label="Booking" style={S(PAGE)}>
-        <Header title={k.name} avatar={k.init} onBack={() => c.setBk(false)} />
+        <Header title={k.name} avatar={k.name} onBack={() => c.setBk(false)} />
         <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:16px 20px 24px;display:flex;flex-direction:column;gap:16px')}>
           <div>
             <h2 style={S('margin:0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em;overflow-wrap:anywhere')}>{k.svc}</h2>
@@ -147,26 +142,26 @@ export function FormsOverlay({ c }: { c: FormsCtl }) {
           <DetailRows go={() => {}} rows={[
             { icon: ICONS.day, text: k.when },
             ...(k.who ? [{ icon: ICONS.person, text: k.who }] : []),
-            { icon: ICONS.tag, text: 'Booking ' + k.ref },
+            { icon: ICONS.tag, text: k.ref },
           ]} />
-          <section role="status" style={S('box-sizing:border-box;border-radius:20px;padding:16px 18px;background:' + LEVEL[k.level].bg + ';color:' + LEVEL[k.level].fg)}>
+          <section role="status" style={S('box-sizing:border-box;border-radius:20px;padding:16px 18px;background:' + TONE[LEVEL[k.level].tone].bg + ';color:' + TONE[LEVEL[k.level].tone].fg)}>
             <div style={S('font-size:15px;font-weight:600')}>{k.banner.title}</div>
             <div style={S('margin-top:2px;font-size:13.5px;opacity:0.92')}>{k.banner.text}</div>
           </section>
-          {!!c.notice && <p role="status" style={S('margin:0;color:#14624A;font-size:14px;font-weight:600')}>{c.notice}</p>}
+          {!!c.notice && <Notice>{c.notice}</Notice>}
           {err}
           <h3 style={S('margin:6px 0 -4px;font-size:17px;font-weight:600;letter-spacing:-0.01em')}>Forms</h3>
-          {k.rows.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No forms are set up for this booking.</p>}
+          {k.rows.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No forms are set up for this appointment.</p>}
           {k.rows.map((r) => {
             const st = c.stat[r.state];
-            return <FormCard key={r.tplId} name={r.name} line={r.needed ? 'Needed for this appointment' : 'Optional'} tag={{ t: st.t, bg: st.bg, fg: st.fg }} onOpen={() => { c.setError(''); c.setFm(r.tplId); }} />;
+            return <FormCard key={r.tplId} name={r.name} line={r.needed ? 'Needed for this appointment' : 'Optional'} tag={{ t: st.t, tone: st.tone }} onOpen={() => { c.setError(''); c.setFm(r.tplId); }} />;
           })}
         </main>
         <div style={S(BAR)}>
-          {k.sendable > 0 && !!k.email && !wasSent && <button type="button" onClick={c.send} disabled={c.busy} style={S(BLACK)}>{k.sendable > 1 ? `Send ${k.sendable} forms by email` : 'Send link'}</button>}
+          {k.sendable > 0 && !!k.email && !wasSent && <button type="button" onClick={c.send} disabled={c.busy} style={S(BLACK + FULL + dim(c.busy))}>{c.busy ? 'Sending…' : k.sendable > 1 ? `Send ${k.sendable} forms by email` : 'Send link'}</button>}
           <div style={S('display:flex;gap:10px')}>
-            <Link href={`/clients/${k.clientId}`} style={S(OUTLINE)}>Profile</Link>
-            <Link href={`/calendar?d=${k.dayYmd}&b=${k.bookingId}`} style={S(BLACK)}>View booking</Link>
+            <Link href={`/clients/${k.clientId}`} style={S(OUTLINE)}>Open profile</Link>
+            <Link href={`/calendar?d=${k.dayYmd}&b=${k.bookingId}`} style={S(BLACK)}>View in calendar</Link>
           </div>
         </div>
       </div>
@@ -183,14 +178,14 @@ export function FormsOverlay({ c }: { c: FormsCtl }) {
             <div>
               <h2 style={S('margin:0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em;overflow-wrap:anywhere')}>{row.name}</h2>
               <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px')}>
-                <span style={S('padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;background:' + st.bg + ';color:' + st.fg)}>{st.t}</span>
+                <Chip tone={st.tone}>{st.t}</Chip>
                 <span style={S('font-size:13px;color:#5E6673')}>{k.name} · {k.when}</span>
               </div>
             </div>
             <p style={S('margin:0;color:#4A525E;font-size:14px;overflow-wrap:anywhere')}>{wasSent && row.canSend ? 'Link sent to ' + k.email : row.line}</p>
-            {!!c.notice && <p role="status" style={S('margin:0;color:#14624A;font-size:14px;font-weight:600')}>{c.notice}</p>}
+            {!!c.notice && <Notice>{c.notice}</Notice>}
             {err}
-            {row.state === 'reaction' && <div style={S('padding:12px 14px;border-radius:16px;background:#FDECEA;color:#B42318;font-size:13.5px;font-weight:600')}>A reaction was noted on this form.</div>}
+            {row.state === 'reaction' && <div style={S('padding:12px 14px;border-radius:16px;background:' + TONE.red.bg + ';color:' + TONE.red.fg + ';font-size:13.5px;font-weight:600')}>A reaction was noted on this form.</div>}
             {answers.map((x, i) => (
               <div key={i} style={S('box-sizing:border-box;padding:12px 16px 14px;border:1px solid #E1E4E9;border-radius:16px;background:#FFFFFF')}>
                 <div style={S('font-size:12.5px;color:#5E6673;overflow-wrap:anywhere')}>{x.k}</div>
@@ -200,9 +195,9 @@ export function FormsOverlay({ c }: { c: FormsCtl }) {
           </main>
           {(canSend || row.canFill || row.canRecord) && (
             <div style={S(BAR)}>
-              {canSend && <button type="button" onClick={c.send} disabled={c.busy} style={S(BLACK)}>Send link</button>}
-              {row.canFill && <Link href={`/clients/forms/fill/${k.bookingId}?t=${row.tplId}`} style={S(canSend ? OUTLINE : BLACK)}>Fill in at the salon</Link>}
-              {row.canRecord && <button type="button" onClick={() => { c.setRec({ tplId: row.tplId, date: c.today, reaction: false, note: '' }); c.setError(''); }} style={S(canSend || row.canFill ? OUTLINE : BLACK)}>{row.state === 'valid' || row.state === 'reaction' ? 'Record again' : 'Record result'}</button>}
+              {canSend && <button type="button" onClick={c.send} disabled={c.busy} style={S(BLACK + FULL + dim(c.busy))}>{c.busy ? 'Sending…' : 'Send link'}</button>}
+              {row.canFill && <Link href={`/clients/forms/fill/${k.bookingId}?t=${row.tplId}`} style={S((canSend ? OUTLINE : BLACK) + FULL)}>Fill in at the salon</Link>}
+              {row.canRecord && <button type="button" onClick={() => { c.setRec({ tplId: row.tplId, date: c.today, reaction: false, note: '' }); c.setError(''); }} style={S((canSend || row.canFill ? OUTLINE : BLACK) + FULL)}>{row.state === 'valid' || row.state === 'reaction' ? 'Record again' : 'Record result'}</button>}
             </div>
           )}
         </div>
@@ -221,7 +216,7 @@ export function FormsOverlay({ c }: { c: FormsCtl }) {
               <h2 style={S('margin:0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em;overflow-wrap:anywhere')}>{a.name}</h2>
               <p style={S('margin:6px 0 0;font-size:14px;color:#5E6673;overflow-wrap:anywhere')}>{a.sub}</p>
             </div>
-            {a.flagged && <div style={S('padding:12px 14px;border-radius:16px;background:#FDECEA;color:#B42318;font-size:13.5px;font-weight:600')}>A reaction was noted on this form.</div>}
+            {a.flagged && <div style={S('padding:12px 14px;border-radius:16px;background:' + TONE.red.bg + ';color:' + TONE.red.fg + ';font-size:13.5px;font-weight:600')}>A reaction was noted on this form.</div>}
             {answers.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No answers were given.</p>}
             {answers.map((x, i) => (
               <div key={i} style={S('box-sizing:border-box;padding:12px 16px 14px;border:1px solid #E1E4E9;border-radius:16px;background:#FFFFFF')}>
@@ -229,7 +224,7 @@ export function FormsOverlay({ c }: { c: FormsCtl }) {
                 <div style={S('margin-top:3px;font-size:16px;font-weight:600;overflow-wrap:anywhere')}>{x.v}</div>
               </div>
             ))}
-            <Link href={`/clients/${a.clientId}`} style={S(OUTLINE)}>Open profile</Link>
+            <Link href={`/clients/${a.clientId}`} style={S(OUTLINE + FULL)}>Open profile</Link>
           </main>
         </div>
       );
@@ -249,8 +244,8 @@ export function FormsOverlay({ c }: { c: FormsCtl }) {
           <Field label="Notes (optional)" htmlFor="rc-note"><input id="rc-note" type="text" maxLength={300} value={rec.note} onChange={(e) => c.setRec({ ...rec, note: e.target.value })} placeholder="For example, mild redness behind the ear" style={FIELD_IN} /></Field>
         </main>
         <div style={S(BAR)}>
-          {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
-          <button type="button" onClick={c.saveRec} disabled={c.busy} style={S(BLACK)}>Save result</button>
+          {!!c.error && <FieldError>{c.error}</FieldError>}
+          <button type="button" onClick={c.saveRec} disabled={c.busy} style={S(BLACK + FULL + dim(c.busy))}>{c.busy ? 'Saving…' : 'Save result'}</button>
         </div>
       </div>
     )}

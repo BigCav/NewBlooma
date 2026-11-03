@@ -7,7 +7,9 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireCtx, friendly } from '@/lib/session';
 import { CANCEL_REASONS } from '@/lib/cal';
-import { zonedToUtc, minutesOfDay, ymd as ymdOf, time12 } from '@/lib/format';
+import { zonedToUtc, minutesOfDay, ymd as ymdOf, time12, toCents } from '@/lib/format';
+import { refDigits, plural } from '@/lib/display';
+import { firstName } from '@/lib/people';
 import { buildCfg, buildClosed, buildHours, buildOffers, buildRecent, buildServices } from './base';
 
 const s = (fd: FormData, k: string) => String(fd.get(k) ?? '').trim();
@@ -78,8 +80,8 @@ export async function cancelBooking(id: string, reason: string): Promise<R> {
 export async function noShowBooking(id: string): Promise<R> {
   const { sb } = await requireCtx();
   const { data: b } = await sb.from('bookings').select('status,starts_at').eq('id', id).maybeSingle();
-  if (!b) return { error: 'That booking no longer exists.' };
-  if (!['pending', 'confirmed'].includes(b.status)) return { error: 'Only a booking that has not been checked in can be marked as a no-show.' };
+  if (!b) return { error: 'That appointment no longer exists.' };
+  if (!['pending', 'confirmed'].includes(b.status)) return { error: 'Only an appointment that has not been checked in can be marked as a no-show.' };
   if (new Date(b.starts_at) > new Date()) return { error: 'You can mark a no-show once the appointment time has passed.' };
   const { error } = await sb.from('bookings').update({ status: 'no_show' }).eq('id', id);
   if (error) return { error: friendly(error.message) };
@@ -91,8 +93,8 @@ export async function setBookingStatus(id: string, target: 'confirmed' | 'checke
   const { sb } = await requireCtx();
   if (!['confirmed', 'checked_in', 'in_progress'].includes(target)) return { error: 'Choose a status.' };
   const { data: b } = await sb.from('bookings').select('status,starts_at').eq('id', id).maybeSingle();
-  if (!b) return { error: 'That booking no longer exists.' };
-  if (!['pending', 'confirmed', 'checked_in', 'in_progress'].includes(b.status)) return { error: 'This booking can no longer change status.' };
+  if (!b) return { error: 'That appointment no longer exists.' };
+  if (!['pending', 'confirmed', 'checked_in', 'in_progress'].includes(b.status)) return { error: 'This appointment can no longer change status.' };
   if (b.status === target) return { ok: true };
   if (target !== 'confirmed' && new Date(b.starts_at).getTime() - Date.now() > 24 * 3600e3) return { error: 'You can check someone in on the day of their appointment.' };
   if (b.status === 'pending') {
@@ -110,7 +112,7 @@ export async function setBookingStatus(id: string, target: 'confirmed' | 'checke
 export async function loadNewAppt() {
   const { sb, salon, settings, staff } = await requireCtx();
   const [{ data: team }, { data: oh }, { data: svc }, { data: ss }, { data: sa }, { data: rc }, { data: cp }] = await Promise.all([
-    sb.from('staff').select('id,name,role_title').eq('active', true).order('name'),
+    sb.from('staff').select('id,name,role_title,photo_url').eq('active', true).order('name'),
     sb.from('opening_hours').select('*'),
     sb.from('services').select('id,name,duration_min,price_cents,is_addon,service_categories(name)').eq('active', true).order('name'),
     sb.from('service_staff').select('service_id,staff_id'),
@@ -120,7 +122,7 @@ export async function loadNewAppt() {
   ]);
   return {
     today: ymdOf(new Date(), salon.timezone), nowMin: minutesOfDay(new Date(), salon.timezone), tz: salon.timezone, slug: salon.slug,
-    team: (team ?? []).map((t) => ({ id: t.id, name: t.name, role: t.role_title ?? '' })),
+    team: (team ?? []).map((t) => ({ id: t.id, name: t.name, role: t.role_title ?? '', photo: t.photo_url ?? null })),
     hours: buildHours(oh), closed: buildClosed(cp, ymdOf(new Date(), salon.timezone)), services: buildServices(svc, sa), offers: buildOffers(ss), cfg: buildCfg(settings, staff.app_role), recent: buildRecent(rc),
   };
 }
@@ -133,12 +135,12 @@ export async function messageBookingClient(bookingId: string, text: string): Pro
   if (text.length > 600) return { error: 'Keep the message under 600 characters.' };
   const { data: b } = await sb.from('bookings').select('client_id,clients(name,email,phone)').eq('id', bookingId).maybeSingle();
   const c = (b as any)?.clients;
-  if (!c || !(b as any).client_id) return { error: 'That booking no longer exists.' };
+  if (!c || !(b as any).client_id) return { error: 'That appointment no longer exists.' };
   const th = await ensureThread(salon.id, (b as any).client_id, bookingId);
   const r = await sendCustomMessage(salon.id, c, text, undefined, replyUrl(th.token));
   if (!r.ok) { if (th.created) await dropEmptyThread(th.id); return { error: r.error }; }
   await logStaffMessage(salon.id, th.id, text);
-  return { ok: true, note: `Message sent to ${String(c.name ?? 'the client').split(' ')[0]}` };
+  return { ok: true, note: `Message sent to ${firstName(c.name, 'the client')}` };
 }
 
 export async function dayAvailability(dayYmd: string, staffId: string, ignoreBooking?: string) {
@@ -174,7 +176,7 @@ async function slotProblem(dayYmd: string, staffId: string, startMin: number, du
 export async function rescheduleBooking(id: string, dayYmd: string, startMin: number): Promise<R> {
   const { sb, salon } = await requireCtx();
   const { data: b } = await sb.from('bookings').select('starts_at,ends_at,staff_id').eq('id', id).single();
-  if (!b) return { error: 'Booking not found.' };
+  if (!b) return { error: 'Appointment not found.' };
   const dur = Math.round((new Date(b.ends_at).getTime() - new Date(b.starts_at).getTime()) / 60000);
   const why = await slotProblem(dayYmd, b.staff_id, startMin, dur, id); if (why) return { error: why };
   const hh = String(Math.floor(startMin / 60)).padStart(2, '0'), mi = String(startMin % 60).padStart(2, '0');
@@ -192,7 +194,7 @@ export async function createBlock(staffId: string, dayYmd: string, startMin: num
   const e = new Date(s.getTime() + durMin * 60000);
   // Blocking time over booked clients would leave them there with no warning.
   const { data: under } = await sb.from('bookings').select('clients(name)').eq('staff_id', staffId).in('status', ['pending', 'confirmed', 'checked_in', 'in_progress']).lt('starts_at', e.toISOString()).gt('ends_at', s.toISOString());
-  if (under?.length) return { error: `${under.length === 1 ? 'There is an appointment' : 'There are ' + under.length + ' appointments'} in that time (${under.slice(0, 3).map((u: any) => String(u.clients?.name ?? 'Client').split(' ')[0]).join(', ')}${under.length > 3 ? ' and more' : ''}). Move or cancel ${under.length === 1 ? 'it' : 'them'} first, or use Running late.` };
+  if (under?.length) return { error: `${under.length === 1 ? 'There is an appointment' : 'There are ' + under.length + ' appointments'} in that time (${under.slice(0, 3).map((u: any) => firstName(u.clients?.name, 'Client')).join(', ')}${under.length > 3 ? ' and more' : ''}). Move or cancel ${under.length === 1 ? 'it' : 'them'} first, or use Running late.` };
   const { error } = await sb.from('staff_blocks').insert({ salon_id: salon.id, staff_id: staffId, kind, starts_at: s.toISOString(), ends_at: e.toISOString() });
   if (error) return { error: friendly(error.message) };
   revalidatePath('/calendar'); return { ok: true };
@@ -230,7 +232,7 @@ export async function addWalkIn(name: string, clientId: string | null, serviceId
   const { data, error } = await sb.rpc('create_booking', { p_salon: salon.id, p_client: cid, p_staff: plan.staffId, p_starts_at: plan.startsAt, p_service_ids: [serviceId], p_source: 'staff', p_notes: 'Walk-in', p_mode: 'staff' });
   if (error) return { error: friendly(error.message) };
   revalidatePath('/calendar');
-  return { ok: true, id: data as string, note: `${name.split(' ')[0]} added with ${plan.staff.split(' ')[0]} at ${plan.label}` };
+  return { ok: true, id: data as string, note: `${firstName(name, 'Client')} added with ${firstName(plan.staff, 'a team member')} at ${plan.label}` };
 }
 
 
@@ -271,7 +273,7 @@ export async function checkoutBooking(bookingId: string, method: 'card' | 'cash'
   }
   if (disc && disc.kind !== 'none') {
     const v = Number(String(disc.value).replace(/[^0-9.]/g, ''));
-    const d = await sb.rpc('set_sale_discount', { p_sale: id, p_kind: disc.kind, p_value: disc.kind === 'amount' ? Math.round(v * 100) : v || 0, p_note: disc.note });
+    const d = await sb.rpc('set_sale_discount', { p_sale: id, p_kind: disc.kind, p_value: disc.kind === 'amount' ? toCents(disc.value) : v || 0, p_note: disc.note });
     if (d.error) { await sb.rpc('void_pending_sale', { p_sale: id }); return { error: friendly(d.error.message) }; }
     const t = await sb.rpc('set_sale_tip', { p_sale: id, p_pct: tipPct });
     if (t.error) { await sb.rpc('void_pending_sale', { p_sale: id }); return { error: friendly(t.error.message) }; }
@@ -310,12 +312,12 @@ export async function payNowBooking(bookingId: string): Promise<R & { saleId?: s
 export async function editBooking(id: string, dayYmd: string, startMin: number, remove: string[], add: string[], extras: { serviceId: string; staffId: string; startMin: number }[]): Promise<R> {
   const { sb, salon } = await requireCtx();
   const { data: b } = await sb.from('bookings').select('id,client_id,staff_id,starts_at,ends_at').eq('id', id).single();
-  if (!b) return { error: 'Booking not found.' };
+  if (!b) return { error: 'Appointment not found.' };
   const { data: lines } = await sb.from('booking_services').select('service_id,duration_min,price_cents').eq('booking_id', id);
   const keep = (lines ?? []).filter((l) => !remove.includes(l.service_id));
   const { data: adds } = add.length ? await sb.from('services').select('id,duration_min,price_cents').in('id', add) : { data: [] as any[] };
   const dur = keep.reduce((a, l) => a + l.duration_min, 0) + (adds ?? []).reduce((a: number, l: any) => a + l.duration_min, 0);
-  if (!keep.length && !(adds ?? []).length && !extras.length) return { error: 'Keep at least one service on the booking.' };
+  if (!keep.length && !(adds ?? []).length && !extras.length) return { error: 'Keep at least one service on the appointment.' };
   // The database only stops two bookings overlapping, so opening hours, shifts and blocked time are checked here.
   if (dur > 0) { const why = await slotProblem(dayYmd, b.staff_id, startMin, dur, id); if (why) return { error: why }; }
   if (extras.length) {
@@ -342,7 +344,7 @@ export async function rebookBooking(id: string, dayYmd: string, startMin: number
   const { sb, salon } = await requireCtx();
   const { data: b } = await sb.from('bookings').select('client_id,staff_id').eq('id', id).single();
   const { data: lines } = await sb.from('booking_services').select('service_id,duration_min').eq('booking_id', id);
-  if (!b || !lines?.length) return { error: 'Booking not found.' };
+  if (!b || !lines?.length) return { error: 'Appointment not found.' };
   const why = await slotProblem(dayYmd, b.staff_id, startMin, lines.reduce((a, l) => a + l.duration_min, 0)); if (why) return { error: why };
   const hh = String(Math.floor(startMin / 60)).padStart(2, '0'), mi = String(startMin % 60).padStart(2, '0');
   const { error } = await sb.rpc('create_booking', { p_salon: salon.id, p_client: b.client_id, p_staff: b.staff_id, p_starts_at: zonedToUtc(dayYmd, `${hh}:${mi}`, salon.timezone).toISOString(), p_service_ids: lines.map((l) => l.service_id), p_source: 'staff', p_notes: null, p_mode: 'staff' });
@@ -376,6 +378,8 @@ export async function searchBookings(q: string): Promise<SearchHit[]> {
   const needle = q.trim().toLowerCase(); if (!needle) return [];
   const a = new Date(Date.now() - 180 * 86400000), b = new Date(Date.now() + 180 * 86400000);
   const digits = needle.replace(/\D/g, '');
+  // "B-1048" is how a booking reads on every screen, so it finds the booking as well as the bare number.
+  const refQ = refDigits(needle);
   const { data } = await sb.from('bookings').select('id,ref_no,starts_at,staff(name),clients(name,phone),booking_services(services(name,service_categories(name)))')
     .gte('starts_at', a.toISOString()).lt('starts_at', b.toISOString()).not('status', 'in', '(cancelled,no_show)').order('starts_at').limit(1000);
   const hits: SearchHit[] = [];
@@ -384,7 +388,7 @@ export async function searchBookings(q: string): Promise<SearchHit[]> {
     const services = lines.map((l) => l.services?.name).filter(Boolean).join(' + ');
     const staff = x.staff?.name ?? '', client = x.clients?.name ?? 'Client';
     const phone = String(x.clients?.phone ?? '').replace(/\D/g, '');
-    if (!(client + ' ' + services + ' ' + (x.ref_no ?? '')).toLowerCase().includes(needle) && !(digits.length >= 3 && phone.includes(digits))) continue;
+    if (!(client + ' ' + services + ' ' + (x.ref_no ?? '')).toLowerCase().includes(needle) && !(/^\d+$/.test(refQ) && String(x.ref_no ?? '').includes(refQ)) && !(digits.length >= 3 && phone.includes(digits))) continue;
     hits.push({ id: x.id, dayYmd: ymdOf(x.starts_at, salon.timezone), start: minutesOfDay(x.starts_at, salon.timezone), client, services, staff, cat: lines[0]?.services?.service_categories?.name ?? '' });
     if (hits.length >= 12) break;
   }
@@ -442,7 +446,7 @@ export async function delayStaffDay(staffId: string, dayYmd: string, minutes: nu
   const mm = (iso: string) => minutesOfDay(iso, tz);
   for (const b of move) {
     const ns = new Date(new Date(b.starts_at).getTime() + ms), ne = new Date(new Date(b.ends_at).getTime() + ms);
-    const who = String(b.clients?.name ?? 'A client').split(' ')[0];
+    const who = firstName(b.clients?.name, 'A client');
     if (mm(ne.toISOString()) > av.to || ymdOf(ne.toISOString(), tz) !== dayYmd) return { error: `${who}'s appointment would finish after closing (${time12(ne.toISOString(), tz)}). Move or cancel it first, or choose a shorter delay.` };
     if ((blocks ?? []).some((k: any) => ns < new Date(k.ends_at) && new Date(k.starts_at) < ne)) return { error: `${who}'s new time would land on blocked time. Remove the block first or choose a different delay.` };
     if (stay.some((o) => ns < new Date(o.ends_at) && new Date(o.starts_at) < ne)) return { error: `${who}'s new time would clash with an appointment that is already under way.` };
@@ -458,12 +462,12 @@ export async function delayStaffDay(staffId: string, dayYmd: string, minutes: nu
   }
   let told = 0, noContact = 0, failed = 0;
   if (tell) {
-    const stylist = String(st?.name ?? 'Your stylist').split(' ')[0];
+    const stylist = firstName(st?.name, 'Your team member');
     for (const b of [...move].reverse()) {
       const c = b.clients;
       if (!c || (!c.email && !c.phone)) { noContact++; continue; }
       const svc = ((b.booking_services ?? []) as any[]).map((l) => l.services?.name).filter(Boolean).join(' + ') || 'appointment';
-      const text = `Hi ${String(c.name ?? 'there').split(' ')[0]}, ${stylist} is running about ${minutes} minutes late today. Your ${svc} is now at ${time12(new Date(new Date(b.starts_at).getTime() + ms).toISOString(), tz)} instead of ${time12(b.starts_at, tz)}. Sorry about that, and thank you for your patience.`;
+      const text = `Hi ${firstName(c.name, 'there')}, ${stylist} is running about ${minutes} minutes late today. Your ${svc} is now at ${time12(new Date(new Date(b.starts_at).getTime() + ms).toISOString(), tz)} instead of ${time12(b.starts_at, tz)}. Sorry about that, and thank you for your patience.`;
       try {
         const th = await ensureThread(salon.id, b.client_id, b.id);
         const r = await sendCustomMessage(salon.id, c, text, undefined, replyUrl(th.token));
@@ -473,8 +477,8 @@ export async function delayStaffDay(staffId: string, dayYmd: string, minutes: nu
     }
   }
   revalidatePath('/calendar'); revalidatePath('/inbox');
-  const parts = [`${move.length} appointment${move.length === 1 ? '' : 's'} moved ${minutes} minutes later`];
-  if (tell) parts.push(`${told} client${told === 1 ? '' : 's'} told`);
+  const parts = [`${plural(move.length, 'appointment')} moved ${minutes} minutes later`];
+  if (tell) parts.push(`${plural(told, 'client')} told`);
   if (noContact) parts.push(`${noContact} with no email or phone`);
   if (failed) parts.push(`${failed} could not be messaged`);
   return { ok: true, note: parts.join(', ') };

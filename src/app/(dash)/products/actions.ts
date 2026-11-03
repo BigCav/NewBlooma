@@ -1,9 +1,9 @@
 'use server';
 import { revalidatePath } from 'next/cache';
 import { requireCtx, friendly } from '@/lib/session';
+import { toCents } from '@/lib/format';
 
 type Res = { error?: string; notice?: string; id?: string; stock?: number };
-const price = (v: string) => { const n = Number(String(v).replace(/[^0-9.]/g, '')); return Number.isFinite(n) && String(v).trim() !== '' ? Math.round(n * 100) : NaN; };
 const whole = (v: string) => (/^\d{1,6}$/.test(String(v).trim()) ? Number(String(v).trim()) : NaN);
 
 export async function adjustStock(id: string, delta: number, notice?: string): Promise<Res> {
@@ -16,7 +16,7 @@ export async function adjustStock(id: string, delta: number, notice?: string): P
 export async function saveProduct(id: string, f: { name: string; brand: string; price: string; reorder: string }): Promise<Res> {
   const { sb, staff } = await requireCtx();
   if (staff.app_role !== 'owner') return { error: 'Only the owner can edit products.' };
-  const cents = price(f.price), reorder = whole(f.reorder);
+  const cents = toCents(f.price), reorder = whole(f.reorder);
   if (!f.name.trim()) return { error: 'Add a product name.' };
   if (isNaN(cents) || cents <= 0) return { error: 'Enter a price above zero, like 24 or 24.50.' };
   if (isNaN(reorder) || reorder < 0) return { error: 'Enter the reorder level as a whole number, 0 or more.' };
@@ -28,7 +28,7 @@ export async function saveProduct(id: string, f: { name: string; brand: string; 
 export async function createProduct(f: { name: string; brand: string; cat: string; price: string; stock: string; reorder: string }): Promise<Res> {
   const { sb, salon, staff } = await requireCtx();
   if (staff.app_role !== 'owner') return { error: 'Only the owner can add products.' };
-  const cents = price(f.price), stock = whole(f.stock), reorder = whole(f.reorder);
+  const cents = toCents(f.price), stock = whole(f.stock), reorder = whole(f.reorder);
   if (!f.name.trim()) return { error: 'Add a product name.' };
   if (isNaN(cents) || cents <= 0) return { error: 'Enter a price above zero, like 24 or 24.50.' };
   if (isNaN(stock) || stock < 0) return { error: 'Enter the starting stock as a whole number, 0 or more.' };

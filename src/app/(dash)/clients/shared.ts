@@ -1,4 +1,5 @@
-import { dollars } from '@/lib/format';
+import { MONTHS_FULL } from '@/lib/cal';
+import type { ToneName } from '@/lib/tones';
 // Types and pure helpers shared by the Clients list, the profile and their server code.
 export type Tag = 'Regular' | 'New' | 'Lapsed';
 export type ClientRow = {
@@ -8,10 +9,12 @@ export type ClientRow = {
 export const TAG_LIST: Tag[] = ['Regular', 'New', 'Lapsed'];
 export const FILTERS: { id: 'all' | Tag; label: string }[] = [{ id: 'all', label: 'All clients' }, { id: 'Regular', label: 'Regulars' }, { id: 'New', label: 'New' }, { id: 'Lapsed', label: 'Lapsed' }];
 
-export const money = dollars;
-export const initialsOf = (name: string, max = 2) => name.split(' ').filter(Boolean).map((w) => w[0]).join('').slice(0, max).toUpperCase();
+/** The colour of each tag, defined once for the list, the quick view and the profile. */
+export const TAG_TONE: Record<Tag, ToneName> = { Regular: 'purple', New: 'green', Lapsed: 'amber' };
+/** The colour of a patch test's state (patchInfo.tone). */
+export const PATCH_TONE: Record<'ok' | 'bad' | 'none', ToneName> = { ok: 'green', bad: 'red', none: 'grey' };
 
-const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MON = MONTHS_FULL.map((m) => m.slice(0, 3));
 /** Patch tests are valid for twelve months. */
 export function patchInfo(on: string | null, today: string): { text: string; tone: 'ok' | 'bad' | 'none'; needsAction: boolean } {
   if (!on) return { text: 'Not recorded', tone: 'none', needsAction: true };

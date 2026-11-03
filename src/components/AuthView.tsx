@@ -5,9 +5,12 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { S } from '@/app/(dash)/calendar/pickers';
 import { requestReset, setNewPassword, signIn, signUp } from '@/app/auth-actions';
+import { BLACK, FieldError, OUTLINE, dim } from '@/components/ui';
+import { TONE } from '@/lib/tones';
+import { firstName } from '@/lib/people';
 
 type Mode = 'in' | 'up' | 'reset' | 'new';
-const FIELD = 'box-sizing:border-box;width:100%;min-height:0;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF';
+const FIELD = 'box-sizing:border-box;width:100%;min-height:0;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:16px;color:#0E1116;background:#FFFFFF';
 const COPY: Record<Mode, { title: string; sub: string; cta: string }> = {
   in: { title: 'Welcome back', sub: 'Sign in to manage your salon.', cta: 'Sign in' },
   up: { title: 'Create your account', sub: 'Set up Aster in a few minutes. No card needed.', cta: 'Create account' },
@@ -21,7 +24,7 @@ const ASIDE: Record<Mode, [string, string]> = {
   new: ['Your day is ready when you are.', "Today's bookings, clients and sales are all here."],
 };
 const ALT: Record<Mode, [string, string, Mode] | null> = {
-  in: ['New to Aster?', 'Create an account', 'up'],
+  in: ['New to Aster?', 'Create account', 'up'],
   up: ['Already have an account?', 'Sign in', 'in'],
   reset: ['Remembered it?', 'Back to sign in', 'in'],
   new: null,
@@ -48,7 +51,7 @@ export function AuthView({ mode: initial }: { mode: Mode }) {
     } catch (err: any) { if (err?.digest?.startsWith?.('NEXT_REDIRECT')) throw err; setError('Something went wrong. Please try again.'); } finally { setBusy(false); }
   };
   const c = COPY[mode], aside = ASIDE[mode], alt = ALT[mode];
-  const first = name.trim().split(' ')[0];
+  const first = firstName(name);
   const dc = done === 'created' ? { t: 'Account created', p: 'Welcome, ' + first + '. Next, tell us about your salon.', href: '/setup', label: 'Set up your salon' }
     : done === 'confirm' ? { t: 'Check your email', p: 'We sent a confirmation link to ' + email.trim() + '. Open it to finish creating your account.', href: '', label: '' }
     : { t: 'Check your email', p: 'If ' + email.trim() + ' has an account, a reset link is on its way.', href: '', label: '' };
@@ -90,20 +93,20 @@ export function AuthView({ mode: initial }: { mode: Mode }) {
                   </div>
                 </div>
               )}
-              {!!error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{error}</p>}
-              <button type="submit" disabled={busy} style={S('height:48px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:15px;font-weight:500;padding:0 24px')}>{busy ? 'Please wait…' : c.cta}</button>
+              {!!error && <FieldError>{error}</FieldError>}
+              <button type="submit" disabled={busy} style={S(BLACK + ';flex:0 0 auto;padding:0 24px' + dim(busy))}>{busy ? 'Please wait…' : c.cta}</button>
             </form>
             {alt && <div style={S('display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px;padding-top:20px;border-top:1px solid #E6E8EC;font-size:14.5px;color:#5E6673')}><span>{alt[0]}</span><button type="button" onClick={() => goMode(alt[2])} style={S('border:0;background:transparent;padding:6px 0;color:#5B3DF5;font-size:14.5px;font-weight:600')}>{alt[1]}</button></div>}
           </>}
           {done && (
             <div role="status" style={S('display:flex;flex-direction:column;gap:16px;padding:20px;border-radius:20px;background:#FFFFFF;border:1px solid #E6E8EC')}>
               <div style={S('display:flex;align-items:center;gap:12px')}>
-                <span aria-hidden="true" style={S('flex:0 0 36px;width:36px;height:36px;border-radius:999px;background:#DDF3EA;display:flex;align-items:center;justify-content:center')}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#14624A" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5 10 17.5 19 7.5" /></svg></span>
+                <span aria-hidden="true" style={S('flex:0 0 36px;width:36px;height:36px;border-radius:999px;background:' + TONE.green.bg + ';display:flex;align-items:center;justify-content:center')}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={TONE.green.fg} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5 10 17.5 19 7.5" /></svg></span>
                 <div style={S('font-size:16px;font-weight:600')}>{dc.t}</div>
               </div>
               <p style={S('margin:0;color:#5E6673;font-size:14.5px;overflow-wrap:anywhere')}>{dc.p}</p>
-              {!!dc.href && <a href={dc.href} style={S('height:48px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:15px;font-weight:500;padding:0 24px;display:flex;align-items:center;justify-content:center;text-decoration:none;box-sizing:border-box')}>{dc.label}</a>}
-              <button onClick={() => goMode('in')} style={S('height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:15px;font-weight:500;padding:0 24px')}>Back to sign in</button>
+              {!!dc.href && <a href={dc.href} style={S(BLACK + ';flex:0 0 auto;padding:0 24px')}>{dc.label}</a>}
+              <button onClick={() => goMode('in')} style={S(OUTLINE + ';flex:0 0 auto;padding:0 24px')}>Back to sign in</button>
             </div>
           )}
         </div>

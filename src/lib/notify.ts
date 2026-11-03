@@ -1,8 +1,11 @@
 import 'server-only';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { dateLong, time12 } from '@/lib/format';
+import { time12 } from '@/lib/format';
+import { bookingRef } from '@/lib/display';
+import { firstName } from '@/lib/people';
+import { dateShort } from '@/lib/public';
 import { outstandingForBooking } from '@/lib/forms';
-import { mailShell, mailP, mailNote, mailButton, mailButtonPair, mailDetails, textDetails } from '@/lib/email-layout';
+import { esc, mailShell, mailP, mailNote, mailButton, mailButtonPair, mailDetails, textDetails } from '@/lib/email-layout';
 
 const base = () => process.env.NEXT_PUBLIC_APP_URL ?? '';
 
@@ -17,9 +20,11 @@ type Row = { id: string; salon_id: string; booking_id: string | null; channel: '
 
 const footerFor = (salon: { name: string; phone?: string | null }) => `${salon.name}${salon.phone ? ` · ${salon.phone}` : ''}`;
 
-async function compose(r: Row): Promise<{ subject: string; text: string; html: string; from: string } | null> {
+type Mail = { subject: string; text: string; html: string; from: string; replyTo?: string };
+
+async function compose(r: Row): Promise<Mail | null> {
   const sb = supabaseAdmin();
-  const { data: salon } = await sb.from('salons').select('name,phone,timezone,slug').eq('id', r.salon_id).single();
+  const { data: salon } = await sb.from('salons').select('name,phone,timezone,slug,email').eq('id', r.salon_id).single();
   if (!salon) return null;
   let service = '', staffName = '', date = '', time = '', bref = '', clientName = '';
   let manage = '';
@@ -30,15 +35,15 @@ async function compose(r: Row): Promise<{ subject: string; text: string; html: s
     if (!cancelledTpl && ['cancelled', 'no_show'].includes(b.status)) return null; // nothing to tell them
     if (cancelledTpl && b.status !== 'cancelled') return null; // it was reinstated
     if (r.template.startsWith('reminder') && (b as any).clients?.reminders === false) return null; // client turned reminders off
-    bref = 'B-' + (b as any).ref_no;
+    bref = bookingRef((b as any).ref_no);
     clientName = String((b as any).clients?.name ?? '');
-    date = dateLong(b.starts_at, salon.timezone); time = time12(b.starts_at, salon.timezone);
+    date = dateShort(b.starts_at, salon.timezone); time = time12(b.starts_at, salon.timezone);
     service = (b as any).booking_services.map((x: any) => x.services.name).join(', ');
     staffName = (b as any).staff?.name ?? '';
     const { data: t } = await sb.from('booking_tokens').select('token').eq('booking_id', r.booking_id).eq('purpose', 'manage_booking').maybeSingle();
     if (t) manage = `${base()}/manage/${t.token}`;
   }
-  const first = clientName.split(' ')[0] || 'there';
+  const first = firstName(clientName);
   const visit: [string, string][] = [['Service', service], ['With', staffName], ['Date', date], ['Time', time], ['Booking', bref]];
   let subject = '', heading = '', intro = '', details: [string, string | null | undefined][] = visit, outro = '', link = manage, cta = 'View or change your appointment';
   switch (r.template) {
@@ -51,7 +56,7 @@ async function compose(r: Row): Promise<{ subject: string; text: string; html: s
     case 'waitlist_offer': {
       subject = `A time opened up at ${salon.name}`; heading = 'A time opened up'; intro = 'A time you were waiting for is now available.'; outro = 'It is held for you for a short time.';
       link = `${base()}/offer/${r.payload.token}`; cta = 'Book this time';
-      details = [['Date', dateLong(r.payload.starts_at, salon.timezone)], ['Time', time12(r.payload.starts_at, salon.timezone)]]; break; }
+      details = [['Date', dateShort(r.payload.starts_at, salon.timezone)], ['Time', time12(r.payload.starts_at, salon.timezone)]]; break; }
     case 'review_request': subject = `How was your visit to ${salon.name}?`; heading = 'How was your visit?'; intro = 'Thanks for visiting. We would love to hear how it went.'; details = []; link = `${base()}/review/${r.payload.token}`; cta = 'Leave a review'; break;
     default: return null;
   }
@@ -62,19 +67,20 @@ async function compose(r: Row): Promise<{ subject: string; text: string; html: s
     .filter((x, i, a) => x !== '' || (i > 0 && a[i - 1] !== '')).join('\n').replace(/\n{3,}/g, '\n\n').trim();
   const body = mailP(intro) + mailDetails(details) + (outro ? `<div style="height:8px"></div>${mailP(outro)}` : '') + (formLine ? `<div style="height:8px"></div>${mailP(formLine)}` : '')
     + (link && forms ? mailButtonPair({ label: 'Manage booking', url: link }, { label: 'Complete form', url: forms.url }) : link ? mailButton(cta, link) : '');
-  return { subject, text, html: mailShell({ brand: salon.name, heading, body, footer: bref ? `${salon.name} · ${bref}` : footerFor(salon), preheader: intro }), from: fromFor(salon.name) };
+  return { subject, text, html: mailShell({ brand: salon.name, heading, body, footer: bref ? `${salon.name} · ${bref}` : footerFor(salon), preheader: intro }), from: fromFor(salon.name), replyTo: salon.email || undefined };
 }
 
-async function sendEmail(to: string, m: { subject: string; text: string; html: string; from: string }) {
+/** Replies go to the salon's own email when it has one, so a client answering "Booking confirmed" reaches a person. */
+async function sendEmail(to: string, m: Mail) {
   if (!viaSupabase() && process.env.RESEND_API_KEY) {
     const res = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: m.from, to, subject: m.subject, text: m.text, html: m.html }) });
+      body: JSON.stringify({ from: m.from, to, subject: m.subject, text: m.text, html: m.html, ...(m.replyTo ? { reply_to: m.replyTo } : {}) }) });
     if (!res.ok) { const b = await res.json().catch(() => ({})) as { message?: string }; throw new Error(`email ${res.status}${b.message ? ': ' + b.message : ''}`); }
     return;
   }
   const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-email`, { method: 'POST',
     headers: { Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: m.from, to, subject: m.subject, text: m.text, html: m.html }) });
+    body: JSON.stringify({ from: m.from, to, subject: m.subject, text: m.text, html: m.html, ...(m.replyTo ? { reply_to: m.replyTo } : {}) }) });
   const b = await res.json().catch(() => ({})) as { sent?: boolean; error?: string };
   if (!res.ok || !b.sent) throw new Error(`email ${res.status}${b.error ? ': ' + b.error : ''}`);
 }
@@ -118,20 +124,23 @@ type Action = string | { label: string; url: string };
 /** Sends a one-off message typed by staff, right away, and keeps a record of it in the outbox. `email` customises the subject, heading and body of the email version. */
 export async function sendCustomMessage(salonId: string, to: { phone?: string | null; email?: string | null }, text: string, email?: { subject: string; html?: string; heading?: string; footer?: string }, action?: Action): Promise<{ ok: true; via: 'sms' | 'email' } | { ok: false; error: string }> {
   const sb = supabaseAdmin();
-  const { data: salon } = await sb.from('salons').select('name,phone').eq('id', salonId).single();
+  const { data: salon } = await sb.from('salons').select('name,phone,email').eq('id', salonId).single();
   if (!salon) return { ok: false, error: 'Salon not found.' };
   const channel: 'sms' | 'email' | null = smsConfigured() && to.phone ? 'sms' : emailConfigured() && to.email ? 'email' : null;
   if (!channel) return { ok: false, error: smsConfigured() || emailConfigured() ? 'This client has no phone or email that can receive messages.' : 'Messaging is not set up yet. Add the Twilio or Resend keys to send.' };
   const address = (channel === 'sms' ? to.phone : to.email)!;
   const row = { salon_id: salonId, channel, to_address: address, template: 'custom_message', payload: { text } };
   const act = typeof action === 'string' ? { label: 'Reply', url: action } : action;
+  const textHasAction = !!act && text.includes(act.url);
   try {
-    if (channel === 'sms') await sendSms(address, `${salon.name}: ${text}${act ? ` ${act.label}: ${act.url}` : ''}`);
+    if (channel === 'sms') await sendSms(address, `${salon.name}: ${text}${act && !textHasAction ? ` ${act.label}: ${act.url}` : ''}`);
     else {
       const foot = email?.footer ?? footerFor(salon);
-      const body = (email?.html ?? text.split(/\n+/).map(mailP).join('')) + (act ? mailButton(act.label, act.url, 'dark') : '');
-      await sendEmail(address, { from: fromFor(salon.name), subject: email?.subject ?? `Message from ${salon.name}`, text: `${text}${act ? `\n\n${act.label}: ${act.url}` : ''}\n\n${foot}`,
-        html: mailShell({ brand: salon.name, heading: email?.heading ?? 'You have a message', body, footer: foot, preheader: text.slice(0, 90) }) });
+      // A caller that already put the button (or the link) in its own html/text must not get a second one.
+      const htmlHasAction = !!act && !!email?.html && email.html.includes(esc(act.url));
+      const body = (email?.html ?? text.split(/\n+/).map(mailP).join('')) + (act && !htmlHasAction ? mailButton(act.label, act.url) : '');
+      await sendEmail(address, { from: fromFor(salon.name), subject: email?.subject ?? `Message from ${salon.name}`, text: `${text}${act && !textHasAction ? `\n\n${act.label}: ${act.url}` : ''}\n\n${foot}`,
+        html: mailShell({ brand: salon.name, heading: email?.heading ?? 'You have a message', body, footer: foot, preheader: text.slice(0, 90) }), replyTo: salon.email || undefined });
     }
   } catch (e: any) {
     await sb.from('notifications_outbox').insert({ ...row, status: 'failed', attempts: 1, error: String(e.message).slice(0, 200) });

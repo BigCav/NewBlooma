@@ -181,7 +181,7 @@ export function PricingView({ dash = null }: { dash?: string | null }) {
   const [n, setN] = useState(3);
   const per = n >= 2 ? 19 : 24, total = per * n;
   const step = (d: number) => setN((v) => Math.max(1, Math.min(30, v + d)));
-  const btn = (off: boolean) => 'flex:0 0 48px;width:48px;height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:22px;line-height:1;opacity:' + (off ? '0.4' : '1');
+  const btn = (off: boolean) => 'flex:0 0 48px;width:48px;height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font:inherit;font-size:22px;line-height:1;cursor:pointer;opacity:' + (off ? '0.4' : '1');
   const calc = (
     <div style={S(`box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:${m ? 20 : 32}px;display:flex;flex-direction:column;gap:24px`)}>
       <div style={S('display:flex;flex-direction:column;gap:10px')}><span id="pc-l" style={S('font-size:15px;font-weight:600')}>How many stylists?</span>

@@ -6,25 +6,29 @@ import { BottomSheet } from '@/components/BottomSheet';
 import { openNewMenu } from '@/components/NewMenu';
 import { rootCls } from '@/components/drawer';
 import { useState } from 'react';
-import { ClientMatches } from './ClientMatches';
 import { NewApptForm } from './NewApptForm';
 import { LateWizard, BlockWizard, WalkInWizard, CheckoutWizard } from './QuickWizards';
 import { ChatPage } from '@/components/ChatPanel';
-import { DiscountPick } from './DiscountPick';
 import Link from 'next/link';
-import { dayInfo, fmtMin, initials, addDaysYmd, BLOCK_KINDS } from '@/lib/cal';
-import { cancelBooking, deleteBlock, messageBookingClient, payNowBooking, setBookingStatus } from './actions';
+import { dayInfo, fmtMin, addDaysYmd, BLOCK_KINDS } from '@/lib/cal';
+import { cancelBooking, deleteBlock, messageBookingClient, setBookingStatus } from './actions';
 import { sendReceipt } from '../sales/actions';
 import { VisitSheet, MoreButton, QuickActions, QaGroup, QA_ITEM, ICON_TIME, ICON_PERSON } from './VisitSheet';
-import { STATUS_LABEL } from '@/lib/format';
+import { dollars } from '@/lib/format';
+import { duration, plural, bookingRef } from '@/lib/display';
+import { firstName } from '@/lib/people';
+import { bookingStatus, PAYMENT_STATUS } from '@/lib/status';
+import { TONE } from '@/lib/tones';
+import { Chip, FieldError, FilterChip, Notice, RING, CLOSE, DOTS, DANGER, dim } from '@/components/ui';
 import { CancelPick } from './CancelPick';
-import { S, ServicePicker, TeamPicker } from './pickers';
-import { chipTone, HATCH, first, usd, m2, BLOCK_DURS_M, METHODS, TIP_OPTS, chip, slotCss, dayCss, note, PRIMARY, SECOND, CLOSE_BTN, H2S, ERR, DLROW, CloseX, Mag } from './calUi';
+import { TerminalStatus } from './TerminalStatus';
+import { S, ServicePicker } from './pickers';
+import { HATCH, slotCss, dayCss, noteTone, spanText, NoticeBar, PRIMARY, SECOND, H2S, DLROW, Mag } from './calUi';
 import type { useCalendar } from './useCalendar';
 import type { Props } from './calUi';
 
 export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useCalendar>; props: Props; drawer?: boolean }) {
-  const { HOUR_PX, act, activeCards, addWalkin, amap, av, avail, availKey, backToView, bf, bfDur, blank, blockId, blockRows, blocks, bookings, busy, bvB, cards, cfg, charge, chk, close, co, coMath, createNew, cur, day, dayB, dayHrs, days14, di, doneBk, ed, editPlan, error, firstOpenDay, gEnd, gHours, gStart, go, hasError, hours, hrsOf, later, laterBk, minutesFromIso, mode, moveBooking, nFirstSvc, nKeyStr, nKeys, nOffers, nPickSvc, nPlan, nSlots, nWhy, nf, notice, now, nowTop, offered, offers, open, openBlock, openBooking, openDays, openNew, pageSubtitle, pageTitle, pendingSel, plan, primary, query, reason, refresh, router, row, rs, saveBlock, saveEdit, searchOpen, seg, sel, selId, services, setAmap, setAvail, setBf, setBlockId, setCo, setEd, setError, setMode, setNf, setNotice, setNow, setOpen, setPendingSel, setPlan, setQuery, setRs, setSearchOpen, setSelId, setSres, setStaffSel, setWi, setWkOpen, slotsFor, sq, sres, staffName, staffSel, startCheckout, startResched, startT, statCount, statRevenue, statNext, strip, svcMap, team, today, todayList, tz, upcoming, view, viewEvents, vm, weekDays, wi, wiPlanText, wiPlanCss, wiSvc, wkCards, wkOpen, wkRange, wkStaff, wkTitle, ws, nLock, edLock, lockFor, lf, setLf, openLate, lateList, saveLate } = c;
+  const { act, activeCards, backToView, bookings, busy, bvB, cards, cfg, close, cur, day, dayB, days14, ed, editPlan, error, go, hasError, hrsOf, later, mode, moveBooking, notice, now, offered, offers, open, openBlock, openBooking, openNew, pageSubtitle, pageTitle, primary, query, reason, rs, saveEdit, searchOpen, seg, sel, services, setBf, setBlockId, setEd, setError, setMode, setNotice, setOpen, setQuery, setRs, setSearchOpen, setSelId, setWi, setWkOpen, slotsFor, sq, sres, staffName, startCheckout, startResched, statCount, statRevenue, statNext, strip, svcMap, team, today, view, wkCards, wkOpen, wkRange, wkTitle, edLock, openLate } = c;
   const [qa, setQa] = useState(false);
   const [askBlock, setAskBlock] = useState(false);
   const [qk, setQk] = useState(false);
@@ -36,17 +40,17 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
   const paidC = dayB.reduce((a, b) => a + (b.paid ? b.priceCents : 0), 0);
   const sumTitle = day === today ? "Today's summary" : dayInfo(day).short + ' summary';
   const stats: [string, string][] = [
-    ['Bookings', String(statCount)], ['Revenue', statRevenue],
-    ['Next free', statNext], ['Completed', String(done)],
+    ['Appointments', String(statCount)], ['Booked revenue', statRevenue],
+    ['Next opening', statNext], ['Completed', String(done)],
     ['In progress', String(live)], ['Still to come', String(toCome)],
-    ['Paid so far', usd(paidC)], ['Still to take', usd(Math.max(0, worth - paidC))],
+    ['Paid so far', dollars(paidC)], ['Still to take', dollars(Math.max(0, worth - paidC))],
   ];
   const SHEET_ROW = 'display:flex;align-items:center;width:100%;min-height:56px;box-sizing:border-box;padding:0;border:0;border-bottom:1px solid #EEF0F3;background:transparent;font:inherit;font-size:16px;text-align:left;color:#0E1116;cursor:pointer';
   const fullSheet = (title: string, body: React.ReactNode, onClose: () => void, bg = '#FFFFFF') => (
     <BottomSheet label={title} onClose={onClose} z={6} gap={0} handleGap={12} bg={bg}>
         <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px')}>
           <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{title}</h2>
-          <button onClick={onClose} aria-label="Close" style={S(CLOSE_BTN)}><CloseX /></button>
+          <button onClick={onClose} aria-label="Close" style={S(RING)}>{CLOSE}</button>
         </div>
         {body}
       </BottomSheet>
@@ -64,7 +68,7 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
                 </button>
               </div>
   );
-  const errP = () => hasError ? <p role="alert" style={S(ERR)}>{error}</p> : null;
+  const errP = () => hasError ? <FieldError>{error}</FieldError> : null;
   const tabsA = (id: string, href: string, label: string, on: boolean, svg: React.ReactNode) => (
     <Link key={id} href={href} aria-current={on ? 'page' : 'false'} style={S('width:100%;min-height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;text-decoration:none;font-size:12px;font-weight:' + (on ? 600 : 500) + ';color:' + (on ? '#0E1116' : '#5E6673'))}>
       {svg}{label}
@@ -75,10 +79,10 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
   return (
     <div className={rootCls(drawer)} style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
 
-      {qk && fullSheet('Quick actions', (
+      {qk && fullSheet('More actions', (
         <div style={S('display:flex;flex-direction:column;border-top:1px solid #EEF0F3')}>
           <button onClick={() => { setQk(false); startWalkin(); }} style={S(SHEET_ROW)}>Walk-in</button>
-          <button onClick={() => { setQk(false); openLate(); }} style={S(SHEET_ROW)}>Late</button>
+          <button onClick={() => { setQk(false); openLate(); }} style={S(SHEET_ROW)}>Running late</button>
           <button onClick={() => { setQk(false); startBlock(); }} style={S(SHEET_ROW)}>Block time</button>
         </div>
       ), () => setQk(false))}
@@ -142,17 +146,13 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
           </div>
         )}
 
-        {!!notice && (
-          <div role="status" style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;box-sizing:border-box;padding:12px 16px;border-radius:18px;background:#DDF3EA;color:#14624A;font-size:14px;font-weight:500')}>
-            <span style={S('min-width:0;overflow-wrap:anywhere')}>{notice}</span>
-            <button onClick={() => setNotice('')} aria-label="Dismiss message" style={S('flex:0 0 44px;width:44px;height:44px;margin:-8px -8px -8px 0;border:0;border-radius:999px;background:transparent;display:flex;align-items:center;justify-content:center')}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#14624A" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
-          </div>
-        )}
+        {!!notice && !open && <NoticeBar text={notice} onDismiss={() => setNotice('')} />}
+        {hasError && !open && <FieldError>{error}</FieldError>}
 
         {view === 'day' && (<>
           <div style={S('display:flex;flex-direction:column;gap:12px')}>
             <div style={S('display:flex;gap:10px')}>
-              <button onClick={() => setQk(true)} aria-label="Quick actions" aria-haspopup="dialog" style={S(CLOSE_BTN + ';flex:0 0 52px;width:52px;height:52px')}><svg width="20" height="20" viewBox="0 0 24 24" fill="#0E1116"><circle cx="12" cy="5.5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="18.5" r="1.6" /></svg></button>
+              <button onClick={() => setQk(true)} aria-label="More actions" aria-haspopup="dialog" style={S(RING + ';flex:0 0 52px;width:52px;height:52px')}>{DOTS}</button>
               <button onClick={() => setSum(true)} aria-haspopup="dialog" style={S('flex:1 1 0;height:52px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;cursor:pointer')}>{sumTitle}</button>
             </div>
           </div>
@@ -160,11 +160,11 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
           {!!sq && (
             <section aria-label="Search results" style={S('display:flex;flex-direction:column;gap:10px')}>
               <h2 style={S('margin:0;font-size:16px;font-weight:600')}>Search results</h2>
-              <p style={S('margin:0;color:#5E6673;font-size:13.5px')}>{(c.sres ? c.sres.length + (c.sres.length === 1 ? ' appointment' : ' appointments') : 'Searching') + ' for "' + query.trim() + '"'}</p>
+              <p style={S('margin:0;color:#5E6673;font-size:13.5px')}>{(c.sres ? plural(c.sres.length, 'appointment') : 'Searching') + ' for "' + query.trim() + '"'}</p>
               {c.sres && c.sres.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>Nothing matches that yet. Try a client name, phone number, service or booking number.</p>}
               {(c.sres ?? []).map((h) => { const when = dayInfo(h.dayYmd).short + ', ' + fmtMin(h.start); return (
                 <button key={h.id} onClick={() => { c.setSelId(h.id); c.setQuery(''); c.setSearchOpen(false); c.setOpen(true); c.setMode('view'); if (h.dayYmd !== day) go(h.dayYmd, 'day'); }} aria-label={h.client + ', ' + h.services + ', ' + when} style={S('display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:60px;padding:10px 14px;border:1px solid #E6E8EC;border-radius:18px;background:#FFFFFF;text-align:left;font:inherit;color:#0E1116;cursor:pointer')}>
-                  <span style={S('min-width:0;flex:1 1 auto')}><span style={S('display:block;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{h.client}</span><span style={S('display:block;font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{h.services + ' with ' + first(h.staff)}</span></span>
+                  <span style={S('min-width:0;flex:1 1 auto')}><span style={S('display:block;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{h.client}</span><span style={S('display:block;font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{h.services + ' with ' + firstName(h.staff, '')}</span></span>
                   <span style={S('flex:0 0 auto;font-size:12.5px;color:#5E6673')}>{when}</span>
                 </button>); })}
             </section>
@@ -177,7 +177,7 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
                 {cards.map((c) => (
                   <div key={c.b.id} style={S((activeCards.length > 1 ? 'flex:0 0 300px;' : 'flex:1 1 100%;min-width:0;') + 'box-sizing:border-box;scroll-snap-align:start;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:20px;display:flex;flex-direction:column;gap:14px')}>
                     <button onClick={() => openBooking(c.b.id)} aria-label={c.label} style={S('display:flex;flex-direction:column;align-items:flex-start;gap:14px;width:100%;padding:0;border:0;background:transparent;text-align:left;font:inherit;color:inherit;cursor:pointer')}>
-                      <span style={S('display:flex;flex-wrap:wrap;gap:8px')}><span style={S(c.chipStyle)}>{c.chipText}</span>{c.b.paid && <span style={S('padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.b.paidText}</span>}</span>
+                      <span style={S('display:flex;flex-wrap:wrap;gap:8px')}><Chip tone={c.status.tone}>{c.status.label}</Chip>{c.b.paid && <Chip tone="green">{c.b.paidText}</Chip>}</span>
                       <span style={S('display:block;min-width:0;max-width:100%')}>
                         <span style={S('display:block;font-size:21px;font-weight:600;letter-spacing:-0.02em;line-height:1.2;overflow-wrap:anywhere')}>{c.b.client}</span>
                         <span style={S('display:block;margin-top:4px;color:#5E6673;font-size:14px;overflow-wrap:anywhere')}>{c.line}</span>
@@ -200,7 +200,7 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
           <section aria-label="Later today" style={S('flex-direction:column;gap:12px;display:' + (sq || (c.laterUp.length === 0 && cards.length > 0) ? 'none' : 'flex'))}>
             <div style={S('display:flex;align-items:baseline;justify-content:space-between;gap:12px')}>
               <h2 style={S('margin:0;font-size:17px;font-weight:600;letter-spacing:-0.01em')}>{day === today ? 'Later today' : 'Appointments'}</h2>
-              <span style={S('color:#5E6673;font-size:13px')}>{c.laterUp.length === 0 ? '' : c.laterUp.length + (c.laterUp.length === 1 ? ' appointment' : ' appointments')}</span>
+              <span style={S('color:#5E6673;font-size:13px')}>{c.laterUp.length === 0 ? '' : plural(c.laterUp.length, 'appointment')}</span>
             </div>
             {c.laterUp.length === 0 && <p style={S('margin:0;padding:18px 16px;border:1px dashed #D5D9E0;border-radius:18px;text-align:center;color:#5E6673;font-size:14px')}>{day === today ? 'Nothing else booked for today.' : 'Nothing booked for this day.'}</p>}
             {c.laterUp.map(renderLater)}
@@ -251,39 +251,41 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
             {mode === 'view' && sel && (
               <VisitSheet onClose={close} title={dayInfo(sel.b.dayYmd).short}
                 status={sel.k === 'done'
-                  ? <span style={S(sel.chipStyle + ';flex:0 0 auto;font-size:14px;padding:8px 16px')}>{STATUS_LABEL[sel.b.status] ?? sel.chipText}</span>
-                  : <button onClick={() => setSt('list')} aria-haspopup="dialog" aria-label={'Status: ' + (STATUS_LABEL[sel.b.status] ?? sel.chipText) + '. Change'} style={S('flex:0 0 auto;display:flex;align-items:center;gap:8px;height:42px;padding:0 14px 0 18px;border:0;border-radius:999px;font:inherit;font-size:14.5px;font-weight:500;cursor:pointer;background:' + chipTone[sel.k].bg + ';color:' + chipTone[sel.k].fg)}>
-                    {STATUS_LABEL[sel.b.status] ?? sel.chipText}
+                  ? <Chip tone={sel.status.tone} size="lg">{sel.status.label}</Chip>
+                  : <button onClick={() => setSt('list')} aria-haspopup="dialog" aria-label={'Status: ' + sel.status.label + '. Change'} style={S('flex:0 0 auto;display:flex;align-items:center;gap:8px;height:42px;padding:0 14px 0 18px;border:0;border-radius:999px;font:inherit;font-size:14.5px;font-weight:500;cursor:pointer;background:' + TONE[sel.status.tone].bg + ';color:' + TONE[sel.status.tone].fg)}>
+                    {sel.status.label}
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
                   </button>}
                 tags={(sel.b.paid || sel.b.refunded) && <div style={S('display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:-6px')}>
-                  {sel.b.paid && <span style={S('padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{sel.b.paidText}</span>}
-                  {sel.b.refunded && <span style={S('padding:4px 12px;border-radius:999px;background:#EEF0F3;color:#4A525E;font-size:12.5px;font-weight:500')}>Refunded</span>}
+                  {sel.b.paid && <Chip tone={PAYMENT_STATUS.paid.tone}>{sel.b.paidText}</Chip>}
+                  {sel.b.refunded && <Chip tone={PAYMENT_STATUS.refunded.tone}>{PAYMENT_STATUS.refunded.label}</Chip>}
                 </div>}
-                avatar={initials(sel.b.client)} avatarStyle={sel.avatarStyle} name={sel.b.client} sub={'Booking B-' + sel.b.ref}
-                clientAction={<button onClick={c.startMessage} aria-label={'Message ' + first(sel.b.client)} style={S('flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer')}>
+                name={sel.b.client} sub={'Booking ' + bookingRef(sel.b.ref)}
+                clientAction={<button onClick={c.startMessage} aria-label={'Message ' + firstName(sel.b.client, '')} style={S(RING)}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3.5" y="5.5" width="17" height="13" rx="3" /><path d="m4.5 7.5 7.5 5.5 7.5-5.5" /></svg>
                 </button>}
-                banner={sel.b.forms && <a href={'/clients/forms?c=' + sel.b.clientId} style={S('display:block;border-radius:16px;text-decoration:none;padding:12px 14px;font-size:13.5px;font-weight:500;background:' + (sel.b.forms.level === 'alert' ? '#FDECEA;color:#B42318' : '#FFF4E5;color:#7A4204'))}>{sel.b.forms.text}<span style={S('display:block;margin-top:2px;font-size:12.5px;font-weight:600;text-decoration:underline')}>Open forms</span></a>}
+                banner={sel.b.forms && <a href={'/clients/forms?c=' + sel.b.clientId} style={S('display:block;border-radius:16px;text-decoration:none;padding:12px 14px;font-size:13.5px;font-weight:500;background:' + TONE[sel.b.forms.level === 'alert' ? 'red' : 'amber'].bg + ';color:' + TONE[sel.b.forms.level === 'alert' ? 'red' : 'amber'].fg)}>{sel.b.forms.text}<span style={S('display:block;margin-top:2px;font-size:12.5px;font-weight:600;text-decoration:underline')}>Open forms</span></a>}
                 details={[
                   { label: 'Time', value: sel.time, icon: ICON_TIME },
                   { label: 'With', value: staffName(sel.b.staffId), icon: ICON_PERSON, photo: c.team.find((t) => t.id === sel.b.staffId)?.photo ?? null },
                 ]}
-                lines={(sel.b.serviceIds.map((id) => svcMap.get(id)).filter(Boolean) as NonNullable<ReturnType<typeof svcMap.get>>[]).map((v) => ({ key: v.id, name: v.name, sub: v.dur + ' min', price: usd(v.priceCents) }))}
+                lines={(sel.b.serviceIds.map((id) => svcMap.get(id)).filter(Boolean) as NonNullable<ReturnType<typeof svcMap.get>>[]).map((v) => ({ key: v.id, name: v.name, sub: duration(v.dur), price: dollars(v.priceCents) }))}
                 fallback={sel.b.services}
                 total={sel.priceText} label={sel.b.paid ? 'Paid' : sel.b.refunded ? 'Refunded' : 'To pay'}
-                message={errP()}
-                actions={<>
+                message={<>{!!notice && <Notice>{notice}</Notice>}{errP()}</>}
+                actions={c.confirmRefund ? (
+                  <ConfirmBox label="Confirm refund" title={'Refund ' + dollars(sel.b.saleCents ?? sel.b.priceCents) + '?'} body="The sale is marked as refunded and removed from today's sales." action="Refund" keep="Cancel" onAction={() => c.doRefund()} busy={busy} onKeep={() => c.setConfirmRefund(false)} />
+                ) : <>
                   {sel.b.paid && sel.b.saleId && <div style={S('display:flex;gap:10px')}>
-                    <button disabled={busy} onClick={() => act(() => sendReceipt(sel.b.saleId!), 'Receipt sent')} style={S(SECOND + ';height:52px')}>Send receipt</button>
-                    <button onClick={() => router.push(`/sales?sale=${sel.b.saleId}`)} style={S(SECOND + ';height:52px')}>Refund</button>
+                    <button disabled={busy} onClick={() => act(() => sendReceipt(sel.b.saleId!), 'Receipt sent')} style={S(SECOND + ';height:52px' + dim(busy))}>Send receipt</button>
+                    <button onClick={() => c.setConfirmRefund(true)} style={S(SECOND + ';height:52px')}>Refund</button>
                   </div>}
                   <div style={S('display:flex;gap:10px')}>
                     <MoreButton onClick={() => setQa(true)} />
                   {sel.k === 'done'
                     ? (sel.b.saleId ? <button onClick={() => primary(sel.b)} style={S(PRIMARY + ';height:52px')}>View sale</button> : null)
                     : (<>
-                      {cfg.acceptCard && <button disabled={busy} onClick={() => c.payNow(sel.b.id)} style={S(SECOND + ';height:52px')}>Pay now</button>}
+                      {cfg.acceptCard && <button disabled={busy} onClick={() => c.payNow(sel.b.id)} style={S(SECOND + ';height:52px' + dim(busy))}>Pay now</button>}
                       <button onClick={() => startCheckout(sel.b.id)} style={S(PRIMARY + ';height:52px')}>Checkout</button>
                     </>)}
                   </div>
@@ -293,63 +295,65 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
 
             {mode === 'checkout' && sel && <CheckoutWizard c={c} />}
 
+            {mode === 'refund' && sel && <TerminalStatus t={{ ...c.term.view, onDone: c.finishRefund, onRetry: () => c.doRefund(true), onBack: c.backFromRefund }} amount={dollars(sel.b.saleCents ?? sel.b.priceCents)} refund />}
+
             {mode === 'edit' && cur && (() => {
               const pl = editPlan()!;
               const homeCat = svcMap.get(cur.serviceIds[0])?.cat;
               const summary = cur.client + ' with ' + pl.f + ', ' + dayInfo(cur.dayYmd).short + ' at ' + fmtMin(cur.start) + '.';
               const oldDur = cur.end - cur.start;
-              const dur = pl.dur === oldDur ? pl.dur + ' min' : oldDur + ' min to ' + pl.dur + ' min';
+              const dur = pl.dur === oldDur ? duration(pl.dur) : duration(oldDur) + ' to ' + duration(pl.dur);
               const end = fmtMin(pl.mainEnd) + (pl.dur !== oldDur || pl.start !== cur.start ? ' (was ' + fmtMin(cur.end) + ')' : '');
-              const price = pl.priceC === cur.priceCents ? usd(pl.priceC) : usd(cur.priceCents) + ' to ' + usd(pl.priceC);
+              const price = pl.priceC === cur.priceCents ? dollars(pl.priceC) : dollars(cur.priceCents) + ' to ' + dollars(pl.priceC);
               let blockText = '';
               if (pl.problem) {
-                blockText = pl.problem.kind === 'late' ? 'That would run past closing at ' + fmtMin(hrsOf(cur.dayYmd)?.to ?? 1080) + '.' : pl.f + ' is booked with ' + pl.problem.with.who + ' from ' + fmtMin(pl.problem.with.s) + ', so ' + pl.dur + ' min from ' + fmtMin(pl.start) + ' does not fit.';
+                blockText = pl.problem.kind === 'late' ? 'That would run past closing at ' + fmtMin(hrsOf(cur.dayYmd)?.to ?? 1080) + '.' : pl.f + ' is booked with ' + pl.problem.with.who + ' from ' + fmtMin(pl.problem.with.s) + ', so ' + duration(pl.dur) + ' from ' + fmtMin(pl.start) + ' does not fit.';
                 if (!pl.alts.length) blockText += ' ' + pl.f + ' has no gap long enough today. Remove a service or reschedule to another day.';
               }
               return (<>
-                <div style={S('min-width:0')}><h2 style={S(H2S)}>Edit booking</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px;overflow-wrap:anywhere')}>{summary}</p></div>
+                <div style={S('min-width:0')}><h2 style={S(H2S)}>Edit appointment</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px;overflow-wrap:anywhere')}>{summary}</p></div>
                 <ServicePicker services={services} selected={ed.ids} initialCat={homeCat} chipHeight={44}
                   lock={edLock} onPick={(id) => { let ids = ed.ids.includes(id) ? ed.ids.filter((i) => i !== id) : [...ed.ids, id]; ids = ids.filter((i) => { const sv = svcMap.get(i); return !sv?.addon || (sv.parents ?? []).some((p) => ids.includes(p)); }); setEd({ ids, start: null }); }}
-                  note={(x) => (cur.serviceIds.includes(x.id) || offered(x.id, cur.staffId) ? '' : (offers[x.id] ?? [])[0] ? 'separate booking with ' + first(staffName(offers[x.id][0])) : 'no one offers this')} />
+                  note={(x) => (cur.serviceIds.includes(x.id) || offered(x.id, cur.staffId) ? '' : (offers[x.id] ?? [])[0] ? 'separate booking with ' + firstName(staffName(offers[x.id][0]), '') : 'no one offers this')} />
                 <div style={S('display:flex;flex-direction:column;border:1px solid #E6E8EC;border-radius:16px;padding:4px 16px')}>
                   <div style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #EEF0F3')}><span style={S('color:#5E6673')}>Length</span><span style={S('font-weight:500;text-align:right')}>{dur}</span></div>
                   <div style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #EEF0F3')}><span style={S('color:#5E6673')}>Finishes</span><span style={S('font-weight:500;text-align:right')}>{end}</span></div>
                   <div style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 0')}><span style={S('color:#5E6673')}>Price</span><span style={S('font-weight:500;text-align:right')}>{price}</span></div>
                 </div>
-                {!!pl.problem && <div role="alert" style={S('border-radius:16px;background:#FDECEA;color:#B42318;padding:12px 14px;font-size:13.5px;font-weight:500')}>{blockText}</div>}
+                {!!pl.problem && <div role="alert" style={S(noteTone('red'))}>{blockText}</div>}
                 {pl.alts.length > 0 && (
                   <div style={S('display:flex;flex-direction:column;gap:8px')}><span style={S('font-size:14px;font-weight:600')}>Start earlier or later so it fits</span>
-                    <div className="hscroll" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>{pl.alts.map((t) => <button key={t} onClick={() => { setEd({ ids: ed.ids, start: t }); setError(''); }} aria-pressed={pl.start === t} style={S(chip(pl.start === t))}>{fmtMin(t) + ' to ' + fmtMin(t + pl.dur)}</button>)}</div></div>
+                    <div className="hscroll" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>{pl.alts.map((t) => <FilterChip key={t} on={pl.start === t} phone onClick={() => { setEd({ ids: ed.ids, start: t }); setError(''); }}>{spanText(t, t + pl.dur)}</FilterChip>)}</div></div>
                 )}
-                {!pl.problem && (pl.dur > cur.end - cur.start || pl.start !== cur.start) && <div style={S(note('#DDF3EA', '#14624A'))}>{pl.f + ' is free for the full ' + pl.dur + ' min' + (pl.start !== cur.start ? ' from ' + fmtMin(pl.start) : '') + '.'}</div>}
+                {!pl.problem && (pl.dur > cur.end - cur.start || pl.start !== cur.start) && <div style={S(noteTone('green'))}>{pl.f + ' is free for the full ' + duration(pl.dur) + (pl.start !== cur.start ? ' from ' + fmtMin(pl.start) : '') + '.'}</div>}
                 {pl.extras.map((x) => x.at !== undefined
-                  ? <div key={x.svc.id} style={S(note('#EEEAFE', '#3A2BB5'))}>{x.svc.name + ' is a ' + x.svc.cat.toLowerCase() + ' service. It will be booked as a separate appointment with ' + x.f + ' at ' + fmtMin(x.at) + ', ' + x.svc.dur + ' min.'}</div>
-                  : <div key={x.svc.id} style={S(note('#FDECEA', '#B42318'))}>{x.sid ? x.f + ' has no free time for ' + x.svc.name + ' on this day.' : 'No one offers ' + x.svc.name + ' yet, so it cannot be added.'}</div>)}
+                  ? <div key={x.svc.id} style={S(noteTone('purple'))}>{x.svc.name + ' is a ' + x.svc.cat.toLowerCase() + ' service. It will be booked as a separate appointment with ' + x.f + ' at ' + fmtMin(x.at) + ', ' + duration(x.svc.dur) + '.'}</div>
+                  : <div key={x.svc.id} style={S(noteTone('red'))}>{x.sid ? x.f + ' has no free time for ' + x.svc.name + ' on this day.' : 'No one offers ' + x.svc.name + ' yet, so it cannot be added.'}</div>)}
                 {errP()}
                 <div style={S('display:flex;gap:10px')}>
-                  <button onClick={saveEdit} disabled={busy} style={S(PRIMARY)}>Save changes</button>
+                  <button onClick={saveEdit} disabled={busy} style={S(PRIMARY + dim(busy))}>{busy ? 'Saving…' : 'Save changes'}</button>
                   <button onClick={backToView} style={S(SECOND)}>Back</button>
                 </div>
                 {sel && sel.canEdit && sel.k !== 'live' && (c.cancelAsk
-                  ? <CancelPick name={first(cur.client)} mobile busy={busy} onBack={() => c.setCancelAsk(false)} onConfirm={(why) => act(() => cancelBooking(cur.id, why), first(cur.client) + "'s booking cancelled", () => { c.setCancelAsk(false); setOpen(false); setMode('view'); })} />
-                  : <button onClick={() => c.setCancelAsk(true)} style={S('height:48px;border:0;border-radius:999px;background:transparent;color:#B42318;font-size:14.5px;font-weight:500;cursor:pointer')}>Cancel this booking</button>)}
+                  ? <CancelPick name={firstName(cur.client, '')} mobile busy={busy} onBack={() => c.setCancelAsk(false)} onConfirm={(why) => act(() => cancelBooking(cur.id, why), firstName(cur.client, '') + "'s appointment cancelled", () => { c.setCancelAsk(false); setOpen(false); setMode('view'); })} />
+                  : <button onClick={() => c.setCancelAsk(true)} style={S(DANGER + ';flex:0 0 auto;width:100%')}>Cancel appointment</button>)}
               </>);
             })()}
 
-            {mode === 'message' && cur && !cur.clientId && <p style={S('margin:0;color:#5E6673;font-size:14px')}>This booking has no client to message.</p>}
+            {mode === 'message' && cur && !cur.clientId && <p style={S('margin:0;color:#5E6673;font-size:14px')}>This appointment has no client to message.</p>}
 
             {mode === 'blockview' && bvB && (<>
-              <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><span style={S('display:inline-block;padding:4px 12px;border-radius:999px;background:#EEF0F3;color:#4A525E;font-size:12.5px;font-weight:500')}>Blocked</span><button onClick={close} aria-label="Close" style={S(CLOSE_BTN)}><CloseX sw={2} /></button></div>
+              <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><Chip tone="grey">Blocked</Chip><button onClick={close} aria-label="Close" style={S(RING)}>{CLOSE}</button></div>
               <div><div style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{BLOCK_KINDS.find((k) => k[0] === bvB.kind)?.[1] ?? 'Blocked'}</div><div style={S('font-size:14px;color:#5E6673')}>{staffName(bvB.staffId)}</div></div>
               <dl style={S('margin:0;display:flex;flex-direction:column')}>
                 <div style={S(DLROW)}><dt style={S('color:#5E6673')}>Day</dt><dd style={S('margin:0;font-weight:500;text-align:right')}>{dayInfo(bvB.dayYmd).full}</dd></div>
-                <div style={S(DLROW + ';border-bottom:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>Time</dt><dd style={S('margin:0;font-weight:500;text-align:right')}>{fmtMin(bvB.start) + ' – ' + fmtMin(bvB.end)}</dd></div>
+                <div style={S(DLROW + ';border-bottom:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>Time</dt><dd style={S('margin:0;font-weight:500;text-align:right')}>{spanText(bvB.start, bvB.end)}</dd></div>
               </dl>
               {errP()}
               {askBlock ? <ConfirmBox label="Confirm removal" title="Remove this block?" body="The time opens up for bookings again." action="Remove block" onAction={() => { setAskBlock(false); act(() => deleteBlock(bvB.id), 'Block removed', () => { setBlockId(null); setOpen(false); setMode('view'); }); }} onKeep={() => setAskBlock(false)} busy={busy} /> : (
               <div style={S('display:flex;gap:10px')}>
-                <button onClick={() => setAskBlock(true)} style={S(PRIMARY)}>Remove block</button>
                 <button onClick={close} style={S(SECOND)}>Close</button>
+                <button onClick={() => setAskBlock(true)} style={S(DANGER)}>Remove block</button>
               </div>
               )}
             </>)}
@@ -364,8 +368,8 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
 
             {mode === 'resched' && cur && (<>
               <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
-                <div style={S('min-width:0')}><h2 style={S(H2S)}>{rs.rebook ? 'Rebook' : 'Reschedule'}</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px;overflow-wrap:anywhere')}>{rs.rebook ? cur.client + ', ' + cur.services + ' with ' + first(staffName(cur.staffId)) + ', ' + (cur.end - cur.start) + ' min, ' + usd(cur.priceCents) + '.' : cur.client + ', ' + cur.services + ' with ' + first(staffName(cur.staffId)) + '.'}</p></div>
-                <button onClick={close} aria-label="Close" style={S(CLOSE_BTN)}><CloseX /></button>
+                <div style={S('min-width:0')}><h2 style={S(H2S)}>{rs.rebook ? 'Book again' : 'Reschedule'}</h2><p style={S('margin:4px 0 0;color:#5E6673;font-size:14px;overflow-wrap:anywhere')}>{rs.rebook ? cur.client + ', ' + cur.services + ' with ' + firstName(staffName(cur.staffId), '') + ', ' + duration(cur.end - cur.start) + ', ' + dollars(cur.priceCents) + '.' : cur.client + ', ' + cur.services + ' with ' + firstName(staffName(cur.staffId), '') + '.'}</p></div>
+                <button onClick={close} aria-label="Close" style={S(RING)}>{CLOSE}</button>
               </div>
               <div style={S('display:flex;flex-direction:column;gap:8px')}><span id="rs-day-label" style={S('font-size:14px;font-weight:600')}>{rs.rebook ? 'Day' : 'New day'}</span>
                 <div role="group" className="hscroll" aria-labelledby="rs-day-label" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
@@ -377,7 +381,7 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
                 </div></div>
               {errP()}
               <div style={S('display:flex;gap:10px')}>
-                <button onClick={moveBooking} disabled={busy} style={S(PRIMARY)}>{rs.rebook ? 'Book again' : 'Move appointment'}</button>
+                <button onClick={moveBooking} disabled={busy} style={S(PRIMARY + dim(busy))}>{busy ? 'Saving…' : rs.rebook ? 'Book again' : 'Move appointment'}</button>
                 <button onClick={backToView} style={S(SECOND)}>Cancel</button>
               </div>
             </>)}
@@ -385,17 +389,17 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
       )}
 
       {open && mode === 'message' && cur?.clientId && (
-        <ChatPage label="Message client" clientId={cur.clientId} name={cur.client} first={first(cur.client)} context={cur.services + ', ' + dayInfo(cur.dayYmd).short + ' at ' + fmtMin(cur.start)} send={(t) => messageBookingClient(cur.id, t)} onBack={backToView} />
+        <ChatPage label="Message client" clientId={cur.clientId} name={cur.client} first={firstName(cur.client, '')} context={cur.services + ', ' + dayInfo(cur.dayYmd).short + ' at ' + fmtMin(cur.start)} send={(t) => messageBookingClient(cur.id, t)} onBack={backToView} />
       )}
 
       {qa && open && mode === 'view' && sel && (
         <QuickActions onClose={() => setQa(false)}>
           <QaGroup first>
-            <button onClick={() => { setQa(false); c.startMessage(); }} style={S(QA_ITEM)}>{'Message ' + first(sel.b.client)}</button>
-            <Link href={'/clients/' + sel.b.clientId} style={S(QA_ITEM)}>Open client profile</Link>
+            <button onClick={() => { setQa(false); c.startMessage(); }} style={S(QA_ITEM)}>{'Message ' + firstName(sel.b.client, '')}</button>
+            <Link href={'/clients/' + sel.b.clientId} style={S(QA_ITEM)}>Open profile</Link>
           </QaGroup>
           <QaGroup>
-            {sel.canEdit && <button onClick={() => { setQa(false); setEd({ ids: sel.b.serviceIds.slice(), start: null }); setMode('edit'); setError(''); setNotice(''); }} style={S(QA_ITEM)}>Edit or cancel booking</button>}
+            {sel.canEdit && <button onClick={() => { setQa(false); setEd({ ids: sel.b.serviceIds.slice(), start: null }); setMode('edit'); setError(''); setNotice(''); }} style={S(QA_ITEM)}>Edit or cancel appointment</button>}
             <button onClick={() => { setQa(false); startResched(sel.b, sel.k === 'done'); }} style={S(QA_ITEM)}>{sel.secondaryLabel}</button>
           </QaGroup>
         </QuickActions>
@@ -404,7 +408,7 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
       {st && open && mode === 'view' && sel && (
         <BottomSheet label="Change status" onClose={() => setSt('')} backdropLabel="Close status" z={6} gap={6} handleGap={12}>
             {st === 'cancel'
-              ? <CancelPick name={first(sel.b.client)} mobile busy={busy} onBack={() => setSt('list')} onConfirm={(why) => act(() => cancelBooking(sel.b.id, why), first(sel.b.client) + "'s booking cancelled", () => { setSt(''); setOpen(false); setMode('view'); })} />
+              ? <CancelPick name={firstName(sel.b.client, '')} mobile busy={busy} onBack={() => setSt('list')} onConfirm={(why) => act(() => cancelBooking(sel.b.id, why), firstName(sel.b.client, '') + "'s appointment cancelled", () => { setSt(''); setOpen(false); setMode('view'); })} />
               : (() => {
                 const ITEM = 'display:flex;align-items:center;gap:14px;width:100%;min-height:56px;box-sizing:border-box;padding:0;border:0;background:transparent;font:inherit;font-size:16px;text-align:left;color:#0E1116;cursor:pointer';
                 const ico = (children: React.ReactNode) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')} aria-hidden="true">{children}</svg>;
@@ -412,21 +416,21 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
                 const pick = (t: 'confirmed' | 'checked_in' | 'in_progress', label: string) => {
                   setSt('');
                   if (t !== 'confirmed' && sel.b.dayYmd > today) { setError('You can check someone in on the day of their appointment.'); return; }
-                  act(() => setBookingStatus(sel.b.id, t), first(sel.b.client) + ' is now ' + label.toLowerCase());
+                  act(() => setBookingStatus(sel.b.id, t), firstName(sel.b.client, '') + ' is now ' + label.toLowerCase());
                 };
                 const cur = sel.b.status;
                 const rows: [string, 'confirmed' | 'checked_in' | 'in_progress', string, React.ReactNode][] = [
-                  ['confirmed', 'confirmed', 'Confirmed', ico(<path d="M7 11v8H4v-8zM7 11l4-7c1.5 0 2.5 1 2.2 2.5L12.7 9H18a2 2 0 0 1 2 2.4l-1.2 6A2 2 0 0 1 16.9 19H7" />)],
-                  ['checked_in', 'checked_in', 'Checked in', ico(<><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0C18.5 15.4 12 21 12 21z" /><circle cx="12" cy="10" r="2.4" /></>)],
-                  ['in_progress', 'in_progress', 'Started', ico(<path d="M7 4.5v15L19 12z" />)],
+                  ['confirmed', 'confirmed', bookingStatus('confirmed').label, ico(<path d="M7 11v8H4v-8zM7 11l4-7c1.5 0 2.5 1 2.2 2.5L12.7 9H18a2 2 0 0 1 2 2.4l-1.2 6A2 2 0 0 1 16.9 19H7" />)],
+                  ['checked_in', 'checked_in', bookingStatus('checked_in').label, ico(<><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0C18.5 15.4 12 21 12 21z" /><circle cx="12" cy="10" r="2.4" /></>)],
+                  ['in_progress', 'in_progress', bookingStatus('in_progress').label, ico(<path d="M7 4.5v15L19 12z" />)],
                 ];
                 const canNoShow = (cur === 'pending' || cur === 'confirmed') && c.started(sel.b);
                 return (<>
-                  <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:4px')}><h2 style={S(H2S)}>Change status</h2><button onClick={() => setSt('')} aria-label="Close" style={S(CLOSE_BTN)}><CloseX /></button></div>
-                  {cur === 'pending' && <div style={S(ITEM + ';cursor:default')}>{ico(<><rect x="3.5" y="5" width="17" height="15.5" rx="3" /><path d="M3.5 10h17M12 13v4M10 15h4" /></>)}Needs approval{tick}</div>}
+                  <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:4px')}><h2 style={S(H2S)}>Change status</h2><button onClick={() => setSt('')} aria-label="Close" style={S(RING)}>{CLOSE}</button></div>
+                  {cur === 'pending' && <div style={S(ITEM + ';cursor:default')}>{ico(<><rect x="3.5" y="5" width="17" height="15.5" rx="3" /><path d="M3.5 10h17M12 13v4M10 15h4" /></>)}{bookingStatus('pending').label}{tick}</div>}
                   {rows.map(([id, t, label, icon]) => <button key={id} onClick={() => pick(t, label)} aria-current={cur === id ? 'true' : undefined} style={S(ITEM)}>{icon}{label}{cur === id && tick}</button>)}
-                  {canNoShow && <button onClick={() => { setSt(''); c.markNoShow(sel.b); }} style={S(ITEM + ';color:#B42318')}>{ico(<><path d="M3 12s3.5-6 9-6c1.7 0 3.2.6 4.5 1.4M21 12s-3.5 6-9 6c-1.7 0-3.2-.6-4.5-1.4M4 4l16 16" /></>)}No-show</button>}
-                  {sel.canEdit && sel.k !== 'live' && <button onClick={() => setSt('cancel')} style={S(ITEM + ';color:#B42318')}>{ico(<><rect x="3.5" y="5" width="17" height="15.5" rx="3" /><path d="M3.5 10h17M10 13.5l4 4M14 13.5l-4 4" /></>)}Cancel booking</button>}
+                  {canNoShow && <button onClick={() => { setSt(''); c.markNoShow(sel.b); }} style={S(ITEM + ';color:#B42318')}>{ico(<><path d="M3 12s3.5-6 9-6c1.7 0 3.2.6 4.5 1.4M21 12s-3.5 6-9 6c-1.7 0-3.2-.6-4.5-1.4M4 4l16 16" /></>)}{bookingStatus('no_show').label}</button>}
+                  {sel.canEdit && sel.k !== 'live' && <button onClick={() => setSt('cancel')} style={S(ITEM + ';color:#B42318')}>{ico(<><rect x="3.5" y="5" width="17" height="15.5" rx="3" /><path d="M3.5 10h17M10 13.5l4 4M14 13.5l-4 4" /></>)}Cancel appointment</button>}
                 </>);
               })()}
           </BottomSheet>

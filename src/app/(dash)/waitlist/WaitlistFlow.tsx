@@ -1,11 +1,12 @@
 'use client';
-import { RING, BACK, CLOSE, DOTS, BLACK, OUTLINE } from '@/components/ui';
+import { Avatar, Chip, FieldError, Notice, RING, BACK, CLOSE, DOTS, BLACK, MENU_ROW, OUTLINE, dim } from '@/components/ui';
+import { TONE } from '@/lib/tones';
 import { BottomSheet } from '@/components/BottomSheet';
 import { ConfirmBox } from '@/components/ConfirmBox';
 import { useState } from 'react';
 import { S, ServicePicker } from '../calendar/pickers';
 import { ClientCard, ClientStep, DetailRows, ICONS, PeopleStep, ROW, StepShell, TICK, Tiles, useSteps } from '../calendar/wizardUi';
-import { DAY_PREFS, STATUS, WINDOWS, initialsOf, type WlRow } from './shared';
+import { DAY_PREFS, STATUS, WINDOWS, type WlRow } from './shared';
 import type { WaitlistCtl } from './WaitlistView';
 
 
@@ -18,14 +19,14 @@ export function AddFlow({ c }: { c: WaitlistCtl }) {
   const kind = kinds[step];
   const titles: Record<string, string> = { client: 'Select client', service: 'Select service', team: 'Select team member', days: 'Which days?', time: 'Time of day', summary: 'Summary' };
   const svc = c.services.find((x) => x.id === a.svc);
-  const proName = a.pro === 'any' ? 'Anyone' : c.team.find((t) => t.id === a.pro)?.name ?? 'Anyone';
+  const proName = a.pro === 'any' ? 'First available team member' : c.team.find((t) => t.id === a.pro)?.name ?? 'First available team member';
   const ready = () => (kind === 'client' && !a.name.trim() ? "Add the client's name." : kind === 'service' && !a.svc ? 'Choose a service.' : '');
   const next = () => { const e = ready(); if (e) { c.setError(e); return; } forward(); };
   const close = () => { c.setMode('list'); c.setError(''); };
   return (
     <StepShell step={step} titles={kinds.map((k) => titles[k])} onBack={back} onClose={close} error={c.error}
       actions={kind === 'summary' ? [] : [{ label: 'Continue', onClick: next }]}
-      bar={kind === 'summary' ? <button type="button" onClick={c.submitAdd} disabled={c.busy} style={S(BLACK + ';width:100%;flex:0 0 auto')}>Add to waitlist</button> : undefined}>
+      bar={kind === 'summary' ? <button type="button" onClick={c.submitAdd} disabled={c.busy} style={S(BLACK + ';width:100%;flex:0 0 auto' + dim(c.busy))}>{c.busy ? 'Adding…' : 'Add to waitlist'}</button> : undefined}>
       {kind === 'client' && <ClientStep name={a.name} clientId={a.clientId} recent={[]} onChange={(name, id) => { c.setAdd({ ...a, name, clientId: id }); c.setError(''); }} />}
       {kind === 'service' && <ServicePicker extras={false} services={c.services} selected={a.svc ? [a.svc] : []} initialCat={svc?.cat} chipHeight={44} onPick={c.pickSvc} />}
       {kind === 'team' && <PeopleStep any team={c.team} selected={a.pro} offers={svc ? (sid) => (c.offers[svc.id] ?? []).includes(sid) : undefined} onPick={(id) => { c.setAdd({ ...a, pro: id || 'any' }); c.setError(''); }} />}
@@ -49,18 +50,17 @@ export function AddFlow({ c }: { c: WaitlistCtl }) {
 export function EntryPage({ c, r }: { c: WaitlistCtl; r: WlRow }) {
   const [qa, setQa] = useState(false);
   const [confirm, setConfirm] = useState(false);
-  const tone = STATUS[r.status];
   const sl = c.slots[r.id];
   const pick = c.picked[r.id] ?? null;
   const close = () => c.toggle(r);
-  const err = c.error ? <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p> : null;
-  const rowCss = 'display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:58px;padding:0 4px;border:0;background:transparent;font:inherit;font-size:16px;text-align:left;color:#B42318;cursor:pointer';
+  const err = c.error ? <FieldError>{c.error}</FieldError> : null;
+  const rowCss = MENU_ROW + ';color:#B42318';
   const prefs = r.prefs.split(', ');
   return (
     <div role="dialog" aria-label="Waitlist entry" style={S("position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;display:flex;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px;border-bottom:1px solid #E6E8EC')}>
         <button onClick={close} aria-label="Back" style={S(RING)}>{BACK}</button>
-        <div style={S('flex:0 0 36px;width:36px;height:36px;border-radius:999px;background:#EEEAFE;color:#3A2BB5;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600')}>{r.initials || initialsOf(r.name)}</div>
+        <Avatar name={r.name} size="sm" />
         <div style={S('flex:1 1 auto;min-width:0;font-size:18px;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{r.name}</div>
         <button onClick={() => { setConfirm(false); setQa(true); }} aria-label="More actions" aria-haspopup="dialog" style={S(RING)}>{DOTS}</button>
       </header>
@@ -68,9 +68,9 @@ export function EntryPage({ c, r }: { c: WaitlistCtl; r: WlRow }) {
         <div>
           <h2 style={S('margin:0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em;overflow-wrap:anywhere')}>{r.service.split(',')[0]}</h2>
           <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px')}>
-            <span style={S('display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;background:' + tone[0] + ';color:' + tone[1])}>{r.status}</span>
+            <Chip tone={STATUS[r.status]}>{r.status}</Chip>
             <span style={S('font-size:13px;color:#5E6673')}>{r.meta}</span>
-            {!!c.notice && <span role="status" style={S('padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.notice}</span>}
+            {!!c.notice && <Notice>{c.notice}</Notice>}
           </div>
         </div>
         <DetailRows go={() => {}} rows={[
@@ -78,7 +78,7 @@ export function EntryPage({ c, r }: { c: WaitlistCtl; r: WlRow }) {
           { icon: ICONS.person, text: prefs[0] ?? '' },
           { icon: ICONS.day, text: prefs.slice(1).join(', ') || 'Any day, Any time' },
         ]} />
-        {!!r.offer && r.status === 'Offered' && <div style={S('border-radius:16px;background:#EEEAFE;color:#3A2BB5;padding:12px 16px;font-size:14px;font-weight:500;overflow-wrap:anywhere')}>{r.offer}. Waiting for a reply.</div>}
+        {!!r.offer && r.status === 'Offered' && <div style={S('border-radius:16px;background:' + TONE.purple.bg + ';color:' + TONE.purple.fg + ';padding:12px 16px;font-size:14px;font-weight:500;overflow-wrap:anywhere')}>{r.offer}. Waiting for a reply.</div>}
         {r.status !== 'Booked' && (
           <section aria-label="Times that fit">
             <h3 style={S('margin:0 0 10px;font-size:17px;font-weight:600;letter-spacing:-0.01em')}>Times that fit</h3>
@@ -95,9 +95,9 @@ export function EntryPage({ c, r }: { c: WaitlistCtl; r: WlRow }) {
         <div style={S('flex:0 0 auto;padding:14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3;display:flex;flex-direction:column;gap:12px')}>
           {err}
           <div style={S('display:flex;gap:10px')}>
-            {(r.status === 'Offered' || !!pick) && <button className="ghost" onClick={() => c.bookNow(r)} disabled={c.busy} style={S(OUTLINE)}>Mark as booked</button>}
-            {r.status === 'Waiting' && <button onClick={() => c.offerNow(r)} disabled={c.busy || !pick} style={S(BLACK + ';opacity:' + (pick ? 1 : 0.45))}>Offer this time</button>}
-            {r.status === 'Offered' && !!pick && <button onClick={() => c.offerNow(r)} disabled={c.busy} style={S(BLACK)}>Offer this time</button>}
+            {(r.status === 'Offered' || !!pick) && <button className="ghost" onClick={() => c.bookNow(r)} disabled={c.busy} style={S(OUTLINE + dim(c.busy))}>Mark as booked</button>}
+            {r.status === 'Waiting' && <button onClick={() => c.offerNow(r)} disabled={c.busy || !pick} style={S(BLACK + dim(c.busy || !pick))}>Offer this time</button>}
+            {r.status === 'Offered' && !!pick && <button onClick={() => c.offerNow(r)} disabled={c.busy} style={S(BLACK + dim(c.busy))}>Offer this time</button>}
           </div>
         </div>
       )}
@@ -108,7 +108,7 @@ export function EntryPage({ c, r }: { c: WaitlistCtl; r: WlRow }) {
               <button onClick={() => setQa(false)} aria-label="Close" style={S(RING)}>{CLOSE}</button>
             </div>
             {!confirm ? <button onClick={() => setConfirm(true)} style={S(rowCss)}>Remove from waitlist</button> : (
-              <ConfirmBox label="Confirm removal" title={'Remove ' + r.name + ' from the waitlist?'} error={c.error} action="Remove" onAction={() => c.remove(r)} busy={c.busy} onKeep={() => { setConfirm(false); setQa(false); }} />
+              <ConfirmBox label="Confirm removal" title={'Remove ' + r.name + ' from the waitlist?'} error={c.error} action="Remove from waitlist" keep="Keep on waitlist" onAction={() => c.remove(r)} busy={c.busy} onKeep={() => { setConfirm(false); setQa(false); }} />
             )}
           </BottomSheet>
       )}

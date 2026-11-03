@@ -1,6 +1,7 @@
 'use client';
-import { TONE } from '@/lib/tones';
-import { RING, BACK, CLOSE, DOTS, BLACK, OUTLINE, MENU_ROW } from '@/components/ui';
+import { Avatar, Chip, FieldError, Notice, RING, BACK, CLOSE, DANGER, DOTS, BLACK, OUTLINE, MENU_ROW, dim } from '@/components/ui';
+import { firstName } from '@/lib/people';
+import { BAR, CARD, PAGE } from '../settings/forms/FormPage';
 import { ChatPanel } from '@/components/ChatPanel';
 import { BottomSheet } from '@/components/BottomSheet';
 import Link from 'next/link';
@@ -9,10 +10,8 @@ import { S } from '../calendar/pickers';
 import { ROW, TICK } from '../calendar/wizardUi';
 import { replyToItem } from './actions';
 import { BookingCard, BookingQuickView } from './BookingQuickView';
-import { REASONS, STATUS, TYPES, initialsOf } from './shared';
+import { REASONS, STATUS, TYPES, needsAction } from './shared';
 import type { InboxCtl } from './InboxView';
-
-const CARD = 'box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:6px 20px';
 
 function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
@@ -32,23 +31,21 @@ export function MobileItem({ c, onClose }: { c: InboxCtl; onClose: () => void })
   const [qa, setQa] = useState(false);
   const [bq, setBq] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
-  const first = sel.client.split(' ')[0];
+  const first = firstName(sel.client);
   const isMsg = sel.type === 'message', isCancel = sel.type === 'cancellation', isResched = sel.type === 'reschedule';
-  const actionable = sel.type === 'request' && sel.status === 'new' && !sel.cancelled;
+  const actionable = needsAction(sel);
   const clientHref = sel.clientId ? `/clients/${sel.clientId}` : null;
   const calHref = sel.bookingId && sel.calendarDay ? `/calendar?d=${sel.calendarDay}&b=${sel.bookingId}` : null;
   const rebookHref = sel.clientId ? `/calendar/new?client=${sel.clientId}` : '/calendar?new=1';
   const canDone = (isResched || isMsg) && sel.status === 'new';
-  const status = sel.cancelled ? { t: 'Booking cancelled', ...TONE.red } : isMsg || isCancel || sel.type === 'booking' || sel.type === 'rescheduled' || sel.status === 'new' ? null : STATUS[sel.status];
+  const status = sel.cancelled ? { t: 'Booking cancelled', tone: 'red' as const } : isMsg || isCancel || sel.type === 'booking' || sel.type === 'rescheduled' || sel.status === 'new' ? null : STATUS[sel.status];
   const t = TYPES[sel.type];
   const hasMore = !!clientHref || !!calHref || !!sel.booking || isCancel || canDone || (!isMsg && c.mode === 'view');
 
   useEffect(() => { const el = mainRef.current; if (el) el.scrollTo({ top: 0 }); }, [sel.id, c.mode]);
 
-  const err = c.error ? <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p> : null;
-  const bar = (children: React.ReactNode) => (
-    <div style={S('flex:0 0 auto;padding:14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3;display:flex;flex-direction:column;gap:12px')}>{err}{children}</div>
-  );
+  const err = c.error ? <FieldError>{c.error}</FieldError> : null;
+  const bar = (children: React.ReactNode) => <div style={S(BAR)}>{err}{children}</div>;
   const back = () => { if (c.mode !== 'view') { c.cancel(); return; } onClose(); };
 
   // What the bottom bar offers.
@@ -56,12 +53,12 @@ export function MobileItem({ c, onClose }: { c: InboxCtl; onClose: () => void })
   if (c.mode === 'decline') {
     foot = bar(<div style={S('display:flex;gap:10px')}>
       <button className="ghost" onClick={c.cancel} style={S(OUTLINE)}>Back</button>
-      <button onClick={c.sendDecline} disabled={c.busy} style={S(BLACK + ';background:#C0261B')}>Send decline</button>
+      <button onClick={c.sendDecline} disabled={c.busy} style={S(DANGER + dim(c.busy))}>{c.busy ? 'Sending…' : 'Send decline'}</button>
     </div>);
   } else if (actionable) {
     foot = bar(<div style={S('display:flex;gap:10px')}>
       <button className="ghost" onClick={() => { c.setMode('decline'); c.setReason(null); c.setError(''); c.setNotice(''); }} style={S(OUTLINE)}>Decline</button>
-      <button onClick={c.accept} disabled={c.busy} style={S(BLACK)}>Accept</button>
+      <button onClick={c.accept} disabled={c.busy} style={S(BLACK + dim(c.busy))}>{c.busy ? 'Approving…' : 'Approve'}</button>
     </div>);
   } else if (isCancel) {
     foot = bar(<div style={S('display:flex;gap:10px')}>
@@ -85,7 +82,7 @@ export function MobileItem({ c, onClose }: { c: InboxCtl; onClose: () => void })
         <Sheet title="More actions" onClose={() => setQa(false)}>
           <div style={S('display:flex;flex-direction:column')}>
             {!isMsg && <button onClick={() => { setQa(false); c.compose(); }} style={S(MENU_ROW)}>Message {first}</button>}
-            {clientHref && <Link href={clientHref} style={S(MENU_ROW)}>Open {first}&apos;s profile</Link>}
+            {clientHref && <Link href={clientHref} style={S(MENU_ROW)}>Open profile</Link>}
             {sel.booking && <button onClick={() => { setQa(false); setBq(true); }} style={S(MENU_ROW)}>Quick view booking</button>}
             {calHref && <Link href={calHref} style={S(MENU_ROW)}>View in calendar</Link>}
             {isCancel && <Link href={rebookHref} style={S(MENU_ROW)}>Book again</Link>}
@@ -96,7 +93,7 @@ export function MobileItem({ c, onClose }: { c: InboxCtl; onClose: () => void })
   </>);
 
   return (
-    <div role="dialog" aria-label="Inbox item" style={S("position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;display:flex;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
+    <div role="dialog" aria-label="Inbox item" style={S(PAGE)}>
       {chat ? (<>
         <ChatPanel fill key={sel.id + c.mode} clientId={sel.clientId} name={sel.client} first={first}
           initial={isMsg ? sel.thread.map((m, i) => ({ id: String(i), mine: m.mine, text: m.text, day: '', time: m.at })) : undefined}
@@ -107,7 +104,7 @@ export function MobileItem({ c, onClose }: { c: InboxCtl; onClose: () => void })
       </>) : (<>
       <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px;border-bottom:1px solid #E6E8EC')}>
         <button onClick={back} aria-label="Back" style={S(RING)}>{BACK}</button>
-        <div style={S('flex:0 0 36px;width:36px;height:36px;border-radius:999px;background:#EEEAFE;color:#3A2BB5;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600')}>{initialsOf(sel.client)}</div>
+        <Avatar name={sel.client} size="sm" />
         <div style={S('flex:1 1 auto;min-width:0;font-size:18px;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{sel.client}</div>
         {hasMore && <button onClick={() => setQa(true)} aria-label="More actions" aria-haspopup="dialog" style={S(RING)}>{DOTS}</button>}
       </header>
@@ -126,9 +123,9 @@ export function MobileItem({ c, onClose }: { c: InboxCtl; onClose: () => void })
             <p style={S('margin:6px 0 0;font-size:14px;color:#5E6673;overflow-wrap:anywhere')}>{sel.summary}</p>
           </div>
           <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:8px')}>
-            {status && <span style={S('display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;background:' + status.bg + ';color:' + status.fg)}>{status.t}</span>}
+            {status && <Chip tone={status.tone}>{status.t}</Chip>}
             <span style={S('font-size:13px;color:#5E6673')}>{sel.time}</span>
-            {!!c.notice && <span role="status" style={S('padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.notice}</span>}
+            {!!c.notice && <Notice>{c.notice}</Notice>}
           </div>
           {sel.rows.length > 0 && (
             <dl style={S(CARD + ';margin:0;display:flex;flex-direction:column')} className="sum-rows">

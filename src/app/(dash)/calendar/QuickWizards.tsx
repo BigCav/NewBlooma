@@ -1,8 +1,9 @@
 'use client';
-import { useState } from 'react';
 import { dayInfo, fmtMin, BLOCK_KINDS } from '@/lib/cal';
-import { S, ServicePicker } from './pickers';
-import { BLOCK_DURS_M, METHODS } from './calUi';
+import { S } from './s';
+import { ServicePicker } from './pickers';
+import { BLOCK_DURS_M, METHODS, spanText } from './calUi';
+import { duration, plural } from '@/lib/display';
 import { CheckoutFlow } from './CheckoutFlow';
 import { useSteps, StepShell, ClientStep, PeopleStep, Tiles, DayTimeStep, ClientCard, DetailRows, ICONS } from './wizardUi';
 import type { useCalendar } from './useCalendar';
@@ -18,7 +19,7 @@ export function WalkInWizard({ c, props }: { c: C; props: Props }) {
   const next = () => { if (!canNext) { setError(step === 0 ? "Add the client's name." : step === 1 ? 'Choose a service.' : 'Choose a team member.'); return; } forward(); };
   return (
     <StepShell step={step} titles={['Select client', 'Select service', 'Select team member', 'Summary']} onBack={back} onClose={close} error={hasError ? error : ''}
-      actions={step === 3 ? [{ label: 'Add & check out', onClick: () => addWalkin(true), disabled: busy }, { label: 'Add to calendar', onClick: () => addWalkin(false), disabled: busy, secondary: true }] : [{ label: 'Continue', onClick: next, disabled: !canNext }]}>
+      actions={step === 3 ? [{ label: busy ? 'Adding…' : 'Add & check out', onClick: () => addWalkin(true), disabled: busy }, { label: 'Add to calendar', onClick: () => addWalkin(false), disabled: busy, secondary: true }] : [{ label: 'Continue', onClick: next, disabled: !canNext }]}>
       {step === 0 && <ClientStep name={wi.name} clientId={wi.clientId} recent={props.recent ?? []} onChange={(name, id) => { setWi({ ...wi, name, clientId: id }); setError(''); }} />}
       {step === 1 && (
         <ServicePicker extras={false} lock={lockFor([])} services={services} selected={wi.svc ? [wi.svc] : []} initialCat={wiSvc?.cat || wi.cat || undefined} chipHeight={44} onCat={(cat) => setWi({ ...wi, cat })}
@@ -29,7 +30,7 @@ export function WalkInWizard({ c, props }: { c: C; props: Props }) {
         <ClientCard name={wi.name} existing={!!wi.clientId} onChange={() => jump(0)} />
         <DetailRows go={jump} rows={[
           { icon: ICONS.scissors, text: wiSvc ? wiSvc.name : '', step: 1 },
-          { icon: ICONS.person, text: wi.pro === 'any' ? 'First available' : staffName(wi.pro), step: 2 },
+          { icon: ICONS.person, text: wi.pro === 'any' ? 'First available team member' : staffName(wi.pro), step: 2 },
         ]} />
         <div role="status" style={S(wiPlanCss)}>{wiPlanText}</div>
       </>)}
@@ -37,7 +38,7 @@ export function WalkInWizard({ c, props }: { c: C; props: Props }) {
   );
 }
 
-const LATE_OPTS = [[15, '15 min'], [30, '30 min'], [45, '45 min'], [60, '1 hour'], [90, '1.5 hours'], [120, '2 hours']] as const;
+const LATE_OPTS = [[15, duration(15)], [30, duration(30)], [45, duration(45)], [60, duration(60)], [90, duration(90)], [120, duration(120)]] as const;
 
 /** Running late as steps: who, how late, then what moves and whether to tell the clients. */
 export function LateWizard({ c }: { c: C }) {
@@ -46,7 +47,7 @@ export function LateWizard({ c }: { c: C }) {
   const canNext = step === 0 ? !!lf.s : true;
   return (
     <StepShell step={step} titles={['Select team member', 'How late?', 'Summary']} onBack={back} onClose={close} error={hasError ? error : ''}
-      actions={[step === 2 ? { label: 'Move ' + (lateList.length || ''), onClick: saveLate, disabled: busy || !lateList.length } : { label: 'Continue', onClick: () => { if (!canNext) { setError('Choose a team member.'); return; } forward(); }, disabled: !canNext }]}>
+      actions={[step === 2 ? { label: busy ? 'Moving…' : 'Move ' + (lateList.length || ''), onClick: saveLate, disabled: busy || !lateList.length } : { label: 'Continue', onClick: () => { if (!canNext) { setError('Choose a team member.'); return; } forward(); }, disabled: !canNext }]}>
       {step === 0 && (<>
         <p style={S('margin:0;color:#5E6673;font-size:14px')}>Moves everything not started for one person on {dayInfo(day).short}.</p>
         <PeopleStep team={team} selected={lf.s} onPick={(id) => { setLf({ ...lf, s: id }); setError(''); }} />
@@ -55,10 +56,10 @@ export function LateWizard({ c }: { c: C }) {
       {step === 2 && (<>
         <DetailRows go={jump} rows={[
           { icon: ICONS.person, text: staffName(lf.s), step: 0 },
-          { icon: ICONS.time, text: 'Running late by ' + (LATE_OPTS.find((o) => o[0] === lf.mins)?.[1] ?? lf.mins + ' min'), step: 1 },
+          { icon: ICONS.time, text: 'Running late by ' + (LATE_OPTS.find((o) => o[0] === lf.mins)?.[1] ?? duration(lf.mins)), step: 1 },
         ]} />
-        <h3 style={S('margin:6px 0 0;font-size:17px;font-weight:600;letter-spacing:-0.01em')}>{lateList.length ? lateList.length + (lateList.length === 1 ? ' appointment moves' : ' appointments move') : 'Nothing left to move'}</h3>
-        {lateList.map((b) => <div key={b.id} style={S('display:flex;justify-content:space-between;gap:12px;padding:12px 14px;border-radius:14px;background:#F4F5F7;font-size:14px')}><span style={S('min-width:0;overflow-wrap:anywhere')}>{b.client}</span><span style={S('flex:0 0 auto;color:#5E6673')}>{fmtMin(b.start)} to {fmtMin(b.start + lf.mins)}</span></div>)}
+        <h3 style={S('margin:6px 0 0;font-size:17px;font-weight:600;letter-spacing:-0.01em')}>{lateList.length ? plural(lateList.length, 'appointment') + (lateList.length === 1 ? ' moves' : ' move') : 'Nothing left to move'}</h3>
+        {lateList.map((b) => <div key={b.id} style={S('display:flex;justify-content:space-between;gap:12px;padding:12px 14px;border-radius:14px;background:#F4F5F7;font-size:14px')}><span style={S('min-width:0;overflow-wrap:anywhere')}>{b.client}</span><span style={S('flex:0 0 auto;color:#5E6673')}>{spanText(b.start, b.start + lf.mins)}</span></div>)}
         <h3 style={S('margin:6px 0 0;font-size:17px;font-weight:600;letter-spacing:-0.01em')}>Tell the clients</h3>
         <Tiles label="Tell the clients" options={[['yes', 'Message them'], ['no', 'Do not message']] as const} value={lf.tell ? 'yes' : 'no'} onPick={(v) => setLf({ ...lf, tell: v === 'yes' })} />
       </>)}
@@ -76,7 +77,7 @@ export function BlockWizard({ c }: { c: C }) {
   const next = () => { if (!canNext) { setError(step === 0 ? 'Choose a team member.' : 'Choose a start time.'); return; } forward(); };
   return (
     <StepShell step={step} titles={['Select team member', 'Select reason', 'Select length', 'Select time', 'Summary']} onBack={back} onClose={close} error={hasError ? error : ''}
-      actions={[step === 4 ? { label: 'Block time', onClick: saveBlock, disabled: busy } : { label: 'Continue', onClick: next, disabled: !canNext }]}>
+      actions={[step === 4 ? { label: busy ? 'Blocking…' : 'Block time', onClick: saveBlock, disabled: busy } : { label: 'Continue', onClick: next, disabled: !canNext }]}>
       {step === 0 && (<>
         <p style={S('margin:0;color:#5E6673;font-size:14px')}>Clients cannot book blocked time.</p>
         <PeopleStep team={team} selected={bf.s} onPick={(id) => { setBf({ ...bf, s: id, start: null }); setError(''); }} />
@@ -88,7 +89,7 @@ export function BlockWizard({ c }: { c: C }) {
         <DetailRows go={jump} rows={[
           { icon: ICONS.person, text: staffName(bf.s), step: 0 },
           { icon: ICONS.tag, text: kindLabel, step: 1 },
-          { icon: ICONS.time, text: durLabel + (bf.start !== null ? ', ' + fmtMin(bf.start) + (bfDur > 0 ? ' – ' + fmtMin(bf.start + bfDur) : '') : ''), step: 2 },
+          { icon: ICONS.time, text: durLabel + (bf.start !== null ? ', ' + (bfDur > 0 ? spanText(bf.start, bf.start + bfDur) : fmtMin(bf.start)) : ''), step: 2 },
           { icon: ICONS.day, text: dayInfo(bf.day).full, step: 3 },
         ]} />
       )}
@@ -104,7 +105,7 @@ export function CheckoutWizard({ c }: { c: C }) {
   const ids = co.svc ?? sel.b.serviceIds;
   const found = ids.map((id) => svcMap.get(id)).filter(Boolean) as NonNullable<ReturnType<typeof svcMap.get>>[];
   const gross = co.svc ? found.reduce((a, v) => a + v.priceCents, 0) : sel.b.priceCents;
-  const lines = found.length ? found.map((v) => ({ key: v.id, name: v.name, sub: v.dur + ' min', cents: v.priceCents })) : [{ key: 'sale', name: sel.b.services, cents: gross }];
+  const lines = found.length ? found.map((v) => ({ key: v.id, name: v.name, sub: duration(v.dur), cents: v.priceCents })) : [{ key: 'sale', name: sel.b.services, cents: gross }];
   const pickSvc = (id: string) => {
     const next = toggleSvc(ids, id);
     if (!next.length) { setError('Keep at least one service on the sale.'); return; }

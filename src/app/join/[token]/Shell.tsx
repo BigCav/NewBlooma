@@ -2,10 +2,11 @@
 // Team invite layout, following the prototype's TeamInvite: dark panel on desktop, banner on phones, one primary action and a sign-in line.
 import Link from 'next/link';
 import { S } from '@/app/(dash)/calendar/pickers';
+import { BLACK, FieldError, OUTLINE } from '@/components/ui';
 
 const BULLET = <span aria-hidden="true" style={S('width:8px;height:8px;border-radius:999px;background:#8F7CFF;flex:0 0 8px')}></span>;
-const DARK = 'height:48px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:15px;font-weight:500;padding:0 24px;display:flex;align-items:center;justify-content:center;text-decoration:none;box-sizing:border-box;width:100%';
-const LIGHT = 'height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:15px;font-weight:500;padding:0 24px;display:flex;align-items:center;justify-content:center;text-decoration:none;box-sizing:border-box;width:100%';
+const DARK = BLACK + ';flex:0 0 auto;width:100%;padding:0 24px';
+const LIGHT = OUTLINE + ';flex:0 0 auto;width:100%;padding:0 24px';
 
 export function Shell({ children, title }: { children: React.ReactNode; title: string }) {
   return (
@@ -36,7 +37,7 @@ export function Shell({ children, title }: { children: React.ReactNode; title: s
 
 export const Lead = ({ children }: { children: React.ReactNode }) => <p style={S('margin:-12px 0 0;color:#5E6673;font-size:15px')}>{children}</p>;
 export const Note = ({ children }: { children: React.ReactNode }) => <p style={S('margin:0;color:#5E6673;font-size:13.5px;text-align:center')}>{children}</p>;
-export const Problem = ({ children }: { children: React.ReactNode }) => <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{children}</p>;
+export const Problem = ({ children }: { children: React.ReactNode }) => <FieldError>{children}</FieldError>;
 export const PrimaryLink = ({ href, children }: { href: string; children: React.ReactNode }) => <Link href={href} style={S(DARK)}>{children}</Link>;
 export const LightLink = ({ href, children }: { href: string; children: React.ReactNode }) => <Link href={href} style={S(LIGHT)}>{children}</Link>;
 export const PrimaryButton = ({ children }: { children: React.ReactNode }) => <button style={S(DARK)}>{children}</button>;

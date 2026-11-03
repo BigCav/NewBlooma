@@ -1,16 +1,14 @@
 'use client';
-import { FIELD_IN } from '@/components/ui';
+import { BLACK, FIELD_IN, dim } from '@/components/ui';
+import { dollars } from '@/lib/format';
 import { decimalInput } from '@/lib/numeric';
 import { S } from '../calendar/pickers';
 import { ClientCard, ClientStep, DetailRows, ICONS, ROW, StepShell, TICK, Tiles, useSteps } from '../calendar/wizardUi';
-import { DISC_PCTS, NO_DISC, TIP_OPTS, discountCents, fmt } from './shared';
+import { DISC_PCTS, NO_DISC, TIP_OPTS, discountCents } from './shared';
+import { Field } from '../settings/forms/FormPage';
 import type { SalesCtl } from './SalesView';
 
 const I_CARD = <><rect x="3.5" y="6" width="17" height="12" rx="2.5" /><path d="M3.5 10.5h17" /></>;
-
-function Field({ label, children, htmlFor }: { label: string; children: React.ReactNode; htmlFor?: string }) {
-  return <label htmlFor={htmlFor} style={S('display:block;box-sizing:border-box;padding:10px 16px 12px;border:1px solid #E1E4E9;border-radius:16px;background:#FFFFFF')}><span style={S('display:block;font-size:12.5px;color:#5E6673')}>{label}</span>{children}</label>;
-}
 
 /** The phone's new sale as steps: client, service, payment, discount and tip when switched on, then a summary. */
 export function NewSaleFlow({ c }: { c: SalesCtl }) {
@@ -30,12 +28,12 @@ export function NewSaleFlow({ c }: { c: SalesCtl }) {
   const ready = () => (kind === 'client' && !nw.client.trim() ? "Add the client's name." : kind === 'service' && !nw.service ? 'Choose a service.' : '');
   const next = () => { const e = ready(); if (e) { c.setError(e); return; } forward(); };
   const dv = nw.disc.kind === 'none' ? 'none' : nw.disc.kind === 'amount' ? 'amount' : nw.disc.value;
-  const discText = nw.disc.kind === 'none' || !disc ? 'No discount' : (nw.disc.kind === 'percent' ? nw.disc.value + '% off' : fmt(disc) + ' off') + (nw.disc.note ? ' (' + nw.disc.note + ')' : '');
+  const discText = nw.disc.kind === 'none' || !disc ? 'No discount' : (nw.disc.kind === 'percent' ? nw.disc.value + '% off' : dollars(disc) + ' off') + (nw.disc.note ? ' (' + nw.disc.note + ')' : '');
 
   return (
     <StepShell step={step} titles={kinds.map((k) => titles[k])} onBack={back} onClose={c.cancel} error={c.error}
       actions={kind === 'summary' ? [] : [{ label: 'Continue', onClick: next }]}
-      bar={kind === 'summary' ? <button type="button" onClick={c.createSale} disabled={c.busy} style={S('width:100%;height:52px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;cursor:pointer')}>Record sale</button> : undefined}>
+      bar={kind === 'summary' ? <button type="button" onClick={c.createSale} disabled={c.busy} style={S(BLACK + ';flex:0 0 auto;width:100%' + dim(c.busy))}>{c.busy ? 'Saving…' : 'Record sale'}</button> : undefined}>
       {kind === 'client' && <ClientStep name={nw.client} clientId={nw.clientId} recent={[]} onChange={(name, id) => { c.setNw({ ...nw, client: name, clientId: id }); c.setError(''); }} />}
 
       {kind === 'service' && (
@@ -43,7 +41,7 @@ export function NewSaleFlow({ c }: { c: SalesCtl }) {
           {c.services.map((x) => { const on = nw.service === x.id; return (
             <button key={x.id} onClick={() => { c.setNw({ ...nw, service: on ? null : x.id }); c.setError(''); }} aria-pressed={on} style={S(ROW(on))}>
               <span style={S('flex:1 1 auto;min-width:0;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{x.name}</span>
-              <span style={S('flex:0 0 auto;font-size:14px;color:#5E6673')}>{fmt(x.priceCents)}</span>
+              <span style={S('flex:0 0 auto;font-size:14px;color:#5E6673')}>{dollars(x.priceCents)}</span>
               {on && TICK}
             </button>
           ); })}
@@ -67,12 +65,12 @@ export function NewSaleFlow({ c }: { c: SalesCtl }) {
       {kind === 'summary' && (<>
         <ClientCard name={nw.client} existing={!!nw.clientId} onChange={() => jump(0)} />
         <DetailRows go={jump} rows={[
-          { icon: ICONS.scissors, text: svc ? svc.name + ', ' + fmt(svc.priceCents) : 'No service', step: at('service') },
+          { icon: ICONS.scissors, text: svc ? svc.name + ', ' + dollars(svc.priceCents) : 'No service', step: at('service') },
           { icon: I_CARD, text: methodLabel, step: at('payment') },
           ...(c.canDiscount ? [{ icon: ICONS.tag, text: discText, step: at('discount') }] : []),
-          ...(c.askTip ? [{ icon: ICONS.time, text: tipAmt ? fmt(tipAmt) + ' tip' : 'No tip', step: at('tip') }] : []),
+          ...(c.askTip ? [{ icon: ICONS.time, text: tipAmt ? dollars(tipAmt) + ' tip' : 'No tip', step: at('tip') }] : []),
         ]} />
-        <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:4px 4px 0')}><span style={S('font-size:15px;font-weight:600')}>Total</span><span style={S('font-size:24px;font-weight:600;letter-spacing:-0.02em')}>{fmt(total)}</span></div>
+        <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:4px 4px 0')}><span style={S('font-size:15px;font-weight:600')}>Total</span><span style={S('font-size:24px;font-weight:600;letter-spacing:-0.02em')}>{dollars(total)}</span></div>
       </>)}
     </StepShell>
   );

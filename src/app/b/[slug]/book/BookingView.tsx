@@ -1,7 +1,11 @@
 'use client';
 // 1:1 conversion of the prototype's Booking.dc.html and MobileBooking.dc.html (the public online booking flow).
 // Markup and style strings are kept as written; the {{ }} holes are the salon's real data and the handlers are real server actions.
-import { clock12, clockStr, makeMoney } from '@/lib/display';
+import { clock12, clockStr, duration, makeMoney, plural, timeRange } from '@/lib/display';
+import { addDaysYmd, dayInfo } from '@/lib/cal';
+import { firstName } from '@/lib/people';
+import { TONE } from '@/lib/tones';
+import { Avatar, BACK, BLACK, Chip, FieldError, Notice, OUTLINE, RING, dim, filterChipCss } from '@/components/ui';
 import { checkPhone, phoneInput } from '@/lib/phone';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { S } from '../../../(dash)/calendar/pickers';
@@ -16,17 +20,13 @@ type Props = {
   today: string; nowMin: number; autoConfirm: boolean; windowDays: number; emailOn: boolean; preselect: string; account: Account | null;
 };
 
-const DAY_ABBR = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const DAY_NAME = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const MONTH_NAME = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-const TITLES = ['Choose your services', 'Choose a professional', 'Pick a date and time', 'Your details'];
-const LABELS = ['Services', 'Professional', 'Time', 'Details'];
-const hhmm = clock12;
-const fmtDur = (m: number) => { const h = Math.floor(m / 60); const r = m % 60; return h ? h + ' hr' + (r ? ' ' + r + ' min' : '') : m + ' min'; };
+const TITLES = ['Choose your services', 'Choose a team member', 'Pick a date and time', 'Your details'];
+const LABELS = ['Services', 'Team member', 'Time', 'Details'];
 const toMin = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
-const initialsOf = (n: string) => n.split(' ').filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
-const firstOf = (a: Account) => (a.name.trim().split(' ')[0] || a.email.split('@')[0]);
+const firstOf = (a: Account) => firstName(a.name, a.email.split('@')[0]);
+/** The signed-in chip keeps its dark ink look. */
+const INK = { bg: '#0E1116', fg: '#FFFFFF' };
+const ANY_ICON = <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8.5" r="3.5" /><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5" /><path d="M16 5.2a3.4 3.4 0 0 1 0 6.6M18.5 14.8c1.6.8 2.6 2.4 3 5.2" /></svg>;
 
 type Form = { name: string; email: string; phone: string; notes: string };
 type Wl = { open: boolean; done: boolean; name: string; phone: string; error: string };
@@ -37,17 +37,10 @@ const EMPTY_AU: Au = { panel: 'none', email: '', pw: '', show: false, error: '',
 const formFor = (a: Account | null, notes = ''): Form => ({ name: a?.name ?? '', email: a?.email ?? '', phone: a?.phone ?? '', notes });
 
 function useBooking(p: Props) {
-  const days = useMemo(() => {
-    const [y, mo, d] = p.today.split('-').map(Number);
-    return Array.from({ length: Math.min(p.windowDays, 57) }, (_, i) => {
-      const dt = new Date(Date.UTC(y, mo - 1, d + i));
-      const wd = dt.getUTCDay();
-      return {
-        ymd: dt.toISOString().slice(0, 10), abbr: DAY_ABBR[wd], num: dt.getUTCDate(), month: MONTH_ABBR[dt.getUTCMonth()], dow: (wd + 6) % 7, name: DAY_NAME[wd],
-        full: DAY_NAME[wd] + ' ' + dt.getUTCDate() + ' ' + MONTH_NAME[dt.getUTCMonth()],
-      };
-    });
-  }, [p.today, p.windowDays]);
+  const days = useMemo(() => Array.from({ length: Math.min(p.windowDays, 57) }, (_, i) => {
+    const d = dayInfo(addDaysYmd(p.today, i));
+    return { ymd: d.ymd, abbr: d.abbr, num: d.num, month: d.month.slice(0, 3), dow: d.wd, name: d.weekday, full: d.full };
+  }), [p.today, p.windowDays]);
   const money = useMemo(() => makeMoney(p.currency), [p.currency]);
 
   const [step, setStep] = useState(1);
@@ -126,9 +119,9 @@ function useBooking(p: Props) {
     setAcct(null); setForm((f) => formFor(null, f.notes)); setError(''); setAuState(EMPTY_AU);
   };
 
-  const whenOf = (min: number) => days[day].full + ', ' + hhmm(min) + ' to ' + hhmm(min + totalDur);
-  const countText = list.length + (list.length === 1 ? ' service' : ' services');
-  const durText = totalDur ? fmtDur(totalDur) : '0 min';
+  const whenOf = (min: number) => days[day].full + ', ' + timeRange(clock12(min), clock12(min + totalDur));
+  const countText = plural(list.length, 'service');
+  const durText = duration(totalDur);
 
   const next = async () => {
     if (busy) return;
@@ -148,7 +141,7 @@ function useBooking(p: Props) {
         const note = r.account === 'created' ? 'Your account is ready. Sign in next time to skip the details step.' : r.account === 'saved' ? 'Saved to your account.' : r.account === 'exists' ? 'You already have an account with this email. Sign in next time to skip the details step.' : '';
         if (r.account === 'created') setAcct({ name: form.name.trim(), email: form.email.trim().toLowerCase(), phone: form.phone.trim() });
         else if (r.account === 'saved' && acct) setAcct({ ...acct, name: acct.name || form.name.trim(), phone: form.phone.trim() || acct.phone });
-        setDone({ staffName: r.staffName || member?.name || 'The team', email: form.email.trim(), first: form.name.trim().split(' ')[0] || 'there', when: whenOf(slotMin ?? 0), count: countText, dur: durText, total: money(totalCents), note, forms: r.forms });
+        setDone({ staffName: r.staffName || member?.name || 'The team', email: form.email.trim(), first: firstName(form.name), when: whenOf(slotMin ?? 0), count: countText, dur: durText, total: money(totalCents), note, forms: r.forms });
         setError('');
       } catch { setError('Something went wrong. Please try again.'); } finally { setBusy(false); }
       return;
@@ -200,7 +193,7 @@ const Check = ({ size = 16, color = '#FFFFFF', w = 2.4 }: { size?: number; color
 );
 const Arrow = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M9 7h8v8" /></svg>;
 
-const INPUT = 'box-sizing:border-box;width:100%;height:48px;min-height:0;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;color:#0E1116;background:#FFFFFF';
+const INPUT = 'box-sizing:border-box;width:100%;height:48px;min-height:0;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:16px;color:#0E1116;background:#FFFFFF';
 const circle = (on: boolean) => 'flex:0 0 32px;width:32px;height:32px;border-radius:999px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border:1.5px solid ' + (on ? '#0E1116' : '#D5D9E0') + ';background:' + (on ? '#0E1116' : '#FFFFFF');
 
 type O = { rowH: number; rowPad: string; dayW: number; cols: string; btnH: number; mob: boolean };
@@ -208,7 +201,6 @@ type O = { rowH: number; rowPad: string; dayW: number; cols: string; btnH: numbe
 function Steps({ m, o }: { m: M; o: O }) {
   const { p } = m;
   const rowStyle = (on: boolean) => 'display:flex;align-items:center;gap:16px;width:100%;box-sizing:border-box;min-height:' + o.rowH + 'px;padding:' + o.rowPad + ';border:0;border-bottom:1px solid #EEF0F3;text-align:left;font:inherit;color:#0E1116;cursor:pointer;background:' + (on ? '#F8F9FB' : 'transparent');
-  const chip = (on: boolean) => 'flex:0 0 auto;height:44px;padding:0 18px;border-radius:999px;font-size:14px;font-weight:500;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
   const closed = !m.hoursToday;
   const anyOk = m.slots.length > 0;
   const hasSlots = !closed && !m.loading && !m.slotErr && anyOk;
@@ -217,19 +209,19 @@ function Steps({ m, o }: { m: M; o: O }) {
   return <>
     {m.step === 1 && (
       <div className="bk-flow" style={S('display:flex;flex-direction:column;gap:16px')}>
-        {m.sel.length > 0 && !!m.nextAt && <div role="status" style={S('display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;border-radius:16px;background:#DDF3EA;color:#14624A;padding:12px 16px;font-size:14px;font-weight:500')}><span style={S('width:8px;height:8px;border-radius:999px;background:#14624A')}></span>Next available: {m.nextAt}</div>}
+        {m.sel.length > 0 && !!m.nextAt && <div role="status" style={S(`display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;border-radius:16px;background:${TONE.green.bg};color:${TONE.green.fg};padding:12px 16px;font-size:14px;font-weight:500`)}><span style={S(`width:8px;height:8px;border-radius:999px;background:${TONE.green.fg}`)}></span>Next available: {m.nextAt}</div>}
         <div role="group" className="hscroll" aria-label="Filter services" style={S('display:flex;gap:8px;overflow-x:auto')}>
-          {['All', ...p.cats].map((c) => <button key={c} onClick={() => m.setCat(c)} aria-pressed={m.cat === c} style={S(chip(m.cat === c))}>{c === 'All' ? 'All services' : c}</button>)}
+          {['All', ...p.cats].map((c) => <button key={c} onClick={() => m.setCat(c)} aria-pressed={m.cat === c} style={S(filterChipCss(m.cat === c, o.mob))}>{c === 'All' ? 'All services' : c}</button>)}
         </div>
         <ul className="bk-list" style={S('margin:0;padding:0;list-style:none;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;overflow:hidden')}>
           {p.services.filter((s) => m.cat === 'All' || s.cat === m.cat).map((s) => {
             const on = m.sel.includes(s.id);
             return <li key={s.id}>
-              <button onClick={() => m.toggle(s.id)} aria-pressed={on} aria-label={`${s.name}, ${fmtDur(s.dur)}, ${m.money(s.cents)}`} style={S(rowStyle(on))}>
+              <button onClick={() => m.toggle(s.id)} aria-pressed={on} aria-label={`${s.name}, ${duration(s.dur)}, ${m.money(s.cents)}`} style={S(rowStyle(on))}>
                 <span style={S('flex:1 1 auto;min-width:0')}>
                   <span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{s.name}</span>
                   <span style={S('display:block;margin-top:2px;font-size:13px;color:#5E6673;overflow-wrap:anywhere')}>{s.desc}</span>
-                  <span style={S('display:block;margin-top:4px;font-size:13px;color:#5E6673')}>{fmtDur(s.dur)}</span>
+                  <span style={S('display:block;margin-top:4px;font-size:13px;color:#5E6673')}>{duration(s.dur)}</span>
                 </span>
                 <span style={S('flex:0 0 auto;font-size:15px;font-weight:600')}>{m.money(s.cents)}</span>
                 <span style={S(circle(on))}>
@@ -247,11 +239,11 @@ function Steps({ m, o }: { m: M; o: O }) {
               {m.offers.map((s) => {
                 const on = m.sel.includes(s.id);
                 return <li key={s.id}>
-                  <button onClick={() => m.toggle(s.id)} aria-pressed={on} aria-label={`${s.name}, add ${fmtDur(s.dur)}, ${m.money(s.cents)}`} style={S(rowStyle(on))}>
+                  <button onClick={() => m.toggle(s.id)} aria-pressed={on} aria-label={`${s.name}, add ${duration(s.dur)}, ${m.money(s.cents)}`} style={S(rowStyle(on))}>
                     <span style={S('flex:1 1 auto;min-width:0')}>
                       <span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{s.name}</span>
                       {!!s.desc && <span style={S('display:block;margin-top:2px;font-size:13px;color:#5E6673;overflow-wrap:anywhere')}>{s.desc}</span>}
-                      <span style={S('display:block;margin-top:4px;font-size:13px;color:#5E6673')}>+{fmtDur(s.dur)}</span>
+                      <span style={S('display:block;margin-top:4px;font-size:13px;color:#5E6673')}>+{duration(s.dur)}</span>
                     </span>
                     <span style={S('flex:0 0 auto;font-size:15px;font-weight:600')}>+{m.money(s.cents)}</span>
                     <span style={S(circle(on))}>
@@ -267,18 +259,15 @@ function Steps({ m, o }: { m: M; o: O }) {
       </div>
     )}
 
-    {m.step === 2 && m.sel.length > 0 && !!m.nextAt && <div role="status" style={S('display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;margin-bottom:16px;border-radius:16px;background:#DDF3EA;color:#14624A;padding:12px 16px;font-size:14px;font-weight:500')}><span style={S('flex:0 0 8px;width:8px;height:8px;border-radius:999px;background:#14624A')}></span>{(m.staff && m.staff !== 'any' ? 'Next available with ' + (p.team.find((x) => x.id === m.staff)?.name.split(' ')[0] ?? 'them') : 'Next available') + ': ' + m.nextAt}</div>}
+    {m.step === 2 && m.sel.length > 0 && !!m.nextAt && <div role="status" style={S(`display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;margin-bottom:16px;border-radius:16px;background:${TONE.green.bg};color:${TONE.green.fg};padding:12px 16px;font-size:14px;font-weight:500`)}><span style={S(`flex:0 0 8px;width:8px;height:8px;border-radius:999px;background:${TONE.green.fg}`)}></span>{(m.staff && m.staff !== 'any' ? 'Next available with ' + firstName(p.team.find((x) => x.id === m.staff)?.name, 'them') : 'Next available') + ': ' + m.nextAt}</div>}
     {m.step === 2 && (
       <ul className="bk-flow bk-list" style={S('margin:0;padding:0;list-style:none;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;overflow:hidden')}>
-        {[{ id: 'any', name: 'Any professional', role: 'Best available time', svc: null as string[] | null }, ...p.team].map((t) => {
+        {[{ id: 'any', name: 'Any team member', role: 'Best available time', svc: null as string[] | null }, ...p.team].map((t) => {
           const bad = t.svc ? m.list.find((s) => !p.addons.some((a) => a.id === s.id) && !t.svc!.includes(s.id)) : null;
           const on = m.staff === t.id;
           return <li key={t.id}>
             <button onClick={() => { if (!bad) m.setStaff(t.id); }} aria-pressed={on} aria-disabled={!!bad} aria-label={t.name + ', ' + (bad ? "doesn't offer " + bad.name : t.role)} style={S(rowStyle(on) + (bad ? ';cursor:default' : ''))}>
-              <span style={S('flex:0 0 48px;width:48px;height:48px;border-radius:999px;background:#EEF0F3;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:#0E1116' + ('photo' in t && t.photo ? ';background-image:url(' + t.photo + ');background-size:cover;background-position:center' : ''))}>
-                {t.id !== 'any' && !('photo' in t && t.photo) && initialsOf(t.name)}
-                {t.id === 'any' && <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8.5" r="3.5" /><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5" /><path d="M16 5.2a3.4 3.4 0 0 1 0 6.6M18.5 14.8c1.6.8 2.6 2.4 3 5.2" /></svg>}
-              </span>
+              <Avatar name={t.name} photo={'photo' in t ? t.photo : null} size="lg" icon={t.id === 'any' ? ANY_ICON : undefined} />
               <span style={S('flex:1 1 auto;min-width:0;color:' + (bad ? '#8A93A0' : '#0E1116'))}>
                 <span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{t.name}</span>
                 <span style={S('display:block;margin-top:2px;font-size:13px;overflow-wrap:anywhere')}>{bad ? "Doesn't offer " + bad.name : t.role}</span>
@@ -294,9 +283,9 @@ function Steps({ m, o }: { m: M; o: O }) {
       <div className="bk-flow" style={S('display:flex;flex-direction:column;gap:20px')}>
         <div role="group" className="hscroll" aria-label="Choose a day" style={S('display:flex;gap:8px;overflow-x:auto')}>
           {m.days.map((d, i) => {
-            const on = m.day === i; const sub = on ? '#D5D9E0' : '#5E6673';
+            const on = m.day === i; const shut = !p.hours[d.dow]; const sub = on ? '#D5D9E0' : shut ? '#8A93A0' : '#5E6673';
             return <button key={d.ymd} onClick={() => m.setDay(i)} aria-pressed={on} aria-label={d.full + (p.hours[d.dow] ? '' : ', closed')}
-              style={S('flex:0 0 ' + o.dayW + 'px;height:76px;box-sizing:border-box;border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:inherit;padding:0;border:1px solid ' + (on ? '#0E1116' : '#E6E8EC') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116'))}>
+              style={S('flex:0 0 ' + o.dayW + 'px;height:76px;box-sizing:border-box;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:inherit;padding:0;border:1px solid ' + (on ? '#0E1116' : '#E6E8EC') + ';background:' + (on ? '#0E1116' : shut ? '#F4F5F7' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : shut ? '#8A93A0' : '#0E1116'))}>
               <span style={S('font-size:12.5px;color:' + sub)}>{d.abbr}</span>
               <span style={S('font-size:17px;font-weight:600')}>{d.num}</span>
               <span style={S('font-size:11.5px;color:' + sub)}>{d.month}</span>
@@ -309,25 +298,25 @@ function Steps({ m, o }: { m: M; o: O }) {
             <div role="group" aria-label="Available times" style={S('display:grid;grid-template-columns:' + o.cols + ';gap:8px')}>
               {m.grid.map((min) => {
                 const key = m.open.get(min); const ok = !!key; const on = m.slot === key && ok;
-                return <button key={min} onClick={() => { if (ok) { m.setSlot(key!); m.setSlotMin(min); } }} disabled={!ok} aria-pressed={on} aria-label={hhmm(min) + (ok ? '' : ', unavailable')}
-                  style={S('width:100%;height:44px;padding:0;border-radius:14px;font-size:14px;font-weight:500;font-family:inherit;border:1px solid ' + (on ? '#0E1116' : (ok ? '#E1E4E9' : '#EEF0F3')) + ';background:' + (on ? '#0E1116' : (ok ? '#FFFFFF' : '#F4F5F7')) + ';color:' + (on ? '#FFFFFF' : (ok ? '#0E1116' : '#8A93A0')) + (ok ? '' : ';text-decoration:line-through;cursor:default'))}>{hhmm(min)}</button>;
+                return <button key={min} onClick={() => { if (ok) { m.setSlot(key!); m.setSlotMin(min); } }} disabled={!ok} aria-pressed={on} aria-label={clock12(min) + (ok ? '' : ', unavailable')}
+                  style={S('width:100%;height:44px;padding:0;border-radius:14px;font-size:14px;font-weight:500;font-family:inherit;border:1px solid ' + (on ? '#0E1116' : (ok ? '#E1E4E9' : '#EEF0F3')) + ';background:' + (on ? '#0E1116' : (ok ? '#FFFFFF' : '#F4F5F7')) + ';color:' + (on ? '#FFFFFF' : (ok ? '#0E1116' : '#8A93A0')) + (ok ? '' : ';text-decoration:line-through;cursor:default'))}>{clock12(min)}</button>;
               })}
             </div>
           )}
           {!hasSlots && <p style={S('margin:0;color:#5E6673;font-size:14px')}>{slotMessage}</p>}
           <div style={S('border-top:1px solid #EEF0F3;padding-top:16px;display:flex;flex-direction:column;gap:12px')}>
-            {!wl.open && !wl.done && m.sel.length > 0 && <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:10px')}><span style={S('flex:1 1 200px;font-size:14px;color:#5E6673')}>Cannot find a time that suits?</span><button className="ghost" onClick={() => m.setWl({ ...wl, open: true, error: '' })} style={S('height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;padding:0 20px')}>Join the waitlist</button></div>}
+            {!wl.open && !wl.done && m.sel.length > 0 && <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:10px')}><span style={S('flex:1 1 200px;font-size:14px;color:#5E6673')}>Cannot find a time that suits?</span><button className="ghost" onClick={() => m.setWl({ ...wl, open: true, error: '' })} style={S(OUTLINE + ';flex:0 0 auto;height:44px;padding:0 20px')}>Join the waitlist</button></div>}
             {wl.open && (
               <div style={S('display:flex;flex-direction:column;gap:12px')}>
                 <span style={S('font-size:15px;font-weight:600')}>Join the waitlist</span>
                 <span style={S('font-size:13.5px;color:#5E6673')}>We will message you if a time opens up for your services.</span>
                 <div style={S('display:flex;flex-direction:column;gap:6px')}><label htmlFor="wl-n" style={S('font-size:14px;font-weight:600')}>Full name</label><input id="wl-n" className="bkf" type="text" value={wl.name} onChange={(e) => m.setWlField('name', e.target.value)} placeholder="Your name" style={S(INPUT)} /></div>
                 <div style={S('display:flex;flex-direction:column;gap:6px')}><label htmlFor="wl-p" style={S('font-size:14px;font-weight:600')}>Mobile number</label><input id="wl-p" className="bkf" type="tel" value={wl.phone} onChange={(e) => m.setWlField('phone', phoneInput(e.target.value))} placeholder="Your number" style={S(INPUT)} /></div>
-                {!!wl.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{wl.error}</p>}
-                <div style={S('display:flex;gap:10px')}><button onClick={m.submitWl} style={S('flex:1 1 0;height:44px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500')}>Join waitlist</button><button className="ghost" onClick={() => m.setWl({ ...wl, open: false, error: '' })} style={S('flex:1 1 0;height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>Cancel</button></div>
+                {!!wl.error && <FieldError>{wl.error}</FieldError>}
+                <div style={S('display:flex;gap:10px')}><button onClick={m.submitWl} style={S(BLACK)}>Join waitlist</button><button className="ghost" onClick={() => m.setWl({ ...wl, open: false, error: '' })} style={S(OUTLINE)}>Cancel</button></div>
               </div>
             )}
-            {wl.done && <div role="status" style={S('border-radius:16px;background:#DDF3EA;color:#14624A;padding:12px 14px;font-size:14px;font-weight:500')}>You are on the waitlist. We will message you if a time opens up.</div>}
+            {wl.done && <Notice>You are on the waitlist. We will message you if a time opens up.</Notice>}
           </div>
         </div>
       </div>
@@ -339,7 +328,7 @@ function Steps({ m, o }: { m: M; o: O }) {
         {!m.acct && m.au.panel === 'none' && (
           <div style={S(o.mob ? 'display:flex;flex-direction:column;align-items:stretch;gap:12px;padding:16px;border-radius:16px;background:#F4F5F7' : 'display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;padding:14px 16px;border-radius:16px;background:#F4F5F7')}>
             <span style={S(o.mob ? 'font-size:14px;line-height:1.45;color:#5E6673' : 'flex:1 1 220px;font-size:14px;color:#5E6673')}>Have an account? Sign in to use your saved details.</span>
-            <button className="ghost" onClick={m.openIn} style={S('height:' + (o.mob ? 48 : 44) + 'px;padding:0 20px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>Sign in</button>
+            <button className="ghost" onClick={m.openIn} style={S(OUTLINE + ';flex:0 0 auto;height:' + (o.mob ? 52 : 44) + 'px;padding:0 20px')}>Sign in</button>
           </div>
         )}
         {!m.acct && m.au.panel === 'in' && (
@@ -353,13 +342,13 @@ function Steps({ m, o }: { m: M; o: O }) {
                 <button type="button" onClick={() => m.setAu({ show: !m.au.show })} style={S('position:absolute;right:6px;top:4px;height:40px;padding:0 12px;border:0;border-radius:999px;background:transparent;color:#5B3DF5;font-size:13.5px;font-weight:600')}>{m.au.show ? 'Hide' : 'Show'}</button>
               </div>
             </div>
-            {!!m.au.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{m.au.error}</p>}
-            <button onClick={m.submitIn} disabled={m.au.busy} style={S('height:48px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;padding:0 24px')}>{m.au.busy ? 'Signing in…' : 'Sign in'}</button>
+            {!!m.au.error && <FieldError>{m.au.error}</FieldError>}
+            <button onClick={m.submitIn} disabled={m.au.busy} style={S(BLACK + ';flex:0 0 auto' + dim(m.au.busy))}>{m.au.busy ? 'Signing in…' : 'Sign in'}</button>
           </div>
         )}
         {m.acct && (
           <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:14px 16px;border-radius:16px;background:#F4F5F7')}>
-            <span aria-hidden="true" style={S('flex:0 0 44px;width:44px;height:44px;border-radius:999px;background:#0E1116;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600')}>{initialsOf(m.acct.name || m.acct.email)}</span>
+            <Avatar name={m.acct.name || m.acct.email} size="lg" tone={INK} />
             <div style={S('flex:1 1 140px;min-width:0')}><div style={S('font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{m.acct.name || m.acct.email}</div><div style={S('font-size:13px;color:#5E6673;overflow-wrap:anywhere')}>{m.acct.email}</div></div>
           </div>
         )}
@@ -373,7 +362,7 @@ function Steps({ m, o }: { m: M; o: O }) {
         {!(m.acct && m.acct.phone) && <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="bk-phone" style={S('font-size:14px;font-weight:600')}>Phone</label><input id="bk-phone" className="bkf" type="tel" inputMode="tel" autoComplete="tel" value={m.form.phone} onChange={(e) => m.setField('phone', phoneInput(e.target.value))} placeholder="Required" style={S(INPUT)} /></div>}
         <div style={S('display:flex;flex-direction:column;gap:8px')}>
           <label htmlFor="bk-notes" style={S('font-size:14px;font-weight:600')}>Notes for the salon</label>
-          <textarea id="bk-notes" className="bkf" value={m.form.notes} onChange={(e) => m.setField('notes', e.target.value)} placeholder="Optional" style={S('box-sizing:border-box;width:100%;min-height:96px;resize:none;padding:12px 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;color:#0E1116;background:#FFFFFF')} />
+          <textarea id="bk-notes" className="bkf" value={m.form.notes} onChange={(e) => m.setField('notes', e.target.value)} placeholder="Optional" style={S('box-sizing:border-box;width:100%;min-height:96px;resize:none;padding:12px 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:16px;color:#0E1116;background:#FFFFFF')} />
         </div>
         {!m.acct && m.au.panel === 'none' && (
           <div style={S('display:flex;flex-direction:column;gap:14px;padding:16px;border:1px solid #E6E8EC;border-radius:18px')}>
@@ -394,7 +383,7 @@ function Steps({ m, o }: { m: M; o: O }) {
         )}
         <p style={S('margin:0;font-size:13px;color:#5E6673')}>You pay at the salon after your appointment.</p>
         {!p.autoConfirm && <p style={S('margin:0;font-size:13px;color:#5E6673')}>{m.p.emailOn ? 'The salon will confirm your request by email.' : 'The salon will confirm your request.'}</p>}
-        {!!m.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{m.error}</p>}
+        {!!m.error && <FieldError>{m.error}</FieldError>}
       </div>
     )}
   </>;
@@ -402,7 +391,7 @@ function Steps({ m, o }: { m: M; o: O }) {
 
 const HINTS = ['Choose at least one service to continue.', 'Choose who you would like to see.', 'Pick a day and a time.', ''];
 const primaryLabel = (m: M) => m.busy ? (m.p.autoConfirm ? 'Booking…' : 'Sending…') : m.step === 4 ? (m.p.autoConfirm ? 'Confirm booking' : 'Request booking') : 'Continue';
-const primaryStyle = (m: M, h: number) => 'width:100%;height:' + h + 'px;border:0;border-radius:999px;font-size:14.5px;font-weight:500;font-family:inherit;background:' + (m.canGo ? '#0E1116' : '#D5D9E0') + ';color:' + (m.canGo ? '#FFFFFF' : '#5E6673') + ';cursor:' + (m.canGo ? 'pointer' : 'default');
+const primaryStyle = (m: M) => BLACK + ';flex:0 0 auto;width:100%' + dim(!m.canGo || m.busy);
 
 function DoneNote({ m }: { m: M }) {
   const n = m.done?.note, f = m.done?.forms;
@@ -410,10 +399,10 @@ function DoneNote({ m }: { m: M }) {
   return (<>
     {n && <div role="status" style={S('box-sizing:border-box;padding:18px 20px;border-radius:24px;background:#0E1116;color:#FFFFFF;font-size:15px;font-weight:500;line-height:1.4')}>{n}</div>}
     {f && (
-      <div role="status" style={S('box-sizing:border-box;padding:20px;border-radius:24px;background:#EEEAFE;color:#2B1F8A;display:flex;flex-direction:column;gap:10px')}>
+      <div role="status" style={S('box-sizing:border-box;padding:20px;border-radius:24px;background:' + TONE.purple.bg + ';color:' + TONE.purple.fg + ';display:flex;flex-direction:column;gap:10px')}>
         <div style={S('font-size:16px;font-weight:600')}>{f.ask ? 'One more thing before your visit' : 'Forms for your visit'}</div>
         <p style={S('margin:0;font-size:14.5px;line-height:1.45;overflow-wrap:anywhere')}>{f.ask ? `Please complete ${f.names.join(' and ')} now. It takes about two minutes.` : `Please complete ${f.names.join(' and ')} before your visit.${m.p.emailOn ? ' We have also emailed you the link.' : ''}`}</p>
-        <a href={f.url} style={S('align-self:flex-start;display:inline-flex;align-items:center;height:48px;padding:0 24px;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;text-decoration:none')}>Complete your form</a>
+        <a href={f.url} style={S(BLACK + ';flex:0 0 auto;align-self:flex-start;padding:0 24px')}>Complete your form</a>
       </div>
     )}
   </>);
@@ -426,7 +415,7 @@ function DoneCard({ m, wide = false }: { m: M; wide?: boolean }) {
   return (
     <div role="status" style={S(wide ? 'display:flex;flex-wrap:wrap;align-items:center;gap:32px 56px;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:40px' : 'display:flex;flex-direction:column;gap:20px;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:28px')}>
       <div style={S(wide ? 'flex:1 1 380px;min-width:0;display:flex;flex-direction:column;gap:20px' : 'display:contents')}>
-      <div style={S('flex:0 0 56px;width:56px;height:56px;border-radius:999px;background:#DDF3EA;display:flex;align-items:center;justify-content:center')}><Check size={26} color="#14624A" w={2.2} /></div>
+      <div style={S('flex:0 0 56px;width:56px;height:56px;border-radius:999px;background:' + TONE.green.bg + ';display:flex;align-items:center;justify-content:center')}><Check size={26} color={TONE.green.fg} w={2.2} /></div>
       <div>
         <h1 style={S('margin:0;font-size:30px;line-height:1.15;font-weight:600;letter-spacing:-0.03em;overflow-wrap:anywhere')}>{booked ? `You're booked, ${d.first}` : `Request sent, ${d.first}`}</h1>
         <p style={S('margin:8px 0 0;color:#5E6673;font-size:15px;overflow-wrap:anywhere')}>{booked ? (m.p.emailOn ? `We've sent the details to ${d.email}.` : 'Your booking is confirmed. Keep these details handy.') : (m.p.emailOn ? `We'll email ${d.email} once the salon confirms.` : 'The salon will confirm your request soon.')}</p>
@@ -447,10 +436,10 @@ function DoneActions({ m }: { m: M }) {
   return (
     <>
       <div style={S('display:flex;gap:10px')}>
-        <button onClick={m.reset} style={S('flex:1 1 0;height:48px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500')}>Book another</button>
-        <button className="ghost" onClick={() => m.setCalOpen(!m.calOpen)} aria-expanded={m.calOpen} aria-haspopup="menu" style={S('flex:1 1 0;height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14.5px;font-weight:500')}>Add to calendar</button>
+        <button onClick={m.reset} style={S(BLACK)}>Book again</button>
+        <button className="ghost" onClick={() => m.setCalOpen(!m.calOpen)} aria-expanded={m.calOpen} aria-haspopup="menu" style={S(OUTLINE)}>Add to calendar</button>
       </div>
-      <a href={'/b/' + m.p.slug} style={S('display:flex;align-items:center;justify-content:center;height:48px;border:1px solid #E1E4E9;border-radius:999px;color:#0E1116;text-decoration:none;font-size:14.5px;font-weight:500')}>Back to {m.p.name}</a>
+      <a href={'/b/' + m.p.slug} style={S(OUTLINE + ';flex:0 0 auto')}>Back to {m.p.name}</a>
       {m.calOpen && (
         <div role="menu" aria-label="Add to calendar" style={S('display:flex;flex-direction:column;border:1px solid #E6E8EC;border-radius:18px;overflow:hidden;background:#FFFFFF')}>
           {([['Google Calendar', m.calLinks.google], ['Outlook', m.calLinks.outlook], ['Yahoo Calendar', m.calLinks.yahoo]] as const).map(([l, h], i) => (
@@ -473,9 +462,7 @@ function Desktop({ m }: { m: M }) {
     <div style={S('max-width:1180px;margin:0 auto;box-sizing:border-box;padding:24px 32px 56px;display:flex;flex-direction:column;gap:28px')}>
       <header style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px')}>
         <div style={S('display:flex;align-items:center;gap:12px')}>
-          <button className="ghost" onClick={m.back} aria-label={m.step <= 1 ? `Back to ${p.name}` : 'Back to previous step'} style={S('flex:0 0 44px;width:44px;height:44px;padding:0;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center')}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 6 8.5 12l6 6" /></svg>
-          </button>
+          <button className="ghost" onClick={m.back} aria-label={m.step <= 1 ? `Back to ${p.name}` : 'Back to previous step'} style={S(RING)}>{BACK}</button>
           <div>
             <a href={'/b/' + p.slug} style={S('display:block;font-size:17px;font-weight:600;letter-spacing:-0.01em;color:#0E1116;text-decoration:none')}>{p.name}</a>
             <div style={S('font-size:13px;color:#5E6673')}>Online booking</div>
@@ -484,12 +471,12 @@ function Desktop({ m }: { m: M }) {
         <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:10px')}>
           {m.acct && (
             <div style={S('display:flex;align-items:center;gap:8px;min-height:44px;box-sizing:border-box;padding:0 6px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF')}>
-              <span aria-hidden="true" style={S('flex:0 0 32px;width:32px;height:32px;border-radius:999px;background:#0E1116;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600')}>{initialsOf(m.acct.name || m.acct.email)}</span>
+              <Avatar name={m.acct.name || m.acct.email} size="xs" tone={INK} />
               <span style={S('font-size:14px;font-weight:500')}>{firstOf(m.acct)}</span>
               <button className="ghost" onClick={m.signOutNow} style={S('height:32px;padding:0 12px;border:0;border-radius:999px;background:transparent;color:#5B3DF5;font-size:13px;font-weight:600')}>Sign out</button>
             </div>
           )}
-          <span style={S('padding:6px 14px;border-radius:999px;font-size:13px;font-weight:500;background:' + (pillOn ? '#DDF3EA' : '#EEF0F3') + ';color:' + (pillOn ? '#14624A' : '#4A525E'))}>{pill}</span>
+          <Chip tone={pillOn ? 'green' : 'grey'}>{pill}</Chip>
         </div>
       </header>
 
@@ -500,7 +487,7 @@ function Desktop({ m }: { m: M }) {
               const n = i + 1; const cur = m.step === n; const past = n < m.step;
               return <li key={l}>
                 <button onClick={() => m.goStep(n)} disabled={!past} aria-label={`Step ${n}, ${l}` + (cur ? ', current step' : past ? ', completed' : '')} style={S('display:flex;align-items:center;gap:10px;min-height:44px;padding:0;border:0;background:transparent;font:inherit')}>
-                  <span style={S('flex:0 0 28px;width:28px;height:28px;box-sizing:content-box;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;background:' + (cur ? '#0E1116' : past ? '#DDF3EA' : '#FFFFFF') + ';color:' + (cur ? '#FFFFFF' : past ? '#14624A' : '#5E6673') + ';border:1px solid ' + (cur ? '#0E1116' : past ? '#DDF3EA' : '#E1E4E9'))}>{n}</span>
+                  <span style={S('flex:0 0 28px;width:28px;height:28px;box-sizing:content-box;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;background:' + (cur ? '#0E1116' : past ? TONE.green.bg : '#FFFFFF') + ';color:' + (cur ? '#FFFFFF' : past ? TONE.green.fg : '#5E6673') + ';border:1px solid ' + (cur ? '#0E1116' : past ? TONE.green.bg : '#E1E4E9'))}>{n}</span>
                   <span style={S('font-size:14px;font-weight:' + (cur ? 600 : 500) + ';color:' + (cur ? '#0E1116' : '#5E6673'))}>{l}</span>
                 </button>
               </li>;
@@ -520,7 +507,7 @@ function Desktop({ m }: { m: M }) {
               <ul style={S('margin:0;padding:0;list-style:none;display:flex;flex-direction:column')}>
                 {m.list.map((l) => (
                   <li key={l.id} style={S('display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid #EEF0F3')}>
-                    <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:14.5px;font-weight:600;overflow-wrap:anywhere')}>{l.name}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{fmtDur(l.dur)}</span></span>
+                    <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:14.5px;font-weight:600;overflow-wrap:anywhere')}>{l.name}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{duration(l.dur)}</span></span>
                     <span style={S('flex:0 0 auto;font-size:14.5px;font-weight:600')}>{m.money(l.cents)}</span>
                     <button className="ghost" onClick={() => m.toggle(l.id)} aria-label={'Remove ' + l.name} style={S('flex:0 0 44px;width:44px;height:44px;padding:0;border:0;border-radius:999px;background:transparent;display:flex;align-items:center;justify-content:center')}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
                   </li>
@@ -528,12 +515,12 @@ function Desktop({ m }: { m: M }) {
               </ul>
             )}
             <dl style={S('margin:0;display:flex;flex-direction:column')}>
-              {(m.staff ? true : false) && <div style={S('display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>With</dt><dd style={S('margin:0;font-weight:500;text-align:right;overflow-wrap:anywhere')}>{m.member ? m.member.name : 'Any professional'}</dd></div>}
+              {(m.staff ? true : false) && <div style={S('display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>With</dt><dd style={S('margin:0;font-weight:500;text-align:right;overflow-wrap:anywhere')}>{m.member ? m.member.name : 'Any team member'}</dd></div>}
               {hasWhen && <div style={S('display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>When</dt><dd style={S('margin:0;font-weight:500;text-align:right')}>{m.whenOf(m.slotMin!)}</dd></div>}
               <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:14px 0;border-top:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>Total, {m.durText}</dt><dd style={S('margin:0;font-size:22px;font-weight:600;letter-spacing:-0.02em')}>{m.money(m.totalCents)}</dd></div>
             </dl>
             <div style={S('display:flex;flex-direction:column;gap:10px')}>
-              <button onClick={m.next} disabled={!m.canGo || m.busy} style={S(primaryStyle(m, o.btnH))}>{primaryLabel(m)}</button>
+              <button onClick={m.next} disabled={!m.canGo || m.busy} style={S(primaryStyle(m))}>{primaryLabel(m)}</button>
               {!m.canGo && <p style={S('margin:0;text-align:center;color:#5E6673;font-size:13px')}>{HINTS[m.step - 1]}</p>}
             </div>
           </aside>
@@ -557,9 +544,7 @@ function Mobile({ m }: { m: M }) {
   );
   return <>
     <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px')}>
-      <button className="ghost" onClick={m.back} aria-label={m.step <= 1 ? `Back to ${p.name}` : 'Back to previous step'} style={S('flex:0 0 44px;width:44px;height:44px;padding:0;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center')}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 6 8.5 12l6 6" /></svg>
-      </button>
+      <button className="ghost" onClick={m.back} aria-label={m.step <= 1 ? `Back to ${p.name}` : 'Back to previous step'} style={S(RING)}>{BACK}</button>
       <div style={S('flex:1 1 auto;min-width:0')}>
         <div style={S('font-size:13px;color:#5E6673')}>{p.name}, Step {m.step} of 4</div>
         <h1 style={S('margin:0;font-size:20px;line-height:1.2;font-weight:600;letter-spacing:-0.02em')}>{TITLES[m.step - 1]}</h1>
@@ -574,7 +559,7 @@ function Mobile({ m }: { m: M }) {
         <span style={S('color:#5E6673;font-size:13.5px')}>{m.countText}, {m.durText}</span>
         <span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{m.money(m.totalCents)}</span>
       </div>
-      <button onClick={m.next} disabled={!m.canGo || m.busy} style={S(primaryStyle(m, o.btnH))}>{primaryLabel(m)}</button>
+      <button onClick={m.next} disabled={!m.canGo || m.busy} style={S(primaryStyle(m))}>{primaryLabel(m)}</button>
       {!m.canGo && <p style={S('margin:0;text-align:center;color:#5E6673;font-size:13px')}>{HINTS[m.step - 1]}</p>}
     </div>
   </>;

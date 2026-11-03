@@ -1,5 +1,6 @@
 import { requireCtx } from '@/lib/session';
-import { ymd, zonedToUtc } from '@/lib/format';
+import { minutesOfDay, ymd, zonedToUtc } from '@/lib/format';
+import { clock12 } from '@/lib/display';
 import { addDaysYmd, dayInfo, weekStartOf } from '@/lib/cal';
 import { hrs, type PayRow } from './shared';
 import { PayrollView } from './PayrollView';
@@ -50,9 +51,9 @@ export default async function Payroll({ searchParams }: { searchParams: Promise<
     const total = worked.reduce((a, b) => a + b, 0);
     const planned = dates.reduce((a, _, i) => a + (state[i] === 'done' ? worked[i] : state[i] === 'today' ? Math.max(worked[i], sched[i]) : sched[i]), 0);
     const m = money.get(p.id);
-    const since = open ? (() => { const x = new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', hour: 'numeric', minute: '2-digit' }).formatToParts(new Date(open.clock_in)); return `${x.find((y) => y.type === 'hour')!.value}:${x.find((y) => y.type === 'minute')!.value}`; })() : null;
+    const since = open ? clock12(minutesOfDay(open.clock_in, tz)) : null;
     return {
-      id: p.id, name: p.name, role: p.role, photo: photoOf.get(p.id) ?? null, cells, total: hrs(total), planned: w === 0 ? 'of ' + hrs(planned) + ' planned' : 'worked', inSince: since,
+      id: p.id, name: p.name, role: p.role, photo: photoOf.get(p.id) ?? null, cells, total: hrs(total), hours: total, planned: w === 0 ? 'of ' + hrs(planned) + ' planned' : 'worked', inSince: since,
       canClock: owner || p.id === staff.id,
       svc: Number(m?.service_cents ?? 0), prod: Number(m?.product_cents ?? 0), tips: Number(m?.tips_cents ?? 0), rate: Number(m?.commission_pct ?? 0), prodPct: Number(m?.product_pct ?? 10),
       commission: Number(m?.service_commission_cents ?? 0) + Number(m?.product_commission_cents ?? 0), paid: !!m?.paid_at,

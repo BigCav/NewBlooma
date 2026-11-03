@@ -1,33 +1,34 @@
 'use client';
-// 1:1 conversion of the prototype's ClientProfile.dc.html and MobileClientProfile.dc.html. Markup and style strings are kept as written;
-// only the {{ }} holes are real data and handlers are real server actions.
-import { RING, BACK, CLOSE, FIELD_IN, CHEV } from '@/components/ui';
+// The client's profile, on a phone and on a computer. The computer shows the same pages in a drawer on the right.
+import { Avatar, BACK, BLACK, CHEV, CLOSE, Chip, DOTS, FIELD_IN, FieldError, FilterChip, MENU_ROW, Notice, OUTLINE, RING, SwitchRow, dim } from '@/components/ui';
 import { BottomSheet } from '@/components/BottomSheet';
 import { ConfirmBox } from '@/components/ConfirmBox';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { MobileTabs } from '@/components/Chrome';
-import { STATUS_LABEL } from '@/lib/format';
 import { S } from '../../calendar/pickers';
-import { ChatBubbles, ChatComposer, ChatPanel } from '@/components/ChatPanel';
+import { ChatPage, ChatPanel } from '@/components/ChatPanel';
 import { QaGroup, QA_ITEM, QuickActions } from '../../calendar/VisitSheet';
+import { BAR, Field, PAGE } from '../../settings/forms/FormPage';
 import { addNote, deleteClient, recordPatchTest, removeNote, saveFormula, sendClientMessage, setAllergies, setPatchTest, setPreference, updateClient } from '../actions';
 import { phoneInput } from '@/lib/phone';
-import { channelNote, initialsOf, money, patchInfo, type Channels, type ClientRow } from '../shared';
+import { PATCH_TONE, TAG_TONE, patchInfo, type Channels, type ClientRow } from '../shared';
 import { niceDate } from '@/lib/forms-shared';
+import { dollars } from '@/lib/format';
+import { plural } from '@/lib/display';
+import { firstName } from '@/lib/people';
+import { PAYMENT_STATUS, bookingStatus } from '@/lib/status';
+import { TONE } from '@/lib/tones';
 
 export type ProfileData = {
   row: ClientRow; since: string; allergies: string[]; patchOn: string | null; formula: string; reminders: boolean; marketing: boolean;
   notes: { id: string; text: string }[];
   forms: { id: string; name: string; date: string; flagged: boolean; answers: { k: string; v: string }[] }[];
-  history: { id: string; ref: string; date: string; service: string; staff: string; cents: number; when: string; paid: string }[]; historyTotal: number;
   today: string; channels: Channels;
   messages: { id: string; mine: boolean; text: string; day: string; time: string }[];
   appts: { id: string; href: string; month: string; label: string; time: string; status: string; staff: string; services: string; cents: number; pay: string; upcoming: boolean }[];
 };
-// The same colours as the tags in the Clients list: Regular purple, New green, Lapsed amber.
-const TONE: Record<string, [string, string]> = { Regular: ['#EEEAFE', '#3A2BB5'], New: ['#DDF3EA', '#14624A'], Lapsed: ['#FFEBD0', '#7A4204'] };
 
 function useProfile(d: ProfileData) {
   const router = useRouter();
@@ -40,8 +41,6 @@ function useProfile(d: ProfileData) {
     f(); mq.addEventListener('change', f);
     return () => mq.removeEventListener('change', f);
   }, []);
-  const [openHist, setOpenHist] = useState('');
-  const [histPage, setHistPage] = useState(0);
   const [notes, setNotes] = useState(d.notes);
   const [allergies, setAl] = useState(d.allergies);
   const [patchOn, setPatchOn] = useState(d.patchOn);
@@ -51,19 +50,18 @@ function useProfile(d: ProfileData) {
   const [marketing, setMarketing] = useState(d.marketing);
   const [noteDraft, setNoteDraft] = useState('');
   const [allergyDraft, setAllergyDraft] = useState('');
-  const [mode, setMode] = useState<'view' | 'message' | 'edit'>('view');
+  const [mode, setMode] = useState<'view' | 'edit'>('view');
   const [ed, setEd] = useState({ name: '', email: '', phone: '' });
   const [confirmDel, setConfirmDel] = useState(false);
   const [ask, setAsk] = useState<{ kind: 'note' | 'allergy'; key: string; label: string } | null>(null);
-  const [msg, setMsg] = useState('');
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
-  const first = row.name.split(' ')[0];
-  const fail = (e?: string) => { setError(e ?? 'Something went wrong'); };
+  const first = firstName(row.name);
+  const fail = (e?: string) => { setError(e ?? 'Something went wrong. Please try again.'); };
   const run = (fn: () => Promise<{ error?: string }>, ok: () => void) => startT(async () => { const r = await fn(); if (r.error) { fail(r.error); return; } setError(''); ok(); });
 
   return {
-    d, row, first, narrow, busy, openHist, setOpenHist, histPage, setHistPage, notes, allergies, patchOn, formula, setFormula, saved, reminders, marketing, noteDraft, setNoteDraft, allergyDraft, setAllergyDraft, mode, setMode, msg, setMsg, notice, setNotice, error, setError,
+    d, row, first, narrow, busy, notes, allergies, patchOn, formula, setFormula, saved, reminders, marketing, noteDraft, setNoteDraft, allergyDraft, setAllergyDraft, mode, setMode, notice, setNotice, error, setError,
     addNote: () => { const t = noteDraft.trim(); if (!t) return; startT(async () => { const r = await addNote(row.id, t); if (r.error) { fail(r.error); return; } setError(''); setNotes((n) => [...n, { id: r.id!, text: t }]); setNoteDraft(''); setNotice('Note added'); }); },
     removeNote: (id: string) => run(() => removeNote(id), () => { setNotes((n) => n.filter((x) => x.id !== id)); }),
     addAllergy: () => { const t = allergyDraft.trim(); if (!t) return; const next = allergies.includes(t) ? allergies : [...allergies, t]; run(() => setAllergies(row.id, next), () => { setAl(next); setAllergyDraft(''); setNotice('Alert added'); }); },
@@ -76,27 +74,19 @@ function useProfile(d: ProfileData) {
     startEdit: () => { setEd({ name: row.name, email: row.email, phone: row.phone }); setConfirmDel(false); setMode('edit'); setError(''); setNotice(''); },
     saveEdit: () => { if (!ed.name.trim()) { setError("Add the client's name."); return; } run(() => updateClient(row.id, ed.name, ed.email, ed.phone), () => { setMode('view'); setNotice('Details saved'); router.refresh(); }); },
     removeClient: () => run(() => deleteClient(row.id), () => { router.push('/clients'); router.refresh(); }),
-    sendMsg: () => { if (!msg.trim()) { setError('Write a message first.'); return; } run(() => sendClientMessage(row.id, msg), () => { setMsg(''); setMode('view'); setNotice('Message sent to ' + first); }); },
   };
 }
 type C = ReturnType<typeof useProfile>;
 
-const CARD = 'box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:16px';
+const CARD_M = 'box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:20px;display:flex;flex-direction:column;gap:14px';
+const LIST_CARD = 'box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:8px 20px';
 const TXTIN = (h: number) => ({ ...S('box-sizing:border-box;width:100%;height:' + h + 'px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF;flex:1 1 auto;min-width:0'), minHeight: 0 });
-const HIST_PER = 6, FORMS_PER = 5;
-/** Previous / next for a list that is paged on the client. Hidden while everything fits on one page. */
-function Pager({ page, pages, total, per, onPage }: { page: number; pages: number; total: number; per: number; onPage: (p: number) => void }) {
-  if (pages <= 1) return null;
-  const btn = (dis: boolean) => 'height:40px;padding:0 16px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:' + (dis ? '#A6ADB8' : '#0E1116') + ';font:inherit;font-size:13.5px;font-weight:500;cursor:' + (dis ? 'default' : 'pointer');
-  return (
-    <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:12px;border-top:1px solid #EEF0F3')}>
-      <button className="ghost" onClick={() => onPage(page - 1)} disabled={page === 0} style={S(btn(page === 0))}>Previous</button>
-      <span style={S('font-size:13px;color:#5E6673;text-align:center')}>{page * per + 1}–{Math.min(total, (page + 1) * per)} of {total}</span>
-      <button className="ghost" onClick={() => onPage(page + 1)} disabled={page >= pages - 1} style={S(btn(page >= pages - 1))}>Next</button>
-    </div>
-  );
-}
 const X = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>;
+const PHONE_P = 'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z';
+const MAIL_P = 'M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zm0 1 8 6 8-6';
+const CAL_P = 'M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v11A1.5 1.5 0 0 1 19 19.5H5A1.5 1.5 0 0 1 3.5 18V7A1.5 1.5 0 0 1 5 5.5zM3.5 10h17M8 3.5v4M16 3.5v4';
+const ico = (path: string) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')} aria-hidden="true"><path d={path} /></svg>;
+const MAIL_ICON = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3.5" y="5.5" width="17" height="13" rx="3" /><path d="m4.5 7.5 7.5 5.5 7.5-5.5" /></svg>;
 
 /** Asks before a note or an allergy is taken off the client. */
 function AskRemove({ c }: { c: C }) {
@@ -106,300 +96,100 @@ function AskRemove({ c }: { c: C }) {
     onAction={() => { c.setAsk(null); if (a.kind === 'note') c.removeNote(a.key); else c.removeAllergy(Number(a.key)); }} onKeep={() => c.setAsk(null)} />;
 }
 
-/* The section cards. `pad` is the card padding (24 desktop, 20 mobile). */
-function Sections({ c, pad, titles = true, usually = true }: { c: C; pad: number; titles?: boolean; usually?: boolean }) {
-  const { d } = c;
-  const card = CARD + ';padding:' + pad + 'px';
-  const pi = patchInfo(c.patchOn, d.today);
-  const patchStyle = 'display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;background:' + (pi.tone === 'ok' ? '#DDF3EA' : pi.tone === 'bad' ? '#FDECEA' : '#EEF0F3') + ';color:' + (pi.tone === 'ok' ? '#14624A' : pi.tone === 'bad' ? '#B42318' : '#5E6673');
-  const sw = (on: boolean) => ({ st: 'position:relative;flex:0 0 52px;width:52px;height:32px;padding:0;border:0;border-radius:999px;background:' + (on ? '#0E1116' : '#D5D9E0'), kn: 'position:absolute;top:3px;left:' + (on ? 23 : 3) + 'px;width:26px;height:26px;border-radius:999px;background:#FFFFFF' });
-  const rs = sw(c.reminders), ms = sw(c.marketing);
-  const hPages = Math.max(1, Math.ceil(d.history.length / HIST_PER)), hPage = Math.min(c.histPage, hPages - 1);
-  const history = (
-    <section style={S(card)}>{titles && <div><h2 style={S('margin:0;font-size:16px;font-weight:600')}>Visit history</h2></div>}
-      {d.history.slice(hPage * HIST_PER, (hPage + 1) * HIST_PER).map((h) => {
-        const open = c.openHist === h.id;
-        return (
-          <div key={h.id} style={S('border-top:1px solid #EEF0F3')}>
-            <button onClick={() => c.setOpenHist(open ? '' : h.id)} aria-expanded={open} aria-label={`${h.service}, ${h.date}, ${open ? 'hide details' : 'show details'}`} style={S('width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border:0;background:transparent;text-align:left;font:inherit;color:#0E1116;cursor:pointer')}>
-              <span style={S('min-width:0')}><span style={S('display:block;font-size:14.5px;font-weight:600;overflow-wrap:anywhere')}>{h.service}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{h.ref} · {h.date}, With {h.staff}</span></span>
-              <span style={S('flex:0 0 auto;display:flex;align-items:center;gap:10px')}><span style={S('font-size:14.5px;font-weight:600')}>{money(h.cents)}</span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={S('transform:rotate(' + (open ? 180 : 0) + 'deg)')}><path d="M6 9l6 6 6-6" /></svg></span>
-            </button>
-            {open && (
-              <div style={S('margin:0 0 12px;padding:4px 14px;border-radius:16px;background:#F4F5F7')}>
-                {([['Booking', h.ref], ['When', h.when], ['Service', h.service], ['With', h.staff], ['Status', 'Completed'], ['Paid', h.paid]] as const).map(([k, v], j) => (
-                  <div key={k} style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 0' + (j < 5 ? ';border-bottom:1px solid #E6E8EC' : ''))}><span style={S('color:#5E6673')}>{k}</span><span style={S('font-weight:500;text-align:right' + (k === 'Status' ? ';color:#14624A' : ''))}>{v}</span></div>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })}
-      {d.history.length === 0 && <p style={S('margin:0;font-size:14px;color:#5E6673')}>No completed visits yet.</p>}
-      <Pager page={hPage} pages={hPages} total={d.history.length} per={HIST_PER} onPage={(p) => { c.setHistPage(p); c.setOpenHist(''); }} />
-    </section>
-  );
-  const notes = (
-    <section style={S(card)}>{titles && <div><h2 style={S('margin:0;font-size:16px;font-weight:600')}>Notes</h2></div>}
-      {c.ask?.kind === 'note' && <AskRemove c={c} />}
-      {c.notes.length === 0 && <p style={S('margin:0;font-size:14px;color:#5E6673')}>No notes yet.</p>}
-      {c.notes.map((n) => (
-        <div key={n.id} style={S('display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:12px 14px;border-radius:16px;background:#F4F5F7')}>
-          <span style={S('font-size:14px;overflow-wrap:anywhere;padding-top:6px')}>{n.text}</span>
-          <button className="ghost" onClick={() => c.setAsk({ kind: 'note', key: n.id, label: n.text })} aria-label="Remove note" style={S('flex:0 0 36px;width:36px;height:36px;border:0;border-radius:999px;background:transparent;display:flex;align-items:center;justify-content:center')}>{X}</button>
-        </div>
-      ))}
-      <div style={S('display:flex;gap:8px')}><label htmlFor="pf-note" style={S('position:absolute;left:-9999px')}>Add a note</label>
-        <input id="pf-note" type="text" value={c.noteDraft} onChange={(e) => c.setNoteDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') c.addNote(); }} placeholder="Add a note" style={TXTIN(48)} />
-        <button onClick={c.addNote} disabled={c.busy} style={S('height:44px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500;padding:0 20px;height:48px;flex:0 0 auto')}>Add</button></div>
-    </section>
-  );
-  const alerts = (
-    <section style={S(card)}>{titles && <div><h2 style={S('margin:0;font-size:16px;font-weight:600')}>Alerts</h2></div>}
-      <div style={S('display:flex;flex-direction:column;gap:10px')}>
-        <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
-          <span style={S('font-size:14px;font-weight:600')}>Allergies</span>
-          {c.allergies.length === 0 && <span style={S('font-size:13.5px;color:#5E6673')}>None recorded</span>}
-        </div>
-        {c.ask?.kind === 'allergy' && <AskRemove c={c} />}
-        {c.allergies.length > 0 && <div style={S('display:flex;flex-wrap:wrap;gap:8px')}>
-          {c.allergies.map((a, i) => (
-            <span key={a} style={S('display:inline-flex;align-items:center;gap:2px;padding:0 4px 0 14px;height:36px;border-radius:999px;background:#FDECEA;color:#B42318;font-size:13.5px;font-weight:500')}>{a}
-              <button className="ghost" onClick={() => c.setAsk({ kind: 'allergy', key: String(i), label: a })} aria-label={'Remove ' + a} style={S('flex:0 0 32px;width:32px;height:32px;border:0;border-radius:999px;background:transparent;display:flex;align-items:center;justify-content:center')}>{X}</button></span>
-          ))}
-        </div>}
-        <div style={S('display:flex;gap:8px')}><label htmlFor="pf-all" style={S('position:absolute;left:-9999px')}>Add an allergy</label>
-          <input id="pf-all" type="text" value={c.allergyDraft} onChange={(e) => c.setAllergyDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') c.addAllergy(); }} placeholder="Add an allergy" style={TXTIN(44)} />
-          <button onClick={c.addAllergy} disabled={c.busy} style={S('border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;padding:0 20px;height:44px;flex:0 0 auto')}>Add</button></div>
-      </div>
-      <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:14px;border-top:1px solid #EEF0F3')}>
-        <div style={S('display:flex;flex-direction:column;gap:6px')}><span style={S('font-size:14px;font-weight:600')}>Patch test</span><span style={S(patchStyle)}>{pi.text}</span></div>
-        {pi.needsAction && <button onClick={c.recordPatch} disabled={c.busy} style={S('height:44px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;padding:0 20px;flex:0 0 auto')}>Record test</button>}
-      </div>
-    </section>
-  );
-  const formula = (
-    <section style={S(card)}>{titles && <div><h2 style={S('margin:0;font-size:16px;font-weight:600')}>Colour formula</h2></div>}
-      <label htmlFor="pf-formula" style={S('position:absolute;left:-9999px')}>Colour formula</label>
-      <textarea id="pf-formula" value={c.formula} onChange={(e) => c.setFormula(e.target.value)} placeholder="No formula saved yet" style={S('box-sizing:border-box;width:100%;min-height:88px;resize:vertical;padding:12px 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:14.5px;color:#0E1116;background:#FFFFFF')} />
-      {c.formula !== c.saved && <button onClick={c.saveFormula} disabled={c.busy} style={S('height:44px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500;padding:0 20px')}>Save formula</button>}
-    </section>
-  );
-  const switchRow = (id: string, title: string, sub: string, on: boolean, st: { st: string; kn: string }, k: 'reminders' | 'marketing', top = true) => (
-    <div style={S('display:flex;align-items:center;justify-content:space-between;gap:16px;justify-content:space-between;gap:12px;padding:12px 0;' + (top ? 'border-top:1px solid #EEF0F3' : ''))}>
-      <div><div id={id} style={S('font-size:14px;font-weight:600')}>{title}</div><div style={S('font-size:13px;color:#5E6673')}>{sub}</div></div>
-      <button role="switch" aria-checked={on} aria-labelledby={id} onClick={() => c.toggle(k)} style={S(st.st)}><span style={S(st.kn)} /></button>
-    </div>
-  );
-  const prefs = (
-    <section style={S(card)}>{titles && <div><h2 style={S('margin:0;font-size:16px;font-weight:600')}>Preferences</h2></div>}
-      <div style={S('display:flex;flex-direction:column')}>
-        {usually && <div style={S('display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #EEF0F3')}><span style={S('color:#5E6673')}>Usually sees</span><span style={S('font-weight:500;text-align:right')}>{c.row.staff}</span></div>}
-        {switchRow('pf-rem', 'Appointment reminders', 'Text and email', c.reminders, rs, 'reminders', usually)}
-        {switchRow('pf-mk', 'Marketing messages', 'Offers and news', c.marketing, ms, 'marketing')}
-      </div>
-    </section>
-  );
-  const forms = <FormsCard forms={d.forms} card={card} titles={titles} />;
-  return { history, notes, alerts, formula, prefs, forms };
-}
-
-/** Everything this client has completed, newest first, with their answers. */
-function FormsCard({ forms, card, titles = true }: { forms: ProfileData['forms']; card: string; titles?: boolean }) {
-  const [open, setOpen] = useState('');
-  const [page, setPage] = useState(0);
-  const pages = Math.max(1, Math.ceil(forms.length / FORMS_PER)), pg = Math.min(page, pages - 1);
+/** A text box with an Add button beside it (notes, allergies). */
+function AddRow({ id, value, onChange, onAdd, placeholder, busy }: { id: string; value: string; onChange: (v: string) => void; onAdd: () => void; placeholder: string; busy: boolean }) {
   return (
-    <section style={S(card)}>
-      {titles && <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><h2 style={S('margin:0;font-size:16px;font-weight:600')}>Forms</h2></div>}
-      {forms.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No forms completed yet.</p>}
-      {forms.slice(pg * FORMS_PER, (pg + 1) * FORMS_PER).map((f) => (
-        <div key={f.id} style={S('display:flex;flex-direction:column;gap:8px;padding-top:12px;border-top:1px solid #EEF0F3')}>
-          <div style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 12px')}>
-            <div style={S('min-width:0')}><div style={S('font-size:14.5px;font-weight:600;overflow-wrap:anywhere')}>{f.name}</div><div style={S('font-size:13px;color:#5E6673')}>{f.date}{f.flagged ? ' · reaction' : ''}</div></div>
-            <button className="ghost" onClick={() => setOpen(open === f.id ? '' : f.id)} aria-expanded={open === f.id} style={S('height:36px;padding:0 14px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font:inherit;font-size:13px;font-weight:500;cursor:pointer')}>{open === f.id ? 'Hide answers' : 'View answers'}</button>
-          </div>
-          {open === f.id && <dl style={S('margin:0;display:flex;flex-direction:column;border-top:1px solid #EEF0F3')}>{f.answers.map((a, i) => <div key={i} style={S('display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 16px;padding:10px 0;border-bottom:1px solid #EEF0F3;font-size:14px')}><dt style={S('color:#5E6673')}>{a.k}</dt><dd style={S('margin:0;font-weight:500;text-align:right;overflow-wrap:anywhere')}>{a.v}</dd></div>)}</dl>}
-        </div>
-      ))}
-      <Pager page={pg} pages={pages} total={forms.length} per={FORMS_PER} onPage={(p) => { setPage(p); setOpen(''); }} />
-    </section>
+    <div style={S('display:flex;gap:8px')}><label htmlFor={id} style={S('position:absolute;left:-9999px')}>{placeholder}</label>
+      <input id={id} type="text" value={value} onChange={(e) => onChange(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') onAdd(); }} placeholder={placeholder} style={TXTIN(48)} />
+      <button onClick={onAdd} disabled={busy} style={S(BLACK + ';flex:0 0 auto;height:48px;padding:0 20px' + dim(busy))}>{busy ? 'Adding…' : 'Add'}</button></div>
   );
 }
 
-
-/** The profile on a computer: the same layout as the phone, with the pages (overview, appointments, messages ...) behind the three dots. A page opens in the right-hand drawer. */
-function Desktop({ c, initial }: { c: C; initial?: string }) {
-  const { row, d } = c;
-  const [page, setPage] = useState<Sub | null>(initial === 'messages' ? 'messages' : null);
-  const [thread, setThread] = useState(d.messages);
-  const [apFilter, setApFilter] = useState<'all' | 'upcoming' | 'past'>('all');
-  const [openForm, setOpenForm] = useState('');
-  const [qa, setQa] = useState(false);
-  const [rec, setRec] = useState(false);
-  const tone = TONE[row.tag];
-  const book = `/calendar?new=1&c=${encodeURIComponent(row.name)}`;
-  const ring = RING + ';flex:0 0 52px;width:52px;height:52px';
-  const ico = (path: string) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')} aria-hidden="true"><path d={path} /></svg>;
-  const counts: Partial<Record<Sub, number>> = { appointments: d.appts.length, messages: thread.length, notes: c.notes.length, alerts: c.allergies.length, forms: d.forms.length };
-  const open = (v: Sub) => { c.setError(''); c.setNotice(''); setOpenForm(''); setQa(false); setPage(v); };
-  const close = () => { setPage(null); setOpenForm(''); c.setError(''); c.setNotice(''); };
-  const back = () => { if (openForm) { setOpenForm(''); return; } close(); };
-  // Editing opens its own drawer, so the page that asked for it steps aside first.
-  const edit = () => { close(); setQa(false); c.startEdit(); };
-  const cc = { ...c, startEdit: edit };
-  const avatar = (px: number, fs: number) => <div style={S('flex:0 0 ' + px + 'px;width:' + px + 'px;height:' + px + 'px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:' + fs + 'px;font-weight:600;background:' + tone[0] + ';color:' + tone[1])}>{initialsOf(row.name, 2)}</div>;
-  // One row of the list under the contact card: it opens that page in the right-hand drawer.
-  const menuRow = (id: Sub, label: string, indent?: boolean) => (
-    <button key={id} onClick={() => open(id)} style={S(ROW_BTN + (indent ? ';padding-left:24px' : ''))}>
-      <span style={S('flex:1 1 auto;min-width:0')}>{label}</span>
-      {!!counts[id] && <span style={S('flex:0 0 auto;min-width:24px;height:24px;padding:0 8px;box-sizing:border-box;border-radius:999px;background:#EEF0F3;color:#4A525E;font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center')}>{counts[id]}</span>}
-      {CHEV}
-    </button>
-  );
-  const drawer = "position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;display:flex;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4";
-  return (
-    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:20px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
-      <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
-        <Link href="/clients" aria-label="Back to clients" style={S(RING)}>{BACK}</Link>
-        <Link href="/clients" aria-label="Close profile" style={S(RING)}>{CLOSE}</Link>
-      </div>
-      <div style={S('width:100%;display:flex;flex-direction:column;gap:16px')}>
-        <div style={S('display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0 4px;text-align:center')}>
-          {avatar(112, 34)}
-          <h1 style={S('margin:12px 0 0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em;overflow-wrap:anywhere')}>{row.name}</h1>
-          <div style={S('display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px')}><span style={S('display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;background:' + tone[0] + ';color:' + tone[1])}>{row.tag}</span>{!!row.email && <span style={S('font-size:14px;color:#5E6673;overflow-wrap:anywhere')}>{row.email}</span>}</div>
-        </div>
-        {!!c.notice && <span role="status" style={S('align-self:center;padding:4px 12px;border-radius:999px;background:#DDF3EA;color:#14624A;font-size:12.5px;font-weight:500')}>{c.notice}</span>}
-        <div style={S('display:flex;gap:10px')}>
-          <button onClick={() => setQa(true)} aria-label="More actions" aria-haspopup="dialog" style={S(ring)}><svg width="20" height="20" viewBox="0 0 24 24" fill="#0E1116"><circle cx="12" cy="5.5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="18.5" r="1.6" /></svg></button>
-          <button onClick={() => open('messages')} aria-label={'Messages with ' + c.first} style={S(ring)}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3.5" y="5.5" width="17" height="13" rx="3" /><path d="m4.5 7.5 7.5 5.5 7.5-5.5" /></svg></button>
-          <Link href={book} style={S('flex:1 1 0;height:52px;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none')}>Book appointment</Link>
-        </div>
-        <div style={S(LIST_CARD + ';display:flex;flex-direction:column')} className="sum-rows">
-          {[[PHONE_P, row.phone || 'No phone'], [MAIL_P, row.email || 'No email'], [CAL_P, d.since]].map(([p, t]) => <div key={p} style={S('display:flex;align-items:center;gap:12px;padding:14px 0;font-size:15px')}>{ico(p)}<span style={S('min-width:0;overflow-wrap:anywhere')}>{t}</span></div>)}
-        </div>
-        <div style={S(LIST_CARD + ';display:flex;flex-direction:column')} className="sum-rows">
-          {menuRow('overview', 'Overview')}
-          {menuRow('appointments', 'Appointments')}
-          {menuRow('messages', 'Messages')}
-          {menuRow('details', 'Client details')}
-          <button onClick={() => setRec(!rec)} aria-expanded={rec} style={S(ROW_BTN)}><span style={S('flex:1 1 auto')}>Records</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto;transform:rotate(' + (rec ? 180 : 0) + 'deg)')} aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg></button>
-          {rec && <>
-            {menuRow('notes', 'Notes', true)}
-            {menuRow('alerts', 'Allergies and patch tests', true)}
-            {menuRow('formula', 'Colour formula', true)}
-            {menuRow('forms', 'Client forms', true)}
-          </>}
-          {menuRow('prefs', 'Preferences')}
-        </div>
-      </div>
-      {c.mode !== 'view' && <Mobile c={c} drawer />}
-      {qa && (
-        <div className="m-cal cal-root m-drawer">
-          <QuickActions onClose={() => setQa(false)}>
-            <QaGroup first>
-              <button onClick={edit} style={S(QA_ITEM)}>Edit details</button>
-              <Link href={'/clients/forms?c=' + row.id} style={S(QA_ITEM)}>Client forms</Link>
-            </QaGroup>
-          </QuickActions>
-        </div>
-      )}
-      {page && (
-        <div className="m-cal cal-root m-drawer">
-          <div role="dialog" aria-label={SUB_TITLE[page]} style={S(drawer)}>
-            {page === 'messages'
-              ? <ChatPanel fill clientId={row.id} name={row.name} first={c.first} initial={thread} send={(t) => sendClientMessage(row.id, t)} onSent={(m) => setThread((x) => [...x, m])} onBack={back} />
-              : (<>
-                <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px;border-bottom:1px solid #E6E8EC;margin-bottom:8px')}>
-                  <button onClick={back} aria-label="Back" style={S(RING)}>{BACK}</button>
-                  {avatar(36, 13)}
-                  <div style={S('flex:1 1 auto;min-width:0;font-size:18px;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{row.name}</div>
-                  <button onClick={close} aria-label="Close" style={S(RING)}>{CLOSE}</button>
-                </header>
-                <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 24px;display:flex;flex-direction:column;gap:16px')}>
-                  {!!c.error && c.mode === 'view' && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
-                  <ProfilePages c={cc} view={page} setView={(v) => { setOpenForm(''); setPage(v === 'home' ? null : v); }} thread={thread} apFilter={apFilter} setApFilter={setApFilter} openForm={openForm} setOpenForm={setOpenForm} title />
-                </main>
-              </>)}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+/** The number beside a menu row (how many notes, forms ...). */
+const Count = ({ n }: { n: number }) => <span style={S('flex:0 0 auto;min-width:24px;height:24px;padding:0 8px;box-sizing:border-box;border-radius:999px;font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center;background:' + TONE.grey.bg + ';color:' + TONE.grey.fg)}>{n}</span>;
 
 type Sub = 'home' | 'overview' | 'appointments' | 'messages' | 'details' | 'notes' | 'alerts' | 'formula' | 'forms' | 'prefs';
 const SUB_TITLE: Record<Sub, string> = { home: '', overview: 'Overview', appointments: 'Appointments', messages: 'Messages', details: 'Client details', notes: 'Notes', alerts: 'Allergies and patch tests', formula: 'Colour formula', forms: 'Client forms', prefs: 'Preferences' };
 
-/** How each kind of visit looks in the appointments list, so a glance tells them apart. */
-const VISIT: Record<string, { label: string; card: string; fg: string; chipBg: string; chipFg: string; strike?: boolean }> = {
-  pending: { label: 'Needs approval', card: 'background:#FFF4E5;border:1px solid #F6D9A8', fg: '#7A4204', chipBg: '#FFEBD0', chipFg: '#7A4204' },
-  confirmed: { label: 'Confirmed', card: 'background:#ECE8FE;border:1px solid #ECE8FE', fg: '#3A2BB5', chipBg: '#FFFFFF', chipFg: '#3A2BB5' },
-  checked_in: { label: 'Checked in', card: 'background:#E9F0FF;border:1px solid #E9F0FF', fg: '#1B4A8A', chipBg: '#FFFFFF', chipFg: '#1B4A8A' },
-  in_progress: { label: 'In progress', card: 'background:#5B3DF5;border:1px solid #5B3DF5', fg: '#FFFFFF', chipBg: '#FFFFFF', chipFg: '#5B3DF5' },
-  completed: { label: 'Completed', card: 'background:#FFFFFF;border:1px solid #E6E8EC', fg: '#0E1116', chipBg: '#DDF3EA', chipFg: '#14624A' },
-  cancelled: { label: 'Cancelled', card: 'background:#FDF0EF;border:1px solid #FDF0EF', fg: '#9A7773', chipBg: '#FFFFFF', chipFg: '#B42318', strike: true },
-  no_show: { label: 'No-show', card: 'background:#FFF6E8;border:1px solid #FFF6E8', fg: '#8F7A5C', chipBg: '#FFFFFF', chipFg: '#7A4204', strike: true },
-  refunded: { label: 'Refunded', card: 'background:#FDF0EF;border:1px solid #FDF0EF', fg: '#9A7773', chipBg: '#FFFFFF', chipFg: '#B42318', strike: true },
-};
+/** What a visit in the appointments list is called and coloured: the booking status table, plus Refunded for a refunded sale. */
+const visitStatus = (s: string) => (s === 'refunded' ? PAYMENT_STATUS.refunded : bookingStatus(s));
+/** Visits that did not happen (or were paid back) sit in a faded red card with the text struck through. */
+const STRUCK = ['cancelled', 'no_show', 'refunded'];
+const CARD_PLAIN = 'background:#FFFFFF;border:1px solid #E6E8EC;color:#0E1116';
+const CARD_STRUCK = 'background:color-mix(in srgb, ' + TONE.red.bg + ' 45%, #FFFFFF);border:1px solid ' + TONE.red.bg + ';color:' + TONE.red.fg;
 
-/** A labelled field in a rounded card: the label sits small above the value. */
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label style={S('display:block;box-sizing:border-box;padding:10px 16px 12px;border:1px solid #E1E4E9;border-radius:16px;background:#FFFFFF')}><span style={S('display:block;font-size:12.5px;color:#5E6673')}>{label}</span>{children}</label>;
-}
-const CARD_M = 'box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:20px;display:flex;flex-direction:column;gap:14px';
-const LIST_CARD = 'box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:8px 20px';
-const ROW_BTN = 'display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:58px;padding:0 4px;border:0;background:transparent;font:inherit;font-size:16px;text-align:left;color:#0E1116;cursor:pointer';
-const PHONE_P = 'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z';
-const MAIL_P = 'M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zm0 1 8 6 8-6';
-const CAL_P = 'M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v11A1.5 1.5 0 0 1 19 19.5H5A1.5 1.5 0 0 1 3.5 18V7A1.5 1.5 0 0 1 5 5.5zM3.5 10h17M8 3.5v4M16 3.5v4';
-const BLACK = 'height:48px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500;padding:0 20px;flex:0 0 auto';
-
-/** A bottom bar pinned to the foot of the page, as on the booking and checkout pages. */
-function BottomBar({ error, children }: { error?: string; children: React.ReactNode }) {
-  return (
-    <div style={S('flex:0 0 auto;padding:14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3;display:flex;flex-direction:column;gap:12px')}>
-      {!!error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{error}</p>}
-      {children}
-    </div>
+/** The front page of a profile: who it is, the three round actions, contact details and the list of pages. */
+function ProfileHome({ c, messages, rec, setRec, onOpen, onMore }: { c: C; messages: number; rec: boolean; setRec: (v: boolean) => void; onOpen: (v: Sub) => void; onMore: () => void }) {
+  const { row, d } = c;
+  const book = `/calendar?new=1&c=${encodeURIComponent(row.name)}`;
+  const ring = RING + ';flex:0 0 52px;width:52px;height:52px';
+  const counts: Partial<Record<Sub, number>> = { appointments: d.appts.length, messages, notes: c.notes.length, alerts: c.allergies.length, forms: d.forms.length };
+  const menu = (id: Sub, label: string, indent?: boolean) => (
+    <button key={id} onClick={() => onOpen(id)} style={S(MENU_ROW + (indent ? ';padding-left:24px' : ''))}>
+      <span style={S('flex:1 1 auto;min-width:0')}>{label}</span>
+      {!!counts[id] && <Count n={counts[id]!} />}
+      {CHEV}
+    </button>
   );
+  return (<>
+    <div style={S('display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0 4px;text-align:center')}>
+      <Avatar name={row.name} size="hero" />
+      <h1 style={S('margin:12px 0 0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em;overflow-wrap:anywhere')}>{row.name}</h1>
+      <div style={S('display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px')}><Chip tone={TAG_TONE[row.tag]}>{row.tag}</Chip>{!!row.email && <span style={S('font-size:14px;color:#5E6673;overflow-wrap:anywhere')}>{row.email}</span>}</div>
+    </div>
+    {!!c.notice && <div style={S('align-self:center')}><Notice>{c.notice}</Notice></div>}
+    <div style={S('display:flex;gap:10px')}>
+      <button onClick={onMore} aria-label="More actions" aria-haspopup="dialog" style={S(ring)}>{DOTS}</button>
+      <button onClick={() => onOpen('messages')} aria-label={'Messages with ' + c.first} style={S(ring)}>{MAIL_ICON}</button>
+      <Link href={book} style={S(BLACK)}>Book appointment</Link>
+    </div>
+    <div style={S(LIST_CARD + ';display:flex;flex-direction:column')} className="sum-rows">
+      {[[PHONE_P, row.phone || 'No phone'], [MAIL_P, row.email || 'No email'], [CAL_P, d.since]].map(([p, t]) => <div key={p} style={S('display:flex;align-items:center;gap:12px;padding:14px 0;font-size:15px')}>{ico(p)}<span style={S('min-width:0;overflow-wrap:anywhere')}>{t}</span></div>)}
+    </div>
+    <div style={S(LIST_CARD + ';display:flex;flex-direction:column')} className="sum-rows">
+      {menu('overview', 'Overview')}
+      {menu('appointments', 'Appointments')}
+      {menu('messages', 'Messages')}
+      {menu('details', 'Client details')}
+      <button onClick={() => setRec(!rec)} aria-expanded={rec} style={S(MENU_ROW)}><span style={S('flex:1 1 auto')}>Records</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto;transform:rotate(' + (rec ? 180 : 0) + 'deg)')} aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg></button>
+      {rec && <>
+        {menu('notes', 'Notes', true)}
+        {menu('alerts', 'Allergies and patch tests', true)}
+        {menu('formula', 'Colour formula', true)}
+        {menu('forms', 'Client forms', true)}
+      </>}
+      {menu('prefs', 'Preferences')}
+    </div>
+  </>);
 }
 
-/** The pages of a client's profile (overview, appointments, details, notes ...). The phone and the desktop show the same ones. */
-function ProfilePages({ c, view, setView, thread, apFilter, setApFilter, openForm, setOpenForm, title }: {
-  c: C; view: Sub; setView: (v: Sub) => void; thread: ProfileData['messages']; apFilter: 'all' | 'upcoming' | 'past'; setApFilter: (f: 'all' | 'upcoming' | 'past') => void;
+/** The pages of a client's profile (overview, appointments, details, notes ...). The phone and the desktop drawer show the same ones. */
+function ProfilePages({ c, view, setView, apFilter, setApFilter, openForm, setOpenForm, title }: {
+  c: C; view: Sub; setView: (v: Sub) => void; apFilter: 'all' | 'upcoming' | 'past'; setApFilter: (f: 'all' | 'upcoming' | 'past') => void;
   openForm: string; setOpenForm: (id: string) => void; title?: boolean;
 }) {
   const { row, d } = c;
-  const s = Sections({ c, pad: 20, titles: false, usually: false });
-  const card = LIST_CARD, rowCss = ROW_BTN;
+  const card = LIST_CARD, rowCss = MENU_ROW;
   const appts = d.appts.filter((a) => (apFilter === 'all' ? true : apFilter === 'upcoming' ? a.upcoming : !a.upcoming));
   const groups: { month: string; items: typeof appts }[] = [];
   appts.forEach((a) => { const g = groups[groups.length - 1]; if (g && g.month === a.month) g.items.push(a); else groups.push({ month: a.month, items: [a] }); });
   const avg = row.visits ? Math.round(row.spentCents / row.visits) : 0;
   const pi = patchInfo(c.patchOn, d.today);
-  const piBg = pi.tone === 'ok' ? '#DDF3EA' : pi.tone === 'bad' ? '#FDECEA' : '#EEF0F3', piFg = pi.tone === 'ok' ? '#14624A' : pi.tone === 'bad' ? '#B42318' : '#5E6673';
   const greyRow = 'display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;border-radius:16px;background:#F4F5F7';
   const xBtn = 'flex:0 0 36px;width:36px;height:36px;border:0;border-radius:999px;background:transparent;display:flex;align-items:center;justify-content:center';
-  const addRow = (id: string, value: string, set: (v: string) => void, add: () => void, ph: string) => (
-    <div style={S('display:flex;gap:8px')}><label htmlFor={id} style={S('position:absolute;left:-9999px')}>{ph}</label>
-      <input id={id} type="text" value={value} onChange={(e) => set(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') add(); }} placeholder={ph} style={TXTIN(48)} />
-      <button onClick={add} disabled={c.busy} style={S(BLACK)}>Add</button></div>
-  );
   return (<>
         {title && view !== 'home' && !openForm && <h2 style={S('margin:8px 0 0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>{SUB_TITLE[view]}</h2>}
+        {view !== 'home' && !!c.notice && <Notice>{c.notice}</Notice>}
 
         {view === 'overview' && (<>
           <section aria-label="Total spent" style={S('box-sizing:border-box;border-radius:24px;background:#0E1116;color:#FFFFFF;padding:22px 22px 20px')}>
             <div style={S('font-size:13.5px;opacity:0.7')}>Total spent</div>
-            <div style={S('margin-top:4px;font-size:40px;line-height:1.1;font-weight:600;letter-spacing:-0.03em')}>{money(row.spentCents)}</div>
-            <div style={S('margin-top:6px;font-size:14px;opacity:0.7')}>{row.visits + (row.visits === 1 ? ' visit' : ' visits') + (row.visits ? ', ' + money(Math.round(avg / 100) * 100) + ' on average' : '')}</div>
+            <div style={S('margin-top:4px;font-size:40px;line-height:1.1;font-weight:600;letter-spacing:-0.03em')}>{dollars(row.spentCents)}</div>
+            <div style={S('margin-top:6px;font-size:14px;opacity:0.7')}>{plural(row.visits, 'visit') + (row.visits ? ', ' + dollars(Math.round(avg / 100) * 100) + ' on average' : '')}</div>
           </section>
           <section aria-label="Last and next visit" style={S('display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px')}>
             <div style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:20px;padding:16px')}><div style={S('font-size:13px;color:#5E6673')}>Last visit</div><div style={S('margin-top:4px;font-size:18px;font-weight:600;letter-spacing:-0.02em;overflow-wrap:anywhere')}>{row.last}</div></div>
-            <div style={S('box-sizing:border-box;background:#ECE8FE;border-radius:20px;padding:16px;color:#3A2BB5')}><div style={S('font-size:13px;opacity:0.8')}>Next booking</div><div style={S('margin-top:4px;font-size:18px;font-weight:600;letter-spacing:-0.02em;overflow-wrap:anywhere')}>{row.next}</div></div>
+            <div style={S('box-sizing:border-box;background:' + TONE.purple.bg + ';border-radius:20px;padding:16px;color:' + TONE.purple.fg)}><div style={S('font-size:13px;opacity:0.8')}>Next appointment</div><div style={S('margin-top:4px;font-size:18px;font-weight:600;letter-spacing:-0.02em;overflow-wrap:anywhere')}>{row.next}</div></div>
           </section>
           <div style={S(card + ';display:flex;flex-direction:column')} className="sum-rows">
             {([
@@ -418,19 +208,19 @@ function ProfilePages({ c, view, setView, thread, apFilter, setApFilter, openFor
 
         {view === 'appointments' && (<>
           <div role="group" aria-label="Filter appointments" className="hscroll" style={S('display:flex;gap:8px;overflow-x:auto')}>
-            {([['all', 'All'], ['upcoming', 'Upcoming'], ['past', 'Past']] as const).map(([id, l]) => <button key={id} onClick={() => setApFilter(id)} aria-pressed={apFilter === id} style={S('flex:0 0 auto;height:44px;padding:0 18px;border-radius:999px;font-size:14px;font-weight:500;border:1px solid ' + (apFilter === id ? '#0E1116' : '#E1E4E9') + ';background:' + (apFilter === id ? '#0E1116' : '#FFFFFF') + ';color:' + (apFilter === id ? '#FFFFFF' : '#0E1116'))}>{l}</button>)}
+            {([['all', 'All'], ['upcoming', 'Upcoming'], ['past', 'Past']] as const).map(([id, l]) => <FilterChip key={id} phone on={apFilter === id} onClick={() => setApFilter(id)}>{l}</FilterChip>)}
           </div>
           {groups.map((g) => (
             <div key={g.month} style={S('display:flex;flex-direction:column;gap:10px')}>
               <h3 style={S('margin:6px 0 0;font-size:15px;font-weight:600;color:#5E6673')}>{g.month}</h3>
               {g.items.map((a) => {
-                const v = VISIT[a.status] ?? VISIT.confirmed;
+                const st = visitStatus(a.status), strike = STRUCK.includes(a.status);
                 return (
-                  <Link key={a.id} href={a.href} aria-label={a.label + ', ' + a.services + ', ' + v.label} style={S('display:block;text-decoration:none;box-sizing:border-box;padding:14px 16px;border-radius:20px;color:' + v.fg + ';' + v.card)}>
-                    <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px')}><span style={S('font-size:16px;font-weight:600')}>{a.label}</span><span style={S('font-size:14.5px;font-weight:500;flex:0 0 auto' + (v.strike ? ';text-decoration:line-through' : ''))}>{money(a.cents)}</span></div>
-                    <div style={S('margin-top:2px;font-size:14px;overflow-wrap:anywhere' + (v.strike ? ';text-decoration:line-through' : ''))}>{(a.time ? a.time + ' · ' : '') + a.services + (a.staff ? ' with ' + a.staff : '')}</div>
+                  <Link key={a.id} href={a.href} aria-label={a.label + ', ' + a.services + ', ' + st.label} style={S('display:block;text-decoration:none;box-sizing:border-box;padding:14px 16px;border-radius:20px;' + (strike ? CARD_STRUCK : CARD_PLAIN))}>
+                    <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px')}><span style={S('font-size:16px;font-weight:600')}>{a.label}</span><span style={S('font-size:14.5px;font-weight:500;flex:0 0 auto' + (strike ? ';text-decoration:line-through' : ''))}>{dollars(a.cents)}</span></div>
+                    <div style={S('margin-top:2px;font-size:14px;overflow-wrap:anywhere' + (strike ? ';text-decoration:line-through' : ''))}>{(a.time ? a.time + ' · ' : '') + a.services + (a.staff ? ' with ' + a.staff : '')}</div>
                     <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px')}>
-                      <span style={S('display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;background:' + v.chipBg + ';color:' + v.chipFg)}>{v.label}</span>
+                      <Chip tone={st.tone}>{st.label}</Chip>
                       {!!a.pay && <span style={S('font-size:12.5px;opacity:0.85')}>{a.pay}</span>}
                     </div>
                   </Link>
@@ -441,16 +231,26 @@ function ProfilePages({ c, view, setView, thread, apFilter, setApFilter, openFor
           {appts.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>{apFilter === 'upcoming' ? 'Nothing coming up.' : apFilter === 'past' ? 'No past appointments.' : 'No appointments yet.'}</p>}
         </>)}
 
-        {view === 'messages' && <ChatBubbles thread={thread} />}
-
         {view === 'details' && (<>
           <div style={S(card + ';display:flex;flex-direction:column')} className="sum-rows">
             {([['Name', row.name], ['Phone', row.phone || 'Not added'], ['Email', row.email || 'Not added'], ['Client since', d.since.replace('Client since ', '')]] as [string, string][]).map(([l, v]) => <div key={l} style={S('display:flex;justify-content:space-between;gap:12px;padding:14px 0;font-size:15px')}><span style={S('color:#5E6673')}>{l}</span><span style={S('font-weight:500;text-align:right;overflow-wrap:anywhere')}>{v}</span></div>)}
           </div>
-          <button onClick={c.startEdit} style={S('height:52px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14.5px;font-weight:500;cursor:pointer')}>Edit details</button>
+          <button className="ghost" onClick={c.startEdit} style={S(OUTLINE + ';flex:0 0 auto')}>Edit details</button>
         </>)}
 
-        {view === 'notes' && s.notes}
+        {view === 'notes' && (
+          <section style={S(CARD_M)}>
+            {c.ask?.kind === 'note' && <AskRemove c={c} />}
+            {c.notes.length === 0 && <p style={S('margin:0;font-size:14px;color:#5E6673')}>No notes yet.</p>}
+            {c.notes.map((n) => (
+              <div key={n.id} style={S(greyRow + ';align-items:flex-start')}>
+                <span style={S('font-size:14px;overflow-wrap:anywhere;padding-top:6px')}>{n.text}</span>
+                <button className="ghost" onClick={() => c.setAsk({ kind: 'note', key: n.id, label: n.text })} aria-label="Remove note" style={S(xBtn)}>{X}</button>
+              </div>
+            ))}
+            <AddRow id="pf-note" value={c.noteDraft} onChange={c.setNoteDraft} onAdd={c.addNote} placeholder="Add a note" busy={c.busy} />
+          </section>
+        )}
 
         {view === 'alerts' && (<>
           <section style={S(CARD_M)}>
@@ -463,18 +263,18 @@ function ProfilePages({ c, view, setView, thread, apFilter, setApFilter, openFor
                 <button className="ghost" onClick={() => c.setAsk({ kind: 'allergy', key: String(i), label: a })} aria-label={'Remove ' + a} style={S(xBtn)}>{X}</button>
               </div>
             ))}
-            {addRow('pf-all', c.allergyDraft, c.setAllergyDraft, c.addAllergy, 'Add an allergy')}
+            <AddRow id="pf-all" value={c.allergyDraft} onChange={c.setAllergyDraft} onAdd={c.addAllergy} placeholder="Add an allergy" busy={c.busy} />
           </section>
           <section style={S(CARD_M)}>
             <h3 style={S('margin:0;font-size:16px;font-weight:600')}>Patch test</h3>
             <div style={S(greyRow)}>
-              <span style={S('display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:600;background:' + piBg + ';color:' + piFg)}>{pi.text}</span>
+              <Chip tone={PATCH_TONE[pi.tone]}>{pi.text}</Chip>
               {c.patchOn && <span style={S('font-size:13px;color:#5E6673')}>{'Tested ' + niceDate(c.patchOn)}</span>}
             </div>
             <Field label="Test date"><input type="date" value={c.patchOn ?? ''} max={d.today} onChange={(e) => { if (e.target.value) c.setPatch(e.target.value); }} style={FIELD_IN} /></Field>
             <div style={S('display:flex;gap:10px')}>
-              <button onClick={c.recordPatch} disabled={c.busy} style={S(BLACK + ';flex:1 1 0')}>Record today</button>
-              {c.patchOn && <button className="ghost" onClick={() => c.setPatch(null)} disabled={c.busy} style={S('flex:1 1 0;height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#B42318;font-size:14px;font-weight:500')}>Remove</button>}
+              <button onClick={c.recordPatch} disabled={c.busy} style={S(BLACK + dim(c.busy))}>Record today</button>
+              {c.patchOn && <button className="ghost" onClick={() => c.setPatch(null)} disabled={c.busy} style={S(OUTLINE + ';color:#B42318' + dim(c.busy))}>Remove</button>}
             </div>
           </section>
         </>)}
@@ -484,7 +284,7 @@ function ProfilePages({ c, view, setView, thread, apFilter, setApFilter, openFor
             <h3 style={S('margin:0;font-size:16px;font-weight:600')}>Formula</h3>
             <label htmlFor="pf-formula" style={S('position:absolute;left:-9999px')}>Colour formula</label>
             <textarea id="pf-formula" value={c.formula} onChange={(e) => c.setFormula(e.target.value)} placeholder="No formula saved yet" rows={6} style={S('box-sizing:border-box;width:100%;resize:none;padding:12px 14px;border:1px solid #E1E4E9;border-radius:16px;background:#F4F5F7;font:inherit;font-size:14.5px;color:#0E1116')} />
-            <button onClick={c.saveFormula} disabled={c.busy || c.formula === c.saved} style={S(BLACK + ';opacity:' + (c.formula === c.saved ? 0.45 : 1))}>Save formula</button>
+            <button onClick={c.saveFormula} disabled={c.busy || c.formula === c.saved} style={S(BLACK + ';flex:0 0 auto' + dim(c.busy || c.formula === c.saved))}>{c.busy ? 'Saving…' : 'Save formula'}</button>
           </section>
         )}
 
@@ -494,20 +294,20 @@ function ProfilePages({ c, view, setView, thread, apFilter, setApFilter, openFor
             const [when, ...rest] = f.date.split(' · ');
             return (
               <button key={f.id} onClick={() => setOpenForm(f.id)} style={S('display:flex;align-items:center;gap:14px;width:100%;box-sizing:border-box;padding:16px;border:1px solid #E6E8EC;border-radius:22px;background:#FFFFFF;text-align:left;font:inherit;color:#0E1116;cursor:pointer')}>
-                <span style={S('flex:0 0 44px;width:44px;height:44px;border-radius:14px;background:#EEEAFE;display:flex;align-items:center;justify-content:center')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3A2BB5" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="2.5" /><path d="M9 9h6M9 13h6M9 17h3" /></svg></span>
+                <span style={S('flex:0 0 44px;width:44px;height:44px;border-radius:14px;background:' + TONE.purple.bg + ';display:flex;align-items:center;justify-content:center')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={TONE.purple.fg} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="2.5" /><path d="M9 9h6M9 13h6M9 17h3" /></svg></span>
                 <span style={S('flex:1 1 auto;min-width:0')}>
                   <span style={S('display:block;font-size:16px;font-weight:600;letter-spacing:-0.01em;overflow-wrap:anywhere')}>{f.name}</span>
                   <span style={S('display:block;margin-top:2px;font-size:13px;color:#5E6673;overflow-wrap:anywhere')}>{when}</span>
                   {(rest.length > 0 || f.flagged) && <span style={S('display:flex;flex-wrap:wrap;gap:6px;margin-top:8px')}>
-                    {rest.map((r) => <span key={r} style={S('padding:3px 10px;border-radius:999px;background:#EEF0F3;color:#4A525E;font-size:12px;font-weight:500')}>{r.replace('booking ', 'Booking ')}</span>)}
-                    {f.flagged && <span style={S('padding:3px 10px;border-radius:999px;background:#FDECEA;color:#B42318;font-size:12px;font-weight:600')}>Reaction noted</span>}
+                    {rest.map((r) => <Chip key={r} tone="grey">{r}</Chip>)}
+                    {f.flagged && <Chip tone="red">Reaction noted</Chip>}
                   </span>}
                 </span>
                 {CHEV}
               </button>
             );
           })}
-          <Link href={'/clients/forms?c=' + row.id} style={S('display:flex;align-items:center;justify-content:center;height:52px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14.5px;font-weight:500;text-decoration:none')}>Open client forms</Link>
+          <Link href={'/clients/forms?c=' + row.id} style={S(OUTLINE + ';flex:0 0 auto')}>View forms</Link>
         </>)}
         {view === 'forms' && !!openForm && (() => {
           const f = d.forms.find((x) => x.id === openForm);
@@ -518,9 +318,9 @@ function ProfilePages({ c, view, setView, thread, apFilter, setApFilter, openFor
           return (<>
             <div>
               <h2 style={S('margin:8px 0 0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em;overflow-wrap:anywhere')}>{f.name}</h2>
-              <p style={S('margin:6px 0 0;font-size:14px;color:#5E6673')}>{'Completed ' + when + (rest.length ? ' · ' + rest.map((r) => r.replace('booking ', 'Booking ')).join(' · ') : '')}</p>
+              <p style={S('margin:6px 0 0;font-size:14px;color:#5E6673')}>{'Completed ' + when + (rest.length ? ' · ' + rest.join(' · ') : '')}</p>
             </div>
-            {f.flagged && <div style={S('padding:12px 14px;border-radius:16px;background:#FDECEA;color:#B42318;font-size:13.5px;font-weight:600')}>A reaction was noted on this form.</div>}
+            {f.flagged && <div style={S('padding:12px 14px;border-radius:16px;background:' + TONE.red.bg + ';color:' + TONE.red.fg + ';font-size:13.5px;font-weight:600')}>A reaction was noted on this form.</div>}
             {answers.map((a, i) => (
               <div key={i} style={S('box-sizing:border-box;padding:12px 16px 14px;border:1px solid #E1E4E9;border-radius:16px;background:#FFFFFF')}>
                 <div style={S('font-size:12.5px;color:#5E6673;overflow-wrap:anywhere')}>{a.k}</div>
@@ -529,17 +329,80 @@ function ProfilePages({ c, view, setView, thread, apFilter, setApFilter, openFor
             ))}
           </>);
         })()}
-        {view === 'prefs' && s.prefs}
+        {view === 'prefs' && (
+          <section style={S(CARD_M)}>
+            <div style={S('display:flex;flex-direction:column')}>
+              <SwitchRow id="pf-rem" title="Appointment reminders" sub="Text and email" on={c.reminders} toggle={() => c.toggle('reminders')} />
+              <SwitchRow id="pf-mk" title="Marketing messages" sub="Offers and news" on={c.marketing} toggle={() => c.toggle('marketing')} last />
+            </div>
+          </section>
+        )}
   </>);
+}
+
+/** The profile on a computer: the same layout as the phone, with the pages (overview, appointments, messages ...) behind the three dots. A page opens in the right-hand drawer. */
+function Desktop({ c, initial }: { c: C; initial?: string }) {
+  const { row, d } = c;
+  const [page, setPage] = useState<Sub | null>(initial === 'messages' ? 'messages' : null);
+  const [thread, setThread] = useState(d.messages);
+  const [apFilter, setApFilter] = useState<'all' | 'upcoming' | 'past'>('all');
+  const [openForm, setOpenForm] = useState('');
+  const [qa, setQa] = useState(false);
+  const [rec, setRec] = useState(false);
+  const open = (v: Sub) => { c.setError(''); c.setNotice(''); setOpenForm(''); setQa(false); setPage(v); };
+  const close = () => { setPage(null); setOpenForm(''); c.setError(''); c.setNotice(''); };
+  const back = () => { if (openForm) { setOpenForm(''); return; } close(); };
+  // Editing opens its own drawer, so the page that asked for it steps aside first.
+  const edit = () => { close(); setQa(false); c.startEdit(); };
+  const cc = { ...c, startEdit: edit };
+  return (
+    <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:20px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
+      <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
+        <Link href="/clients" aria-label="Back to clients" style={S(RING)}>{BACK}</Link>
+        <Link href="/clients" aria-label="Close profile" style={S(RING)}>{CLOSE}</Link>
+      </div>
+      <div style={S('width:100%;display:flex;flex-direction:column;gap:16px')}>
+        <ProfileHome c={c} messages={thread.length} rec={rec} setRec={setRec} onOpen={open} onMore={() => setQa(true)} />
+      </div>
+      {c.mode !== 'view' && <Mobile c={c} drawer />}
+      {qa && (
+        <div className="m-cal cal-root m-drawer">
+          <QuickActions onClose={() => setQa(false)}>
+            <QaGroup first>
+              <button onClick={edit} style={S(QA_ITEM)}>Edit details</button>
+              <Link href={'/clients/forms?c=' + row.id} style={S(QA_ITEM)}>View forms</Link>
+            </QaGroup>
+          </QuickActions>
+        </div>
+      )}
+      {page && (
+        <div className="m-cal cal-root m-drawer">
+          <div role="dialog" aria-label={SUB_TITLE[page]} style={S(PAGE)}>
+            {page === 'messages'
+              ? <ChatPanel fill clientId={row.id} name={row.name} first={c.first} initial={thread} send={(t) => sendClientMessage(row.id, t)} onSent={(m) => setThread((x) => [...x, m])} onBack={back} />
+              : (<>
+                <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px;border-bottom:1px solid #E6E8EC;margin-bottom:8px')}>
+                  <button onClick={back} aria-label="Back" style={S(RING)}>{BACK}</button>
+                  <Avatar name={row.name} size="sm" />
+                  <div style={S('flex:1 1 auto;min-width:0;font-size:18px;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{row.name}</div>
+                  <button onClick={close} aria-label="Close" style={S(RING)}>{CLOSE}</button>
+                </header>
+                <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 24px;display:flex;flex-direction:column;gap:16px')}>
+                  {!!c.error && c.mode === 'view' && <FieldError>{c.error}</FieldError>}
+                  <ProfilePages c={cc} view={page} setView={(v) => { setOpenForm(''); setPage(v === 'home' ? null : v); }} apFilter={apFilter} setApFilter={setApFilter} openForm={openForm} setOpenForm={setOpenForm} title />
+                </main>
+              </>)}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function Mobile({ c, initial, drawer }: { c: C; initial?: string; drawer?: boolean }) {
   const { row, d } = c;
   const [view, setView] = useState<Sub>(initial === 'messages' ? 'messages' : 'home');
   const [thread, setThread] = useState(d.messages);
-  const [draft, setDraft] = useState('');
-  const [sendErr, setSendErr] = useState('');
-  const [sending, startSend] = useTransition();
   const [rec, setRec] = useState(false);
   const [qa, setQa] = useState(false);
   const [apFilter, setApFilter] = useState<'all' | 'upcoming' | 'past'>('all');
@@ -547,30 +410,7 @@ function Mobile({ c, initial, drawer }: { c: C; initial?: string; drawer?: boole
   const [eqa, setEqa] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
   // Every page opens at its top, whatever the last one was scrolled to.
-  useEffect(() => { const el = mainRef.current; if (!el) return; if (view === 'messages') el.scrollTo({ top: el.scrollHeight }); else el.scrollTo({ top: 0 }); }, [view, c.mode, openForm, thread.length]);
-  const sendChat = () => {
-    const t = draft.trim();
-    if (!t) return;
-    startSend(async () => {
-      const r = await sendClientMessage(row.id, t);
-      if (r.error) { setSendErr(r.error); return; }
-      setSendErr(''); setDraft('');
-      setThread((m) => [...m, { id: 'me-' + Date.now(), mine: true, text: t, day: 'Today', time: new Date().toLocaleTimeString('en-NZ', { hour: 'numeric', minute: '2-digit' }).toLowerCase().replace(/\s+/g, '') }]);
-    });
-  };
-  const tone = TONE[row.tag];
-  const book = `/calendar?new=1&c=${encodeURIComponent(row.name)}`;
-  const avatar = (px: number, fs: number) => <div style={S('flex:0 0 ' + px + 'px;width:' + px + 'px;height:' + px + 'px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:' + fs + 'px;font-weight:600;background:' + tone[0] + ';color:' + tone[1])}>{initialsOf(row.name, 2)}</div>;
-  const rowCss = ROW_BTN;
-  const menu = (id: Sub, label: string, count?: number, indent?: boolean) => (
-    <button key={id} onClick={() => { c.setError(''); c.setNotice(''); setOpenForm(''); setView(id); }} style={S(rowCss + (indent ? ';padding-left:24px' : ''))}>
-      <span style={S('flex:1 1 auto;min-width:0')}>{label}</span>
-      {!!count && <span style={S('flex:0 0 auto;min-width:24px;height:24px;padding:0 8px;box-sizing:border-box;border-radius:999px;background:#EEF0F3;color:#4A525E;font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center')}>{count}</span>}
-      {CHEV}
-    </button>
-  );
-  const ico = (path: string) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')} aria-hidden="true"><path d={path} /></svg>;
-  const PHONE = PHONE_P, MAIL = MAIL_P, CAL = CAL_P, card = LIST_CARD;
+  useEffect(() => { mainRef.current?.scrollTo({ top: 0 }); }, [view, c.mode, openForm]);
   const sheet = (title: string, body: React.ReactNode, onClose: () => void) => (
     <BottomSheet label={title} onClose={onClose} z={6} maxHeight="none" gap={6} handleGap={12}>
         <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px')}><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{title}</h2><button onClick={onClose} aria-label="Close" style={S(RING)}>{CLOSE}</button></div>
@@ -579,15 +419,9 @@ function Mobile({ c, initial, drawer }: { c: C; initial?: string; drawer?: boole
   );
   const page = "position:relative;width:100%;height:100dvh;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4;";
 
-  // Messaging and editing take over the page (on desktop, they slide in from the right instead).
-  const wrap = (label: string, inner: React.ReactNode) => drawer
-    ? <div className="m-cal cal-root m-drawer"><div role="dialog" aria-label={label} style={S(page.replace('position:relative;width:100%;height:100dvh;', 'position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;') + 'background:#F4F5F7')}>{inner}</div></div>
-    : <div className="only-m m-cal cal-root" style={S(page + 'background:#F4F5F7')}>{inner}</div>;
-  if (c.mode === 'message') {
-    return wrap('Message ' + c.first, <ChatPanel fill clientId={row.id} name={row.name} first={c.first} initial={thread} send={(t) => sendClientMessage(row.id, t)} onSent={(m) => setThread((x) => [...x, m])} onBack={() => { c.setMode('view'); c.setError(''); }} />);
-  }
+  // Editing takes over the page (on desktop, it slides in from the right instead).
   if (c.mode === 'edit') {
-    return wrap('Edit details', (
+    const inner = (
       <>
         <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px')}>
           <button onClick={() => { c.setMode('view'); c.setError(''); }} aria-label="Back" style={S(RING)}>{BACK}</button>
@@ -598,79 +432,50 @@ function Mobile({ c, initial, drawer }: { c: C; initial?: string; drawer?: boole
           <Field label="Email"><input type="email" inputMode="email" value={c.ed.email} onChange={(e) => { c.setEd({ ...c.ed, email: e.target.value }); c.setError(''); }} placeholder="name@example.com" style={FIELD_IN} /></Field>
           <Field label="Phone"><input type="tel" inputMode="tel" value={c.ed.phone} onChange={(e) => { c.setEd({ ...c.ed, phone: phoneInput(e.target.value) }); c.setError(''); }} placeholder="Optional" style={FIELD_IN} /></Field>
         </main>
-        <BottomBar error={c.error}>
+        <div style={S(BAR)}>
+          {!!c.error && <FieldError>{c.error}</FieldError>}
           <div style={S('display:flex;gap:10px')}>
-            <button onClick={() => setEqa(true)} aria-label="More actions" aria-haspopup="dialog" style={S(RING + ';flex:0 0 52px;width:52px;height:52px')}><svg width="20" height="20" viewBox="0 0 24 24" fill="#0E1116"><circle cx="12" cy="5.5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="18.5" r="1.6" /></svg></button>
-            <button onClick={c.saveEdit} disabled={c.busy} style={S(BLACK + ';flex:1 1 0;height:52px')}>Save details</button>
+            <button onClick={() => setEqa(true)} aria-label="More actions" aria-haspopup="dialog" style={S(RING + ';flex:0 0 52px;width:52px;height:52px')}>{DOTS}</button>
+            <button onClick={c.saveEdit} disabled={c.busy} style={S(BLACK + dim(c.busy))}>{c.busy ? 'Saving…' : 'Save changes'}</button>
           </div>
-        </BottomBar>
+        </div>
         {eqa && sheet('More actions', !c.confirmDel ? (
           <div style={S('display:flex;flex-direction:column')}>
-            <button onClick={() => c.setConfirmDel(true)} style={S(rowCss + ';color:#B42318')}>Remove client</button>
+            <button onClick={() => c.setConfirmDel(true)} style={S(MENU_ROW + ';color:#B42318')}>Remove client</button>
           </div>
         ) : (
-          <ConfirmBox label="Confirm removal" title={'Remove ' + row.name + ' for good?'} body="Only possible when they have no bookings or sales. Their notes go too." error={c.error} action="Remove client" onAction={c.removeClient} busy={c.busy} onKeep={() => { c.setConfirmDel(false); setEqa(false); }} />
+          <ConfirmBox label="Confirm removal" title={'Remove ' + row.name + ' for good?'} body="Only possible when they have no appointments or sales. Their notes go too." error={c.error} action="Remove client" onAction={c.removeClient} busy={c.busy} onKeep={() => { c.setConfirmDel(false); setEqa(false); }} />
         ), () => { c.setConfirmDel(false); setEqa(false); })}
       </>
-    ));
+    );
+    return drawer
+      ? <div className="m-cal cal-root m-drawer"><div role="dialog" aria-label="Edit details" style={S(PAGE)}>{inner}</div></div>
+      : <div className="only-m m-cal cal-root" style={S(page + 'background:#F4F5F7')}>{inner}</div>;
   }
 
-
+  const openPage = (id: Sub) => { c.setError(''); c.setNotice(''); setOpenForm(''); setView(id); };
   return (
     <div className="only-m m-cal cal-root" style={S(page + 'background:#F4F5F7')}>
       <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px;' + (view !== 'home' ? 'border-bottom:1px solid #E6E8EC;margin-bottom:8px' : ''))}>
         {view === 'home'
           ? <Link href="/clients" aria-label="Back to clients" style={S(RING)}>{BACK}</Link>
           : <button onClick={() => { if (openForm) { setOpenForm(''); return; } setView('home'); c.setError(''); c.setNotice(''); }} aria-label="Back to profile" style={S(RING)}>{BACK}</button>}
-        {view !== 'home' && <>{avatar(36, 13)}<div style={S('flex:1 1 auto;min-width:0;font-size:18px;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{row.name}</div></>}
+        {view !== 'home' && <><Avatar name={row.name} size="sm" /><div style={S('flex:1 1 auto;min-width:0;font-size:18px;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{row.name}</div></>}
         {view === 'home' && <div style={S('flex:1 1 auto')} />}
         <Link href="/clients" aria-label="Close profile" style={S(RING)}>{CLOSE}</Link>
       </header>
       <main ref={mainRef} className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 24px;display:flex;flex-direction:column;gap:16px')}>
-        {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
-
-        {view === 'home' && (<>
-          <div style={S('display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0 4px;text-align:center')}>
-            {avatar(112, 34)}
-            <h1 style={S('margin:12px 0 0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em;overflow-wrap:anywhere')}>{row.name}</h1>
-            <div style={S('display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px')}><span style={S('display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;background:' + tone[0] + ';color:' + tone[1])}>{row.tag}</span>{!!row.email && <span style={S('font-size:14px;color:#5E6673;overflow-wrap:anywhere')}>{row.email}</span>}</div>
-          </div>
-          <div style={S('display:flex;gap:10px')}>
-            <button onClick={() => setQa(true)} aria-label="More actions" aria-haspopup="dialog" style={S(RING + ';flex:0 0 52px;width:52px;height:52px')}><svg width="20" height="20" viewBox="0 0 24 24" fill="#0E1116"><circle cx="12" cy="5.5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="18.5" r="1.6" /></svg></button>
-            <button onClick={() => { c.setError(''); c.setNotice(''); setView('messages'); }} aria-label={'Messages with ' + c.first} style={S(RING + ';flex:0 0 52px;width:52px;height:52px')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3.5" y="5.5" width="17" height="13" rx="3" /><path d="m4.5 7.5 7.5 5.5 7.5-5.5" /></svg></button>
-            <Link href={book} style={S('flex:1 1 0;height:52px;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none')}>Book appointment</Link>
-          </div>
-          <div style={S(card + ';display:flex;flex-direction:column')} className="sum-rows">
-            {[[PHONE, row.phone || 'No phone'], [MAIL, row.email || 'No email'], [CAL, d.since]].map(([p, t]) => <div key={p} style={S('display:flex;align-items:center;gap:12px;padding:14px 0;font-size:15px')}>{ico(p)}<span style={S('min-width:0;overflow-wrap:anywhere')}>{t}</span></div>)}
-          </div>
-          <div style={S(card + ';display:flex;flex-direction:column')} className="sum-rows">
-            {menu('overview', 'Overview')}
-            {menu('appointments', 'Appointments', d.appts.length)}
-            {menu('messages', 'Messages', thread.length)}
-            {menu('details', 'Client details')}
-            <button onClick={() => setRec(!rec)} aria-expanded={rec} style={S(rowCss)}><span style={S('flex:1 1 auto')}>Records</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto;transform:rotate(' + (rec ? 180 : 0) + 'deg)')} aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg></button>
-            {rec && <>
-              {menu('notes', 'Notes', c.notes.length, true)}
-              {menu('alerts', 'Allergies and patch tests', c.allergies.length, true)}
-              {menu('formula', 'Colour formula', undefined, true)}
-              {menu('forms', 'Client forms', d.forms.length, true)}
-            </>}
-            {menu('prefs', 'Preferences')}
-          </div>
-        </>)}
-
-        <ProfilePages c={c} view={view} setView={setView} thread={thread} apFilter={apFilter} setApFilter={setApFilter} openForm={openForm} setOpenForm={setOpenForm} title />
+        {!!c.error && <FieldError>{c.error}</FieldError>}
+        {view === 'home' && <ProfileHome c={c} messages={thread.length} rec={rec} setRec={setRec} onOpen={openPage} onMore={() => setQa(true)} />}
+        <ProfilePages c={c} view={view} setView={setView} apFilter={apFilter} setApFilter={setApFilter} openForm={openForm} setOpenForm={setOpenForm} title />
       </main>
-      {view === 'messages' ? (
-        <BottomBar error={sendErr}>
-          <ChatComposer first={c.first} draft={draft} onDraft={(v) => { setDraft(v); setSendErr(''); }} onSend={sendChat} busy={sending} />
-        </BottomBar>
-      ) : <MobileTabs active="clients" />}
+      <MobileTabs active="clients" />
+      {view === 'messages' && <ChatPage label={'Message ' + c.first} clientId={row.id} name={row.name} first={c.first} initial={thread} send={(t) => sendClientMessage(row.id, t)} onSent={(m) => setThread((x) => [...x, m])} onBack={() => { setView('home'); c.setError(''); }} />}
       {qa && (
         <QuickActions onClose={() => setQa(false)}>
           <QaGroup first>
             <button onClick={() => { setQa(false); c.startEdit(); }} style={S(QA_ITEM)}>Edit details</button>
-            <Link href={'/clients/forms?c=' + row.id} style={S(QA_ITEM)}>Client forms</Link>
+            <Link href={'/clients/forms?c=' + row.id} style={S(QA_ITEM)}>View forms</Link>
           </QaGroup>
         </QuickActions>
       )}

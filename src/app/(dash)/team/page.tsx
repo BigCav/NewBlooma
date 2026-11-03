@@ -1,7 +1,7 @@
 import { requireCtx } from '@/lib/session';
 import { ymd } from '@/lib/format';
 import { dayInfo } from '@/lib/cal';
-import { SHIFTS, clock24, shortRange, type TeamRow } from './shared';
+import { SHIFTS, shortRange, type TeamRow } from './shared';
 import { TeamView } from './TeamView';
 
 export const metadata = { title: 'Team' };
@@ -31,7 +31,7 @@ export default async function Team() {
       cats: (cats ?? []).filter((c) => (svcs ?? []).some((s) => s.category_id === c.id && offered.has(s.id))).map((c) => c.name),
       times: Array.from({ length: 7 }, (_, d) => { const s = at(d); return (s ? [f(s.start_time), f(s.end_time)] : ['09:00', '17:00']) as [string, string]; }),
       cells: Array.from({ length: 7 }, (_, d) => { const s = at(d); return s ? shortRange(f(s.start_time), f(s.end_time)) : 'Off'; }),
-      todayOn: !!t, todayLabel: t ? `${clock24(f(t.start_time))} to ${clock24(f(t.end_time))}` : '',
+      todayOn: !!t, todayLabel: t ? shortRange(f(t.start_time), f(t.end_time)) : '',
     };
   });
   return <TeamView rows={rows} cats={(cats ?? []).map((c) => c.name)} todayWd={todayWd} owner={staff.app_role === 'owner'} />;

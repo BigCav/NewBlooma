@@ -1,10 +1,11 @@
 import { requireCtx } from '@/lib/session';
 import { settleTerminals } from '@/lib/windcave';
 import { dollars, minutesOfDay, ymd, zonedToUtc } from '@/lib/format';
-import { weekStartOf, addDaysYmd, toneFor, TONE_LIST, type CalBooking, type CalBlock } from '@/lib/cal';
+import { weekStartOf, addDaysYmd, toneFor, TONE_LIST, type CalBlock } from '@/lib/cal';
 import { loadSubs, loadTemplates } from '@/lib/forms';
 import { formRows } from '@/lib/forms-shared';
 import { CalendarView } from './CalendarView';
+import type { CalBk } from './calUi';
 import { buildCfg, buildClosed, buildHours, buildOffers, buildRecent, buildServices } from './base';
 
 export const metadata = { title: 'Calendar' };
@@ -44,7 +45,7 @@ export default async function Calendar({ searchParams }: { searchParams: Promise
   const catIdx = new Map<string, number>(); 
   const tpls = await loadTemplates(sb, salon.id);
   const subs = tpls.length ? await loadSubs(sb, [...new Set((bk ?? []).map((x: any) => x.client_id).filter(Boolean))] as string[]) : [];
-  const bookings: CalBooking[] = (bk ?? []).map((x: any) => {
+  const bookings: CalBk[] = (bk ?? []).map((x: any) => {
     const lines = (x.booking_services ?? []) as any[];
     const cid = lines[0]?.services?.category_id as string | undefined;
     const cname = lines[0]?.services?.service_categories?.name as string | undefined;
@@ -56,7 +57,7 @@ export default async function Calendar({ searchParams }: { searchParams: Promise
       id: x.id, ref: x.ref_no, staffId: x.staff_id, clientId: x.client_id, client: x.clients?.name ?? 'Client',
       services: lines.map((l) => l.services?.name).filter(Boolean).join(' + '),
       dayYmd: ymd(x.starts_at, salon.timezone), start: minutesOfDay(x.starts_at, salon.timezone), end: minutesOfDay(x.ends_at, salon.timezone) || 24 * 60,
-      status: x.status, priceCents: lines.reduce((s, l) => s + l.price_cents, 0), paid: sale?.status === 'paid', refunded: sale?.status === 'refunded', paidText: sale?.status === 'paid' ? `Paid ${dollars(sale.total_cents)}${sale.method ? ' by ' + ({ card: 'Card', cash: 'Cash', gift_card: 'Gift card', package: 'Package' } as Record<string, string>)[sale.method] : ''}` : '', saleId: sale?.id ?? null, serviceIds: lines.map((l) => l.service_id),
+      status: x.status, priceCents: lines.reduce((s, l) => s + l.price_cents, 0), paid: sale?.status === 'paid', refunded: sale?.status === 'refunded', paidText: sale?.status === 'paid' ? `Paid ${dollars(sale.total_cents)}${sale.method ? ' by ' + ({ card: 'Card', cash: 'Cash', gift_card: 'Gift card', package: 'Package' } as Record<string, string>)[sale.method] : ''}` : '', saleId: sale?.id ?? null, saleCents: sale?.total_cents as number | undefined, serviceIds: lines.map((l) => l.service_id),
       tone: Math.max(0, TONE_LIST.indexOf(toneFor(cname, cid ? catIdx.get(cid)! : 0))), walkin: x.notes === 'Walk-in', notes: x.notes,
       forms: (() => {
         if (!tpls.length || !x.client_id || x.status === 'completed') return null;

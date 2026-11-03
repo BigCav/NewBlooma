@@ -1,9 +1,10 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { fmtMin, initials } from '@/lib/cal';
+import { fmtMin } from '@/lib/cal';
 import { findClients, recentClients, type ClientHit } from './actions';
-import { S } from './pickers';
-import { slotCss, dayCss, PRIMARY, CLOSE_BTN, ERR, CloseX } from './calUi';
+import { S } from './s';
+import { slotCss, dayCss } from './calUi';
+import { Avatar, avatarCss, BLACK, OUTLINE, RING, BACK, CLOSE, FieldError, dim } from '@/components/ui';
 
 /* Pieces shared by the phone step-by-step flows (new appointment, walk-in, running late, block time, checkout). */
 
@@ -18,7 +19,8 @@ export function useSteps(last: number, onNav: () => void, start = 0) {
   return { step, go, jump, forward, back };
 }
 
-export const AV = 'flex:0 0 40px;width:40px;height:40px;border-radius:999px;background:#EEEAFE;color:#3A2BB5;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600';
+/** @deprecated A person's circle is `<Avatar>` from components/ui; this is its 40px style string for the one caller that still needs it. */
+export const AV = avatarCss('md');
 export const ROW = (on: boolean) => 'display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:64px;padding:8px 14px;margin-bottom:8px;border-radius:16px;font:inherit;text-align:left;color:#0E1116;cursor:pointer;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#F4F5F7' : '#FFFFFF') + (on ? ';box-shadow:inset 0 0 0 1px #0E1116' : '');
 export const TICK = <span aria-hidden="true" style={S('flex:0 0 22px;width:22px;height:22px;border-radius:999px;background:#0E1116;display:flex;align-items:center;justify-content:center')}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5 10 17.5 19 7.5" /></svg></span>;
 export const ico = (children: React.ReactNode) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')} aria-hidden="true">{children}</svg>;
@@ -40,21 +42,21 @@ export function StepShell({ step, titles, onBack, onClose, error, summary, actio
     <div style={S('display:flex;flex-direction:column;flex:1 1 auto;min-height:0;margin:0 -20px -40px')}>
       <div style={S('flex:0 0 auto;padding:0 20px 14px')}>
         <div style={S('display:flex;align-items:center;gap:12px;min-height:44px')}>
-          {(step > 0 || plain) && <button onClick={onBack} aria-label="Back" style={S(CLOSE_BTN)}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 6l-6 6 6 6" /></svg></button>}
+          {(step > 0 || plain) && <button onClick={onBack} aria-label="Back" style={S(RING)}>{BACK}</button>}
           <div style={S('flex:1 1 auto;min-width:0;font-size:13px;color:#5E6673')}>{plain ? '' : 'Step ' + (step + 1) + ' of ' + titles.length}</div>
-          <button onClick={onClose} aria-label="Close" style={S(CLOSE_BTN)}><CloseX /></button>
+          <button onClick={onClose} aria-label="Close" style={S(RING)}>{CLOSE}</button>
         </div>
         {!plain && <div aria-hidden="true" style={S('display:flex;gap:6px;margin-top:12px')}>{titles.map((t, i) => <span key={t} style={S('flex:1 1 0;height:4px;border-radius:999px;background:' + (i <= step ? '#0E1116' : '#E6E8EC'))} />)}</div>}
         <h2 style={S('margin:16px 0 0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>{titles[step]}</h2>
       </div>
       <div style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:4px 20px 16px;display:flex;flex-direction:column;gap:14px')}>
         {children}
-        {error ? <p role="alert" style={S(ERR)}>{error}</p> : null}
+        {error ? <FieldError>{error}</FieldError> : null}
       </div>
       <div style={S('flex:0 0 auto;padding:14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3;display:flex;flex-direction:column;gap:12px')}>
         {summary}
         {bar}
-        {!bar && actions.map((a) => <button key={a.label} onClick={a.onClick} disabled={a.disabled} style={S((a.secondary ? 'flex:0 0 auto;width:100%;height:52px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14.5px;font-weight:500;cursor:pointer' : PRIMARY + ';flex:0 0 auto;width:100%;height:52px') + ';opacity:' + (a.disabled ? 0.45 : 1))}>{a.label}</button>)}
+        {!bar && actions.map((a) => <button key={a.label} onClick={a.onClick} disabled={a.disabled} style={S((a.secondary ? OUTLINE : BLACK) + ';flex:0 0 auto;width:100%;height:52px' + dim(!!a.disabled))}>{a.label}</button>)}
       </div>
     </div>
   );
@@ -77,7 +79,7 @@ function Matches({ query, pickedId, onPick }: { query: string; pickedId: string 
     <div role="listbox" aria-label="Matching clients" style={S('display:flex;flex-direction:column')}>
       {hits.map((h) => (
         <button key={h.id} role="option" aria-selected="false" onClick={() => onPick(h)} style={S(ROW(false))}>
-          <span style={S(AV)}>{initials(h.name)}</span>
+          <Avatar name={h.name} size="lg" />
           <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{h.name}</span>{!!h.sub && <span style={S('display:block;font-size:13px;color:#5E6673;overflow:hidden;text-overflow:ellipsis;white-space:nowrap')}>{h.sub}</span>}</span>
         </button>
       ))}
@@ -89,7 +91,7 @@ type Recent = { id: string; name: string; phone?: string };
 let recentCache: { at: number; list: Recent[] } | null = null;
 
 const rowBody = (name: string, phone: string | undefined, tick: boolean) => (<>
-  <span style={S(AV)}>{initials(name)}</span>
+  <Avatar name={name} size="lg" />
   <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{name}</span>{!!phone && <span style={S('display:block;font-size:13px;color:#5E6673;overflow:hidden;text-overflow:ellipsis;white-space:nowrap')}>{phone}</span>}</span>
   {tick && TICK}
 </>);
@@ -130,15 +132,17 @@ export function ClientStep({ name, clientId, recent, onChange }: { name: string;
 }
 
 /** Team members as separate cards. `any` adds a "First available" card. */
-export function PeopleStep({ team, selected, onPick, offers, any }: { team: { id: string; name: string; role?: string }[]; selected: string; onPick: (id: string) => void; offers?: (id: string) => boolean; any?: boolean }) {
-  const list = [...(any ? [{ id: 'any', name: 'First available', role: 'Whoever is free first' }] : []), ...team];
+export function PeopleStep({ team, selected, onPick, offers, any }: { team: { id: string; name: string; role?: string; photo?: string | null }[]; selected: string; onPick: (id: string) => void; offers?: (id: string) => boolean; any?: boolean }) {
+  const list: { id: string; name: string; role?: string; photo?: string | null }[] = [...(any ? [{ id: 'any', name: 'First available team member', role: 'Whoever is free first' }] : []), ...team];
   return (
     <div role="group" aria-label="Team member" style={S('display:flex;flex-direction:column')}>
       {list.map((m) => {
         const off = m.id !== 'any' && !!offers && !offers(m.id), on = selected === m.id && !off;
         return (
           <button key={m.id} disabled={off} aria-pressed={on} onClick={() => onPick(on && m.id !== 'any' ? '' : m.id)} style={S(ROW(on) + (off ? ';opacity:0.55;cursor:default;background:#FAFBFC' : ''))}>
-            <span style={S(AV)}>{m.id === 'any' ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3A2BB5" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8.5" r="3.5" /><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5" /><path d="M16 5.2a3.4 3.4 0 0 1 0 6.6M18.5 14.8c1.6.8 2.6 2.4 3 5.2" /></svg> : initials(m.name)}</span>
+            {m.id === 'any'
+              ? <Avatar name="" size="lg" icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3A2BB5" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8.5" r="3.5" /><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5" /><path d="M16 5.2a3.4 3.4 0 0 1 0 6.6M18.5 14.8c1.6.8 2.6 2.4 3 5.2" /></svg>} />
+              : <Avatar name={m.name} photo={m.photo} size="lg" />}
             <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{m.name}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{off ? 'Does not offer this service' : m.role || 'Team member'}</span></span>
             {on && TICK}
           </button>
@@ -184,7 +188,7 @@ export function DayTimeStep({ days, day, onDay, slots, why, time, onTime }: {
 export function ClientCard({ name, existing, onChange }: { name: string; existing: boolean; onChange: () => void }) {
   return (
     <div style={S('display:flex;align-items:center;gap:14px;padding:16px;border:1px solid #E6E8EC;border-radius:22px')}>
-      <div style={S('flex:0 0 52px;width:52px;height:52px;border-radius:999px;background:#EEEAFE;color:#3A2BB5;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600')}>{initials(name.trim() || '?')}</div>
+      <Avatar name={name.trim()} size="xl" />
       <div style={S('flex:1 1 auto;min-width:0')}>
         <div style={S('font-size:19px;font-weight:600;letter-spacing:-0.02em;line-height:1.2;overflow-wrap:anywhere')}>{name.trim()}</div>
         <div style={S('margin-top:2px;font-size:13.5px;color:#5E6673')}>{existing ? 'Existing client' : 'New client'}</div>

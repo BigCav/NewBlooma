@@ -1,18 +1,18 @@
 'use server';
 import { revalidatePath } from 'next/cache';
 import { requireOwner, friendly } from '@/lib/session';
+import { toCents } from '@/lib/format';
 
 type Res = { error?: string; id?: string; notice?: string };
 
 export async function issueGiftCard(i: { amount: string; name: string; code: string }): Promise<Res> {
   const { sb, salon } = await requireOwner();
-  const n = Number(String(i.amount).replace(/[^0-9.]/g, ''));
+  const cents = toCents(i.amount);
   const code = i.code.trim().toUpperCase();
-  if (!Number.isFinite(n) || Math.round(n * 100) < 1) return { error: 'Choose or enter an amount.' };
-  if (n > 10000) return { error: 'That amount is too large.' };
+  if (cents < 1) return { error: 'Choose or enter an amount.' };
+  if (cents > 10000 * 100) return { error: 'That amount is too large.' };
   if (code.length < 4) return { error: 'Codes need at least 4 characters.' };
   if (!/^[A-Z0-9-]+$/.test(code)) return { error: 'Codes can only use letters, numbers and dashes.' };
-  const cents = Math.round(n * 100);
   const { data, error } = await sb.from('gift_cards').insert({ salon_id: salon.id, code, balance_cents: cents, original_cents: cents, for_name: i.name.trim().slice(0, 80) || null }).select('id').single();
   if (error) return { error: error.code === '23505' ? 'That code is already in use. Try a new one.' : friendly(error.message) };
   revalidatePath('/gift-cards');

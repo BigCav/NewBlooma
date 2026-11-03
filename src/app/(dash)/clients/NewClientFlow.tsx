@@ -1,17 +1,13 @@
 'use client';
-import { FIELD_IN } from '@/components/ui';
+import { Avatar, BLACK, FIELD_IN, dim } from '@/components/ui';
 import { phoneInput } from '@/lib/phone';
 import { S } from '../calendar/pickers';
 import { ICONS, StepShell, useSteps, DetailRows } from '../calendar/wizardUi';
-import { initialsOf } from './shared';
+import { Field } from '../settings/forms/FormPage';
 import type { ClientsCtl } from './ClientsView';
 
 const I_MAIL = <><rect x="3.5" y="5.5" width="17" height="13" rx="3" /><path d="m4.5 7.5 7.5 5.5 7.5-5.5" /></>;
 const I_PHONE = <path d="M6.5 4h3l1.5 4-2 1.3a10 10 0 0 0 4.7 4.7l1.3-2 4 1.5v3a2 2 0 0 1-2.2 2A14.5 14.5 0 0 1 4.5 6.2 2 2 0 0 1 6.5 4z" />;
-
-function Field({ label, children, htmlFor }: { label: string; children: React.ReactNode; htmlFor?: string }) {
-  return <label htmlFor={htmlFor} style={S('display:block;box-sizing:border-box;padding:10px 16px 12px;border:1px solid #E1E4E9;border-radius:16px;background:#FFFFFF')}><span style={S('display:block;font-size:12.5px;color:#5E6673')}>{label}</span>{children}</label>;
-}
 
 /** The phone's new client form as steps: name, contact details, then a summary. */
 export function NewClientFlow({ c }: { c: ClientsCtl }) {
@@ -37,7 +33,7 @@ export function NewClientFlow({ c }: { c: ClientsCtl }) {
   return (
     <StepShell step={step} titles={kinds.map((k) => titles[k])} onBack={back} onClose={c.cancel} error={c.error}
       actions={kind === 'summary' ? [] : [{ label: 'Continue', onClick: next }]}
-      bar={kind === 'summary' ? <button type="button" onClick={c.create} disabled={c.busy} style={S('width:100%;height:52px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;cursor:pointer')}>Add client</button> : undefined}>
+      bar={kind === 'summary' ? <button type="button" onClick={c.create} disabled={c.busy} style={S(BLACK + ';width:100%' + dim(c.busy))}>{c.busy ? 'Adding…' : 'Add client'}</button> : undefined}>
       <div style={S('display:flex;flex-direction:column;gap:14px')}>
         {kind === 'details' && (<>
           <p style={S('margin:0;font-size:13px;color:#5E6673')}>They start with the New tag.</p>
@@ -52,7 +48,7 @@ export function NewClientFlow({ c }: { c: ClientsCtl }) {
 
         {kind === 'summary' && (<>
           <div style={S('display:flex;align-items:center;gap:14px;box-sizing:border-box;padding:14px 16px;border:1px solid #E6E8EC;border-radius:20px;background:#FAFAFB')}>
-            <div style={S('flex:0 0 48px;width:48px;height:48px;border-radius:999px;background:#EEEAFE;color:#3A2BB5;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600')}>{initialsOf(nc.name.trim() || '?')}</div>
+            <Avatar name={nc.name.trim() || '?'} size="lg" />
             <div style={S('flex:1 1 auto;min-width:0')}>
               <div style={S('font-size:16px;font-weight:600;overflow-wrap:anywhere')}>{nc.name.trim() || 'Client name'}</div>
               <div style={S('font-size:13px;color:#5E6673')}>New client</div>

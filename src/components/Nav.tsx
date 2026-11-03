@@ -1,8 +1,9 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { openNewMenu } from '@/components/NewMenu';
+import { signOut } from '@/app/auth-actions';
 
 const S = (children: ReactNode, size = 20, sw = 1.7) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{children}</svg>
@@ -24,17 +25,63 @@ const ICON: Record<string, (s?: number, w?: number) => ReactNode> = {
   packages: (s, w) => S(<><path d="M12 3.5 3.5 8 12 12.5 20.5 8z" /><path d="M3.5 12 12 16.5 20.5 12M3.5 16 12 20.5 20.5 16" /></>, s, w),
   gift: (s, w) => S(<><rect x="4" y="9" width="16" height="11" rx="2" /><path d="M12 9v11M4 13h16M12 9c-1.5-3-5-3-5-.5S10.5 9 12 9zm0 0c1.5-3 5-3 5-.5S13.5 9 12 9z" /></>, s, w),
   more: (s, w) => S(<><circle cx="5.5" cy="12" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="18.5" cy="12" r="1.2" /></>, s, w),
+  signout: (s, w) => S(<><path d="M10 4.5H6.5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2H10" /><path d="M15 8l4 4-4 4M19 12H9.5" /></>, s, w),
 };
-const RAIL: [string, string, string][] = [
-  ['calendar', '/calendar', 'Calendar'], ['inbox', '/inbox', 'Inbox'], ['clients', '/clients', 'Clients'], ['waitlist', '/waitlist', 'Waitlist'],
-  ['services', '/services', 'Services'], ['team', '/team', 'Team'], ['payroll', '/payroll', 'Payroll'], ['sales', '/sales', 'Sales'],
-  ['products', '/products', 'Products'], ['packages', '/packages', 'Packages'], ['gift', '/gift-cards', 'Gift cards'], ['reviews', '/reviews', 'Reviews'], ['reports', '/reports', 'Reports'],
-];
+
+/**
+ * THE list of places in the app and what they are called. The desktop rail, the phone tab bar and the More page all read their
+ * names from here, so one place has one name everywhere. (`href` is empty for the salon's public page: it depends on the salon's slug, see `salonHref`.)
+ */
+export const NAV = {
+  calendar: { href: '/calendar', label: 'Calendar' },
+  inbox: { href: '/inbox', label: 'Inbox' },
+  clients: { href: '/clients', label: 'Clients' },
+  clientForms: { href: '/clients/forms', label: 'Client forms' },
+  waitlist: { href: '/waitlist', label: 'Waitlist' },
+  services: { href: '/services', label: 'Services' },
+  team: { href: '/team', label: 'Team' },
+  payroll: { href: '/payroll', label: 'Payroll' },
+  sales: { href: '/sales', label: 'Sales' },
+  dailySummary: { href: '/sales/summary', label: 'Daily summary' },
+  products: { href: '/products', label: 'Products' },
+  packages: { href: '/packages', label: 'Packages' },
+  gift: { href: '/gift-cards', label: 'Gift cards' },
+  reviews: { href: '/reviews', label: 'Reviews' },
+  reports: { href: '/reports', label: 'Reports' },
+  store: { href: '', label: 'Your salon page' },
+  settings: { href: '/settings', label: 'Settings' },
+  more: { href: '/more', label: 'More' },
+} as const;
+/** Where the salon's public page lives. */
+export const salonHref = (slug: string) => `/b/${slug}`;
+
+/** The desktop rail, top to bottom (the salon page and Settings sit at the bottom). */
+const RAIL = ['calendar', 'inbox', 'clients', 'waitlist', 'services', 'team', 'payroll', 'sales', 'products', 'packages', 'gift', 'reviews', 'reports'] as const;
+/** The phone tab bar, left to right, with the + button between the second and third. */
+const TABS = ['calendar', 'services', 'clients', 'more'] as const;
+export type TabId = (typeof TABS)[number];
+
+/* ---------- Unread inbox count, shared by the rail and the phone tab bar ---------- */
+let unreadNow = 0;
+const listeners = new Set<() => void>();
+const subscribe = (f: () => void) => { listeners.add(f); return () => { listeners.delete(f); }; };
+/** Rendered once by the layout next to the rail: publishes the count so the phone tab bar can show it too. */
+export function UnreadSync({ n }: { n: number }) {
+  useEffect(() => { unreadNow = n; listeners.forEach((f) => f()); }, [n]);
+  return null;
+}
+export const useUnread = () => useSyncExternalStore(subscribe, () => unreadNow, () => 0);
+const badgeCss = (border: string): React.CSSProperties => ({ minWidth: 20, height: 20, padding: '0 5px', boxSizing: 'border-box', borderRadius: 999, background: '#5B3DF5', color: '#fff', fontSize: 11, fontWeight: 600, lineHeight: '16px', textAlign: 'center', border: '2px solid ' + border });
+/** The purple unread count (for any list row that should show it, such as Inbox in the More page). Nothing when there is nothing unread. */
+export function UnreadBadge({ border = '#FFFFFF' }: { border?: string }) {
+  const n = useUnread();
+  return n > 0 ? <span aria-hidden="true" style={badgeCss(border)}>{n > 9 ? '9+' : n}</span> : null;
+}
 
 /** Rail items that open a menu of their own instead of going straight to a page. */
 const MENUS: Record<string, { title: string; items: { href: string; label: string }[]; hide?: (role: string) => string[] }> = {
-  clients: { title: 'Clients', items: [{ href: '/clients', label: 'All clients' }, { href: '/clients/forms', label: 'Client forms' }] },
-  sales: { title: 'Sales', items: [{ href: '/sales', label: 'Sales' }, { href: '/sales/summary', label: 'Daily summary' }], hide: (role) => (role === 'stylist' ? ['/sales/summary'] : []) },
+  clients: { title: NAV.clients.label, items: [{ href: NAV.clients.href, label: 'All clients' }, { href: NAV.clientForms.href, label: NAV.clientForms.label }] },
+  sales: { title: NAV.sales.label, items: [{ href: NAV.sales.href, label: NAV.sales.label }, { href: NAV.dailySummary.href, label: NAV.dailySummary.label }], hide: (role) => (role === 'stylist' ? [NAV.dailySummary.href] : []) },
 };
 const itemsOf = (id: string, role: string) => (MENUS[id]?.items ?? []).filter((x) => !MENUS[id].hide?.(role).includes(x.href));
 const hasMenu = (id: string, role: string) => itemsOf(id, role).length > 1;
@@ -44,7 +91,7 @@ const RAIL_LOCKED_OPEN = true;
 
 export function SideNav({ slug, unread, role }: { slug: string; unread: number; role: string }) {
   const p = usePathname();
-  const here = RAIL.find(([, href]) => p.startsWith(href))?.[0];
+  const here = RAIL.find((id) => p.startsWith(NAV[id].href));
   const [open, setOpen] = useState<string | null>(here && hasMenu(here, role) ? here : null);
   const lastOpen = useRef<string | null>(open);
   if (open) lastOpen.current = open;
@@ -54,7 +101,10 @@ export function SideNav({ slug, unread, role }: { slug: string; unread: number; 
   const wide = RAIL_LOCKED_OPEN || wideSaved;
   useEffect(() => { try { setWide(localStorage.getItem('aster_rail') === '1'); } catch { /* storage blocked */ } }, []);
   const toggle = () => RAIL_LOCKED_OPEN ? undefined : setWide((w) => { try { localStorage.setItem('aster_rail', w ? '0' : '1'); } catch { /* storage blocked */ } return !w; });
-  const item = (id: string, href: string, label: string, extra?: React.CSSProperties, ext = false) => {
+  const item = (id: keyof typeof NAV, extra?: React.CSSProperties) => {
+    const ext = id === 'store';
+    const href = ext ? salonHref(slug) : NAV[id].href;
+    const label = NAV[id].label;
     const on = !ext && p.startsWith(href);
     if (hasMenu(id, role)) {
       const pressed = open === id;
@@ -67,11 +117,11 @@ export function SideNav({ slug, unread, role }: { slug: string; unread: number; 
       );
     }
     return (
-      <Link key={id} href={href} className="rail-link" aria-label={id === 'inbox' && unread > 0 ? `Inbox, ${unread} need attention` : label} title={label} aria-current={on ? 'page' : undefined} target={ext ? '_blank' : undefined}
+      <Link key={id} href={href} className="rail-link" aria-label={id === 'inbox' && unread > 0 ? `${label}, ${unread} need attention` : label} title={label} aria-current={on ? 'page' : undefined} target={ext ? '_blank' : undefined}
         style={{ width: 44, height: 44, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', background: on ? '#0E1116' : 'transparent', color: on ? '#fff' : '#4A525E', ...extra }}>
         {ICON[id]()}
-        <span className="rail-label">{id === 'store' ? 'Your salon page' : label}</span>
-        {id === 'inbox' && unread > 0 && <span aria-hidden="true" className="rail-badge" style={{ minWidth: 20, height: 20, padding: '0 5px', boxSizing: 'border-box', borderRadius: 999, background: '#5B3DF5', color: '#fff', fontSize: 11, fontWeight: 600, lineHeight: '16px', textAlign: 'center', border: '2px solid #F4F5F7' }}>{unread > 9 ? '9+' : unread}</span>}
+        <span className="rail-label">{label}</span>
+        {id === 'inbox' && unread > 0 && <span aria-hidden="true" className="rail-badge" style={badgeCss('#F4F5F7')}>{unread > 9 ? '9+' : unread}</span>}
       </Link>
     );
   };
@@ -85,9 +135,15 @@ export function SideNav({ slug, unread, role }: { slug: string; unread: number; 
       </button>
       <span className="rail-name" aria-hidden="true">Aster</span>
       </div>
-      {RAIL.map(([id, href, label]) => item(id, href, label))}
-      {item('store', `/b/${slug}`, 'View your public salon page', { marginTop: 'auto' }, true)}
-      {item('settings', '/settings', 'Settings')}
+      {RAIL.map((id) => item(id))}
+      {item('store', { marginTop: 'auto' })}
+      {item('settings')}
+      <form action={signOut} style={{ display: 'contents' }}>
+        <button type="submit" className="rail-link" title="Sign out" style={{ height: 44, borderRadius: 14, border: 0, font: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', background: 'transparent', color: '#4A525E' }}>
+          {ICON.signout()}
+          <span className="rail-label">Sign out</span>
+        </button>
+      </form>
     </nav>
     <div id="subpanel" className={'subpanel' + (open ? ' open' : '')}>
       <nav className="subpanel-in" aria-label={shown ? MENUS[shown].title : undefined}>
@@ -100,23 +156,48 @@ export function SideNav({ slug, unread, role }: { slug: string; unread: number; 
   </>);
 }
 
-export function TabBar() {
+/** Which tab a page belongs to: the three main places, and everything else lives under More. */
+const tabOf = (p: string): TabId => (p.startsWith('/calendar') ? 'calendar' : p.startsWith('/services') ? 'services' : p.startsWith('/clients') ? 'clients' : 'more');
+
+const GRID = { boxSizing: 'border-box', display: 'grid', gridTemplateColumns: 'repeat(5,minmax(0,1fr))', alignItems: 'center', justifyItems: 'center', padding: '10px 8px 22px', background: '#FFFFFF', borderTop: '1px solid #E6E8EC' } as const;
+
+/**
+ * THE phone tab bar: Calendar, Services, +, Clients, More. The layout shows it fixed to the bottom (class tabs-bar, hidden by the stylesheet
+ * on pages that draw their own); every phone page draws the same bar in place through `inPage` (see MobileTabs in Chrome).
+ * The unread Inbox count shows on More, because Inbox lives under More.
+ */
+export function PhoneTabs({ active, inPage = false }: { active?: TabId; inPage?: boolean }) {
   const p = usePathname();
-  const tab = (id: string, href: string, label: string, on: boolean) => (
-    <Link key={id} href={href} aria-current={on ? 'page' : undefined} style={{ width: '100%', minHeight: 48, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, fontSize: 12, fontWeight: on ? 600 : 500, color: on ? '#0E1116' : '#5E6673' }}>
-      {ICON[id](22, 1.8)}{label}
-    </Link>
-  );
-  const main = ['/calendar', '/services', '/clients'].some((h) => p.startsWith(h));
+  const unread = useUnread();
+  const now = active ?? tabOf(p);
+  const tab = (id: TabId) => {
+    const on = now === id;
+    const badge = id === 'more' && unread > 0;
+    return (
+      <Link key={id} href={NAV[id].href} aria-current={on ? 'page' : undefined} aria-label={badge ? `${NAV[id].label}, ${unread} unread in Inbox` : undefined}
+        style={{ width: '100%', minHeight: 48, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, textDecoration: 'none', fontSize: 12, fontWeight: on ? 600 : 500, color: on ? '#0E1116' : '#5E6673' }}>
+        <span style={{ position: 'relative', display: 'flex' }}>
+          {ICON[id](22, 1.8)}
+          {badge && <span aria-hidden="true" style={{ ...badgeCss('#FFFFFF'), position: 'absolute', top: -8, left: 12 }}>{unread > 9 ? '9+' : unread}</span>}
+        </span>
+        {NAV[id].label}
+      </Link>
+    );
+  };
   return (
-    <nav className="tabs-bar" aria-label="Main">
-      {tab('calendar', '/calendar', 'Calendar', p.startsWith('/calendar'))}
-      {tab('services', '/services', 'Services', p.startsWith('/services'))}
-      <button type="button" onClick={() => openNewMenu()} aria-label="Create new" style={{ width: 48, height: 48, padding: 0, border: 0, cursor: 'pointer', borderRadius: 999, background: '#0E1116', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+    <nav className={inPage ? undefined : 'tabs-bar'} aria-label="Main" style={inPage ? { ...GRID, fontFamily: "'Geist',system-ui,sans-serif" } : undefined}>
+      {tab('calendar')}
+      {tab('services')}
+      <button type="button" onClick={() => openNewMenu()} aria-label="Create new" aria-haspopup="dialog" style={{ width: 48, height: 48, padding: 0, border: 0, cursor: 'pointer', borderRadius: 999, background: '#0E1116', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
       </button>
-      {tab('clients', '/clients', 'Clients', p.startsWith('/clients'))}
-      {tab('more', '/more', 'More', !main)}
+      {tab('clients')}
+      {tab('more')}
     </nav>
   );
+}
+
+/** The bar the layout fixes to the bottom of the screen on a phone. */
+export function TabBar() {
+  return <PhoneTabs />;
 }

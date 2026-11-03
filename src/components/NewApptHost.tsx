@@ -2,6 +2,7 @@
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import { BottomSheet } from '@/components/BottomSheet';
 import { loadNewAppt } from '@/app/(dash)/calendar/actions';
 import type { NewApptData } from '@/app/(dash)/calendar/NewApptSheet';
 
@@ -44,9 +45,9 @@ export function NewApptHost() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   if (!show) return null;
   if (!data) return (
-    <div role="status" aria-label="Loading" style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(14,17,22,0.4)', display: 'flex', alignItems: 'flex-end' }}>
-      <div style={{ width: '100%', boxSizing: 'border-box', background: '#FFFFFF', borderRadius: '28px 28px 0 0', padding: '28px 20px 40px', fontFamily: "'Geist',system-ui,sans-serif", fontSize: 15, fontWeight: 500, color: '#5E6673' }}>Loading…</div>
-    </div>
+    <BottomSheet label="New appointment" onClose={() => setShow(false)} backdropLabel="Cancel" z={60} fixed extraStyle="font-family:'Geist',system-ui,sans-serif;font-size:15px;font-weight:500;color:#5E6673">
+      <div role="status" aria-label="Loading">Loading…</div>
+    </BottomSheet>
   );
   return <Sheet data={data} onClose={() => setShow(false)} onCreated={(r) => { setShow(false); cache.current = null; router.push(`/calendar?d=${r.day}${r.id ? '&b=' + r.id : ''}`); }} />;
 }

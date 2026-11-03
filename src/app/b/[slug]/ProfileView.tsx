@@ -2,7 +2,10 @@
 // 1:1 conversion of the prototype's SalonProfile.dc.html and MobileSalonProfile.dc.html (the public salon page).
 // Markup and style strings are kept as written; the {{ }} holes are the salon's real data.
 import { AcctChip } from './AcctChip';
-import { clockStr } from '@/lib/display';
+import { clockStr, duration, plural, timeRange } from '@/lib/display';
+import { WEEKDAYS_FULL } from '@/lib/cal';
+import { firstName } from '@/lib/people';
+import { Avatar, BLACK, Chip, OUTLINE, filterChipCss } from '@/components/ui';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { S } from '../../(dash)/calendar/pickers';
@@ -16,11 +19,9 @@ type Props = {
   services: Svc[]; cats: string[]; team: { name: string; role: string; photo: string | null }[]; hours: ({ from: string; to: string } | null)[];
   today: number; nowMin: number; cancel: string; bookable: boolean; next: string | null; account: { name: string; email: string; phone: string } | null; visits: { upcoming: BookingRow[]; past: BookingRow[] };
 };
-const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-const fmtDur = (m: number) => { const h = Math.floor(m / 60); const r = m % 60; return h ? h + ' hr' + (r ? ' ' + r + ' min' : '') : m + ' min'; };
+const DAYS = [...WEEKDAYS_FULL.slice(1), WEEKDAYS_FULL[0]];
 const toMin = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
 const TILES: [string, string][] = [['hair', 'Hair'], ['colour', 'Colour'], ['nails', 'Nails'], ['barber', 'Barber']];
-const initialsOf = (n: string) => n.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 const LABEL = 'position:absolute;left:14px;bottom:14px;padding:6px 14px;border-radius:999px;background:rgba(255,255,255,0.92);color:#0E1116;font-size:13px;font-weight:500';
 const CARD = (pad: number, gap: number) => `box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:${pad}px;display:flex;flex-direction:column;gap:${gap}px`;
 
@@ -31,7 +32,6 @@ function Tile({ k, label, style }: { k: string; label?: string; style: string })
 function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string; setCat: (c: string) => void; today: number }) {
   const t = p.hours[today];
   const open = !!t && p.nowMin >= toMin(t.from) && p.nowMin < toMin(t.to);
-  const openStyle = 'display:inline-block;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:500;background:' + (open ? '#DDF3EA' : '#EEF0F3') + ';color:' + (open ? '#14624A' : '#4A525E');
   const openText = open ? 'Open now, until ' + clockStr(t!.to) : 'Closed now';
   const book = (svc?: string) => `/b/${p.slug}/book` + (svc ? `?service=${svc}` : '');
   const matched = TILES.filter(([, n]) => p.cats.some((c) => c.toLowerCase() === n.toLowerCase())).map(([k, n]) => [k, n] as [string, string | undefined]);
@@ -49,19 +49,19 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
     <section aria-label="Services" style={S(CARD(m ? 20 : 24, 16))}>
       <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Services</h2>
       <div role="group" className="hscroll" aria-label="Filter services" style={S('display:flex;gap:8px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px')}>
-        {chips.map((x) => <button key={x.c} onClick={() => setCat(x.c)} aria-pressed={x.on} style={S('flex:0 0 auto;height:44px;padding:0 18px;border-radius:999px;font-size:14px;font-weight:500;border:1px solid ' + (x.on ? '#0E1116' : '#E1E4E9') + ';background:' + (x.on ? '#0E1116' : '#FFFFFF') + ';color:' + (x.on ? '#FFFFFF' : '#0E1116'))}>{x.label}</button>)}
+        {chips.map((x) => <button key={x.c} onClick={() => setCat(x.c)} aria-pressed={x.on} style={S(filterChipCss(x.on, m))}>{x.label}</button>)}
       </div>
       {shown.length === 0 && <span style={S('color:#5E6673;font-size:14px')}>No services are open for online booking yet.</span>}
       <ul style={S(`margin:0 -${m ? 20 : 24}px -${m ? 20 : 24}px;padding:0;list-style:none;border-top:1px solid #EEF0F3`)}>
         {shown.map((s, i) => {
           const row = 'display:flex;align-items:center;gap:16px;min-height:80px;box-sizing:border-box;padding:14px 20px;' + (i < shown.length - 1 ? 'border-bottom:1px solid #EEF0F3;' : '') + 'text-decoration:none;color:#0E1116';
           const inner = (<>
-            <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{s.name}</span>{!!s.desc && <span style={S('display:block;margin-top:2px;font-size:13px;color:#5E6673;overflow-wrap:anywhere')}>{s.desc}</span>}<span style={S('display:block;margin-top:4px;font-size:13px;color:#5E6673')}>{fmtDur(s.dur)}</span></span>
+            <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{s.name}</span>{!!s.desc && <span style={S('display:block;margin-top:2px;font-size:13px;color:#5E6673;overflow-wrap:anywhere')}>{s.desc}</span>}<span style={S('display:block;margin-top:4px;font-size:13px;color:#5E6673')}>{duration(s.dur)}</span></span>
             <span style={S('flex:0 0 auto;font-size:15px;font-weight:600')}>{s.price}</span>
             {m ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')}><path d="M9.5 6l6 6-6 6" /></svg>
               : <span style={S('flex:0 0 auto;padding:8px 16px;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:13.5px;font-weight:500')}>Book</span>}
           </>);
-          return <li key={s.id}>{p.bookable ? <Link href={book(s.id)} aria-label={s.name + ', ' + fmtDur(s.dur) + ', ' + s.price + '. Book'} style={S(row)}>{inner}</Link> : <div style={S(row)}>{inner}</div>}</li>;
+          return <li key={s.id}>{p.bookable ? <Link href={book(s.id)} aria-label={s.name + ', ' + duration(s.dur) + ', ' + s.price + '. Book'} style={S(row)}>{inner}</Link> : <div style={S(row)}>{inner}</div>}</li>;
         })}
       </ul>
     </section>
@@ -71,7 +71,7 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
       <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Team</h2>
       <ul style={S('margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px')}>
         {p.team.map((x) => (
-          <li key={x.name} style={S('display:flex;align-items:center;gap:12px;padding:14px;border:1px solid #E6E8EC;border-radius:18px')}><span style={S('flex:0 0 48px;width:48px;height:48px;border-radius:999px;background:#EEF0F3;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600' + (x.photo ? ';background-image:url(' + x.photo + ');background-size:cover;background-position:center' : ''))}>{x.photo ? '' : initialsOf(x.name)}</span><span style={S('min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{x.name}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{x.role}</span></span></li>
+          <li key={x.name} style={S('display:flex;align-items:center;gap:12px;padding:14px;border:1px solid #E6E8EC;border-radius:18px')}><Avatar name={x.name} photo={x.photo} size="lg" /><span style={S('min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{x.name}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{x.role}</span></span></li>
         ))}
       </ul>
     </section>
@@ -85,11 +85,11 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
         <div style={S(m ? 'flex:1 1 100%;text-align:center' : 'flex:0 0 auto')}>
           <div style={S('font-size:' + (m ? 44 : 52) + 'px;line-height:1;font-weight:600;letter-spacing:-0.04em')}>{p.rating.avg.toFixed(1)}</div>
           <div aria-hidden="true" style={S('margin-top:6px;font-size:18px;letter-spacing:2px')}><span style={S('color:#E8A317')}>{STARS.slice(0, rounded)}</span><span style={S('color:#D5D9E0')}>{STARS.slice(rounded)}</span></div>
-          <div style={S('margin-top:4px;color:#5E6673;font-size:13.5px')}>{p.rating.count + (p.rating.count === 1 ? ' review' : ' reviews')}</div>
+          <div style={S('margin-top:4px;color:#5E6673;font-size:13.5px')}>{plural(p.rating.count, 'review')}</div>
         </div>
         <div style={S('flex:1 1 200px;min-width:0;display:flex;flex-direction:column;gap:7px')}>
           {[5, 4, 3, 2, 1].map((k, i) => (
-            <div key={k} style={S('display:flex;align-items:center;gap:10px;font-size:13px;color:#5E6673')}><span style={S('flex:0 0 46px')}>{k + ' star'}</span><div style={S('flex:1 1 auto;background:#FFFFFF;border-radius:999px')}><div style={S('height:8px;border-radius:999px;background:#0E1116;width:' + Math.round((p.rating.dist[i] ?? 0) / p.rating.count * 100) + '%')} /></div><span style={S('flex:0 0 24px;text-align:right')}>{p.rating.dist[i] ?? 0}</span></div>
+            <div key={k} style={S('display:flex;align-items:center;gap:10px;font-size:13px;color:#5E6673')}><span style={S('flex:0 0 46px')}>{plural(k, 'star')}</span><div style={S('flex:1 1 auto;background:#FFFFFF;border-radius:999px')}><div style={S('height:8px;border-radius:999px;background:#0E1116;width:' + Math.round((p.rating.dist[i] ?? 0) / p.rating.count * 100) + '%')} /></div><span style={S('flex:0 0 24px;text-align:right')}>{p.rating.dist[i] ?? 0}</span></div>
           ))}
         </div>
       </div>
@@ -97,7 +97,7 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
         {p.reviews.map((r, i) => (
           <li key={i} style={S('display:flex;flex-direction:column;gap:10px;padding:16px;border:1px solid #E6E8EC;border-radius:18px;min-width:0')}>
             <div style={S('display:flex;align-items:center;gap:12px')}>
-              <span aria-hidden="true" style={S('flex:0 0 40px;width:40px;height:40px;border-radius:999px;background:#EEF0F3;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600')}>{initialsOf(r.name.replace('.', ''))}</span>
+              <Avatar name={r.name.replace('.', '')} size="md" />
               <div style={S('flex:1 1 auto;min-width:0')}><div style={S('font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{r.name}</div><div style={S('font-size:12.5px;color:#5E6673')}>{r.date}</div></div>
               <span role="img" aria-label={r.stars + ' out of 5 stars'} style={S('flex:0 0 auto;font-size:15px;letter-spacing:1px')}><span style={S('color:#E8A317')}>{STARS.slice(0, r.stars)}</span><span style={S('color:#D5D9E0')}>{STARS.slice(r.stars)}</span></span>
             </div>
@@ -118,7 +118,7 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
     <section aria-label="Opening hours and contact" style={S(CARD(m ? 20 : 24, 16))}>
       <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Opening hours</h2>
       <div style={S('display:flex;flex-direction:column;margin-top:-8px')}>
-        {DAYS.map((d, i) => <div key={d} style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid #EEF0F3;font-weight:' + (i === today ? 600 : 400) + ';color:' + (i === today ? '#0E1116' : '#5E6673'))}><span>{d}</span><span>{p.hours[i] ? clockStr(p.hours[i]!.from) + ' to ' + clockStr(p.hours[i]!.to) : 'Closed'}</span></div>)}
+        {DAYS.map((d, i) => <div key={d} style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid #EEF0F3;font-weight:' + (i === today ? 600 : 400) + ';color:' + (i === today ? '#0E1116' : '#5E6673'))}><span>{d}</span><span>{p.hours[i] ? timeRange(clockStr(p.hours[i]!.from), clockStr(p.hours[i]!.to)) : 'Closed'}</span></div>)}
       </div>
       {!!(p.address || p.phone || p.email) && <>
         <h2 style={S('margin:4px 0 0;font-size:18px;font-weight:600;letter-spacing:-0.01em')}>Find us</h2>
@@ -131,9 +131,9 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
   );
   const manage = <p style={S('margin:0;text-align:center;color:#5E6673;font-size:14px')}>Already booked? <Link href={p.account ? `/b/${p.slug}/account` : '/manage'} style={S('color:#0E1116;font-weight:500')}>Manage your booking</Link>{!p.account && <> · <Link href={`/b/${p.slug}/account`} style={S('color:#0E1116;font-weight:500')}>Sign in</Link></>}</p>;
   const nextUp = p.visits.upcoming[0] ?? null;
-  const first = (p.account?.name ?? '').split(' ')[0] || 'there';
+  const first = firstName(p.account?.name);
   const pastList = p.visits.past.slice(0, 3);
-  const againBtn = (v: BookingRow) => <Link className="ghost" href={book(v.again ?? undefined)} aria-label={'Book ' + v.what + ' again'} style={S('flex:0 0 auto;display:flex;align-items:center;height:44px;padding:0 ' + (m ? 16 : 18) + 'px;box-sizing:border-box;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;text-decoration:none')}>Book again</Link>;
+  const againBtn = (v: BookingRow) => <Link className="ghost" href={book(v.again ?? undefined)} aria-label={'Book ' + v.what + ' again'} style={S(OUTLINE + ';flex:0 0 auto;height:44px;padding:0 ' + (m ? 16 : 18) + 'px')}>Book again</Link>;
   const pastCard = (
     <div style={S(m ? 'box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:20px 20px 8px;display:flex;flex-direction:column;gap:6px' : 'flex:2 1 360px;min-width:0;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:28px 28px 12px;display:flex;flex-direction:column;gap:8px')}>
       <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Past visits</h2>
@@ -151,14 +151,14 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
             <span style={S('color:#5E6673;font-size:13px;font-weight:500')}>Your next appointment</span>
             <div><div style={S('font-size:' + (m ? 18 : 20) + 'px;font-weight:600;letter-spacing:-0.02em')}>{nextUp.when}</div><div style={S('margin-top:4px;font-size:' + (m ? 14.5 : 15) + 'px;overflow-wrap:anywhere')}>{nextUp.what}{nextUp.who ? ' with ' + nextUp.who : ''}</div><div style={S('margin-top:2px;color:#5E6673;font-size:' + (m ? 13 : 13.5) + 'px')}>{nextUp.meta}, pay at the salon</div></div>
             <div style={S('display:flex;flex-wrap:wrap;gap:10px')}>
-              {nextUp.manage && <Link href={nextUp.manage} style={S('height:' + (m ? 48 : 44) + 'px;padding:0 20px;box-sizing:border-box;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:' + (m ? 14.5 : 14) + 'px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none;' + (m ? 'flex:1 1 100%' : ''))}>Change or cancel</Link>}
-              {!m && p.bookable && <Link href={book()} style={S('height:44px;padding:0 20px;box-sizing:border-box;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;display:flex;align-items:center;text-decoration:none')}>Book another</Link>}
+              {nextUp.manage && <Link href={nextUp.manage} style={S(BLACK + ';height:' + (m ? 52 : 44) + 'px;padding:0 20px;flex:' + (m ? '1 1 100%' : '0 0 auto'))}>Change or cancel</Link>}
+              {!m && p.bookable && <Link href={book()} style={S(OUTLINE + ';flex:0 0 auto;height:44px;padding:0 20px')}>Book again</Link>}
             </div>
           </div>
         ) : (
           <div style={S('border-radius:' + (m ? 18 : 20) + 'px;background:#F4F5F7;padding:' + (m ? 16 : 20) + 'px;display:flex;flex-direction:column;align-items:flex-start;gap:12px')}>
             <span style={S('color:#5E6673;font-size:15px')}>You have nothing booked right now.</span>
-            {p.bookable && <Link href={book()} style={S('height:44px;padding:0 20px;box-sizing:border-box;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500;display:flex;align-items:center;text-decoration:none')}>Book now</Link>}
+            {p.bookable && <Link href={book()} style={S(BLACK + ';flex:0 0 auto;height:44px;padding:0 20px')}>Book now</Link>}
           </div>
         )}
       </div>
@@ -169,26 +169,25 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
     <section aria-label="Your next appointment" style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:20px;display:flex;flex-direction:column;gap:12px;flex:0 0 auto')}>
       <span style={S('color:#5E6673;font-size:13px;font-weight:500')}>Your next appointment</span>
       <div><div style={S('font-size:18px;font-weight:600;letter-spacing:-0.02em')}>{nextUp.when}</div><div style={S('margin-top:4px;font-size:14.5px;overflow-wrap:anywhere')}>{nextUp.what}{nextUp.who ? ' with ' + nextUp.who : ''}</div></div>
-      {nextUp.manage && <Link href={nextUp.manage} style={S('height:48px;padding:0 20px;box-sizing:border-box;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none')}>Change or cancel</Link>}
+      {nextUp.manage && <Link href={nextUp.manage} style={S(BLACK + ';flex:0 0 auto')}>Change or cancel</Link>}
     </section>
   );
-  const BOOKBTN = (h: number, fs: number, pad: string, extra = '') => 'height:' + h + 'px;padding:' + pad + ';box-sizing:border-box;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:' + fs + 'px;font-weight:500;display:flex;align-items:center;text-decoration:none;' + extra;
 
   if (m) return (<>
     <main className="flow" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:24px 20px 24px;display:flex;flex-direction:column;gap:20px')}>
-      <header style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{p.name}</span><span style={S(openStyle + ';flex:0 0 auto')}>{openText}</span></header>
+      <header style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{p.name}</span><Chip tone={open ? 'green' : 'grey'}>{openText}</Chip></header>
       {p.account && <AcctChip slug={p.slug} name={p.account.name || 'Your account'} wide />}
       {upNextM}{photos}{services}{team}{reviews}{about}{info}{manage}
     </main>
-    {p.bookable && <div style={S('flex:0 0 auto;box-sizing:border-box;padding:12px 20px 24px;background:#FFFFFF;border-top:1px solid #E6E8EC')}><Link href={book()} style={S('height:48px;box-sizing:border-box;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none')}>Book now</Link></div>}
+    {p.bookable && <div style={S('flex:0 0 auto;box-sizing:border-box;padding:12px 20px 24px;background:#FFFFFF;border-top:1px solid #E6E8EC')}><Link href={book()} style={S(BLACK + ';flex:0 0 auto')}>Book now</Link></div>}
   </>);
   return (
     <div className="flow" style={S('max-width:1180px;margin:0 auto;box-sizing:border-box;padding:24px 32px 56px;display:flex;flex-direction:column;gap:32px')}>
       <header style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px')}>
-        <div style={S('display:flex;align-items:center;gap:12px')}><span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{p.name}</span><span style={S(openStyle)}>{openText}</span></div>
+        <div style={S('display:flex;align-items:center;gap:12px')}><span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{p.name}</span><Chip tone={open ? 'green' : 'grey'}>{openText}</Chip></div>
         <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:10px')}>
           {p.account && <AcctChip slug={p.slug} name={p.account.name || 'Your account'} />}
-          {p.bookable && <Link href={book()} style={S(BOOKBTN(44, 14, '0 22px'))}>Book now</Link>}
+          {p.bookable && <Link href={book()} style={S(BLACK + ';flex:0 0 auto;height:44px;padding:0 22px')}>Book now</Link>}
         </div>
       </header>
       {photos}
@@ -204,7 +203,7 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
               <div style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>Email</dt><dd style={S('margin:0;text-align:right;font-weight:500;overflow-wrap:anywhere')}>{p.account.email}</dd></div>
               <div style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid #EEF0F3;border-bottom:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>Phone</dt><dd style={S('margin:0;text-align:right;font-weight:500')}>{p.account.phone || 'Not added'}</dd></div>
             </dl>}
-            {p.bookable && <Link href={book()} style={S('height:48px;box-sizing:border-box;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;display:flex;align-items:center;justify-content:center;text-decoration:none')}>Book now</Link>}
+            {p.bookable && <Link href={book()} style={S(BLACK + ';flex:0 0 auto')}>Book now</Link>}
           </div>
           {info}
         </aside>

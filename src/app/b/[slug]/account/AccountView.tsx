@@ -4,26 +4,28 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
+import { S } from '@/app/(dash)/calendar/pickers';
 import { phoneInput } from '@/lib/phone';
+import { Chip, FieldError, Notice, BLACK, OUTLINE, dim } from '@/components/ui';
+import { TONE, type ToneName } from '@/lib/tones';
 import { clientSignIn, clientSignOut } from '../book/actions';
 import { AcctChip } from '../AcctChip';
 import { changePassword, saveDetails } from './actions';
 
-export type BookingRow = { id: string; date: string; when: string; what: string; who: string; meta: string; price: string; status: string; manage: string | null; again: string | null };
+export type BookingRow = { id: string; date: string; when: string; what: string; who: string; meta: string; price: string; status: string; statusLabel: string; statusTone: ToneName; manage: string | null; again: string | null };
 type Acct = { name: string; email: string; phone: string };
 type Props = { slug: string; salon: string; account: Acct | null; upcoming: BookingRow[]; past: BookingRow[] };
 
-const initialsOf = (n: string) => n.split(' ').filter(Boolean).map((w) => w.charAt(0)).join('').slice(0, 2).toUpperCase() || 'C';
 const page: React.CSSProperties = { minHeight: '100dvh', background: '#F4F5F7', color: '#0E1116', fontFamily: "'Geist', system-ui, sans-serif", fontSize: 14, lineHeight: 1.4 };
 const wrap: React.CSSProperties = { maxWidth: 1180, margin: '0 auto', padding: '24px 20px 56px', display: 'flex', flexDirection: 'column', gap: 28, boxSizing: 'border-box' };
 const card: React.CSSProperties = { boxSizing: 'border-box', background: '#FFFFFF', border: '1px solid #E6E8EC', borderRadius: 24, padding: 24, display: 'flex', flexDirection: 'column', gap: 16 };
-const dark: React.CSSProperties = { height: 44, padding: '0 22px', boxSizing: 'border-box', borderRadius: 999, border: 0, background: '#0E1116', color: '#FFFFFF', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', cursor: 'pointer', fontFamily: 'inherit' };
-const light: React.CSSProperties = { ...dark, background: '#FFFFFF', color: '#0E1116', border: '1px solid #E1E4E9' };
-const input: React.CSSProperties = { boxSizing: 'border-box', width: '100%', height: 48, padding: '0 14px', border: '1px solid #E1E4E9', borderRadius: 14, font: 'inherit', color: '#0E1116', background: '#FFFFFF' };
+// The big pills from the shared buttons, at 44px for the small ones in headers and rows.
+const pill = (css: string): React.CSSProperties => ({ ...S(css), flex: '0 0 auto', width: 'auto', height: 44, padding: '0 22px' });
+const dark = pill(BLACK);
+const light = pill(OUTLINE);
+const input: React.CSSProperties = { boxSizing: 'border-box', width: '100%', height: 48, minHeight: 0, padding: '0 14px', border: '1px solid #E1E4E9', borderRadius: 14, font: 'inherit', fontSize: 16, color: '#0E1116', background: '#FFFFFF' };
 const label: React.CSSProperties = { fontSize: 14, fontWeight: 600 };
 const field: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 8 };
-const notice: React.CSSProperties = { padding: '6px 14px', borderRadius: 999, background: '#DDF3EA', color: '#14624A', fontSize: 13, fontWeight: 500 };
-const err: React.CSSProperties = { margin: 0, color: '#B42318', fontSize: 13.5, fontWeight: 500 };
 
 function SignIn({ slug, salon }: { slug: string; salon: string }) {
   const router = useRouter();
@@ -44,7 +46,7 @@ function SignIn({ slug, salon }: { slug: string; salon: string }) {
             <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 12 }}>
               {['See your upcoming visits', 'Change or cancel in a tap', 'Rebook your favourites faster', 'Your details saved for next time'].map((t) => (
                 <li key={t} style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 15, color: '#D5D9E0' }}>
-                  <span aria-hidden style={{ flex: '0 0 auto', width: 22, height: 22, borderRadius: 999, background: '#EEEAFE', color: '#3A2BB5', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>✓</span>{t}
+                  <span aria-hidden style={{ flex: '0 0 auto', width: 22, height: 22, borderRadius: 999, background: TONE.purple.bg, color: TONE.purple.fg, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>✓</span>{t}
                 </li>
               ))}
             </ul>
@@ -55,8 +57,8 @@ function SignIn({ slug, salon }: { slug: string; salon: string }) {
             <p style={{ margin: '6px 0 0', color: '#5E6673' }}>Sign in to see and manage your appointments.</p></div>
           <input aria-label="Email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" style={input} />
           <input aria-label="Password" type="password" autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Password" style={input} />
-          {!!error && <p role="alert" style={err}>{error}</p>}
-          <button type="submit" disabled={busy} style={{ ...dark, height: 48 }}>{busy ? 'Signing in…' : 'Sign in'}</button>
+          {!!error && <FieldError>{error}</FieldError>}
+          <button type="submit" disabled={busy} style={{ ...S(BLACK + ';flex:0 0 auto' + dim(busy)) }}>{busy ? 'Signing in…' : 'Sign in'}</button>
           <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '14px 16px', borderRadius: 16, background: '#F4F5F7', fontSize: 13.5, color: '#5E6673', lineHeight: 1.45 }}>
             <span><strong style={{ color: '#0E1116', fontWeight: 600 }}>New here?</strong> <Link href={`/b/${slug}/book`} style={{ color: '#5B3DF5', fontWeight: 600, textDecoration: 'none' }}>Book an appointment</Link> and tick “Save my details for next time” to create your account.</span>
           </div>
@@ -138,11 +140,11 @@ function AccountInner({ slug, salon, account, upcoming, past }: Props) {
                       <span style={{ minWidth: 0 }}>
                         <span style={{ display: 'block', fontSize: 17, fontWeight: 600, letterSpacing: '-0.01em' }}>{u.when}</span>
                         <span style={{ display: 'block', marginTop: 4, fontSize: 14.5, overflowWrap: 'anywhere' }}>{u.what}{u.who ? ` with ${u.who}` : ''}</span>
-                        <span style={{ display: 'block', marginTop: 2, color: '#5E6673', fontSize: 13 }}>{u.meta}, pay at the salon{u.status === 'Awaiting confirmation' ? ', awaiting confirmation' : ''}</span>
+                        <span style={{ display: 'block', marginTop: 2, color: '#5E6673', fontSize: 13 }}>{u.meta}, pay at the salon{u.status === 'pending' ? ', awaiting confirmation' : ''}</span>
                       </span>
                       {u.manage
                         ? <Link href={u.manage} aria-label={`Change or cancel ${u.what} on ${u.when}`} style={{ ...dark, width: '100%', padding: '0 20px' }}>Change or cancel</Link>
-                        : <span style={{ alignSelf: 'flex-start', padding: '6px 14px', borderRadius: 999, background: '#EEEAFE', color: '#3A2BB5', fontSize: 13, fontWeight: 500 }}>{u.status === 'In progress' ? 'Checked in' : u.status}</span>}
+                        : <span style={{ alignSelf: 'flex-start' }}><Chip tone={u.statusTone}>{u.statusLabel}</Chip></span>}
                     </li>
                   ))}
                 </ul>
@@ -177,10 +179,10 @@ function AccountInner({ slug, salon, account, upcoming, past }: Props) {
               <div style={field}><label htmlFor="ca-name" style={label}>Full name</label><input id="ca-name" type="text" autoComplete="name" value={f.name} onChange={(e) => setField('name', e.target.value)} placeholder="Your name" style={input} /></div>
               <div style={field}><label htmlFor="ca-email" style={label}>Email</label><input id="ca-email" type="email" autoComplete="email" value={f.email} onChange={(e) => setField('email', e.target.value)} placeholder="you@example.com" style={input} /></div>
               <div style={field}><label htmlFor="ca-phone" style={label}>Phone</label><input id="ca-phone" type="tel" inputMode="tel" autoComplete="tel" value={f.phone} onChange={(e) => setField('phone', e.target.value)} placeholder="Required" style={input} /></div>
-              {!!error && <p role="alert" style={err}>{error}</p>}
+              {!!error && <FieldError>{error}</FieldError>}
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
-                <button onClick={save} disabled={!dirty || busy} style={{ height: 48, border: 0, borderRadius: 999, padding: '0 24px', fontSize: 14.5, fontWeight: 500, fontFamily: 'inherit', cursor: dirty ? 'pointer' : 'default', background: dirty ? '#0E1116' : '#D5D9E0', color: dirty ? '#FFFFFF' : '#5E6673' }}>Save changes</button>
-                {!!note && <span role="status" style={notice}>{note}</span>}
+                <button onClick={save} disabled={!dirty || busy} style={S(BLACK + ';flex:0 0 auto;padding:0 24px' + dim(!dirty || busy))}>{busy ? 'Saving…' : 'Save changes'}</button>
+                {!!note && <Notice>{note}</Notice>}
               </div>
             </section>
             <section aria-label="Password" style={{ ...card, flex: '1 1 360px', minWidth: 0 }}>
@@ -191,13 +193,13 @@ function AccountInner({ slug, salon, account, upcoming, past }: Props) {
               {pwOpen && (<>
                 {pwInput('ca-pw', 'New password', pw, setPw, 'At least 8 characters')}
                 {pwInput('ca-pw2', 'Confirm new password', pw2, setPw2, 'Type it again')}
-                {!!pwError && <p role="alert" style={err}>{pwError}</p>}
+                {!!pwError && <FieldError>{pwError}</FieldError>}
                 <div style={{ display: 'flex', gap: 10 }}>
-                  <button onClick={savePw} disabled={busy} style={{ ...dark, flex: '1 1 0', height: 48, fontSize: 14.5 }}>Update</button>
-                  <button onClick={() => { setPwOpen(false); setPw(''); setPw2(''); setPwError(''); }} style={{ ...light, flex: '1 1 0', height: 48, fontSize: 14.5 }}>Cancel</button>
+                  <button onClick={savePw} disabled={busy} style={S(BLACK + dim(busy))}>{busy ? 'Saving…' : 'Update password'}</button>
+                  <button onClick={() => { setPwOpen(false); setPw(''); setPw2(''); setPwError(''); }} style={S(OUTLINE)}>Cancel</button>
                 </div>
               </>)}
-              {!!pwNote && <span role="status" style={{ ...notice, alignSelf: 'flex-start' }}>{pwNote}</span>}
+              {!!pwNote && <Notice>{pwNote}</Notice>}
             </section>
           </div>
         </div>

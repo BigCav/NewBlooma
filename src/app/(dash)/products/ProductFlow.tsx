@@ -1,13 +1,16 @@
 'use client';
-import { FIELD_IN, BARE, BLACK as PRIMARY, OUTLINE as SECOND } from '@/components/ui';
+import { FIELD_IN, BARE, BLACK as PRIMARY, OUTLINE as SECOND, CLOSE, DOTS, MENU_ROW, RING, Chip, FieldError, Notice, dim } from '@/components/ui';
 import { BottomSheet } from '@/components/BottomSheet';
 import { ConfirmBox } from '@/components/ConfirmBox';
 import { useState } from 'react';
 import { decimalInput, digitsInput } from '@/lib/numeric';
+import { dollars, toCents } from '@/lib/format';
+import { plural } from '@/lib/display';
+import { initialsOf } from '@/lib/people';
+import { Field } from '../settings/forms/FormPage';
 import { S } from '../calendar/pickers';
-import { CLOSE_BTN as RING_BTN, CloseX } from '../calendar/calUi';
 import { ROW, TICK, ICONS, StepShell, useSteps, Tiles, DetailRows } from '../calendar/wizardUi';
-import { STATUS, initialsOf, money, toneOf } from './shared';
+import { STATUS, toneOf } from './shared';
 import type { ProductsCtl } from './ProductsView';
 
 const QTYS = [6, 12, 24];
@@ -16,12 +19,7 @@ const I_BOX = <><path d="M4 8l8-4 8 4v8l-8 4-8-4z" /><path d="M4 8l8 4 8-4M12 12
 const I_HASH = <path d="M9 4 7 20M17 4l-2 16M4 9h16M3 15h16" />;
 const I_BARS = <path d="M5 19V9M12 19V5M19 19v-7" />;
 
-function Field({ label, children, htmlFor }: { label: string; children: React.ReactNode; htmlFor?: string }) {
-  return <label htmlFor={htmlFor} style={S('display:block;box-sizing:border-box;padding:10px 16px 12px;border:1px solid #E1E4E9;border-radius:16px;background:#FFFFFF')}><span style={S('display:block;font-size:12.5px;color:#5E6673')}>{label}</span>{children}</label>;
-}
-
 const tile = (c: ProductsCtl, cat: string, size: number, r: number, fs: number) => { const t = toneOf(c.cats, cat); return `flex:0 0 ${size}px;width:${size}px;height:${size}px;border-radius:${r}px;display:flex;align-items:center;justify-content:center;font-size:${fs}px;font-weight:600;background:${t.bg};color:${t.fg}`; };
-const dots = <svg width="20" height="20" viewBox="0 0 24 24" fill="#0E1116"><circle cx="12" cy="5.5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="18.5" r="1.6" /></svg>;
 
 /** What the phone shows in the product sheet: the product, a restock page, or the new/edit step flow. */
 export function ProductBody({ c }: { c: ProductsCtl }) {
@@ -36,14 +34,13 @@ export function ProductBody({ c }: { c: ProductsCtl }) {
 function ProductView({ c }: { c: ProductsCtl }) {
   const s = c.sel!;
   const fill = Math.min(100, s.reorder ? Math.round(s.stock / (s.reorder * 3) * 100) : s.stock ? 100 : 0);
-  const pill = 'display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:500;white-space:nowrap;background:' + STATUS[s.status].bg + ';color:' + STATUS[s.status].fg;
   const round = 'flex:0 0 48px;width:48px;height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer';
   return (
     <div style={S('display:flex;flex-direction:column;flex:1 1 auto;min-height:0;margin:0 -20px -40px')}>
       <div style={S('flex:0 0 auto;padding:0 20px 14px')}>
         <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px')}>
-          <span style={S(pill)}>{s.status}</span>
-          <button onClick={c.close} aria-label="Close" style={S(RING_BTN)}><CloseX /></button>
+          <Chip tone={STATUS[s.status].tone} size="lg">{s.status}</Chip>
+          <button onClick={c.close} aria-label="Close" style={S(RING)}>{CLOSE}</button>
         </div>
         <div style={S('display:flex;align-items:center;gap:14px;margin-top:16px')}>
           <div style={S(tile(c, s.cat, 56, 16, 17))}>{initialsOf(s.name)}</div>
@@ -68,11 +65,12 @@ function ProductView({ c }: { c: ProductsCtl }) {
         <DetailRows go={() => {}} rows={[
           { icon: I_HASH, text: 'SKU ' + s.sku },
           { icon: ICONS.tag, text: s.cat || 'No category' },
-          { icon: ICONS.tag, text: money(s.priceCents) },
-          { icon: I_BOX, text: 'Reorder at ' + s.reorder + (s.reorder === 1 ? ' unit' : ' units') },
+          { icon: ICONS.tag, text: dollars(s.priceCents) },
+          { icon: I_BOX, text: 'Reorder at ' + plural(s.reorder, 'unit') },
           { icon: I_BARS, text: s.sold + ' sold this week' },
         ]} />
-        {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
+        {!!c.notice && <Notice>{c.notice}</Notice>}
+        {!!c.error && <FieldError>{c.error}</FieldError>}
       </div>
       <div style={S('flex:0 0 auto;padding:14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3;display:flex;gap:10px')}>
         <button onClick={c.openEdit} style={S(SECOND)}>Edit product</button>
@@ -118,23 +116,23 @@ function ProductForm({ c }: { c: ProductsCtl }) {
   const kind = kinds[Math.min(step, last)];
   const at = (k: string) => kinds.indexOf(k);
   const titles: Record<string, string> = { details: 'Details', category: 'Category', price: 'Price', stock: 'Stock', reorder: 'Reorder level', summary: isNew ? 'Summary' : 'Edit product' };
-  const price = parseFloat(d.price);
+  const cents = toCents(d.price);
   const reorderN = parseInt(d.reorder, 10);
 
   const ready = () => {
     if (kind === 'details') return d.name.trim() ? '' : 'Add a product name.';
-    if (kind === 'price') return !isNaN(price) && price > 0 ? '' : 'Enter a price above zero, like 24 or 24.50.';
+    if (kind === 'price') return cents > 0 ? '' : 'Enter a price above zero, like 24 or 24.50.';
     if (kind === 'reorder' || kind === 'stock') return !isNaN(reorderN) && reorderN >= 0 ? '' : 'Enter the reorder level as a whole number, 0 or more.';
     return '';
   };
   const next = () => { const e = ready(); if (e) { c.setError(e); return; } forward(); };
-  const priceText = isNaN(price) ? '$0' : money(Math.round(price * 100));
+  const priceText = dollars(cents);
   const stockN = parseInt(d.stock, 10) || 0;
 
   const summaryBar = (
     <div style={S('display:flex;gap:10px')}>
-      {!isNew && <button type="button" onClick={() => setMenu(true)} aria-label="More actions" aria-haspopup="dialog" style={S(RING_BTN + ';flex:0 0 52px;width:52px;height:52px')}>{dots}</button>}
-      <button type="button" onClick={isNew ? c.create : c.saveEdit} disabled={c.busy} style={S(PRIMARY)}>{isNew ? 'Add product' : 'Save changes'}</button>
+      {!isNew && <button type="button" onClick={() => setMenu(true)} aria-label="More actions" aria-haspopup="dialog" style={S(RING + ';flex:0 0 52px;width:52px;height:52px')}>{DOTS}</button>}
+      <button type="button" onClick={isNew ? c.create : c.saveEdit} disabled={c.busy} style={S(PRIMARY + dim(c.busy))}>{c.busy ? (isNew ? 'Adding…' : 'Saving…') : isNew ? 'Add product' : 'Save changes'}</button>
     </div>
   );
   const closeMenu = () => { setMenu(false); c.setConfirmDel(false); };
@@ -192,20 +190,20 @@ function ProductForm({ c }: { c: ProductsCtl }) {
             { icon: ICONS.tag, text: priceText, step: at('price') },
             isNew
               ? { icon: I_BOX, text: stockN + ' in stock, reorder at ' + (isNaN(reorderN) ? 0 : reorderN), step: at('stock') }
-              : { icon: I_BOX, text: 'Reorder at ' + (isNaN(reorderN) ? 0 : reorderN) + (reorderN === 1 ? ' unit' : ' units'), step: at('reorder') },
+              : { icon: I_BOX, text: 'Reorder at ' + plural(isNaN(reorderN) ? 0 : reorderN, 'unit'), step: at('reorder') },
           ]} />
         </>)}
       </div>
     </StepShell>
     {menu && (
       <BottomSheet label="More actions" onClose={closeMenu} z={6} gap={0} handleGap={12}>
-          <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px')}><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>More actions</h2><button onClick={closeMenu} aria-label="Close" style={S(RING_BTN)}><CloseX /></button></div>
+          <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px')}><h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>More actions</h2><button onClick={closeMenu} aria-label="Close" style={S(RING)}>{CLOSE}</button></div>
           {!c.confirmDel ? (
             <div style={S('display:flex;flex-direction:column;padding:4px 0;border-top:1px solid #EEF0F3')}>
-              <button type="button" onClick={() => c.setConfirmDel(true)} style={S('display:flex;align-items:center;width:100%;min-height:54px;box-sizing:border-box;padding:0;border:0;background:transparent;font:inherit;font-size:16px;text-align:left;color:#B42318;cursor:pointer')}>Remove product</button>
+              <button type="button" onClick={() => c.setConfirmDel(true)} style={S(MENU_ROW + ';color:#B42318')}>Remove product</button>
             </div>
           ) : (
-            <ConfirmBox label="Confirm removal" title="Remove this product?" body="It will disappear from your product list. Past sales are not affected." error={c.error} action="Remove product" onAction={c.remove} busy={c.busy} onKeep={closeMenu} />
+            <ConfirmBox label="Confirm removal" title={'Remove ' + (s?.name ?? 'this product') + '?'} body="It will disappear from your product list. Past sales are not affected." error={c.error} action="Remove product" keep="Keep product" onAction={c.remove} busy={c.busy} onKeep={closeMenu} />
           )}
         </BottomSheet>
     )}

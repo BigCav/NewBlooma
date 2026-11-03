@@ -1,5 +1,6 @@
 'use client';
-import { RING, BACK, CLOSE, DOTS, FIELD_IN } from '@/components/ui';
+import { CHEV, RING, BACK, BLACK, CLOSE, DOTS, FIELD_IN, FieldError, MENU_ROW, Notice, OUTLINE, dim } from '@/components/ui';
+import { TONE } from '@/lib/tones';
 import { BottomSheet } from '@/components/BottomSheet';
 import { ConfirmBox } from '@/components/ConfirmBox';
 import Link from 'next/link';
@@ -8,7 +9,6 @@ import { S } from '../../calendar/pickers';
 import { HOW_OPTS, QTYPES, VALID_OPTS, type Miss, type QType } from '@/lib/forms-shared';
 import type { FormsCtl } from './FormsView';
 
-const CHEV = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A93A0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')} aria-hidden="true"><path d="M9.5 6l6 6-6 6" /></svg>;
 const UP = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 14l6-6 6 6" /></svg>;
 const DOWN = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 10l6 6 6-6" /></svg>;
 const TRASH = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12" /></svg>;
@@ -45,7 +45,7 @@ export function PickSheet({ title, options, values, multi, help, onPick, onClose
             );
           })}
         </div>
-        {multi && <button onClick={onClose} style={S('margin-top:14px;height:52px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font:inherit;font-size:14.5px;font-weight:500;cursor:pointer')}>Done</button>}
+        {multi && <button onClick={onClose} style={S(BLACK + ';margin-top:14px;flex:0 0 auto')}>Done</button>}
       </BottomSheet>
   );
 }
@@ -74,7 +74,7 @@ export function FormPage({ c }: { c: FormsCtl }) {
   const close = () => c.setOpen(false);
   const missHelp = staff ? 'Staff-recorded forms cannot be asked for online, so staff are warned on the calendar.' : missOn === 'ask' ? 'Clients are asked to complete it as soon as they book online. Staff still see a warning.' : 'Staff see a warning on the appointment in the calendar. Booking still goes through.';
   const validHelp = d.validMonths === 0 ? 'Clients complete this form again at every visit.' : 'After it is completed, it stays valid for ' + validName + '. Then clients are asked again.';
-  const rowCss = 'display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:58px;padding:0 4px;border:0;background:transparent;font:inherit;font-size:16px;text-align:left;color:#0E1116;cursor:pointer;text-decoration:none';
+  const rowCss = MENU_ROW;
 
   return (
     <div role="dialog" aria-label="Edit form" style={S(PAGE)}>
@@ -112,7 +112,7 @@ export function FormPage({ c }: { c: FormsCtl }) {
               <select aria-label={'Answer type for question ' + (i + 1)} value={q.type} onChange={(e) => c.patch((x) => { x.qs[i].type = e.target.value as QType; })} style={{ ...MINI, flex: '1 1 0', minWidth: 0 }}>
                 {QTYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
-              <button type="button" aria-pressed={q.required} onClick={() => c.patch((x) => { x.qs[i].required = !x.qs[i].required; })} style={S('flex:0 0 auto;height:36px;padding:0 14px;border-radius:999px;font:inherit;font-size:13px;font-weight:500;cursor:pointer;border:1px solid ' + (q.required ? '#14624A' : '#E1E4E9') + ';background:' + (q.required ? '#DDF3EA' : '#FFFFFF') + ';color:' + (q.required ? '#14624A' : '#5E6673'))}>{q.required ? 'Required' : 'Optional'}</button>
+              <button type="button" aria-pressed={q.required} onClick={() => c.patch((x) => { x.qs[i].required = !x.qs[i].required; })} style={S('flex:0 0 auto;height:36px;padding:0 14px;border-radius:999px;font:inherit;font-size:13px;font-weight:500;cursor:pointer;border:1px solid ' + (q.required ? TONE.green.fg : '#E1E4E9') + ';background:' + (q.required ? TONE.green.bg : '#FFFFFF') + ';color:' + (q.required ? TONE.green.fg : '#5E6673'))}>{q.required ? 'Required' : 'Optional'}</button>
               <span style={S('flex:1 1 100%;height:0')} />
               <span style={S('flex:1 1 auto')} />
               <button type="button" onClick={() => mv(i, -1)} disabled={i === 0} aria-label="Move up" style={S(ICON_BTN + 'opacity:' + (i > 0 ? 1 : 0.35))}>{UP}</button>
@@ -130,14 +130,14 @@ export function FormPage({ c }: { c: FormsCtl }) {
             <select aria-label="Answer type" value={c.nq.type} onChange={(e) => c.setNq({ ...c.nq, type: e.target.value as QType })} style={{ ...MINI, height: 48, flex: '1 1 0', minWidth: 0, borderRadius: 16, padding: '0 12px', fontSize: 14 }}>
               {QTYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
-            <button type="button" onClick={c.addQ} className="ghost" style={S('flex:1 1 0;height:48px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font:inherit;font-size:14.5px;font-weight:500;cursor:pointer')}>Add</button>
+            <button type="button" onClick={c.addQ} className="ghost" style={S(OUTLINE)}>Add question</button>
           </div>
         </section>
       </main>
       <div style={S(BAR)}>
-        {!!c.error && <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{c.error}</p>}
-        {!!c.notice && <p role="status" style={S('margin:0;color:#14624A;font-size:13.5px;font-weight:500')}>{c.notice}</p>}
-        <button type="button" onClick={c.save} disabled={c.busy || !c.isDirty} style={S('height:52px;border:0;border-radius:999px;font:inherit;font-size:14.5px;font-weight:500;cursor:pointer;background:' + (c.isDirty ? '#0E1116' : '#E9ECF0') + ';color:' + (c.isDirty ? '#FFFFFF' : '#5E6673'))}>{c.busy ? 'Saving' : c.isDirty ? 'Save changes' : 'Saved'}</button>
+        {!!c.error && <FieldError>{c.error}</FieldError>}
+        {!!c.notice && <Notice>{c.notice}</Notice>}
+        <button type="button" onClick={c.save} disabled={c.busy || !c.isDirty} style={S(BLACK + ';flex:0 0 auto' + (c.isDirty ? '' : ';background:#E9ECF0;color:#5E6673;cursor:default') + dim(c.busy))}>{c.busy ? 'Saving…' : c.isDirty ? 'Save changes' : 'Saved'}</button>
       </div>
 
       {sheet === 'cats' && <PickSheet title="Needed for" multi help={c.cats.length ? 'Pick the service categories that need this form.' : 'Add a service category under Services first.'} options={c.cats.map((o) => ({ id: o.id, label: o.name }))} values={d.catIds} onPick={(id) => c.patch((x) => { x.catIds = x.catIds.includes(id) ? x.catIds.filter((y) => y !== id) : x.catIds.concat(id); })} onClose={() => setSheet(null)} />}
@@ -156,7 +156,7 @@ export function FormPage({ c }: { c: FormsCtl }) {
                 <button onClick={() => (d.isNew ? c.remove() : c.setConfirmDel(true))} style={S(rowCss + ';color:#B42318')}>{d.isNew ? 'Discard form' : 'Remove form'}</button>
               </div>
             ) : (
-              <ConfirmBox label="Confirm removal" title={'Remove ' + d.name + '?'} body="Clients stop being asked for it. Answers already given stay on their record." error={c.error} action="Remove form" onAction={c.remove} busy={c.busy} onKeep={() => { c.setConfirmDel(false); setSheet(null); }} />
+              <ConfirmBox label="Confirm removal" title={'Remove ' + d.name + '?'} body="Clients stop being asked for it. Answers already given stay on their record." error={c.error} action="Remove form" keep="Keep form" onAction={c.remove} busy={c.busy} onKeep={() => { c.setConfirmDel(false); setSheet(null); }} />
             )}
           </BottomSheet>
       )}

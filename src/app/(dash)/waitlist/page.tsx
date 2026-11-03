@@ -1,18 +1,16 @@
-import { clock12 } from '@/lib/display';
+import { clock12, clockStr, duration, plural } from '@/lib/display';
 import { dollars } from '@/lib/format';
 import { requireCtx } from '@/lib/session';
 import { minutesOfDay, ymd } from '@/lib/format';
-import { dayInfo, type CalService } from '@/lib/cal';
-import { WEEKDAYS_SHORT } from './weekdays';
-import { initialsOf, type WlRow } from './shared';
+import { WEEKDAYS_FULL, addDaysYmd, dayInfo, type CalService } from '@/lib/cal';
+import { firstName } from '@/lib/people';
+import type { WlRow } from './shared';
 import { WaitlistView } from './WaitlistView';
 
 export const metadata = { title: 'Waitlist' };
 export const dynamic = 'force-dynamic';
 
-const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const clock = clock12;
-const first = (n?: string | null) => String(n ?? '').split(' ')[0];
+const first = (n?: string | null) => firstName(n, '');
 
 export default async function Waitlist() {
   const { sb, salon, staff } = await requireCtx();
@@ -27,27 +25,26 @@ export default async function Waitlist() {
   const ago = (iso: string) => {
     const ms = Date.now() - new Date(iso).getTime(), h = Math.floor(ms / 3600e3), d = ymd(iso, tz);
     if (ms < 60e3) return 'Just now';
-    if (ms < 3600e3) return `${Math.floor(ms / 60e3)} min ago`;
-    if (d === today) return h === 1 ? '1 hour ago' : `${h} hours ago`;
-    const yd = new Date(new Date(`${today}T00:00:00Z`).getTime() - 86400e3).toISOString().slice(0, 10);
-    if (d === yd) return 'Yesterday';
+    if (ms < 3600e3) return `${duration(Math.floor(ms / 60e3))} ago`;
+    if (d === today) return `${plural(h, 'hour')} ago`;
+    if (d === addDaysYmd(today, -1)) return 'Yesterday';
     if (ms < 6 * 86400e3) return dayInfo(d).abbr;
-    const [, M, D] = d.split('-').map(Number); return `${D} ${MON[M - 1]}`;
+    const di = dayInfo(d); return `${di.num} ${di.month.slice(0, 3)}` + (d.slice(0, 4) !== today.slice(0, 4) ? ' ' + d.slice(0, 4) : '');
   };
   const rows: WlRow[] = ((ent ?? []) as any[]).map((e) => {
     const days: number[] = e.weekdays ?? [];
-    const dayText = days.length === 7 ? 'Any day' : days.join() === '0,1,2,3,4' ? 'Weekdays' : days.join() === '5' ? 'Saturday' : days.map((d) => WEEKDAYS_SHORT[d]).join(', ');
+    const dayText = days.length === 7 ? 'Any day' : days.join() === '0,1,2,3,4' ? 'Weekdays' : days.join() === '5' ? 'Saturday' : days.map((d) => WEEKDAYS_FULL[(d + 1) % 7].slice(0, 3)).join(', ');
     const from = e.earliest_time?.slice(0, 5), to = e.latest_time?.slice(0, 5);
-    const win = from === '12:00' && !to ? 'Afternoon' : to === '12:00' && !from ? 'Morning' : !from && !to ? 'Any time' : [from && `from ${from}`, to && `until ${to}`].filter(Boolean).join(' ');
+    const win = from === '12:00' && !to ? 'Afternoon' : to === '12:00' && !from ? 'Morning' : !from && !to ? 'Any time' : [from && `from ${clockStr(from)}`, to && `until ${clockStr(to)}`].filter(Boolean).join(' ');
     const s = e.services;
     const status = e.status === 'offered' ? 'Offered' : e.status === 'booked' ? 'Booked' : 'Waiting';
     const by = !e.added_by ? 'Added' : e.added_by === staff.id ? 'Added by you' : `Added by ${first(e.adder?.name)}`;
     let offer = '';
-    if (status === 'Offered' && e.offered_start) offer = `Offered ${dayInfo(ymd(e.offered_start, tz)).short}, ${clock(minutesOfDay(e.offered_start, tz))} with ${first((team ?? []).find((t) => t.id === e.offered_staff_id)?.name)}`;
+    if (status === 'Offered' && e.offered_start) offer = `Offered ${dayInfo(ymd(e.offered_start, tz)).short}, ${clock12(minutesOfDay(e.offered_start, tz))} with ${first((team ?? []).find((t) => t.id === e.offered_staff_id)?.name)}`;
     const cents = s?.price_cents ?? 0;
     return {
-      id: e.id, name: e.clients?.name ?? 'Client', initials: initialsOf(e.clients?.name ?? ''), clientFirst: first(e.clients?.name), status, offer,
-      service: `${s?.name ?? 'Service'}, ${s?.duration_min ?? 0} min, ${dollars(cents)}`,
+      id: e.id, name: e.clients?.name ?? 'Client', clientFirst: first(e.clients?.name), status, offer,
+      service: `${s?.name ?? 'Service'}, ${duration(s?.duration_min ?? 0)}, ${dollars(cents)}`,
       prefs: [e.staff?.name ? first(e.staff.name) : 'Any team member', dayText, win].join(', '),
       meta: `${by}, ${ago(e.created_at)}`,
     };

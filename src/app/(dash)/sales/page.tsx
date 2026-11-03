@@ -1,15 +1,16 @@
 import { requireCtx } from '@/lib/session';
 import { settleTerminals } from '@/lib/windcave';
-import { ymd, time12 } from '@/lib/format';
+import { dollars, ymd, time12 } from '@/lib/format';
+import { bookingRef, timeRange } from '@/lib/display';
+import { firstName } from '@/lib/people';
+import { TONE } from '@/lib/tones';
 import { addDaysYmd, dayInfo } from '@/lib/cal';
-import { fmt, initialsOf, type PayMethod, type SaleRow } from './shared';
+import { type PayMethod, type SaleRow } from './shared';
 import { SalesView } from './SalesView';
 import { buildOffers, buildServices } from '../calendar/base';
 
 export const metadata = { title: 'Sales' };
 export const dynamic = 'force-dynamic';
-
-const hm = (iso: string, tz: string) => time12(iso, tz);
 
 export default async function Sales({ searchParams }: { searchParams: Promise<{ sale?: string; pay?: string; card?: string }> }) {
   const sp = await searchParams;
@@ -19,7 +20,7 @@ export default async function Sales({ searchParams }: { searchParams: Promise<{ 
   // A terminal payment finished while nobody was watching still finishes its sale.
   await settleTerminals(salon.id);
   const [{ data: sales }, { data: svcs }, { data: pay }, { data: flagged }, { data: prods }, { data: sa }, { data: ss }] = await Promise.all([
-    sb.from('sales').select('id,status,method,subtotal_cents,discount_cents,discount_note,tax_rate,tip_cents,tax_cents,tax_inclusive,total_cents,created_at,paid_at,clients(id,name),staff(id,name,photo_url),bookings(ref_no,starts_at,ends_at),sale_items(label,qty,price_cents,service_id,product_id)')
+    sb.from('sales').select('id,status,method,subtotal_cents,discount_cents,discount_note,tax_rate,tip_cents,tax_cents,tax_inclusive,total_cents,created_at,paid_at,clients(id,name),staff(id,name,photo_url),bookings(id,ref_no,starts_at,ends_at),sale_items(label,qty,price_cents,service_id,product_id)')
       .or(`created_at.gte.${since},status.eq.pending`).order('created_at', { ascending: false }).limit(300),
     sb.from('services').select('id,name,price_cents,duration_min,is_addon,service_categories(name,sort)').eq('active', true).order('name'),
     sb.from('salon_payment_settings').select('online_cards_enabled,terminal_enabled').eq('salon_id', salon.id).maybeSingle(),
@@ -37,6 +38,7 @@ export default async function Sales({ searchParams }: { searchParams: Promise<{ 
   const canEdit = staff.app_role !== 'stylist';
   const { data: openCards } = await sb.from('card_payments').select('sale_id,txn_ref').eq('kind', 'terminal').eq('status', 'pending');
   const openTxn = new Map<string, string>((openCards ?? []).map((x) => [x.sale_id as string, x.txn_ref as string]));
+  const dShort = (d: string) => dayInfo(d).short + (d.slice(0, 4) !== today.slice(0, 4) ? ' ' + d.slice(0, 4) : '');
   const METHOD: Record<string, string> = { card: 'Card', cash: 'Cash', gift_card: 'Gift card', package: 'Package' };
   const durOf = new Map<string, number>(((svcs ?? []) as any[]).map((x) => [x.id as string, x.duration_min as number]));
   const list = ((sales ?? []) as any[]).map((s) => {
@@ -46,12 +48,12 @@ export default async function Sales({ searchParams }: { searchParams: Promise<{ 
     const when = s.paid_at ?? s.created_at, day = ymd(when, tz);
     const name = s.clients?.name ?? 'Walk-in';
     const row: SaleRow = {
-      id: s.id, ref: s.bookings?.ref_no ? 'B-' + s.bookings.ref_no : '', staffId: s.staff?.id ?? null, clientId: s.clients?.id ?? null, bookingDay: s.bookings?.starts_at ? ymd(s.bookings.starts_at, tz) : '', client: name, initials: initialsOf(name), staffName: s.staff?.name ?? 'Unassigned', staffPhoto: s.staff?.photo_url ?? null, firstName: String(s.staff?.name ?? 'Unassigned').split(' ')[0],
+      id: s.id, ref: s.bookings?.ref_no ? bookingRef(s.bookings.ref_no) : '', bookingId: s.bookings?.id ?? '', staffId: s.staff?.id ?? null, clientId: s.clients?.id ?? null, bookingDay: s.bookings?.starts_at ? ymd(s.bookings.starts_at, tz) : '', client: name, staffName: s.staff?.name ?? 'Unassigned', staffPhoto: s.staff?.photo_url ?? null, firstName: firstName(s.staff?.name ?? 'Unassigned'),
       service: first ? `${first.label}${first.qty > 1 ? ` x${first.qty}` : ''}${extra > 0 ? ` +${extra} more` : ''}` : 'Sale',
-      time: status === 'Pending' ? 'In progress' : day === today ? hm(when, tz) : dayInfo(day).short,
+      time: status === 'Pending' ? 'In progress' : day === today ? time12(when, tz) : dShort(day),
       method: status === 'Pending' ? 'Not taken yet' : METHOD[s.method] ?? '', status,
       amount: s.subtotal_cents + s.discount_cents, discount: s.discount_cents, discountNote: s.discount_note ?? '', taxRate: Number(s.tax_rate), taxIncl: !!s.tax_inclusive, tip: s.tip_cents, tax: s.tax_inclusive ? 0 : s.tax_cents, total: s.total_cents,
-      dayShort: dayInfo(day).short, gst: s.tax_cents, range: s.bookings?.starts_at && s.bookings?.ends_at ? hm(s.bookings.starts_at, tz) + ' – ' + hm(s.bookings.ends_at, tz) : '',
+      dayShort: dShort(day), gst: s.tax_cents, range: s.bookings?.starts_at && s.bookings?.ends_at ? timeRange(time12(s.bookings.starts_at, tz), time12(s.bookings.ends_at, tz)) : '',
       lines: items.map((i) => ({ label: i.label as string, qty: i.qty as number, cents: i.price_cents as number, dur: i.service_id ? durOf.get(i.service_id as string) ?? null : null, svc: !!i.service_id, productId: (i.product_id as string | null) ?? null, serviceId: (i.service_id as string | null) ?? null })),
       txn: openTxn.get(s.id),
       canEdit: status === 'Pending' && canEdit && items.filter((i) => i.service_id).length === 1,
@@ -76,12 +78,12 @@ export default async function Sales({ searchParams }: { searchParams: Promise<{ 
   const services = ((svcs ?? []) as any[]).sort((a, b) => (a.service_categories?.sort ?? 0) - (b.service_categories?.sort ?? 0)).map((s) => ({ id: s.id as string, name: s.name as string, priceCents: s.price_cents as number }));
   return <>
     {!!flagged?.length && (
-      <div role="alert" style={{ margin: '16px 24px 0', padding: '12px 16px', borderRadius: 12, background: '#FDECEA', color: '#8A1C12', fontSize: 14, lineHeight: 1.5 }}>
+      <div role="alert" style={{ margin: '16px 24px 0', padding: '12px 16px', borderRadius: 12, background: TONE.red.bg, color: TONE.red.fg, fontSize: 14, lineHeight: 1.5 }}>
         <strong>{flagged.length === 1 ? 'A card payment needs checking.' : `${flagged.length} card payments need checking.`}</strong> Compare with your Windcave statement.
-        {(flagged as any[]).map((f) => <div key={f.id}>{f.sales?.clients?.name ?? 'Walk-in'}, {fmt(f.amount_cents)}: {f.review_note ?? 'Needs a manual check.'}</div>)}
+        {(flagged as any[]).map((f) => <div key={f.id}>{f.sales?.clients?.name ?? 'Walk-in'}, {dollars(f.amount_cents)}: {f.review_note ?? 'Needs a manual check.'}</div>)}
       </div>
     )}
-    <SalesView canDiscount={canEdit} rows={rows} bars={bars} todayTotal={todayTotal} paidCount={todayPaid.length} subtitle={`${t.weekday}, ${t.num} ${t.month}`}
-      methods={methods} services={services} catalog={buildServices(svcs as any[], sa)} offers={buildOffers(ss)} packages={packages} products={((prods ?? []) as any[]).map((x) => ({ id: x.id as string, name: x.name as string, brand: (x.brand ?? '') as string, priceCents: x.price_cents as number, stock: x.stock as number }))} askTip={st.ask_for_tip} initial={{ sale: sp.sale ?? null, pay: sp.pay === '1', card: sp.card ?? '' }} />
+    <SalesView canDiscount={canEdit} rows={rows} bars={bars} todayTotal={todayTotal} paidCount={todayPaid.length} subtitle={t.full}
+      methods={methods} acceptCard={st.accept_card !== false} services={services} catalog={buildServices(svcs as any[], sa)} offers={buildOffers(ss)} packages={packages} products={((prods ?? []) as any[]).map((x) => ({ id: x.id as string, name: x.name as string, brand: (x.brand ?? '') as string, priceCents: x.price_cents as number, stock: x.stock as number }))} askTip={st.ask_for_tip} initial={{ sale: sp.sale ?? null, pay: sp.pay === '1', card: sp.card ?? '' }} />
   </>;
 }

@@ -2,11 +2,11 @@
 import { revalidatePath } from 'next/cache';
 import { requireCtx, friendly } from '@/lib/session';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { zonedToUtc } from '@/lib/format';
+import { minutesOfDay, zonedToUtc } from '@/lib/format';
+import { clock12 } from '@/lib/display';
 import { addDaysYmd } from '@/lib/cal';
 
 type Res = { error?: string; notice?: string };
-const hm = (iso: Date, tz: string) => { const p = new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', hour: 'numeric', minute: '2-digit' }).formatToParts(iso); return `${p.find((x) => x.type === 'hour')!.value}:${p.find((x) => x.type === 'minute')!.value}`; };
 
 export async function clockToggle(staffId: string): Promise<Res> {
   const { sb, salon, staff } = await requireCtx();
@@ -20,7 +20,7 @@ export async function clockToggle(staffId: string): Promise<Res> {
   }
   const { error } = await sb.from('timesheets').insert({ salon_id: salon.id, staff_id: staffId, clock_in: now.toISOString() });
   if (error) return { error: friendly(error.message) };
-  revalidatePath('/payroll'); return { notice: 'Clocked in at ' + hm(now, salon.timezone) };
+  revalidatePath('/payroll'); return { notice: 'Clocked in at ' + clock12(minutesOfDay(now, salon.timezone)) };
 }
 
 export async function setRate(staffId: string, pct: number, from: string, to: string): Promise<Res> {
