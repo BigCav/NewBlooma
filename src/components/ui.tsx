@@ -52,10 +52,8 @@ export const chipCss = (tone: ToneName = 'grey', size: keyof typeof CHIP_SIZE = 
 export function Chip({ tone = 'grey', size = 'md', children }: { tone?: ToneName; size?: keyof typeof CHIP_SIZE; children: ReactNode }) {
   return <span style={S(chipCss(tone, size))}>{children}</span>;
 }
-/** A short message after something happened ("Saved", "Reply sent"). Shown under the thing that changed. */
-export function Notice({ tone = 'green', children }: { tone?: 'green' | 'red' | 'blue'; children: ReactNode }) {
-  return <p role={tone === 'red' ? 'alert' : 'status'} style={S(`margin:0;align-self:flex-start;display:inline-block;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:500;background:${TONE[tone].bg};color:${TONE[tone].fg}`)}>{children}</p>;
-}
+/** A short message after something happened (fades by itself). */
+export { Notice } from './Notice';
 /** A problem with a form or action, in red under the field or above the buttons. */
 export function FieldError({ children }: { children: ReactNode }) {
   return <p role="alert" style={S('margin:0;color:#B42318;font-size:13.5px;font-weight:500')}>{children}</p>;

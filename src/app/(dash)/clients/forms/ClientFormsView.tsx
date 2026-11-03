@@ -39,12 +39,12 @@ function useClientForms(props: Props) {
   const cur = props.cards.find((x) => x.id === sel) ?? props.cards[0] ?? null;
   const pick = (id: string) => { setSel(id); setOpen(''); setRec(null); setError(''); setNotice(''); };
   const openBk = (id: string) => { pick(id); setBk(true); setFm(''); };
-  const send = () => { if (!cur) return; const k = cur.bookingId; startT(async () => { const r = await sendFormLinks(k); if (r.error) { setError(r.error); setNotice(''); return; } setError(''); setNotice(r.notice ?? 'Link sent'); setSent((s) => ({ ...s, [k]: true })); }); };
+  const send = () => { if (!cur) return; const k = cur.bookingId; startT(async () => { const r = await sendFormLinks(k); if (r.error) { setError(r.error); setNotice(''); return; } setError(''); setNotice(''); setSent((s) => ({ ...s, [k]: true })); }); };
   const saveRec = () => {
     if (!cur || !rec) return;
     startT(async () => { const r = await recordPatchTest(cur.clientId, rec.tplId, rec.date, rec.reaction, rec.note); if (r.error) { setError(r.error); return; } setError(''); setRec(null); setNotice(r.notice ?? 'Saved'); router.refresh(); });
   };
-  return { ...props, tab, setTab, busy, narrow, cur, sel, pick, open, setOpen, sent, notice, error, setError, rec, setRec, send, saveRec, ans, setAns, stat: STAT, bk, setBk: (v: boolean) => { setBk(v); if (!v) { setFm(''); setError(''); setNotice(''); } }, fm, setFm, query, setQuery, openBooking: openBk };
+  return { ...props, tab, setTab, busy, narrow, cur, sel, pick, open, setOpen: (v: string) => { setOpen(v); setNotice(''); }, sent, notice, error, setError, rec, setRec, send, saveRec, ans, setAns, stat: STAT, bk, setBk: (v: boolean) => { setBk(v); if (!v) { setFm(''); setError(''); setNotice(''); } }, fm, setFm, query, setQuery, openBooking: openBk };
 }
 type C = ReturnType<typeof useClientForms>;
 export type FormsCtl = C;

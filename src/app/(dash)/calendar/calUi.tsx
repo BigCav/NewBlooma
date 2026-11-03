@@ -31,14 +31,9 @@ export const DLROW = 'display:flex;justify-content:space-between;gap:12px;paddin
 /** @deprecated Use CLOSE from components/ui. */
 export function CloseX() { return CLOSE; }
 
-/** A success message that can be dismissed: under the header on the calendar, or inside an open sheet. */
+/** A success message under the header on the calendar, or inside an open sheet. It fades by itself. */
 export function NoticeBar({ text, onDismiss }: { text: string; onDismiss: () => void }) {
-  return (
-    <div style={S('display:flex;align-items:center;gap:4px;flex:0 0 auto')}>
-      <Notice>{text}</Notice>
-      <button onClick={onDismiss} aria-label="Dismiss message" style={S('flex:0 0 44px;width:44px;height:44px;border:0;border-radius:999px;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer')}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
-    </div>
-  );
+  return <div style={S('display:flex;flex:0 0 auto')}><Notice onDone={onDismiss}>{text}</Notice></div>;
 }
 export const Mag = ({ size, color }: { size: number; color: string }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></svg>;
 

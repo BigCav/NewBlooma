@@ -429,7 +429,6 @@ export function useCalendar(props: Props) {
       if (props.onCreated) { props.onCreated({ id: r.id, day: d }); return; }
       setSelId(r.id ?? null); setPendingSel(r.id ?? null); setNf(blank(d)); setAmap({}); setMode('view'); setOpen(false); setError('');
       if (d !== day) router.push(`/calendar?d=${d}&v=${view === 'week' ? 'week' : 'day'}`); else refresh();
-      setNotice('Appointment added');
     });
   };
 
