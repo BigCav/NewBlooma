@@ -43,10 +43,10 @@ export function minutesOfDay(iso: string | Date, tz: string) {
   const p = new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', hour: '2-digit', minute: '2-digit' }).formatToParts(new Date(iso));
   return Number(p.find((x) => x.type === 'hour')!.value) * 60 + Number(p.find((x) => x.type === 'minute')!.value);
 }
-export const STATUS_LABEL: Record<string, string> = { pending: 'Needs approval', confirmed: 'Confirmed', checked_in: 'Checked in', in_progress: 'In progress', completed: 'Completed', cancelled: 'Cancelled', no_show: 'No-show' };
+export { STATUS_LABEL } from './status';
 
 /** Money on staff screens: whole amounts without cents ("$90"), otherwise two decimals ("$90.50"). Every page uses this one. */
 export const dollars = (cents: number) => {
-  const c = Math.round(cents);
-  return '$' + (c / 100).toLocaleString('en-US', { minimumFractionDigits: c % 100 ? 2 : 0, maximumFractionDigits: 2 });
+  const c = Math.round(cents), a = Math.abs(c);
+  return (c < 0 ? '-' : '') + '$' + (a / 100).toLocaleString('en-US', { minimumFractionDigits: a % 100 ? 2 : 0, maximumFractionDigits: 2 });
 };

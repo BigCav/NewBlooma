@@ -11,19 +11,15 @@ export function toneFor(category: string | null | undefined, index = 0): Tone {
   if (category) for (const [re, i] of KEYS) if (re.test(category)) return TONE_LIST[i];
   return TONE_LIST[index % TONE_LIST.length];
 }
-export function fmtMin(m: number) {
-  const h = Math.floor(m / 60), mm = Math.round(m % 60);
-  return `${((h + 11) % 12) + 1}:${String(mm).padStart(2, '0')}${h % 24 < 12 ? 'am' : 'pm'}`;
-}
-export function hourLabel(h: number) { return `${((h + 11) % 12) + 1}:00${h < 12 ? 'am' : 'pm'}`; }
-export function initials(name: string) { return name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join(''); }
+export { clock12 as fmtMin } from './display';
+export { initialsOf as initials } from './people';
 
-const WD = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const MO = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+export const WEEKDAYS_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+export const MONTHS_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 export type DayInfo = { ymd: string; weekday: string; abbr: string; num: number; month: string; short: string; full: string; wd: number /* 0=Mon */ };
 export function dayInfo(ymd: string): DayInfo {
   const d = new Date(`${ymd}T00:00:00Z`);
-  const w = WD[d.getUTCDay()], mo = MO[d.getUTCMonth()], n = d.getUTCDate();
+  const w = WEEKDAYS_FULL[d.getUTCDay()], mo = MONTHS_FULL[d.getUTCMonth()], n = d.getUTCDate();
   return { ymd, weekday: w, abbr: w.slice(0, 3), num: n, month: mo, short: `${w.slice(0, 3)} ${n} ${mo.slice(0, 3)}`, full: `${w} ${n} ${mo}`, wd: (d.getUTCDay() + 6) % 7 };
 }
 export function addDaysYmd(date: string, n: number) {
