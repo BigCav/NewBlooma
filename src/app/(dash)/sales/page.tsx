@@ -19,9 +19,11 @@ export default async function Sales({ searchParams }: { searchParams: Promise<{ 
   const since = new Date(Date.now() - 15 * 86400e3).toISOString();
   // A terminal payment finished while nobody was watching still finishes its sale.
   await settleTerminals(salon.id);
+  // A stylist sees their own sales, and any still open so a checkout can be finished, but not the rest of the salon's takings.
+  const scope = staff.app_role === 'stylist' ? `and(created_at.gte.${since},staff_id.eq.${staff.id}),status.eq.pending` : `created_at.gte.${since},status.eq.pending`;
   const [{ data: sales }, { data: svcs }, { data: pay }, { data: flagged }, { data: prods }, { data: sa }, { data: ss }] = await Promise.all([
     sb.from('sales').select('id,status,method,subtotal_cents,discount_cents,discount_note,tax_rate,tip_cents,tax_cents,tax_inclusive,total_cents,created_at,paid_at,clients(id,name),staff(id,name,photo_url),bookings(id,ref_no,starts_at,ends_at),sale_items(label,qty,price_cents,service_id,product_id)')
-      .or(`created_at.gte.${since},status.eq.pending`).order('created_at', { ascending: false }).limit(300),
+      .or(scope).order('created_at', { ascending: false }).limit(300),
     sb.from('services').select('id,name,price_cents,duration_min,is_addon,service_categories(name,sort)').eq('active', true).order('name'),
     sb.from('salon_payment_settings').select('online_cards_enabled,terminal_enabled').eq('salon_id', salon.id).maybeSingle(),
     // Card payments the system could not match to a sale cleanly (amount differs, or paid another way as well). Shown for 30 days.

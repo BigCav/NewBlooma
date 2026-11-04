@@ -24,7 +24,7 @@ const tile = (c: ProductsCtl, cat: string, size: number, r: number, fs: number) 
 export function ProductBody({ c }: { c: ProductsCtl }) {
   const s = c.sel;
   if (c.mode === 'new') return <ProductForm c={c} />;
-  if (!s) return <Note>No products yet. Add one with New product.</Note>;
+  if (!s) return <Note>{c.canEdit ? 'No products yet. Add one with New product.' : 'No products yet.'}</Note>;
   if (c.mode === 'restock') return <Restock c={c} />;
   if (c.mode === 'edit') return <ProductForm c={c} />;
   return <ProductView c={c} />;
@@ -53,13 +53,13 @@ function ProductView({ c }: { c: ProductsCtl }) {
         <div style={S('display:flex;flex-direction:column;gap:12px;box-sizing:border-box;padding:16px;border:1px solid #E6E8EC;border-radius:20px;background:#FAFAFB')}>
           <div style={S('display:flex;align-items:baseline;justify-content:space-between;gap:12px')}><span style={S('color:#5E6673')}>In stock</span><span style={S('font-size:30px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{s.stock}</span></div>
           <div style={S('height:8px;border-radius:999px;background:#EEF0F3;overflow:hidden')}><div style={S('height:100%;border-radius:999px;background:' + STATUS[s.status].bar + ';width:' + fill + '%')} /></div>
-          <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
+          {c.canEdit && <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
             <span style={S('font-size:14px;font-weight:500')}>Adjust stock</span>
             <div style={S('display:flex;align-items:center;gap:10px')}>
               <button onClick={() => c.nudge(s, -1)} aria-label="Remove one from stock" style={S(round)}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14" /></svg></button>
               <button onClick={() => c.nudge(s, 1)} aria-label="Add one to stock" style={S(round)}><Icon name="plus" size={18} color="#0E1116" /></button>
             </div>
-          </div>
+          </div>}
         </div>
         <DetailRows go={() => {}} rows={[
           { icon: I_HASH, text: 'SKU ' + s.sku },
@@ -71,10 +71,10 @@ function ProductView({ c }: { c: ProductsCtl }) {
         {!!c.notice && <Notice>{c.notice}</Notice>}
         {!!c.error && <FieldError>{c.error}</FieldError>}
       </div>
-      <div style={S('flex:0 0 auto;padding:14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3;display:flex;gap:10px')}>
+      {c.canEdit && <div style={S('flex:0 0 auto;padding:14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3;display:flex;gap:10px')}>
         <button onClick={c.openEdit} style={S(SECOND)}>Edit product</button>
         <button onClick={c.openRestock} style={S(PRIMARY)}>Restock</button>
-      </div>
+      </div>}
     </div>
   );
 }

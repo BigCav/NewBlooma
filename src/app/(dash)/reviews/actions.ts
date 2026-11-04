@@ -23,7 +23,8 @@ export async function deleteReply(id: string): Promise<Res> {
 }
 
 export async function requestReviews(): Promise<Res> {
-  const { sb } = await requireCtx();
+  const { sb, staff } = await requireCtx();
+  if (staff.app_role === 'stylist') return { error: 'Only the owner or front desk can ask clients for reviews.' };
   const { data, error } = await sb.rpc('request_reviews');
   if (error) return { error: friendly(error.message) };
   await flushOutbox();

@@ -7,7 +7,8 @@ type Res = { error?: string; notice?: string; id?: string; stock?: number };
 const whole = (v: string) => (/^\d{1,6}$/.test(String(v).trim()) ? Number(String(v).trim()) : NaN);
 
 export async function adjustStock(id: string, delta: number, notice?: string): Promise<Res> {
-  const { sb } = await requireCtx();
+  const { sb, staff } = await requireCtx();
+  if (staff.app_role !== 'owner') return { error: 'Only the owner can change stock.' };
   const { data, error } = await sb.rpc('adjust_product_stock', { p_product: id, p_delta: delta });
   if (error) return { error: friendly(error.message) };
   revalidatePath('/products'); return { stock: data as number, notice };

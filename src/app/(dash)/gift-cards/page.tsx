@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { requireCtx } from '@/lib/session';
 import { ymd } from '@/lib/format';
 import { GiftCardsView, type GiftRow } from './GiftCardsView';
@@ -7,6 +8,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function GiftCards() {
   const { sb, salon, staff } = await requireCtx();
+  if (staff.app_role === 'stylist') redirect('/calendar');
   const tz = salon.timezone;
   const [{ data: cards }, { data: sales }] = await Promise.all([
     sb.from('gift_cards').select('id,code,for_name,original_cents,balance_cents,issued_at,voided_at,voided_cents').order('issued_at', { ascending: false }).limit(300),

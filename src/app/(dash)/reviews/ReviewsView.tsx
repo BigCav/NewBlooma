@@ -11,7 +11,7 @@ import { deleteReply, requestReviews, saveReply } from './actions';
 import { ReviewCard, ReviewsMobile } from './ReviewsMobile';
 
 export type ReviewRow = { id: string; name: string; stars: number; text: string; svc: string; pro: string; date: string; reply: string };
-type Props = { rows: ReviewRow[]; salonName: string };
+type Props = { rows: ReviewRow[]; salonName: string; /** Emailing clients to ask for reviews is for the owner and front desk, not a stylist. */ canAsk: boolean };
 export const FILTERS: [string, string][] = [['all', 'All'], ['reply', 'Needs reply'], ['5', '5 stars'], ['4', '4 stars'], ['low', '3 or fewer']];
 const STARS = '★★★★★';
 
@@ -76,7 +76,7 @@ function Desktop({ c }: { c: C }) {
   const needs = c.rows.filter((r) => !r.reply).length;
   return (
     <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
-      <PageHeader title="Reviews" subtitle={`What clients say about ${c.salonName}`} query={c.query} onQuery={c.setQuery} placeholder="Search reviews" actionLabel="Ask for reviews" onAction={c.request} />
+      <PageHeader title="Reviews" subtitle={`What clients say about ${c.salonName}`} query={c.query} onQuery={c.setQuery} placeholder="Search reviews" actionLabel="Ask for reviews" onAction={c.request} showAction={c.canAsk} />
       <section aria-label="Reviews at a glance" style={S('display:flex;flex-wrap:wrap;align-items:flex-end;gap:20px 64px')}>
         {big('Average rating', c.n ? c.avg.toFixed(1) : '0.0')}{big('Reviews', String(c.n))}{big('Needs reply', String(needs))}
       </section>

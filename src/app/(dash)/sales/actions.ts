@@ -2,7 +2,7 @@
 import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { requireCtx, friendly } from '@/lib/session';
+import { requireCtx, friendly, ownsTxn } from '@/lib/session';
 import { getCreds, releaseOnline, startOnline, startTerminal, terminalInFlight, refundByCard, pollTerminal, pressTerminalButton, cancelTerminal } from '@/lib/windcave';
 import { sendCustomMessage } from '@/lib/notify';
 import { mailP } from '@/lib/email-layout';
@@ -90,9 +90,9 @@ export async function payFlow(saleId: string, method: 'terminal' | 'online' | 'c
   return r.error ? { error: r.error } : { url: r.url };
 }
 
-export async function terminalPoll(txn: string) { await requireCtx(); return pollTerminal(txn); }
-export async function terminalCancel(txn: string) { await requireCtx(); await cancelTerminal(txn); }
-export async function terminalPress(txn: string, name: string, label: string) { await requireCtx(); await pressTerminalButton(txn, name, label); }
+export async function terminalPoll(txn: string) { if (!(await ownsTxn(txn))) return { state: 'error' as const }; return pollTerminal(txn); }
+export async function terminalCancel(txn: string) { if (await ownsTxn(txn)) await cancelTerminal(txn); }
+export async function terminalPress(txn: string, name: string, label: string) { if (await ownsTxn(txn)) await pressTerminalButton(txn, name, label); }
 
 export async function setPrice(saleId: string, amount: string): Promise<Res> {
   const { sb } = await requireCtx();

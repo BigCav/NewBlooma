@@ -17,7 +17,7 @@ import { adjustStock, createProduct, removeProduct, saveProduct } from './action
 import { ProductBody } from './ProductFlow';
 import { FILTERS, STATUS, toneOf, type ProductRow } from './shared';
 
-type Props = { rows: ProductRow[]; cats: string[] };
+type Props = { rows: ProductRow[]; cats: string[]; /** Adding, editing, restocking and removing products is the owner's; a stylist can look at what is in stock. */ canEdit: boolean };
 type Mode = 'view' | 'restock' | 'edit' | 'new';
 
 function useProducts(props: Props) {
@@ -86,7 +86,7 @@ function Desktop({ c }: { c: C }) {
   const stat = (label: string, v: number) => <Stat label={label} value={v} />;
   return (
     <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
-      <PageHeader title="Products" subtitle="Retail and backbar stock" query={c.query} onQuery={c.setQuery} placeholder="Search products" actionLabel="New product" onAction={c.openNew} />
+      <PageHeader title="Products" subtitle="Retail and backbar stock" query={c.query} onQuery={c.setQuery} placeholder="Search products" actionLabel="New product" onAction={c.openNew} showAction={c.canEdit} />
       <section aria-label="Stock at a glance" style={S('display:flex;flex-wrap:wrap;gap:20px 64px')}>{stat('Products', c.rows.length)}{stat('Low stock', c.low)}{stat('Out of stock', c.out)}</section>
       {!!c.notice && !c.open && <Notice>{c.notice}</Notice>}
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
@@ -133,10 +133,10 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
         {!!c.notice && !c.open && <Notice>{c.notice}</Notice>}
         <div style={S('display:flex;gap:10px')}>
           <FilterButton onClick={() => setFopen(true)} active={c.filter !== 'all'} label="Filter products" />
-          <button onClick={c.openNew} style={S(BLACK + ';gap:8px')}>
+          {c.canEdit && <button onClick={c.openNew} style={S(BLACK + ';gap:8px')}>
             <Icon name="plus" color="#FFFFFF" />
             New product
-          </button>
+          </button>}
         </div>
         {c.filter !== 'all' && <ActiveFilter label={FILTERS.find((f) => f.id === c.filter)?.label ?? ''} onClear={() => c.setFilter('all')} />}
         {c.list.length > 0 && (
@@ -167,7 +167,7 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
 
 export function ProductsView(props: Props) {
   const c = useProducts(props);
-  useNewParam(() => c.openNew());
+  useNewParam(() => { if (c.canEdit) c.openNew(); });
   return (<>
     {c.narrow !== false && <Mobile c={c} />}
     {c.narrow !== true && <Desktop c={c} />}

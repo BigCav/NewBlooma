@@ -63,7 +63,7 @@ export function ReviewsMobile({ c, filters, drawer, startId, onClose }: { c: Rev
         </section>
         <div style={S('display:flex;gap:12px')}>
           <FilterButton onClick={() => setFopen(true)} active={c.filter !== 'all'} label="Filter reviews" />
-          <button onClick={c.request} disabled={c.busy} style={S(BLACK + dim(c.busy))}>{c.busy ? 'Sending…' : 'Ask for reviews'}</button>
+          {c.canAsk && <button onClick={c.request} disabled={c.busy} style={S(BLACK + dim(c.busy))}>{c.busy ? 'Sending…' : 'Ask for reviews'}</button>}
         </div>
         {c.filter !== 'all' && <ActiveFilter label={fl} onClear={() => c.pickFilter('all')} />}
         {!!c.notice && <Notice>{c.notice}</Notice>}

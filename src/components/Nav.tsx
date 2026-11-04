@@ -59,7 +59,9 @@ export const salonHref = (slug: string) => `/b/${slug}`;
 /** The desktop rail, top to bottom (the salon page and Settings sit at the bottom). */
 /** Pages only the owner can open (they send anyone else back to the calendar), so the other roles are not shown a link to them. */
 const OWNER_ONLY: ReadonlySet<string> = new Set(['reports', 'settings']);
-export const visibleTo = (id: string, role: string) => role === 'owner' || !OWNER_ONLY.has(id);
+/** Pages a stylist is not shown either: gift card codes are as good as cash. */
+const NOT_STYLIST: ReadonlySet<string> = new Set(['gift']);
+export const visibleTo = (id: string, role: string) => role === 'owner' || (!OWNER_ONLY.has(id) && !(role === 'stylist' && NOT_STYLIST.has(id)));
 const RAIL = ['calendar', 'inbox', 'clients', 'waitlist', 'services', 'team', 'payroll', 'sales', 'products', 'packages', 'gift', 'reviews', 'reports'] as const;
 /** The phone tab bar, left to right, with the + button between the second and third. */
 const TABS = ['calendar', 'services', 'clients', 'more'] as const;

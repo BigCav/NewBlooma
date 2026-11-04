@@ -6,7 +6,7 @@ export const metadata = { title: 'Products' };
 export const dynamic = 'force-dynamic';
 
 export default async function Products() {
-  const { sb } = await requireCtx();
+  const { sb, staff } = await requireCtx();
   const since = new Date(Date.now() - 7 * 86400e3).toISOString();
   const [{ data: prods }, { data: cats }, { data: sold }] = await Promise.all([
     sb.from('products').select('id,name,brand,category,sku,price_cents,stock,reorder_level').eq('active', true).order('name'),
@@ -21,5 +21,5 @@ export default async function Products() {
     id: p.id, name: p.name, brand: p.brand ?? '', cat: p.category ?? 'Other', sku: p.sku ?? 'None', priceCents: p.price_cents, stock: p.stock, reorder: p.reorder_level,
     sold: soldBy.get(p.id) ?? 0, status: statusOf(p.stock, p.reorder_level),
   }));
-  return <ProductsView rows={rows} cats={catList} />;
+  return <ProductsView rows={rows} cats={catList} canEdit={staff.app_role === 'owner'} />;
 }

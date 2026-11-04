@@ -68,5 +68,15 @@ begin
   end loop;
   perform pg_temp.ok((select commission_pct from staff where id = stfs) = 45, 'the owner''s change to a commission did not stick');
 
+  ---------------------------------------------------------------- 5. Salon money and mail a stylist cannot reach, however the app screens look
+  perform pg_temp.ok(pg_temp.json_as(us, format('select report_summary(%L, %L)', current_date, current_date)) ->> 'error' is not null, 'a stylist read the salon-wide revenue report');
+  perform pg_temp.ok(pg_temp.json_as(ua, format('select report_summary(%L, %L)', current_date, current_date)) ->> 'error' is null, 'the owner could not read the revenue report');
+  perform pg_temp.ok(pg_temp.dml_as(us, 'select request_reviews()') like 'ERR%', 'a stylist emailed clients asking for reviews');
+  perform pg_temp.ok(pg_temp.dml_as(ua, 'select request_reviews()') = 'OK 1', 'the owner could not ask clients for reviews');
+  perform pg_temp.ok(pg_temp.dml_as(us, format('select adjust_product_stock(%L, 5)', (select id from products where salon_id = sa limit 1))) like 'ERR%', 'a stylist changed a stock count');
+  perform pg_temp.ok(pg_temp.dml_as(ua, format('select adjust_product_stock(%L, 5)', (select id from products where salon_id = sa limit 1))) = 'OK 1', 'the owner could not change a stock count');
+  perform pg_temp.ok(pg_temp.dml_as(ua, format('select * from gift_cards where salon_id = %L', sa)) <> 'OK 0', 'the owner could not see the gift cards');
+  perform pg_temp.ok(pg_temp.dml_as(us, format('select * from gift_cards where salon_id = %L', sa)) = 'OK 0', 'a stylist could list gift card codes');
+
   perform pg_temp.ok(bad = '', 'role rules broken: ' || bad);
 end $t$;

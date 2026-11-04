@@ -36,6 +36,13 @@ export async function requireOwner() {
   return c;
 }
 
+/** A card terminal payment (or refund) of this salon. The terminal routes look payments up with full access, so they check this first: a reference from another salon gets nothing. */
+export async function ownsTxn(txn: string): Promise<boolean> {
+  const { sb } = await requireCtx();
+  const { data } = await sb.from('card_payments').select('id').eq('txn_ref', txn).maybeSingle();
+  return !!data;
+}
+
 /** Turn a Postgres error into a short human message. */
 export function friendly(msg?: string | null) {
   if (!msg) return 'Something went wrong';
