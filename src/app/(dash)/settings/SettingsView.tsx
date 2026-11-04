@@ -62,23 +62,29 @@ const SEC_ICON: Record<string, React.ReactNode> = {
 const TILE_D = `flex:0 0 48px;width:48px;height:48px;border-radius:16px;background:${TONE.purple.bg};display:flex;align-items:center;justify-content:center`;
 const CARD_D = 'display:flex;align-items:center;gap:16px;box-sizing:border-box;min-height:92px;padding:18px 20px;border:1px solid #E6E8EC;border-radius:24px;background:#FFFFFF;text-align:left;text-decoration:none;font:inherit;color:#0E1116;cursor:pointer';
 
-/** Desktop: every settings area as a card in a grid. An area opens in the right-hand drawer. */
-function Desktop({ c }: { c: C }) {
+/** Desktop: every settings area as a card in a grid. With `pick` a card opens its area in the right-hand drawer; without it each card is a link, so a page that has its own address (card payments) can show the same grid behind its drawer. */
+export function SettingsCards({ pick }: { pick?: (id: string) => void }) {
   const body = (id: string, label: string, desc: string) => (<>
     <span style={S(TILE_D)}>{SEC_ICON[id]}</span>
     <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:16px;font-weight:600;letter-spacing:-0.01em')}>{label}</span><span style={S('display:block;margin-top:2px;font-size:13.5px;color:#5E6673')}>{desc}</span></span>
     {CHEV}
   </>);
   return (
+    <section aria-label="Settings sections" style={S('display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px')}>
+      {SECTIONS.map((x) => pick
+        ? <button key={x.id} onClick={() => pick(x.id)} aria-label={x.label + ', ' + x.desc} className="s-card" style={S(CARD_D)}>{body(x.id, x.label, x.desc)}</button>
+        : <Link key={x.id} href={'/settings?section=' + x.id} aria-label={x.label + ', ' + x.desc} className="s-card" style={S(CARD_D)}>{body(x.id, x.label, x.desc)}</Link>)}
+      <Link href="/settings/forms" aria-label="Forms, what clients fill in before a visit" className="s-card" style={S(CARD_D)}>{body('forms', 'Forms', 'What clients fill in before a visit')}</Link>
+    </section>
+  );
+}
+
+function Desktop({ c }: { c: C }) {
+  return (
     <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <PageHeader title="Settings" subtitle="Business details and booking rules" showSearch={false} showAction={false} />
       {!!c.notice && <Notice>{c.notice}</Notice>}
-      <section aria-label="Settings sections" style={S('display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px')}>
-        {SECTIONS.map((x) => (
-          <button key={x.id} onClick={() => c.pick(x.id)} aria-label={x.label + ', ' + x.desc} className="s-card" style={S(CARD_D)}>{body(x.id, x.label, x.desc)}</button>
-        ))}
-        <Link href="/settings/forms" aria-label="Forms, what clients fill in before a visit" className="s-card" style={S(CARD_D)}>{body('forms', 'Forms', 'What clients fill in before a visit')}</Link>
-      </section>
+      <SettingsCards pick={c.pick} />
       {c.open && <div className="m-cal cal-root m-drawer"><SectionPage c={c} /></div>}
     </div>
   );

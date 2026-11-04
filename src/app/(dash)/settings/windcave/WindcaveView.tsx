@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/Chrome';
 import { S } from '../../calendar/pickers';
 import { BACK as BACK_ICON, BAR, BLACK, CARD, FIELD_IN, Field as CardField, FieldError, Notice, OUTLINE, PAGE, ScreenHeader, RING, SwitchRow, dim } from '@/components/ui';
+import { SettingsCards } from '../SettingsView';
 import { checkTerminal, savePayments } from './actions';
 
 type Props = { taxInclusive: boolean; online: boolean; terminal: boolean; station: string; saved: { online_user: boolean; online_key: boolean; hit_user: boolean; hit_key: boolean } };
@@ -42,18 +43,18 @@ function useForm(p: Props) {
     if (r.error) { setError(r.error); setNotice(''); return; }
     setError(''); setNotice(r.ok ?? '');
   });
-  return { narrow, v, set, save, test, busy, error, notice, saved: p.saved };
+  return { narrow, v, set, save, test, busy, error, notice, saved: p.saved, back: () => router.push('/settings?section=payments') };
 }
 type C = ReturnType<typeof useForm>;
 
 
+/** Desktop: the Settings cards, with this page in the right-hand drawer like every other settings area. */
 function Desktop({ c }: { c: C }) {
   return (
     <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
-      <PageHeader title="Card payments" subtitle="Windcave setup and GST mode" showSearch={false} showAction={false} />
-      <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
-        <div style={S('flex:999 1 520px;min-width:0;max-width:760px')}><Mobile c={c} inline /></div>
-      </div>
+      <PageHeader title="Settings" subtitle="Business details and booking rules" showSearch={false} showAction={false} />
+      <SettingsCards />
+      <div className="m-cal cal-root m-drawer"><Mobile c={c} drawer /></div>
     </div>
   );
 }
@@ -67,15 +68,16 @@ function Key({ id, label, value, set, secret, saved, ph }: { id: string; label: 
   );
 }
 
-/** Phone: a page with its own back arrow, a card per area, and a Save bar. */
-function Mobile({ c, inline }: { c: C; inline?: boolean }) {
+/** A page with its own back arrow, a card per area, and a Save bar: full page on the phone, inside the drawer on a computer. */
+function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
   const { v, set, saved } = c;
   const H3 = 'margin:6px 0 0;font-size:17px;font-weight:600;letter-spacing:-0.01em';
   const NOTE = 'margin:2px 0 0;font-size:13px;color:#5E6673';
   const tile = (on: boolean) => 'flex:1 1 0;min-height:56px;padding:10px 12px;border-radius:16px;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-align:center;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
   return (
-    <div className={inline ? 'm-cal cal-root' : 'only-m m-cal cal-root'} style={S(PAGE.replace('position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;display:flex;', inline ? 'position:relative;width:100%;height:calc(100dvh - 170px);min-height:520px;box-sizing:border-box;border:1px solid #E6E8EC;border-radius:24px;display:flex;' : 'position:relative;width:100%;height:100dvh;box-sizing:border-box;'))}>
-      <ScreenHeader title={inline ? 'Payments' : 'Card payments'} sub={inline ? 'Back to payments settings' : 'Windcave setup and GST mode'} backHref="/settings?section=payments" backLabel="Back to payments" />
+    <div role={drawer ? 'dialog' : undefined} aria-label={drawer ? 'Card payments' : undefined} className={drawer ? undefined : 'only-m m-cal cal-root'} style={S(drawer ? PAGE : PAGE.replace('position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;display:flex;', 'position:relative;width:100%;height:100dvh;box-sizing:border-box;'))}>
+      {/* In the drawer Back is a button, so Esc and a click on the blurred area close it the same way. */}
+      <ScreenHeader title="Card payments" sub="Windcave setup and GST mode" backLabel="Back" {...(drawer ? { onBack: c.back } : { backHref: '/settings?section=payments', backLabel: 'Back to payments' })} />
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:16px 20px 24px;display:flex;flex-direction:column;gap:14px')}>
         <div><h3 style={S(H3)}>Prices are</h3></div>
         <div role="group" aria-label="Prices are" style={S('display:flex;gap:10px')}>

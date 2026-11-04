@@ -73,8 +73,8 @@ type Pick = null | 'window' | 'notice' | 'confirm' | 'cancel' | 'tipDefault';
 const PICK_TITLE: Record<string, string> = { window: 'Clients can book up to', notice: 'Minimum notice', confirm: 'Confirm bookings', cancel: 'Free cancellation until', tipDefault: 'Suggested tip' };
 const nameOf = (k: string, v: string) => GROUPS[k].find((o) => o[0] === v)?.[1] ?? '';
 
-/** One settings section on the phone as its own page: cards of fields, rows and switches, and a Save bar. */
-export function SectionPage({ c, inline }: { c: SettingsCtl; inline?: boolean }) {
+/** One settings section as its own page (a full page on the phone, the right-hand drawer on a computer): cards of fields, rows and switches, and a Save bar. */
+export function SectionPage({ c }: { c: SettingsCtl }) {
   const cur = SECTIONS.find((x) => x.id === c.section)!;
   const v: Values = c.v, s = c.section;
   const [night, setNight] = useNightMode();
@@ -82,8 +82,8 @@ export function SectionPage({ c, inline }: { c: SettingsCtl; inline?: boolean })
   const key = pick as keyof Values;
   const showBar = s !== 'appearance';
   return (
-    <div role={inline ? 'region' : 'dialog'} aria-label={cur.label} style={S(inline ? PAGE.replace('position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;', 'position:relative;height:calc(100dvh - 170px);min-height:520px;border:1px solid #E6E8EC;border-radius:24px;') : PAGE)}>
-      <ScreenHeader title={cur.label} sub={cur.desc} onBack={inline ? undefined : c.close} />
+    <div role="dialog" aria-label={cur.label} style={S(PAGE)}>
+      <ScreenHeader title={cur.label} sub={cur.desc} onBack={c.close} />
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:16px 20px 24px;display:flex;flex-direction:column;gap:14px')}>
         {s === 'business' && (<>
           <Text id="st-name" label="Business name" c={c} k="bizName" type="text" ph="Your business name" />
