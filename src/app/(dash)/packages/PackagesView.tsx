@@ -1,5 +1,5 @@
 'use client';
-import { BLACK, BLACK_SM, Chip, FIELD_IN, Field, FilterChip, Notice, OUTLINE, Stat, StatCard, dim } from '@/components/ui';
+import { BLACK, BLACK_SM, Chip, FIELD_IN, Field, FilterChip, Icon, KV_ROW, Note, Notice, OUTLINE, Stat, StatCard, dim } from '@/components/ui';
 import { dayInfo } from '@/lib/cal';
 import { plural } from '@/lib/display';
 import { TONE, type ToneName } from '@/lib/tones';
@@ -181,7 +181,7 @@ function SellFlow({ c }: { c: C }) {
       {kind === 'client' && <ClientStep name={sf.client} clientId={sf.clientId} recent={c.recent} onChange={(name, id) => { setSf({ ...sf, client: name, clientId: id }); c.setError(''); }} />}
       {kind === 'package' && (
         <div role="group" aria-label="Package" style={S('display:flex;flex-direction:column')}>
-          {!c.activeTypes.length && <p style={S('margin:0;color:#5E6673;font-size:14px')}>{c.canEdit ? 'No packages yet. Close this and create one first.' : 'No packages yet. Ask the owner to set one up.'}</p>}
+          {!c.activeTypes.length && <Note>{c.canEdit ? 'No packages yet. Close this and create one first.' : 'No packages yet. Ask the owner to set one up.'}</Note>}
           {c.activeTypes.map((t) => { const on = sf.packageId === t.id; return (
             <button key={t.id} onClick={() => { setSf({ ...sf, packageId: on ? null : t.id }); c.setError(''); }} aria-pressed={on} style={S(ROW(on))}>
               <span style={S('flex:1 1 auto;min-width:0;text-align:left')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{t.name}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{t.uses + ' x ' + t.service}</span></span>
@@ -205,7 +205,7 @@ function SellFlow({ c }: { c: C }) {
 function Detail({ c }: { c: C }) {
   const s = c.sel;
   if (!s) return null;
-  const rowCss = 'display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #EEF0F3';
+  const rowCss = KV_ROW;
   const pct = s.uses ? Math.round(s.left / s.uses * 100) : 0;
   return (
     <div style={S('display:flex;flex-direction:column;gap:20px')}>
@@ -227,7 +227,7 @@ function Detail({ c }: { c: C }) {
       </dl>
       <section aria-label="Visits used" style={S('display:flex;flex-direction:column;gap:4px')}>
         <h3 style={S('margin:0 0 4px;font-size:15px;font-weight:600')}>Visits used</h3>
-        {!s.used.length && <p style={S('margin:0;color:#5E6673;font-size:14px')}>None yet.</p>}
+        {!s.used.length && <Note>None yet.</Note>}
         <ul style={S('margin:0;padding:0;list-style:none')}>{s.used.map((d, i) => <li key={i} style={S('padding:10px 0;border-top:1px solid #EEF0F3;font-size:14px;font-weight:500')}>{dLong(d, c.month)}</li>)}</ul>
       </section>
     </div>
@@ -324,12 +324,12 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
         </section>
         {!!c.notice && <Notice>{c.notice}</Notice>}
         <div style={S('display:flex;gap:10px')}>
-          <button onClick={c.openSell} style={S(BLACK + ';gap:8px')}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>Sell package</button>
+          <button onClick={c.openSell} style={S(BLACK + ';gap:8px')}><Icon name="plus" color="#FFFFFF" />Sell package</button>
           {c.canEdit && c.tab === 'types' && <button className="ghost" onClick={c.openNew} style={S(OUTLINE)}>New package</button>}
         </div>
         <div role="group" aria-label="Packages view" className="hscroll" style={S('display:flex;gap:8px')}>{([['sold', 'Sold to clients'], ['types', 'Your packages']] as const).map(([id, l]) => <FilterChip key={id} on={c.tab === id} phone onClick={() => c.setTab(id)}>{l}</FilterChip>)}</div>
         {c.tab === 'sold' ? (<>
-          {c.sold.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>{noneSold(c)}</p>}
+          {c.sold.length === 0 && <Note>{noneSold(c)}</Note>}
           <ul style={S('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px')}>
             {c.sold.map((s) => (
               <li key={s.id}><button className="ghost" onClick={() => c.pick(s.id)} aria-label={`${s.client}, ${s.name}, ${s.left} of ${s.uses} left, ${s.status}`} style={S('display:flex;flex-direction:column;gap:10px;width:100%;box-sizing:border-box;padding:16px 18px;border:1px solid #E6E8EC;border-radius:20px;background:#FFFFFF;text-align:left;font:inherit;color:#0E1116;cursor:pointer')}>
@@ -343,7 +343,7 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
         </>) : (
           <div style={S('display:flex;flex-direction:column;gap:12px')}>
             {c.types.map((t) => <TypeCard key={t.id} t={t} c={c} />)}
-            {c.types.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>{c.canEdit ? 'No packages yet. Create your first one.' : 'No packages yet.'}</p>}
+            {c.types.length === 0 && <Note>{c.canEdit ? 'No packages yet. Create your first one.' : 'No packages yet.'}</Note>}
           </div>
         )}
       </main>

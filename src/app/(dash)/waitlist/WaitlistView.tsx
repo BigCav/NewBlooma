@@ -8,7 +8,7 @@ import { useEffect, useState, useTransition } from 'react';
 import type { CalService, CalStaff } from '@/lib/cal';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { ActiveFilter, FilterButton, FilterSheet } from '@/components/FilterBits';
-import { Avatar, BLACK, Chip, FieldError, FilterChip, Notice } from '@/components/ui';
+import { Avatar, BLACK, Chip, Note, FieldError, FilterChip, Notice } from '@/components/ui';
 import { S } from '../calendar/pickers';
 import { plural } from '@/lib/display';
 import { addToWaitlist, bookEntry, findTimes, offerTime, removeEntry } from './actions';
@@ -103,7 +103,7 @@ function Desktop({ c }: { c: C }) {
       <section aria-label="Waitlist" style={S('display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:16px;align-items:start')}>
         {list.map((r) => <WlCard key={r.id} r={r} onOpen={() => c.toggle(r)} />)}
       </section>
-      {list.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>{c.query.trim() ? `Nothing matches "${c.query.trim()}".` : filter !== 'all' ? `Nobody is ${fl.toLowerCase()}.` : 'Nobody is on the waitlist yet.'}</p>}
+      {list.length === 0 && <Note>{c.query.trim() ? `Nothing matches "${c.query.trim()}".` : filter !== 'all' ? `Nobody is ${fl.toLowerCase()}.` : 'Nobody is on the waitlist yet.'}</Note>}
       {(!!c.openId || c.mode === 'add') && <Mobile c={c} drawer />}
     </div>
   );

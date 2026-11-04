@@ -1,5 +1,5 @@
 'use client';
-import { CHEV, OUTLINE } from '@/components/ui';
+import { CHEV, OUTLINE, ROW_LIST } from '@/components/ui';
 import { NAV, UnreadBadge, salonHref } from '@/components/Nav';
 import Link from 'next/link';
 import { MobileHeader, MobileTabs } from '@/components/Chrome';
@@ -28,7 +28,7 @@ export function MoreView({ slug, signOut }: { slug: string; signOut: () => Promi
     <div className="m-cal cal-root" style={S("display:flex;position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <MobileHeader title="More" subtitle="Everything else in one place" showSearch={false} />
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:20px')}>
-        <ul style={S('margin:0;padding:4px 0;list-style:none;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px')}>
+        <ul style={S(ROW_LIST)}>
           {ITEMS.map(([id, icon], i) => {
             const booking = id === 'store';
             const { label } = NAV[id];

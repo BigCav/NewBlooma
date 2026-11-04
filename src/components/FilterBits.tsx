@@ -1,7 +1,7 @@
 'use client';
 import { BottomSheet } from '@/components/BottomSheet';
 import { S } from '@/app/(dash)/calendar/pickers';
-import { RING, CLOSE } from '@/components/ui';
+import { CLOSE, Icon, RING } from '@/components/ui';
 import { TONE } from '@/lib/tones';
 
 /** 52px on purpose: this button sits beside the 52px main button of the page (and its 52px search box), so the row lines up. */
@@ -22,7 +22,7 @@ export function ActiveFilter({ label, onClear }: { label: string; onClear: () =>
   return (
     <button type="button" onClick={onClear} aria-label={'Showing ' + label + '. Clear filter'} style={S('align-self:flex-start;display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 8px 0 14px;border:0;border-radius:999px;background:' + TONE.purple.bg + ';color:' + TONE.purple.fg + ';font:inherit;font-size:13.5px;font-weight:500;cursor:pointer')}>
       {label}
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+      <Icon name="close" size={14} w={2.2} decorative />
     </button>
   );
 }
@@ -41,7 +41,7 @@ export function FilterSheet({ title, options, value, onPick, onClose }: { title:
             return (
               <button key={o.id} onClick={() => { onPick(o.id); onClose(); }} aria-pressed={on} style={S('display:flex;align-items:center;gap:12px;width:100%;min-height:56px;box-sizing:border-box;padding:0;border:0;background:transparent;font:inherit;font-size:16px;text-align:left;color:#0E1116;cursor:pointer;font-weight:' + (on ? 600 : 400))}>
                 <span style={S('flex:1 1 auto;min-width:0')}>{o.label}</span>
-                {on && <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>}
+                {on && <Icon name="tick" size={22} color="#0E1116" decorative />}
               </button>
             );
           })}

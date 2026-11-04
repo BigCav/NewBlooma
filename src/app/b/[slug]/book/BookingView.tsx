@@ -6,7 +6,7 @@ import { clock12, clockStr, duration, makeMoney, plural, timeRange } from '@/lib
 import { addDaysYmd, dayInfo } from '@/lib/cal';
 import { firstName } from '@/lib/people';
 import { TONE } from '@/lib/tones';
-import { Avatar, BACK, BLACK, Chip, FieldError, INPUT, LabelledField, Notice, OUTLINE, PasswordInput, RING, TEXTAREA, filterChipCss, dim } from '@/components/ui';
+import { Avatar, BACK, BLACK, Chip, FieldError, INPUT, Icon, KV_ROW, LabelledField, Note, Notice, OUTLINE, PasswordInput, RING, TEXTAREA, filterChipCss, dim } from '@/components/ui';
 import { checkPhone, phoneInput } from '@/lib/phone';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { S } from '../../../(dash)/calendar/pickers';
@@ -226,7 +226,7 @@ function Steps({ m, o }: { m: M; o: O }) {
                 <span style={S('flex:0 0 auto;font-size:15px;font-weight:600')}>{m.money(s.cents)}</span>
                 <span style={S(circle(on))}>
                   {on && <Check />}
-                  {!on && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>}
+                  {!on && <Icon name="plus" color="#0E1116" />}
                 </span>
               </button>
             </li>;
@@ -248,7 +248,7 @@ function Steps({ m, o }: { m: M; o: O }) {
                     <span style={S('flex:0 0 auto;font-size:15px;font-weight:600')}>+{m.money(s.cents)}</span>
                     <span style={S(circle(on))}>
                       {on && <Check />}
-                      {!on && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>}
+                      {!on && <Icon name="plus" color="#0E1116" />}
                     </span>
                   </button>
                 </li>;
@@ -287,7 +287,7 @@ function Steps({ m, o }: { m: M; o: O }) {
           {hasSlots && (
             <TimeGrid times={m.grid.map((min) => ({ min, ok: !!m.open.get(min) }))} selected={m.grid.find((min) => m.open.get(min) === m.slot) ?? null} onPick={(min) => { m.setSlot(m.open.get(min)!); m.setSlotMin(min); }} cols={o.cols} label="Available times" />
           )}
-          {!hasSlots && <p style={S('margin:0;color:#5E6673;font-size:14px')}>{slotMessage}</p>}
+          {!hasSlots && <Note>{slotMessage}</Note>}
           <div style={S('border-top:1px solid #EEF0F3;padding-top:16px;display:flex;flex-direction:column;gap:12px')}>
             {!wl.open && !wl.done && m.sel.length > 0 && <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:10px')}><span style={S('flex:1 1 200px;font-size:14px;color:#5E6673')}>Cannot find a time that suits?</span><button className="ghost" onClick={() => m.setWl({ ...wl, open: true, error: '' })} style={S(OUTLINE + ';flex:0 0 auto;height:44px;padding:0 20px')}>Join the waitlist</button></div>}
             {wl.open && (
@@ -385,7 +385,7 @@ function DoneNote({ m }: { m: M }) {
 
 function DoneCard({ m, wide = false }: { m: M; wide?: boolean }) {
   const d = m.done!;
-  const row = (k: string, v: string, last = false, bold = false) => <div style={S('display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #EEF0F3' + (last ? ';border-bottom:1px solid #EEF0F3' : ''))}><dt style={S('color:#5E6673')}>{k}</dt><dd style={S('margin:0;font-weight:' + (bold ? 600 : 500) + ';text-align:right' + (k === 'With' ? ';overflow-wrap:anywhere' : ''))}>{v}</dd></div>;
+  const row = (k: string, v: string, last = false, bold = false) => <div style={S(KV_ROW + (last ? ';border-bottom:1px solid #EEF0F3' : ''))}><dt style={S('color:#5E6673')}>{k}</dt><dd style={S('margin:0;font-weight:' + (bold ? 600 : 500) + ';text-align:right' + (k === 'With' ? ';overflow-wrap:anywhere' : ''))}>{v}</dd></div>;
   const booked = m.p.autoConfirm;
   return (
     <div role="status" style={S(wide ? 'display:flex;flex-wrap:wrap;align-items:center;gap:32px 56px;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:40px' : 'display:flex;flex-direction:column;gap:20px;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:28px')}>
@@ -477,21 +477,21 @@ function Desktop({ m }: { m: M }) {
           </div>
           <aside aria-label="Your booking" style={S('flex:1 1 320px;max-width:380px;min-width:0;position:sticky;top:24px;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:18px')}>
             <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Your booking</h2>
-            {!m.list.length && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No services yet. Add one from the list.</p>}
+            {!m.list.length && <Note>No services yet. Add one from the list.</Note>}
             {!!m.list.length && (
               <ul style={S('margin:0;padding:0;list-style:none;display:flex;flex-direction:column')}>
                 {m.list.map((l) => (
                   <li key={l.id} style={S('display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid #EEF0F3')}>
                     <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:14.5px;font-weight:600;overflow-wrap:anywhere')}>{l.name}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{duration(l.dur)}</span></span>
                     <span style={S('flex:0 0 auto;font-size:14.5px;font-weight:600')}>{m.money(l.cents)}</span>
-                    <button className="ghost" onClick={() => m.toggle(l.id)} aria-label={'Remove ' + l.name} style={S('flex:0 0 44px;width:44px;height:44px;padding:0;border:0;border-radius:999px;background:transparent;display:flex;align-items:center;justify-content:center')}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
+                    <button className="ghost" onClick={() => m.toggle(l.id)} aria-label={'Remove ' + l.name} style={S('flex:0 0 44px;width:44px;height:44px;padding:0;border:0;border-radius:999px;background:transparent;display:flex;align-items:center;justify-content:center')}><Icon name="close" color="#5E6673" /></button>
                   </li>
                 ))}
               </ul>
             )}
             <dl style={S('margin:0;display:flex;flex-direction:column')}>
-              {(m.staff ? true : false) && <div style={S('display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>With</dt><dd style={S('margin:0;font-weight:500;text-align:right;overflow-wrap:anywhere')}>{m.member ? m.member.name : 'Any team member'}</dd></div>}
-              {hasWhen && <div style={S('display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>When</dt><dd style={S('margin:0;font-weight:500;text-align:right')}>{m.whenOf(m.slotMin!)}</dd></div>}
+              {(m.staff ? true : false) && <div style={S(KV_ROW)}><dt style={S('color:#5E6673')}>With</dt><dd style={S('margin:0;font-weight:500;text-align:right;overflow-wrap:anywhere')}>{m.member ? m.member.name : 'Any team member'}</dd></div>}
+              {hasWhen && <div style={S(KV_ROW)}><dt style={S('color:#5E6673')}>When</dt><dd style={S('margin:0;font-weight:500;text-align:right')}>{m.whenOf(m.slotMin!)}</dd></div>}
               <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:14px 0;border-top:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>Total, {m.durText}</dt><dd style={S('margin:0;font-size:22px;font-weight:600;letter-spacing:-0.02em')}>{m.money(m.totalCents)}</dd></div>
             </dl>
             <div style={S('display:flex;flex-direction:column;gap:10px')}>

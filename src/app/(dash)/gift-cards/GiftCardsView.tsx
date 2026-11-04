@@ -4,7 +4,7 @@ import { ConfirmBox } from '@/components/ConfirmBox';
 import { dollars } from '@/lib/format';
 import { dayInfo } from '@/lib/cal';
 import { plural } from '@/lib/display';
-import { BLACK, CLOSE, Chip, FieldError, FilterChip, Notice, OUTLINE, RING, Stat, StatCard } from '@/components/ui';
+import { BLACK, CLOSE, Chip, DESK_LIST, FieldError, FilterChip, Icon, KV_ROW, Note, Notice, OUTLINE, RING, Stat, StatCard } from '@/components/ui';
 import { PAYMENT_STATUS } from '@/lib/status';
 import type { ToneName } from '@/lib/tones';
 import { rootCls } from '@/components/drawer';
@@ -91,10 +91,10 @@ function Panel({ c }: { c: C }) {
     <button className="ghost" onClick={() => c.setOpen(false)} aria-label="Close" style={S(RING)}>{CLOSE}</button>
   );
   const sel = c.sel;
-  if (!sel) return <p style={S('margin:0;color:#5E6673;font-size:14px')}>{c.canIssue ? 'No gift cards yet. Issue your first one.' : 'No gift cards yet.'}</p>;
+  if (!sel) return <Note>{c.canIssue ? 'No gift cards yet. Issue your first one.' : 'No gift cards yet.'}</Note>;
   const st = statusOf(sel);
   const canVoid = c.canIssue && !sel.voided && sel.balance > 0;
-  const rowCss = 'display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #EEF0F3';
+  const rowCss = KV_ROW;
   const hist = sel.hist.concat([{ d: sel.issued, label: 'Issued', a: sel.original }]);
   return (
     <div style={S('display:flex;flex-direction:column;gap:20px')}>
@@ -148,7 +148,7 @@ function Desktop({ c }: { c: C }) {
         {stat('Owed to clients', dollars(c.owed))}{stat('Active cards', String(c.active))}{stat('Issued this month', dollars(c.issuedM))}{stat('Redeemed this month', dollars(c.redeemedM))}
       </section>
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
-        <section aria-label="Gift card list" style={S('flex:999 1 620px;min-width:0;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;overflow:hidden')}>
+        <section aria-label="Gift card list" style={S(DESK_LIST)}>
           <div style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid #E6E8EC')}>
             <div role="group" aria-label="Filter gift cards" style={S('display:flex;flex-wrap:wrap;gap:8px')}>{FILTERS.map(([id, l]) => <FilterChip key={id} on={c.filter === id} onClick={() => c.setFilter(id)}>{l}</FilterChip>)}</div>
             <span style={S('color:#5E6673;font-size:13.5px')}>{plural(c.shown.length, 'card')}</span>
@@ -198,13 +198,13 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
           <FilterButton onClick={() => setFopen(true)} active={c.filter !== 'all'} label="Filter gift cards" />
           {c.canIssue && (
             <button onClick={c.openNew} style={S(BLACK + ';gap:8px')}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+              <Icon name="plus" color="#FFFFFF" />
               Issue gift card
             </button>
           )}
         </div>
         {c.filter !== 'all' && <ActiveFilter label={opts.find((f) => f.id === c.filter)?.label ?? ''} onClear={() => c.setFilter('all')} />}
-        {c.shown.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>{noneText(c)}</p>}
+        {c.shown.length === 0 && <Note>{noneText(c)}</Note>}
         <ul style={S('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px')}>
           {c.shown.map((g) => {
             const s = statusOf(g), pct = g.original ? Math.round(g.balance / g.original * 100) : 0;

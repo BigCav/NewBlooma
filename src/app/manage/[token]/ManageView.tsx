@@ -5,7 +5,7 @@ import { DayStrip, TimeGrid } from '@/components/DayTimePicker';
 import { clock12, duration, makeMoney, timeRange } from '@/lib/display';
 import { addDaysYmd, dayInfo as dayOf } from '@/lib/cal';
 import { TONE } from '@/lib/tones';
-import { BLACK, Chip, DANGER, FieldError, Notice, OUTLINE, dim, filterChipCss } from '@/components/ui';
+import { BLACK, Chip, DANGER, FieldError, Icon, KV_ROW, Note, Notice, OUTLINE, filterChipCss, dim } from '@/components/ui';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { S } from '../../(dash)/calendar/pickers';
 import { cancelBooking, manageSlots, moveBooking } from './actions';
@@ -108,8 +108,8 @@ function Summary({ m, pad }: { m: M; pad: number }) {
       {p.items.map((it, i) => <li key={i} style={S('display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #EEF0F3')}><span style={S('min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{it.name}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{duration(it.dur)}</span></span><span style={S('flex:0 0 auto;font-size:15px;font-weight:600')}>{m.money(it.cents)}</span></li>)}
     </ul>
     <dl style={S('margin:0;display:flex;flex-direction:column')}>
-      <div style={S('display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>With</dt><dd style={S('margin:0;font-weight:500;text-align:right')}>{p.staffName}</dd></div>
-      <div style={S('display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>Where</dt><dd style={S('margin:0;font-weight:500;text-align:right;overflow-wrap:anywhere')}>{p.address}</dd></div>
+      <div style={S(KV_ROW)}><dt style={S('color:#5E6673')}>With</dt><dd style={S('margin:0;font-weight:500;text-align:right')}>{p.staffName}</dd></div>
+      <div style={S(KV_ROW)}><dt style={S('color:#5E6673')}>Where</dt><dd style={S('margin:0;font-weight:500;text-align:right;overflow-wrap:anywhere')}>{p.address}</dd></div>
       <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:14px 0;border-top:1px solid #EEF0F3;border-bottom:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>Total, pay at the salon</dt><dd style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{m.money(m.totalCents)}</dd></div>
     </dl>
   </div>;
@@ -131,7 +131,7 @@ function Picker({ m, cols, dayW, pad }: { m: M; cols: string; dayW: number; pad:
     <div style={S(CARD(pad))}>
       <h2 style={S('margin:0;font-size:16px;font-weight:600')}>{m.days[m.rs.day].full}</h2>
       {hasSlots && <TimeGrid times={m.grid.map((min) => ({ min, ok: !!m.open.get(min) }))} selected={m.rs.time} onPick={(min) => m.pickTime(min, m.open.get(min)!)} cols={cols} current={m.days[m.rs.day].ymd === m.when.ymd ? m.when.min : null} label="Available times" />}
-      {!hasSlots && <p style={S('margin:0;color:#5E6673;font-size:14px')}>{msg}</p>}
+      {!hasSlots && <Note>{msg}</Note>}
     </div>
   </>;
 }
@@ -145,7 +145,7 @@ function Reasons({ m, phone }: { m: M; phone: boolean }) {
 
 function CancelledCard({ m, pad, h1 }: { m: M; pad: number; h1: number }) {
   return <div role="status" style={S(CARD(pad))}>
-    <div style={S('flex:0 0 56px;width:56px;height:56px;border-radius:999px;background:' + TONE.red.bg + ';display:flex;align-items:center;justify-content:center')}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={TONE.red.fg} strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg></div>
+    <div style={S('flex:0 0 56px;width:56px;height:56px;border-radius:999px;background:' + TONE.red.bg + ';display:flex;align-items:center;justify-content:center')}><Icon name="close" size={24} color={TONE.red.fg} /></div>
     <div><h1 style={S(`margin:0;font-size:${h1}px;line-height:1.15;font-weight:600;letter-spacing:-0.03em`)}>Appointment cancelled</h1><p style={S('margin:8px 0 0;color:#5E6673;font-size:15px')}>{m.whenDay.short + ', ' + clock12(m.when.min)} with {m.p.staffName} has been cancelled. We have emailed you a confirmation.</p></div>
     <a href={`/b/${m.p.slug}/book`} style={S(BLACK + ';flex:0 0 auto;' + (pad === 28 ? 'max-width:320px' : ''))}>Book a new appointment</a>
   </div>;
@@ -186,20 +186,20 @@ function Desktop({ m }: { m: M }) {
             </div>}
             {view && <div style={S(ASIDE_CARD)}>
               <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Manage your appointment</h2>
-              <p style={S('margin:0;color:#5E6673;font-size:14px')}>{m.policyLine}</p>
+              <Note>{m.policyLine}</Note>
               <button onClick={m.openResched} style={S(BTN_D)}>Reschedule</button>
               <button className="ghost" onClick={m.openCancel} style={S(BTN_G)}>Cancel appointment</button>
             </div>}
             {m.mode === 'resched' && <div style={S(ASIDE_CARD)}>
               <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Your change</h2>
-              <p style={S('margin:0;color:#5E6673;font-size:14px')}>{m.changeLine}</p>
+              <Note>{m.changeLine}</Note>
               {!!m.error && <FieldError>{m.error}</FieldError>}
               <button onClick={m.confirmResched} disabled={m.busy} style={S(BTN_D + dim(m.busy))}>{m.busy ? 'Saving…' : 'Confirm new time'}</button>
               <button className="ghost" onClick={m.keep} style={S(BTN_G)}>Keep current time</button>
             </div>}
             {m.mode === 'cancel' && <div style={S(ASIDE_CARD)}>
               <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Confirm cancellation</h2>
-              <p style={S('margin:0;color:#5E6673;font-size:14px')}>{m.cancelNote}</p>
+              <Note>{m.cancelNote}</Note>
               {!!m.error && <FieldError>{m.error}</FieldError>}
               <button onClick={m.confirmCancel} disabled={m.busy} style={S(BTN_R + dim(m.busy))}>{m.busy ? 'Cancelling…' : 'Cancel appointment'}</button>
               <button className="ghost" onClick={m.keep} style={S(BTN_G)}>Keep appointment</button>

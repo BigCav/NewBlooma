@@ -2,7 +2,7 @@
 // 1:1 conversion of the prototype's Team.dc.html and MobileTeam.dc.html. Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
 import { BottomSheet } from '@/components/BottomSheet';
-import { Avatar, BLACK, Chip, FilterChip, Notice, Stat } from '@/components/ui';
+import { Avatar, BLACK, Chip, DESK_LIST, FilterChip, Icon, Note, Notice, ROW_LIST, Stat } from '@/components/ui';
 import { rootCls } from '@/components/drawer';
 import { useNewParam } from '@/components/useNewParam';
 import Link from 'next/link';
@@ -123,7 +123,7 @@ function Desktop({ c }: { c: C }) {
       </section>
       {!!c.notice && !c.open && <Notice>{c.notice}</Notice>}
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
-        <section aria-label="Team schedule" style={S('flex:999 1 620px;min-width:0;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;overflow:hidden')}>
+        <section aria-label="Team schedule" style={S(DESK_LIST)}>
           <div style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid #E6E8EC')}>
             <div role="group" aria-label="Filter team" style={S('display:flex;flex-wrap:wrap;gap:8px')}>
               {FILTERS.map((f) => <FilterChip key={f.id} on={c.filter === f.id} onClick={() => c.setFilter(f.id)}>{f.label}</FilterChip>)}
@@ -153,7 +153,7 @@ function Desktop({ c }: { c: C }) {
               ))}
             </div>
           </div>
-          {c.list.length === 0 && <p style={S('margin:0;padding:24px 20px;color:#5E6673;font-size:14px;border-top:1px solid #EEF0F3')}>{EMPTY(c)}</p>}
+          {c.list.length === 0 && <Note inList>{EMPTY(c)}</Note>}
         </section>
       </div>
       {c.open && <Mobile c={c} drawer />}
@@ -175,12 +175,12 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
         <div style={S('display:flex;gap:10px')}>
           <FilterButton onClick={() => setFopen(true)} active={c.filter !== 'all'} label="Filter team" />
           <button onClick={c.startNew} style={S(BLACK + ';gap:8px')}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+            <Icon name="plus" color="#FFFFFF" />
             New team member
           </button>
         </div>
         {c.filter !== 'all' && <ActiveFilter label={FILTERS.find((f) => f.id === c.filter)?.label ?? ''} onClear={() => c.setFilter('all')} />}
-        <ul style={S('margin:0;padding:4px 0;list-style:none;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px')}>
+        <ul style={S(ROW_LIST)}>
           {c.list.map((m) => (
             <li key={m.id}>
               <button onClick={() => c.select(m.id)} aria-label={`${m.name}, ${m.role}, ${m.todayOn ? 'working today' : 'off today'}, ${m.online ? 'bookable online' : 'hidden online'}`}

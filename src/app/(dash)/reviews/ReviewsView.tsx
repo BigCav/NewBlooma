@@ -4,7 +4,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { PageHeader } from '@/components/Chrome';
-import { FieldError, FilterChip, Notice, Stat } from '@/components/ui';
+import { Note, FieldError, FilterChip, Notice, Stat } from '@/components/ui';
 import { plural } from '@/lib/display';
 import { S } from '../calendar/pickers';
 import { deleteReply, requestReviews, saveReply } from './actions';
@@ -86,7 +86,7 @@ function Desktop({ c }: { c: C }) {
         <div style={S('flex:0 1 380px;min-width:300px;display:flex;flex-direction:column;gap:16px')}><Summary c={c} m={false} /></div>
         <div style={S('flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:16px')}>
           <Filters c={c} />
-          {list.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>{c.n === 0 ? 'No reviews yet. Ask recent clients to leave one.' : 'No reviews match this filter.'}</p>}
+          {list.length === 0 && <Note>{c.n === 0 ? 'No reviews yet. Ask recent clients to leave one.' : 'No reviews match this filter.'}</Note>}
           <section aria-label="Reviews" style={S('display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;align-items:start')}>
             {list.map((r) => <ReviewCard key={r.id} r={r} size="md" onOpen={() => setSel(r.id)} />)}
           </section>

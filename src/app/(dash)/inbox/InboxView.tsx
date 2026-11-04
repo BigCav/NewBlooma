@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { ActiveFilter, FilterButton, FilterSheet } from '@/components/FilterBits';
-import { Avatar, Chip, FilterChip, Stat, StatCard, filterChipCss, dim } from '@/components/ui';
+import { Avatar, Chip, DESK_LIST, Note, FilterChip, Stat, StatCard, filterChipCss, dim } from '@/components/ui';
 import { TONE } from '@/lib/tones';
 import { firstName } from '@/lib/people';
 import { S } from '../calendar/pickers';
@@ -148,7 +148,7 @@ function Desktop({ c }: { c: C }) {
       <PageHeader title="Inbox" subtitle="Requests, cancellations and messages" query={c.query} onQuery={c.setQuery} placeholder="Search inbox" showAction={false} />
       <section aria-label="Inbox at a glance" style={S('display:flex;flex-wrap:wrap;gap:20px 64px')}>{big('Needs action', c.needs)}{big('Unread', c.unread)}{big('Handled', c.handled)}</section>
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
-        <section aria-label="Inbox list" style={S('flex:999 1 620px;min-width:0;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;overflow:hidden')}>
+        <section aria-label="Inbox list" style={S(DESK_LIST)}>
           <div style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid #E6E8EC')}>
             <div role="group" aria-label="Filter inbox" style={S('display:flex;flex-wrap:wrap;gap:8px')}>
               {FILTERS.map((f) => <FilterChip key={f.id} on={c.filter === f.id} onClick={() => c.setFilter(f.id)}>{f.label}</FilterChip>)}
@@ -159,7 +159,7 @@ function Desktop({ c }: { c: C }) {
             </span>
           </div>
           {c.pageRows.map((i) => <Row key={i.id} c={c} i={i} m={false} />)}
-          {c.rows.length === 0 && <p style={S('margin:0;padding:24px 20px;color:#5E6673;font-size:14px')}>{c.query.trim() ? `Nothing matches "${c.query.trim()}".` : 'Nothing here right now.'}</p>}
+          {c.rows.length === 0 && <Note inList>{c.query.trim() ? `Nothing matches "${c.query.trim()}".` : 'Nothing here right now.'}</Note>}
           <Pager c={c} m={false} />
         </section>
       </div>

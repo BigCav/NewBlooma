@@ -8,14 +8,14 @@ import { STEP, NoticeBar } from './calUi';
 import { dollars } from '@/lib/format';
 import { plural } from '@/lib/display';
 import { firstName } from '@/lib/people';
-import { Avatar, BLACK_ACTION, BLACK_SM, FieldError, FilterChip, OUTLINE_SM, RING_SM, Stat } from '@/components/ui';
+import { Avatar, BLACK_ACTION, BLACK_SM, FieldError, FilterChip, Icon, Note, OUTLINE_SM, RING_SM, Stat } from '@/components/ui';
 import type { useCalendar } from './useCalendar';
 import type { Props } from './calUi';
 
 const H2D = 'margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em';
 const SUBD = 'margin:4px 0 0;color:#5E6673;font-size:14px;overflow-wrap:anywhere';
 const HATCH = 'repeating-linear-gradient(135deg,#F7F8FA 0,#F7F8FA 8px,#ECEEF2 8px,#ECEEF2 16px)';
-const CHECK = <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5 10 17.5 19 7.5" /></svg>;
+const CHECK = <Icon name="tick" size={10} color="#FFFFFF" w={3.4} />;
 
 export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar>; props: Props }) {
   const {
@@ -77,7 +77,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
             <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search client, phone or service" aria-label="Search appointments" style={{ ...S('border:0;outline:none;background:transparent;font:inherit;color:#0E1116;width:150px'), padding: '1px 2px', minHeight: 0, borderRadius: 0 }} />
           </label>
           <button onClick={openNew} style={S(BLACK_ACTION)}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+            <Icon name="plus" color="#FFFFFF" />
             New appointment
           </button>
         </div>
@@ -107,7 +107,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 6 8.5 12l6 6" /></svg>
               </button>
               <button className="ghost" onClick={() => stepDay(1)} aria-label={view === 'week' ? 'Next week' : 'Next day'} style={S(RING_SM)}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 6l6 6-6 6" /></svg>
+                <Icon name="next" size={18} color="#0E1116" w={1.8} />
               </button>
               <span style={S('margin-left:8px;font-size:16px;font-weight:600;letter-spacing:-0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{view === 'week' ? wkRange : di.short}</span>
               {dayClosed && <span style={S('color:#5E6673;font-size:13.5px')}>{c.closedWhy(day) !== undefined ? 'Closed' + (c.closedWhy(day) ? ': ' + c.closedWhy(day) : '') : 'Closed'}</span>}
@@ -247,7 +247,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
           {!!sq && (
             <div style={S('display:flex;flex-direction:column;gap:14px')}>
               <div><h2 style={S(H2D)}>Search results</h2><p style={S(SUBD)}>{(hits ? plural(hits.length, 'appointment') : 'Searching') + ' for "' + sq + '"'}</p></div>
-              {hits && hits.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>Nothing matches that yet. Try a client name, phone number, service or booking number.</p>}
+              {hits && hits.length === 0 && <Note>Nothing matches that yet. Try a client name, phone number, service or booking number.</Note>}
               <ul style={S('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px')}>
                 {(hits ?? []).map((h) => {
                   const f = firstName(h.staff, ''), when = dayInfo(h.dayYmd).short + ', ' + fmtMin(h.start);

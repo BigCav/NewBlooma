@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { S } from '@/app/(dash)/calendar/pickers';
 import { requestReset, setNewPassword, signIn, signUp } from '@/app/auth-actions';
-import { BLACK, FieldError, INPUT, LabelledField, OUTLINE, PasswordInput, dim } from '@/components/ui';
+import { BLACK, FieldError, INPUT, Icon, LabelledField, OUTLINE, PasswordInput, dim } from '@/components/ui';
 import { TONE } from '@/lib/tones';
 import { firstName } from '@/lib/people';
 
@@ -97,7 +97,7 @@ export function AuthView({ mode: initial }: { mode: Mode }) {
           {done && (
             <div role="status" style={S('display:flex;flex-direction:column;gap:16px;padding:20px;border-radius:20px;background:#FFFFFF;border:1px solid #E6E8EC')}>
               <div style={S('display:flex;align-items:center;gap:12px')}>
-                <span aria-hidden="true" style={S('flex:0 0 36px;width:36px;height:36px;border-radius:999px;background:' + TONE.green.bg + ';display:flex;align-items:center;justify-content:center')}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={TONE.green.fg} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5 10 17.5 19 7.5" /></svg></span>
+                <span aria-hidden="true" style={S('flex:0 0 36px;width:36px;height:36px;border-radius:999px;background:' + TONE.green.bg + ';display:flex;align-items:center;justify-content:center')}><Icon name="tick" size={18} color={TONE.green.fg} w={2.6} /></span>
                 <div style={S('font-size:16px;font-weight:600')}>{dc.t}</div>
               </div>
               <p style={S('margin:0;color:#5E6673;font-size:14.5px;overflow-wrap:anywhere')}>{dc.p}</p>

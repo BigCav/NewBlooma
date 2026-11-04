@@ -1,6 +1,6 @@
 'use client';
 // The client's profile, on a phone and on a computer. The computer shows the same pages in a drawer on the right.
-import { AnswerBox, Avatar, BACK, BAR, BLACK, CHEV, CLOSE, Chip, DOTS, FIELD_IN, Field, FieldError, FilterChip, MENU_ROW, Notice, OUTLINE, PAGE, RING, ScreenHeader, SwitchRow, dim } from '@/components/ui';
+import { AnswerBox, Avatar, BACK, BAR, BLACK, CHEV, CLOSE, Chip, DOTS, FIELD_IN, Field, FieldError, FilterChip, Icon, MENU_ROW, Note, Notice, OUTLINE, PAGE, RING, ScreenHeader, SwitchRow, TILE, dim } from '@/components/ui';
 import { BottomSheet } from '@/components/BottomSheet';
 import { ConfirmBox } from '@/components/ConfirmBox';
 import Link from 'next/link';
@@ -80,7 +80,7 @@ type C = ReturnType<typeof useProfile>;
 const CARD_M = 'box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:20px;display:flex;flex-direction:column;gap:14px';
 const LIST_CARD = 'box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:8px 20px';
 const TXTIN = (h: number) => ({ ...S('box-sizing:border-box;width:100%;height:' + h + 'px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF;flex:1 1 auto;min-width:0'), minHeight: 0 });
-const X = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>;
+const X = <Icon name="close" size={14} color="#5E6673" w={2.2} />;
 const PHONE_P = 'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z';
 const MAIL_P = 'M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zm0 1 8 6 8-6';
 const CAL_P = 'M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v11A1.5 1.5 0 0 1 19 19.5H5A1.5 1.5 0 0 1 3.5 18V7A1.5 1.5 0 0 1 5 5.5zM3.5 10h17M8 3.5v4M16 3.5v4';
@@ -150,7 +150,7 @@ function ProfileHome({ c, messages, rec, setRec, onOpen, onMore }: { c: C; messa
       {menu('appointments', 'Appointments')}
       {menu('messages', 'Messages')}
       {menu('details', 'Client details')}
-      <button onClick={() => setRec(!rec)} aria-expanded={rec} style={S(MENU_ROW)}><span style={S('flex:1 1 auto')}>Records</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto;transform:rotate(' + (rec ? 180 : 0) + 'deg)')} aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg></button>
+      <button onClick={() => setRec(!rec)} aria-expanded={rec} style={S(MENU_ROW)}><span style={S('flex:1 1 auto')}>Records</span><Icon name="down" size={18} color="#5E6673" w={1.9} style={S('flex:0 0 auto;transform:rotate(' + (rec ? 180 : 0) + 'deg)')} /></button>
       {rec && <>
         {menu('notes', 'Notes', true)}
         {menu('alerts', 'Allergies and patch tests', true)}
@@ -187,7 +187,7 @@ function ProfilePages({ c, view, setView, apFilter, setApFilter, openForm, setOp
             <div style={S('margin-top:6px;font-size:14px;opacity:0.7')}>{plural(row.visits, 'visit') + (row.visits ? ', ' + dollars(Math.round(avg / 100) * 100) + ' on average' : '')}</div>
           </section>
           <section aria-label="Last and next visit" style={S('display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px')}>
-            <div style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:20px;padding:16px')}><div style={S('font-size:13px;color:#5E6673')}>Last visit</div><div style={S('margin-top:4px;font-size:18px;font-weight:600;letter-spacing:-0.02em;overflow-wrap:anywhere')}>{row.last}</div></div>
+            <div style={S(TILE)}><div style={S('font-size:13px;color:#5E6673')}>Last visit</div><div style={S('margin-top:4px;font-size:18px;font-weight:600;letter-spacing:-0.02em;overflow-wrap:anywhere')}>{row.last}</div></div>
             <div style={S('box-sizing:border-box;background:' + TONE.purple.bg + ';border-radius:20px;padding:16px;color:' + TONE.purple.fg)}><div style={S('font-size:13px;opacity:0.8')}>Next appointment</div><div style={S('margin-top:4px;font-size:18px;font-weight:600;letter-spacing:-0.02em;overflow-wrap:anywhere')}>{row.next}</div></div>
           </section>
           <div style={S(card + ';display:flex;flex-direction:column')} className="sum-rows">
@@ -227,7 +227,7 @@ function ProfilePages({ c, view, setView, apFilter, setApFilter, openForm, setOp
               })}
             </div>
           ))}
-          {appts.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>{apFilter === 'upcoming' ? 'Nothing coming up.' : apFilter === 'past' ? 'No past appointments.' : 'No appointments yet.'}</p>}
+          {appts.length === 0 && <Note>{apFilter === 'upcoming' ? 'Nothing coming up.' : apFilter === 'past' ? 'No past appointments.' : 'No appointments yet.'}</Note>}
         </>)}
 
         {view === 'details' && (<>
@@ -288,7 +288,7 @@ function ProfilePages({ c, view, setView, apFilter, setApFilter, openForm, setOp
         )}
 
         {view === 'forms' && !openForm && (<>
-          {d.forms.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No forms completed yet.</p>}
+          {d.forms.length === 0 && <Note>No forms completed yet.</Note>}
           {d.forms.map((f) => {
             const [when, ...rest] = f.date.split(' · ');
             return (

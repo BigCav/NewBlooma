@@ -1,5 +1,5 @@
 'use client';
-import { BARE, BLACK as PRIMARY, CLOSE, Chip, DOTS, FIELD_IN, Field, FieldError, MENU_ROW, Notice, OUTLINE as SECOND, RING, dim } from '@/components/ui';
+import { BARE, BLACK as PRIMARY, CLOSE, Chip, DOTS, FIELD_IN, Field, FieldError, Icon, MENU_ROW, Note, Notice, OUTLINE as SECOND, RING, dim } from '@/components/ui';
 import { BottomSheet } from '@/components/BottomSheet';
 import { ConfirmBox } from '@/components/ConfirmBox';
 import { useState } from 'react';
@@ -24,7 +24,7 @@ const tile = (c: ProductsCtl, cat: string, size: number, r: number, fs: number) 
 export function ProductBody({ c }: { c: ProductsCtl }) {
   const s = c.sel;
   if (c.mode === 'new') return <ProductForm c={c} />;
-  if (!s) return <p style={S('margin:0;color:#5E6673;font-size:14px')}>No products yet. Add one with New product.</p>;
+  if (!s) return <Note>No products yet. Add one with New product.</Note>;
   if (c.mode === 'restock') return <Restock c={c} />;
   if (c.mode === 'edit') return <ProductForm c={c} />;
   return <ProductView c={c} />;
@@ -57,7 +57,7 @@ function ProductView({ c }: { c: ProductsCtl }) {
             <span style={S('font-size:14px;font-weight:500')}>Adjust stock</span>
             <div style={S('display:flex;align-items:center;gap:10px')}>
               <button onClick={() => c.nudge(s, -1)} aria-label="Remove one from stock" style={S(round)}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14" /></svg></button>
-              <button onClick={() => c.nudge(s, 1)} aria-label="Add one to stock" style={S(round)}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg></button>
+              <button onClick={() => c.nudge(s, 1)} aria-label="Add one to stock" style={S(round)}><Icon name="plus" size={18} color="#0E1116" /></button>
             </div>
           </div>
         </div>
@@ -94,7 +94,7 @@ function Restock({ c }: { c: ProductsCtl }) {
       {isCustom && (
         <Field label="Units to add" htmlFor="rs-custom"><input id="rs-custom" type="text" inputMode="numeric" value={ctext} onChange={(e) => { const t = digitsInput(e.target.value).slice(0, 4); c.setError(''); setCustom(true); setCtext(t); c.setQty(parseInt(t, 10) || 0); }} placeholder="For example, 15" style={FIELD_IN} /></Field>
       )}
-      <p style={S('margin:0;color:#5E6673;font-size:14px')}>{c.qty > 0 ? `${s.stock} in stock, ${s.stock + c.qty} after adding ${c.qty}.` : `${s.stock} in stock.`}</p>
+      <Note>{c.qty > 0 ? `${s.stock} in stock, ${s.stock + c.qty} after adding ${c.qty}.` : `${s.stock} in stock.`}</Note>
     </StepShell>
   );
 }

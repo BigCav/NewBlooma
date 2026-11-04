@@ -1,5 +1,5 @@
 'use client';
-import { BACK, BAR, BLACK, CARD, CHEV, CLOSE, DOTS, FIELD_IN, Field, FieldError, MENU_ROW, Notice, OUTLINE, PAGE, ScreenHeader, RING, dim } from '@/components/ui';
+import { BACK, BAR, BLACK, CARD, CHEV, CLOSE, DOTS, FIELD_IN, Field, FieldError, Icon, MENU_ROW, Note, Notice, OUTLINE, PAGE, RING, ScreenHeader, dim } from '@/components/ui';
 import { TONE } from '@/lib/tones';
 import { BottomSheet } from '@/components/BottomSheet';
 import { ConfirmBox } from '@/components/ConfirmBox';
@@ -33,7 +33,7 @@ export function PickSheet({ title, options, values, multi, help, onPick, onClose
             return (
               <button key={o.id} disabled={o.off} onClick={() => { onPick(o.id); if (!multi) onClose(); }} aria-pressed={on} style={S('display:flex;align-items:center;gap:12px;width:100%;min-height:56px;box-sizing:border-box;padding:0;border:0;background:transparent;font:inherit;font-size:16px;text-align:left;color:#0E1116;cursor:pointer;opacity:' + (o.off ? 0.45 : 1) + ';font-weight:' + (on ? 600 : 400))}>
                 <span style={S('flex:1 1 auto;min-width:0')}>{o.label}</span>
-                {on && <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>}
+                {on && <Icon name="tick" size={22} color="#0E1116" decorative />}
               </button>
             );
           })}
@@ -95,7 +95,7 @@ export function FormPage({ c }: { c: FormsCtl }) {
           <h3 style={S('margin:6px 0 0;font-size:17px;font-weight:600;letter-spacing:-0.01em')}>Questions</h3>
           <p style={S('margin:2px 0 0;font-size:13px;color:#5E6673')}>{staff && d.isPatch ? 'A patch test is recorded as a date, a result and notes. These questions are shown with the answers.' : 'Clients see these in this order.'}</p>
         </div>
-        {d.qs.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>{d.consentText.trim() ? 'No questions. Clients only see the consent statement.' : 'No questions yet. Add the first one below.'}</p>}
+        {d.qs.length === 0 && <Note>{d.consentText.trim() ? 'No questions. Clients only see the consent statement.' : 'No questions yet. Add the first one below.'}</Note>}
         {d.qs.map((q, i) => (
           <section key={q.id} style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:22px;padding:14px;display:flex;flex-direction:column;gap:10px')}>
             <Field label={'Question ' + (i + 1)}><input type="text" maxLength={200} value={q.label} onChange={(e) => c.patch((x) => { x.qs[i].label = e.target.value; })} style={FIELD_IN} /></Field>

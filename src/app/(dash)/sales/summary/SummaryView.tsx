@@ -9,7 +9,7 @@ import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../../calendar/pickers';
 import { dollars } from '@/lib/format';
 import { plural } from '@/lib/display';
-import { BACK, BLACK, BLACK_SM, FIELD_IN, Field, FieldError, RING, StatCard, filterChipCss } from '@/components/ui';
+import { BACK, BLACK, BLACK_SM, FIELD_IN, Field, FieldError, Icon, RING, StatCard, filterChipCss } from '@/components/ui';
 import { TillForm, type Till } from './TillForm';
 
 type Preset = { id: string; label: string; from: string; to: string };
@@ -60,7 +60,7 @@ function Period({ from, to, today, presets }: { from: string; to: string; today:
       <button onClick={() => setOpen(true)} aria-haspopup="dialog" style={S('flex:1 1 0;min-width:0;display:flex;align-items:center;gap:10px;height:52px;padding:0 18px;border:1px solid #E6E8EC;border-radius:999px;background:#FFFFFF;font:inherit;font-size:15px;font-weight:500;color:#0E1116;cursor:pointer;text-align:left')}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg>
         <span style={S('flex:1 1 auto;min-width:0')}>{label}</span>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+        <Icon name="down" color="#5E6673" decorative />
       </button>
     </div>
     {open && (
@@ -73,7 +73,7 @@ function Period({ from, to, today, presets }: { from: string; to: string; today:
             {presets.map((p) => { const on = p.from === from && p.to === to; return (
               <Link key={p.id} href={`/sales/summary?from=${p.from}&to=${p.to}`} aria-current={on ? 'true' : undefined} style={S('display:flex;align-items:center;gap:12px;min-height:56px;font-size:16px;color:#0E1116;text-decoration:none;font-weight:' + (on ? 600 : 400))}>
                 <span style={S('flex:1 1 auto')}>{p.label}</span>
-                {on && <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>}
+                {on && <Icon name="tick" size={22} color="#0E1116" decorative />}
               </Link>
             ); })}
           </div>

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
-import { CHEV, Notice } from '@/components/ui';
+import { CHEV, Notice, ROW_LIST } from '@/components/ui';
 import { TONE } from '@/lib/tones';
 import { S } from '../calendar/pickers';
 import { saveSettings } from './actions';
@@ -94,7 +94,7 @@ function Mobile({ c }: { c: C }) {
           <div style={S('flex:0 0 48px;width:48px;height:48px;border-radius:16px;background:#0E1116;display:flex;align-items:center;justify-content:center')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="7.5" /><path d="M8.5 13.5c1 1.6 2.2 2.3 3.5 2.3s2.5-.7 3.5-2.3" /></svg></div>
           <div style={S('min-width:0')}><div style={S('font-size:17px;font-weight:600;letter-spacing:-0.01em;overflow-wrap:anywhere')}>{c.v.bizName.trim() || 'Your business'}</div><div style={S('font-size:13px;color:#5E6673;overflow-wrap:anywhere')}>{c.v.bizAddress.trim() || 'No address yet'}</div></div>
         </section>
-        <ul style={S('margin:0;padding:4px 0;list-style:none;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px')}>
+        <ul style={S(ROW_LIST)}>
           {SECTIONS.map((x, i) => (
             <li key={x.id}>
               <button onClick={() => c.pick(x.id)} aria-label={x.label + ', ' + x.desc} style={S('display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:68px;padding:10px 16px;border:0;border-bottom:' + (i === SECTIONS.length - 1 ? '0' : '1px solid #EEF0F3') + ';background:transparent;text-align:left;font:inherit;color:#0E1116;cursor:pointer')}>

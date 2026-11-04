@@ -7,7 +7,7 @@ import { useNewParam } from '@/components/useNewParam';
 import { dollars } from '@/lib/format';
 import { plural } from '@/lib/display';
 import { initialsOf } from '@/lib/people';
-import { BLACK, Chip, FilterChip, Notice, Stat } from '@/components/ui';
+import { BLACK, Chip, DESK_LIST, FilterChip, Icon, Note, Notice, ROW_LIST, Stat } from '@/components/ui';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
@@ -90,7 +90,7 @@ function Desktop({ c }: { c: C }) {
       <section aria-label="Stock at a glance" style={S('display:flex;flex-wrap:wrap;gap:20px 64px')}>{stat('Products', c.rows.length)}{stat('Low stock', c.low)}{stat('Out of stock', c.out)}</section>
       {!!c.notice && !c.open && <Notice>{c.notice}</Notice>}
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
-        <section aria-label="Product list" style={S('flex:999 1 620px;min-width:0;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;overflow:hidden')}>
+        <section aria-label="Product list" style={S(DESK_LIST)}>
           <div style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid #E6E8EC')}>
             <div role="group" aria-label="Filter products" style={S('display:flex;flex-wrap:wrap;gap:8px')}>{FILTERS.map((f) => <FilterChip key={f.id} on={c.filter === f.id} onClick={() => c.setFilter(f.id)}>{f.label}</FilterChip>)}</div>
             <span style={S('color:#5E6673;font-size:13.5px')}>{`Showing ${c.list.length} of ${c.rows.length}`}</span>
@@ -114,7 +114,7 @@ function Desktop({ c }: { c: C }) {
               </button>
             ))}
           </div></div>
-          {c.list.length === 0 && <p style={S('margin:0;padding:24px 20px;color:#5E6673;font-size:14px;border-top:1px solid #EEF0F3')}>{c.query.trim() ? `Nothing matches "${c.query.trim()}".` : 'No products yet.'}</p>}
+          {c.list.length === 0 && <Note inList>{c.query.trim() ? `Nothing matches "${c.query.trim()}".` : 'No products yet.'}</Note>}
         </section>
       </div>
       {c.open && <Mobile c={c} drawer />}
@@ -134,13 +134,13 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
         <div style={S('display:flex;gap:10px')}>
           <FilterButton onClick={() => setFopen(true)} active={c.filter !== 'all'} label="Filter products" />
           <button onClick={c.openNew} style={S(BLACK + ';gap:8px')}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+            <Icon name="plus" color="#FFFFFF" />
             New product
           </button>
         </div>
         {c.filter !== 'all' && <ActiveFilter label={FILTERS.find((f) => f.id === c.filter)?.label ?? ''} onClear={() => c.setFilter('all')} />}
         {c.list.length > 0 && (
-          <ul style={S('margin:0;padding:4px 0;list-style:none;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px')}>
+          <ul style={S(ROW_LIST)}>
             {c.list.map((p) => (
               <li key={p.id}>
                 <button onClick={() => c.pick(p.id)} aria-label={`${p.name}, ${p.brand}, ${p.stock} in stock, ${p.status}`} style={S('display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:68px;padding:10px 16px;border:0;border-bottom:1px solid #EEF0F3;background:transparent;text-align:left;font:inherit;color:#0E1116;cursor:pointer')}>

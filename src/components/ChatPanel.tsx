@@ -1,7 +1,7 @@
 'use client';
 // Messaging a client: who it is, the conversation (newest at the bottom) and a box to reply. One panel for the calendar, the Clients list,
 // the client's profile and the inbox (on desktop and on the phone), so writing to a client looks the same everywhere.
-import { Avatar, BACK, FieldError, PAGE, RING, SEND, dim } from '@/components/ui';
+import { Avatar, BACK, Note, FieldError, PAGE, RING, SEND, dim } from '@/components/ui';
 import { useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
 import { clientThread } from '@/app/(dash)/clients/actions';
 import type { ChatMsg } from '@/app/(dash)/clients/thread';
@@ -11,7 +11,7 @@ import { S } from '@/app/(dash)/calendar/pickers';
 /** The conversation as bubbles, with the day shown when it changes. */
 export function ChatBubbles({ thread, empty = 'No messages yet. Say hello below.' }: { thread: ChatMsg[]; empty?: string }) {
   return (<>
-    {thread.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>{empty}</p>}
+    {thread.length === 0 && <Note>{empty}</Note>}
     {thread.filter((m) => m.text.trim()).map((m, i, all) => {
       const newDay = !!m.day && (i === 0 || all[i - 1].day !== m.day);
       return (
@@ -102,7 +102,7 @@ export function ChatPanel({ clientId, name, first, context, top, menu, initial, 
       </header>}
       {!!top && <div style={S('flex:0 0 auto;padding:12px ' + pad + ' 0')}>{top}</div>}
       <div className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:12px ' + pad + ' 16px;display:flex;flex-direction:column;gap:14px')}>
-        {loading ? <p style={S('margin:0;color:#5E6673;font-size:14px')}>Loading the conversation…</p> : <ChatBubbles thread={thread} />}
+        {loading ? <Note>Loading the conversation…</Note> : <ChatBubbles thread={thread} />}
         <div ref={end} />
       </div>
       <div style={S('flex:0 0 auto;padding:' + (fill ? '14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3' : '12px 0 0;border-top:1px solid #EEF0F3') + ';display:flex;flex-direction:column;gap:10px')}>

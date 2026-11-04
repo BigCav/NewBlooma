@@ -1,5 +1,5 @@
 'use client';
-import { Avatar, BACK, BLACK, CLOSE, Chip, DOTS, FieldError, MENU_ROW, Notice, OUTLINE, PAGE, ScreenHeader, RING, dim } from '@/components/ui';
+import { Avatar, BACK, BLACK, CLOSE, Chip, DOTS, Note, FieldError, MENU_ROW, Notice, OUTLINE, PAGE, RING, ScreenHeader, dim } from '@/components/ui';
 import { TONE } from '@/lib/tones';
 import { BottomSheet } from '@/components/BottomSheet';
 import { ConfirmBox } from '@/components/ConfirmBox';
@@ -79,8 +79,8 @@ export function EntryPage({ c, r }: { c: WaitlistCtl; r: WlRow }) {
         {r.status !== 'Booked' && (
           <section aria-label="Times that fit">
             <h3 style={S('margin:0 0 10px;font-size:17px;font-weight:600;letter-spacing:-0.01em')}>Times that fit</h3>
-            {sl === 'loading' && <p style={S('margin:0;color:#5E6673;font-size:14px')}>Looking for times…</p>}
-            {Array.isArray(sl) && sl.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>Nothing fits in the next two weeks. Loosen the preferences or try another team member.</p>}
+            {sl === 'loading' && <Note>Looking for times…</Note>}
+            {Array.isArray(sl) && sl.length === 0 && <Note>Nothing fits in the next two weeks. Loosen the preferences or try another team member.</Note>}
             {Array.isArray(sl) && sl.map((s) => {
               const on = pick?.startsAt === s.startsAt && pick?.staffId === s.staffId;
               return <button key={s.staffId + s.startsAt} onClick={() => c.setPicked({ ...c.picked, [r.id]: on ? null : s })} aria-pressed={on} style={S(ROW(on))}><span style={S('flex:1 1 auto;min-width:0;font-size:15px;font-weight:500;overflow-wrap:anywhere')}>{s.label}</span>{on && TICK}</button>;

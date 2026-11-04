@@ -1,7 +1,7 @@
 'use client';
 import { PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
-import { Avatar, Chip, FieldError, FilterChip, Notice, RING_SM, Stat } from '@/components/ui';
+import { Avatar, Chip, Note, FieldError, FilterChip, Notice, RING_SM, Stat } from '@/components/ui';
 import { dollars } from '@/lib/format';
 import { CELL, payTone, type PayRow } from './shared';
 import type { PayrollCtl } from './PayrollView';
@@ -39,7 +39,7 @@ export function PayrollDesk({ c, onOpen }: { c: PayrollCtl; onOpen: (id: string)
         <button className="ghost" onClick={() => c.go(c.w - 1)} disabled={c.w === 0} aria-label="Next week" style={S(RING_SM)}>{ARROW('M9.5 6l6 6-6 6')}</button>
       </div>
     </div>
-    {c.rows.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No team members yet.</p>}
+    {c.rows.length === 0 && <Note>No team members yet.</Note>}
     <section aria-label="Team" style={S('display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:16px')}>
       {c.tab === 'time' && c.rows.map((p) => (
         <button key={p.id} className="s-card" onClick={() => onOpen(p.id)} aria-label={`${p.name}, ${p.total} ${p.planned}`} style={S(CARD)}>

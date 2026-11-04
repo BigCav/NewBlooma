@@ -4,7 +4,7 @@
 import { BottomSheet } from '@/components/BottomSheet';
 import { rootCls } from '@/components/drawer';
 import { useNewParam } from '@/components/useNewParam';
-import { Avatar, BLACK, CLOSE, Chip, FieldError, FilterChip, Notice, OUTLINE, RING, Stat } from '@/components/ui';
+import { Avatar, BLACK, CLOSE, Chip, DESK_LIST, FieldError, FilterChip, Icon, Note, Notice, OUTLINE, RING, ROW_LIST, Stat, TILE } from '@/components/ui';
 import { dollars } from '@/lib/format';
 import { plural } from '@/lib/display';
 import { firstName } from '@/lib/people';
@@ -104,7 +104,7 @@ function MobileClientView({ c, sel }: { c: C; sel: ClientRow }) {
       ))}
     </div>
     <div style={S('display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px')}>
-      {([['Visits', String(sel.visits)], ['Total spent', dollars(sel.spentCents)]] as [string, string][]).map(([l, v]) => <div key={l} style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:20px;padding:16px')}><div style={S('font-size:13px;color:#5E6673')}>{l}</div><div style={S('margin-top:4px;font-size:22px;font-weight:600;letter-spacing:-0.02em')}>{v}</div></div>)}
+      {([['Visits', String(sel.visits)], ['Total spent', dollars(sel.spentCents)]] as [string, string][]).map(([l, v]) => <div key={l} style={S(TILE)}><div style={S('font-size:13px;color:#5E6673')}>{l}</div><div style={S('margin-top:4px;font-size:22px;font-weight:600;letter-spacing:-0.02em')}>{v}</div></div>)}
     </div>
     <div style={S('position:sticky;bottom:-40px;margin:auto -20px -40px;padding:14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3;display:flex;flex-direction:column;gap:12px')}>
       {!!c.error && <FieldError>{c.error}</FieldError>}
@@ -121,7 +121,7 @@ function Panel({ c }: { c: C }) {
   const { sel } = c;
   if (c.mode === 'view' && sel) return <MobileClientView c={c} sel={sel} />;
   return (<>
-    {c.mode === 'view' && !sel && c.items.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No clients yet. Add your first client to get started.</p>}
+    {c.mode === 'view' && !sel && c.items.length === 0 && <Note>No clients yet. Add your first client to get started.</Note>}
     {c.mode === 'book' && sel && <BookPanel data={c.book} client={{ id: sel.id, name: sel.name, first: c.first }} mobile onBooked={c.booked} onCancel={c.cancel} />}
   </>);
 }
@@ -138,7 +138,7 @@ function Desktop({ c }: { c: C }) {
         {big('Clients', String(c.count))}{big('New this month', String(c.newThisMonth))}{big('Rebook rate', c.rebookRate)}
       </section>
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
-        <section aria-label="Client list" style={S('flex:999 1 620px;min-width:0;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;overflow:hidden')}>
+        <section aria-label="Client list" style={S(DESK_LIST)}>
           <div style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid #E6E8EC')}>
             <div role="group" aria-label="Filter clients" style={S('display:flex;flex-wrap:wrap;gap:8px')}>
               {FILTERS.map((f) => <FilterChip key={f.id} on={c.filter === f.id} onClick={() => c.setFilter(f.id)}>{f.label}</FilterChip>)}
@@ -166,7 +166,7 @@ function Desktop({ c }: { c: C }) {
               ))}
             </div>
           </div>
-          {rows.length === 0 && <p style={S('margin:0;padding:24px 20px;color:#5E6673;font-size:14px;border-top:1px solid #EEF0F3')}>{c.items.length === 0 ? 'No clients yet.' : `Nothing matches "${c.query.trim()}".`}</p>}
+          {rows.length === 0 && <Note inList>{c.items.length === 0 ? 'No clients yet.' : `Nothing matches "${c.query.trim()}".`}</Note>}
           {c.filtered.length > SHOW_MAX && <p style={S('margin:0;padding:16px 20px;color:#5E6673;font-size:13px;border-top:1px solid #EEF0F3')}>Showing the first {SHOW_MAX}. Search to narrow the list.</p>}
         </section>
       </div>
@@ -191,12 +191,12 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
         <div style={S('display:flex;gap:10px')}>
           <FilterButton onClick={() => setFopen(true)} active={c.filter !== 'all'} label="Filter clients" />
           <button onClick={c.openNew} style={S(BLACK + ';gap:8px')}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+            <Icon name="plus" color="#FFFFFF" />
             New client
           </button>
         </div>
         {c.filter !== 'all' && <ActiveFilter label={FILTERS.find((f) => f.id === c.filter)?.label ?? ''} onClear={() => c.setFilter('all')} />}
-        <ul style={S('margin:0;padding:4px 0;list-style:none;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px')}>
+        <ul style={S(ROW_LIST)}>
           {rows.map((r) => (
             <li key={r.id}>
               <button onClick={() => c.select(r.id)} aria-label={`${r.name}, ${r.tag}, last visit ${r.last}`} style={S(rowS)}>

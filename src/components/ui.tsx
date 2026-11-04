@@ -2,7 +2,7 @@
 // input that sits inside a labelled box, and the icons they hold. A screen that needs a variant adds to the string, it does not copy it.
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { S } from '@/app/(dash)/calendar/pickers';
+import { S } from '@/app/(dash)/calendar/s';
 import { TONE, type ToneName } from '@/lib/tones';
 import { initialsOf } from '@/lib/people';
 
@@ -144,6 +144,29 @@ export function StatCard({ label, value, tint }: { label: ReactNode; value: Reac
       <div style={S('margin-top:2px;font-size:28px;line-height:1.1;font-weight:500;letter-spacing:-0.03em;font-variant-numeric:tabular-nums')}>{value}</div>
     </div>
   );
+}
+
+/* ---------- Icons ---------- */
+const ICON_PATH = { plus: 'M12 5v14M5 12h14', tick: 'M5 12.5 10 17.5 19 7.5', close: 'M6 6l12 12M18 6 6 18', next: 'M9.5 6l6 6-6 6', down: 'M6 9l6 6 6-6', mail: 'm4.5 7.5 7.5 5.5 7.5-5.5' } as const;
+/** A line icon from the small set every screen draws the same way. Colour is any CSS colour; the default follows the text. */
+export function Icon({ name, size = 16, color = 'currentColor', w = 2, style, decorative }: { name: keyof typeof ICON_PATH; size?: number; color?: string; w?: number; style?: React.CSSProperties; decorative?: boolean }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" style={style} aria-hidden={decorative ? true : undefined}><path d={ICON_PATH[name]} /></svg>
+  );
+}
+
+/* ---------- Boxes and rows ---------- */
+/** A small white tile (a figure, a last-visit line). */
+export const TILE = 'box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:20px;padding:16px';
+/** The white rounded box a phone list sits in. */
+export const ROW_LIST = 'margin:0;padding:4px 0;list-style:none;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px';
+/** The white rounded box a computer's list sits in, beside its detail panel. */
+export const DESK_LIST = 'flex:999 1 620px;min-width:0;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;overflow:hidden';
+/** A "label ... value" line in a list of facts. */
+export const KV_ROW = 'display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #EEF0F3';
+/** A short grey line: an explanation, or "nothing here yet". `inList` puts it inside a list box, under its rows. */
+export function Note({ children, inList }: { children: ReactNode; inList?: boolean }) {
+  return <p style={S('margin:0;color:#5E6673;font-size:14px' + (inList ? ';padding:24px 20px;border-top:1px solid #EEF0F3' : ''))}>{children}</p>;
 }
 
 /* ---------- Full-page screens (the phone's pages that slide over the current one) ---------- */

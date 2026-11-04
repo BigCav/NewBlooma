@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
-import { BACK, BLACK, CHEV, FieldError, Notice, OUTLINE, RING, dim } from '@/components/ui';
+import { BACK, BLACK, CHEV, Note, FieldError, Notice, OUTLINE, RING, dim } from '@/components/ui';
 import { plural } from '@/lib/display';
 import { TONE } from '@/lib/tones';
 import { S } from '../../calendar/pickers';
@@ -82,7 +82,7 @@ function MobileList({ c }: { c: C }) {
         <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:16px;font-weight:600;letter-spacing:-0.01em;overflow-wrap:anywhere')}>{d.name || 'Untitled form'}</span><span style={S('display:block;margin-top:2px;font-size:13px;color:#5E6673;overflow-wrap:anywhere')}>{sub(d)}</span></span>{CHEV}
       </button>
     ))}
-    {c.forms.length === 0 && <section style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:20px;display:flex;flex-direction:column;gap:6px')}><h2 style={S('margin:0;font-size:17px;font-weight:600')}>No forms yet</h2><p style={S('margin:0;color:#5E6673;font-size:14px')}>Forms are what clients fill in before a visit. Add a ready-made one below, or make your own.</p></section>}
+    {c.forms.length === 0 && <section style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:20px;display:flex;flex-direction:column;gap:6px')}><h2 style={S('margin:0;font-size:17px;font-weight:600')}>No forms yet</h2><Note>Forms are what clients fill in before a visit. Add a ready-made one below, or make your own.</Note></section>}
     {c.unused.length > 0 && (
       <section aria-label="Ready-made forms" style={S('display:flex;flex-direction:column;gap:10px')}>
         <h2 style={S('margin:6px 0 0;font-size:17px;font-weight:600;letter-spacing:-0.01em')}>Ready-made forms</h2>

@@ -1,5 +1,5 @@
 'use client';
-import { Avatar, BACK, BLACK, CHEV, Chip, FIELD_IN, Field, FieldError, FilterChip, Notice, OUTLINE, PAGE, RING, ScreenHeader, StatCard, dim } from '@/components/ui';
+import { Avatar, BACK, BLACK, CHEV, Chip, Note, FIELD_IN, Field, FieldError, FilterChip, Notice, OUTLINE, PAGE, RING, ScreenHeader, StatCard, TILE, dim } from '@/components/ui';
 import { dollars } from '@/lib/format';
 import { ConfirmBox } from '@/components/ConfirmBox';
 import { useRouter } from 'next/navigation';
@@ -87,7 +87,7 @@ export function PayrollMobile({ c, drawer, startId, onClose }: { c: PayrollCtl; 
         <div style={S('display:flex;gap:12px')}>{stat('Hours worked', c.hoursText)}{c.owner && stat('Team payout', dollars(c.pay))}</div>
         {!!c.notice && !open && <Notice>{c.notice}</Notice>}
         {!!c.error && !open && <FieldError>{c.error}</FieldError>}
-        {c.rows.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No team members yet.</p>}
+        {c.rows.length === 0 && <Note>No team members yet.</Note>}
 
         <PayRows c={c} onOpen={setOpenId} />
       </main>
@@ -132,7 +132,7 @@ function TimePage({ c, p, onBack, onEdit }: { c: PayrollCtl; p: PayRow; onBack: 
 
 function CommPage({ c, p, onBack }: { c: PayrollCtl; p: PayRow; onBack: () => void }) {
   const t = payTone(c.over, p.paid);
-  const stat = (l: string, v: number) => <div key={l} style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:20px;padding:16px')}><div style={S('font-size:13px;color:#5E6673')}>{l}</div><div style={S('margin-top:2px;font-size:22px;font-weight:600;letter-spacing:-0.02em')}>{dollars(v)}</div></div>;
+  const stat = (l: string, v: number) => <div key={l} style={S(TILE)}><div style={S('font-size:13px;color:#5E6673')}>{l}</div><div style={S('margin-top:2px;font-size:22px;font-weight:600;letter-spacing:-0.02em')}>{dollars(v)}</div></div>;
   return (
     <div role="dialog" aria-label="Commission" style={S(PAGE)}>
       <ScreenHeader title={p.name} avatar={p.name} photo={p.photo} onBack={onBack} />

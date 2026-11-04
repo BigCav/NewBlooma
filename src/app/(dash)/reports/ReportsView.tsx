@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { FilterSheet } from '@/components/FilterBits';
 import { S } from '../calendar/pickers';
-import { Avatar, FieldError, FilterChip } from '@/components/ui';
+import { Avatar, FieldError, FilterChip, Icon, TILE } from '@/components/ui';
 import { dollars } from '@/lib/format';
 import { plural } from '@/lib/display';
 import type { Heat, Period } from './shared';
@@ -126,11 +126,11 @@ function Body({ c, m }: { c: C; m: boolean }) {
     <button onClick={() => setFopen(true)} aria-haspopup="dialog" aria-label={'Report period: ' + p.label} style={S('display:flex;align-items:center;gap:10px;height:52px;padding:0 18px;border:1px solid #E6E8EC;border-radius:999px;background:#FFFFFF;font:inherit;font-size:15px;font-weight:500;color:#0E1116;cursor:pointer;text-align:left')}>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg>
       <span style={S('flex:1 1 auto;min-width:0')}>{p.label}</span>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+      <Icon name="down" color="#5E6673" decorative />
     </button>
     <section aria-label="Key numbers" style={S('display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px')}>
       {kpis.map(([l, v, d]) => (
-        <div key={l} style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:20px;padding:16px')}>
+        <div key={l} style={S(TILE)}>
           <div style={S('color:#5E6673;font-size:13px')}>{l}</div>
           <div style={S('margin-top:2px;font-size:28px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{v}</div>
           <div style={S('margin-top:6px;font-size:12.5px;color:#8A93A0')}><span style={S(dstyle(d[1]).replace('font-size:13px', 'font-size:12.5px'))}>{d[0]}</span> vs before</div>

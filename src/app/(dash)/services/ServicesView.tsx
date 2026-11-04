@@ -5,7 +5,7 @@ import { BottomSheet } from '@/components/BottomSheet';
 import { dollars, toCents } from '@/lib/format';
 import { duration } from '@/lib/display';
 import { initialsOf } from '@/lib/people';
-import { BLACK, Chip, FilterChip, Notice, Stat } from '@/components/ui';
+import { BLACK, Chip, DESK_LIST, FilterChip, Icon, Note, Notice, ROW_LIST, Stat } from '@/components/ui';
 import { rootCls } from '@/components/drawer';
 import { useNewParam } from '@/components/useNewParam';
 import { useRouter } from 'next/navigation';
@@ -144,7 +144,7 @@ function Desktop({ c }: { c: C }) {
       {!!notice && <Notice>{notice}</Notice>}
 
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
-        <section aria-label="Service list" style={S('flex:999 1 620px;min-width:0;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;overflow:hidden')}>
+        <section aria-label="Service list" style={S(DESK_LIST)}>
           <div style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid #E6E8EC')}>
             <div role="group" aria-label="Filter services" style={S('display:flex;flex-wrap:wrap;gap:8px')}>
               {chips.map((x) => <FilterChip key={x.id} on={filter === x.id} onClick={() => setFilter(x.id)}>{x.label}</FilterChip>)}
@@ -173,7 +173,7 @@ function Desktop({ c }: { c: C }) {
               ))}
             </div>
           </div>
-          {rows.length === 0 && <p style={S('margin:0;padding:24px 20px;color:#5E6673;font-size:14px;border-top:1px solid #EEF0F3')}>{services.length === 0 ? (c.canEdit ? 'No services yet. Add a category, then your first service.' : 'No services yet.') : 'Nothing matches "' + c.query.trim() + '".'}</p>}
+          {rows.length === 0 && <Note inList>{services.length === 0 ? (c.canEdit ? 'No services yet. Add a category, then your first service.' : 'No services yet.') : 'Nothing matches "' + c.query.trim() + '".'}</Note>}
         </section>
 
       </div>
@@ -202,14 +202,14 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
           <FilterButton onClick={() => setFopen(true)} active={filter !== 'all'} label="Filter services" />
           {c.canEdit && (
             <button onClick={c.startNew} style={S(BLACK + ';gap:8px')}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+              <Icon name="plus" color="#FFFFFF" />
               New service
             </button>
           )}
         </div>
         {filter !== 'all' && <ActiveFilter label={chips.find((x) => x.id === filter)?.label ?? ''} onClear={() => setFilter('all')} />}
 
-        <ul style={S('margin:0;padding:4px 0;list-style:none;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px')}>
+        <ul style={S(ROW_LIST)}>
           {rows.map((s) => (
             <li key={s.id}>
               <button onClick={() => c.select(s.id)} aria-label={rowLabel(s)} style={S('display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:68px;padding:10px 16px;border:0;border-bottom:1px solid #EEF0F3;background:transparent;text-align:left;font:inherit;color:#0E1116;cursor:pointer')}>

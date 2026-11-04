@@ -5,7 +5,7 @@ import { AcctChip } from './AcctChip';
 import { clockStr, duration, plural, timeRange } from '@/lib/display';
 import { WEEKDAYS_FULL } from '@/lib/cal';
 import { firstName } from '@/lib/people';
-import { Avatar, BLACK, Chip, OUTLINE, filterChipCss } from '@/components/ui';
+import { Avatar, BLACK, Chip, Icon, KV_ROW, Note, OUTLINE, filterChipCss } from '@/components/ui';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { S } from '../../(dash)/calendar/pickers';
@@ -58,7 +58,7 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
           const inner = (<>
             <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{s.name}</span>{!!s.desc && <span style={S('display:block;margin-top:2px;font-size:13px;color:#5E6673;overflow-wrap:anywhere')}>{s.desc}</span>}<span style={S('display:block;margin-top:4px;font-size:13px;color:#5E6673')}>{duration(s.dur)}</span></span>
             <span style={S('flex:0 0 auto;font-size:15px;font-weight:600')}>{s.price}</span>
-            {m ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')}><path d="M9.5 6l6 6-6 6" /></svg>
+            {m ? <Icon name="next" size={18} color="#5E6673" w={1.9} style={S('flex:0 0 auto')} />
               : <span style={S('flex:0 0 auto;padding:8px 16px;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:13.5px;font-weight:500')}>Book</span>}
           </>);
           return <li key={s.id}>{p.bookable ? <Link href={book(s.id)} aria-label={s.name + ', ' + duration(s.dur) + ', ' + s.price + '. Book'} style={S(row)}>{inner}</Link> : <div style={S(row)}>{inner}</div>}</li>;
@@ -118,14 +118,14 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
     <section aria-label="Opening hours and contact" style={S(CARD(m ? 20 : 24, 16))}>
       <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Opening hours</h2>
       <div style={S('display:flex;flex-direction:column;margin-top:-8px')}>
-        {DAYS.map((d, i) => <div key={d} style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid #EEF0F3;font-weight:' + (i === today ? 600 : 400) + ';color:' + (i === today ? '#0E1116' : '#5E6673'))}><span>{d}</span><span>{p.hours[i] ? timeRange(clockStr(p.hours[i]!.from), clockStr(p.hours[i]!.to)) : 'Closed'}</span></div>)}
+        {DAYS.map((d, i) => <div key={d} style={S(KV_ROW + ';font-weight:' + (i === today ? 600 : 400) + ';color:' + (i === today ? '#0E1116' : '#5E6673'))}><span>{d}</span><span>{p.hours[i] ? timeRange(clockStr(p.hours[i]!.from), clockStr(p.hours[i]!.to)) : 'Closed'}</span></div>)}
       </div>
       {!!(p.address || p.phone || p.email) && <>
         <h2 style={S('margin:4px 0 0;font-size:18px;font-weight:600;letter-spacing:-0.01em')}>Find us</h2>
         <dl style={S('margin:-8px 0 0;display:flex;flex-direction:column')}>
-          {!!p.address && <div style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>Address</dt><dd style={S('margin:0;text-align:right;font-weight:500;overflow-wrap:anywhere')}>{p.address}</dd></div>}
-          {!!p.phone && <div style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>Phone</dt><dd style={S('margin:0;text-align:right;font-weight:500;white-space:nowrap')}>{p.phone}</dd></div>}
-          {!!p.email && <div style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>Email</dt><dd style={S('margin:0;text-align:right;font-weight:500;overflow-wrap:anywhere')}>{p.email}</dd></div>}
+          {!!p.address && <div style={S(KV_ROW)}><dt style={S('color:#5E6673')}>Address</dt><dd style={S('margin:0;text-align:right;font-weight:500;overflow-wrap:anywhere')}>{p.address}</dd></div>}
+          {!!p.phone && <div style={S(KV_ROW)}><dt style={S('color:#5E6673')}>Phone</dt><dd style={S('margin:0;text-align:right;font-weight:500;white-space:nowrap')}>{p.phone}</dd></div>}
+          {!!p.email && <div style={S(KV_ROW)}><dt style={S('color:#5E6673')}>Email</dt><dd style={S('margin:0;text-align:right;font-weight:500;overflow-wrap:anywhere')}>{p.email}</dd></div>}
         </dl></>}
     </section>
   );
@@ -197,11 +197,11 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
         <aside className="flow" style={S('flex:1 1 320px;max-width:380px;min-width:0;position:sticky;top:24px;display:flex;flex-direction:column;gap:16px')}>
           <div style={S(CARD(24, 12))}>
             <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Book an appointment</h2>
-            <p style={S('margin:0;color:#5E6673;font-size:14px')}>{p.bookable ? `Free cancellation up to ${p.cancel} before. You pay at the salon.` : 'Online booking is not available right now. Please contact the salon.'}</p>
+            <Note>{p.bookable ? `Free cancellation up to ${p.cancel} before. You pay at the salon.` : 'Online booking is not available right now. Please contact the salon.'}</Note>
             {!!p.account && <dl style={S('margin:0;display:flex;flex-direction:column')}>
-              <div style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>Booking as</dt><dd style={S('margin:0;text-align:right;font-weight:500;overflow-wrap:anywhere')}>{p.account.name}</dd></div>
-              <div style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>Email</dt><dd style={S('margin:0;text-align:right;font-weight:500;overflow-wrap:anywhere')}>{p.account.email}</dd></div>
-              <div style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid #EEF0F3;border-bottom:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>Phone</dt><dd style={S('margin:0;text-align:right;font-weight:500')}>{p.account.phone || 'Not added'}</dd></div>
+              <div style={S(KV_ROW)}><dt style={S('color:#5E6673')}>Booking as</dt><dd style={S('margin:0;text-align:right;font-weight:500;overflow-wrap:anywhere')}>{p.account.name}</dd></div>
+              <div style={S(KV_ROW)}><dt style={S('color:#5E6673')}>Email</dt><dd style={S('margin:0;text-align:right;font-weight:500;overflow-wrap:anywhere')}>{p.account.email}</dd></div>
+              <div style={S(KV_ROW + ';border-bottom:1px solid #EEF0F3')}><dt style={S('color:#5E6673')}>Phone</dt><dd style={S('margin:0;text-align:right;font-weight:500')}>{p.account.phone || 'Not added'}</dd></div>
             </dl>}
             {p.bookable && <Link href={book()} style={S(BLACK + ';flex:0 0 auto')}>Book now</Link>}
           </div>

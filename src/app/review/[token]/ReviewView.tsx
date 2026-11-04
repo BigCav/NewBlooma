@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { S } from '../../(dash)/calendar/pickers';
 import { submitReview } from './actions';
-import { BLACK, FieldError, LabelledField, TEXTAREA, dim } from '@/components/ui';
+import { BLACK, FieldError, Icon, LabelledField, TEXTAREA, dim } from '@/components/ui';
 import { TONE } from '@/lib/tones';
 
 const LABELS = ['', 'Poor', 'Fair', 'Good', 'Very good', 'Excellent'];
@@ -42,7 +42,7 @@ export function ReviewView({ token, salon, slug }: { token: string; salon: strin
         )}
         {done && (
           <section role="status" style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:32px;display:flex;flex-direction:column;gap:16px')}>
-            <div style={S('width:48px;height:48px;border-radius:999px;background:' + TONE.green.bg + ';display:flex;align-items:center;justify-content:center')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={TONE.green.fg} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg></div>
+            <div style={S('width:48px;height:48px;border-radius:999px;background:' + TONE.green.bg + ';display:flex;align-items:center;justify-content:center')}><Icon name="tick" size={22} color={TONE.green.fg} w={2.2} /></div>
             <h1 style={S('margin:0;font-size:30px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>Thank you</h1>
             <p style={S('margin:0;color:#5E6673;font-size:15px')}>Your review has been sent to the team at {salon}.</p>
           </section>

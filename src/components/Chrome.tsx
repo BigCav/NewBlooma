@@ -1,5 +1,5 @@
 'use client';
-import { BLACK_ACTION } from '@/components/ui';
+import { BLACK_ACTION, Icon } from '@/components/ui';
 // Shared page chrome converted 1:1 from the prototype: PageHeader.dc.html, MobileHeader.dc.html, MobileTabs.dc.html.
 import { useState } from 'react';
 import { S } from '@/app/(dash)/calendar/pickers';
@@ -25,7 +25,7 @@ export function PageHeader({ title, subtitle, query, onQuery, placeholder = 'Sea
         )}
         {showAction && (
           <button onClick={onAction} style={S(BLACK_ACTION)}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+            <Icon name="plus" color="#FFFFFF" />
             {actionLabel}
           </button>
         )}

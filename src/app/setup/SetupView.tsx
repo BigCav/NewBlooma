@@ -4,7 +4,7 @@
 import { phoneInput, checkPhone } from '@/lib/phone';
 import { duration, makeMoney, plural } from '@/lib/display';
 import { TONE } from '@/lib/tones';
-import { Avatar, BLACK, CLOSE, FieldError, INPUT, LabelledField, OUTLINE, RING, Switch, filterChipCss, dim } from '@/components/ui';
+import { Avatar, BLACK, CLOSE, FieldError, INPUT, Icon, KV_ROW, LabelledField, OUTLINE, RING, Switch, filterChipCss, dim } from '@/components/ui';
 import Link from 'next/link';
 import { useEffect, useState, useTransition } from 'react';
 import { S } from '../(dash)/calendar/pickers';
@@ -136,12 +136,12 @@ function Done({ c, m }: { c: C; m: boolean }) {
   return (
     <div style={S('display:flex;flex-direction:column;gap:20px')}>
       <div style={S('display:flex;flex-direction:column;gap:12px;align-items:flex-start')}>
-        <span aria-hidden="true" style={S('width:52px;height:52px;border-radius:999px;background:' + TONE.green.bg + ';display:flex;align-items:center;justify-content:center')}><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={TONE.green.fg} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5 10 17.5 19 7.5" /></svg></span>
+        <span aria-hidden="true" style={S('width:52px;height:52px;border-radius:999px;background:' + TONE.green.bg + ';display:flex;align-items:center;justify-content:center')}><Icon name="tick" size={26} color={TONE.green.fg} w={2.6} /></span>
         <h1 style={S(`margin:0;font-size:${m ? 26 : 30}px;line-height:1.15;font-weight:600;letter-spacing:-0.025em`)}>{TITLES[4]}</h1>
         <p style={S('margin:0;color:#5E6673;font-size:15px')}>Here is what we set up. You can change any of it in Settings.</p>
       </div>
       <dl style={S('margin:0;display:flex;flex-direction:column')}>
-        {rows.map(([k, v, extra]) => <div key={k} style={S('display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #EEF0F3;' + extra)}><dt style={S('color:#5E6673')}>{k}</dt><dd style={S('margin:0;font-weight:500;text-align:right;overflow-wrap:anywhere')}>{v}</dd></div>)}
+        {rows.map(([k, v, extra]) => <div key={k} style={S(KV_ROW + ';' + extra)}><dt style={S('color:#5E6673')}>{k}</dt><dd style={S('margin:0;font-weight:500;text-align:right;overflow-wrap:anywhere')}>{v}</dd></div>)}
       </dl>
       <Link href={`/b/${c.slug}`} style={S(BLACK + ';flex:0 0 auto;padding:0 24px')}>See your booking page</Link>
       <Link href="/calendar" style={S('text-align:center;color:#5E6673;font-size:14px;font-weight:500;text-decoration:none')}>Go to your calendar</Link>

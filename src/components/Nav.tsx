@@ -1,4 +1,5 @@
 'use client';
+import { Icon } from '@/components/ui';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
@@ -189,7 +190,7 @@ export function PhoneTabs({ active, inPage = false }: { active?: TabId; inPage?:
       {tab('calendar')}
       {tab('services')}
       <button type="button" onClick={() => openNewMenu()} aria-label="Create new" aria-haspopup="dialog" style={{ width: 48, height: 48, padding: 0, border: 0, cursor: 'pointer', borderRadius: 999, background: '#0E1116', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+        <Icon name="plus" size={22} color="#fff" decorative />
       </button>
       {tab('clients')}
       {tab('more')}

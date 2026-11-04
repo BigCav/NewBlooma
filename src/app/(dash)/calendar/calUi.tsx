@@ -1,5 +1,5 @@
 import { TONE, type ToneName } from '@/lib/tones';
-import { BLACK as PRIMARY, OUTLINE as SECOND, RING, CLOSE, Notice } from '@/components/ui';
+import { BLACK as PRIMARY, CLOSE, KV_ROW, Notice, OUTLINE as SECOND, RING } from '@/components/ui';
 export { PRIMARY, SECOND };
 import { bookingStatus } from '@/lib/status';
 import { duration, timeRange } from '@/lib/display';
@@ -26,7 +26,7 @@ export const note = (bg: string, fg: string) => 'border-radius:16px;background:'
 /** @deprecated Use RING from components/ui. */
 export const CLOSE_BTN = RING;
 export const H2S = 'margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em';
-export const DLROW = 'display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #EEF0F3';
+export const DLROW = KV_ROW;
 
 /** @deprecated Use CLOSE from components/ui. */
 export function CloseX() { return CLOSE; }

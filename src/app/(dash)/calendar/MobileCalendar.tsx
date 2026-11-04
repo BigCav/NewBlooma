@@ -19,7 +19,7 @@ import { duration, plural, bookingRef } from '@/lib/display';
 import { firstName } from '@/lib/people';
 import { bookingStatus, PAYMENT_STATUS } from '@/lib/status';
 import { TONE } from '@/lib/tones';
-import { BLACK, BLACK_MD, CLOSE, Chip, DANGER, DOTS, FieldError, FilterChip, Notice, OUTLINE_SM, RING, dim } from '@/components/ui';
+import { BLACK, BLACK_MD, CLOSE, Chip, DANGER, DOTS, FieldError, FilterChip, Icon, Note, Notice, OUTLINE_SM, RING, TILE, dim } from '@/components/ui';
 import { CancelPick } from './CancelPick';
 import { TerminalStatus } from './TerminalStatus';
 import { S, ServicePicker } from './pickers';
@@ -90,7 +90,7 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
       {sum && fullSheet(sumTitle, (
         <div style={S('display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px')}>
           {stats.map(([l, v]) => (
-            <div key={l} style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:20px;padding:16px')}>
+            <div key={l} style={S(TILE)}>
               <div style={S('color:#5E6673;font-size:13px')}>{l}</div>
               <div style={S('margin-top:4px;font-size:24px;line-height:1.15;font-weight:600;letter-spacing:-0.02em;overflow-wrap:anywhere')}>{v}</div>
             </div>
@@ -162,7 +162,7 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
             <section aria-label="Search results" style={S('display:flex;flex-direction:column;gap:10px')}>
               <h2 style={S('margin:0;font-size:16px;font-weight:600')}>Search results</h2>
               <p style={S('margin:0;color:#5E6673;font-size:13.5px')}>{(c.sres ? plural(c.sres.length, 'appointment') : 'Searching') + ' for "' + query.trim() + '"'}</p>
-              {c.sres && c.sres.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>Nothing matches that yet. Try a client name, phone number, service or booking number.</p>}
+              {c.sres && c.sres.length === 0 && <Note>Nothing matches that yet. Try a client name, phone number, service or booking number.</Note>}
               {(c.sres ?? []).map((h) => { const when = dayInfo(h.dayYmd).short + ', ' + fmtMin(h.start); return (
                 <button key={h.id} onClick={() => { c.setSelId(h.id); c.setQuery(''); c.setSearchOpen(false); c.setOpen(true); c.setMode('view'); if (h.dayYmd !== day) go(h.dayYmd, 'day'); }} aria-label={h.client + ', ' + h.services + ', ' + when} style={S('display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:60px;padding:10px 14px;border:1px solid #E6E8EC;border-radius:18px;background:#FFFFFF;text-align:left;font:inherit;color:#0E1116;cursor:pointer')}>
                   <span style={S('min-width:0;flex:1 1 auto')}><span style={S('display:block;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{h.client}</span><span style={S('display:block;font-size:12.5px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{h.services + ' with ' + firstName(h.staff, '')}</span></span>
@@ -240,7 +240,7 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
         {tabsA('calendar', '/calendar', 'Calendar', true, ic('#0E1116', <><rect x="3.5" y="5" width="17" height="15.5" rx="3" /><path d="M3.5 10h17M8 3v4M16 3v4" /></>))}
         {tabsA('services', '/services', 'Services', false, ic('#5E6673', <><circle cx="6" cy="7" r="2.5" /><circle cx="6" cy="17" r="2.5" /><path d="M8 8.5 20 18M8 15.5 20 6" /></>))}
         <button onClick={() => openNewMenu(openNew)} aria-label="Create new" aria-haspopup="dialog" style={S('width:48px;height:48px;padding:0;border:0;border-radius:999px;background:#0E1116;display:flex;align-items:center;justify-content:center;text-decoration:none;cursor:pointer')}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+          <Icon name="plus" size={22} color="#FFFFFF" />
         </button>
         {tabsA('clients', '/clients', 'Clients', false, ic('#5E6673', <><circle cx="9" cy="8.5" r="3.5" /><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5" /><path d="M16 5.2a3.4 3.4 0 0 1 0 6.6M18.5 14.8c1.6.8 2.6 2.4 3 5.2" /></>))}
         {tabsA('more', '/more', 'More', false, ic('#5E6673', <><circle cx="5.5" cy="12" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="18.5" cy="12" r="1.2" /></>))}
@@ -341,7 +341,7 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
               </>);
             })()}
 
-            {mode === 'message' && cur && !cur.clientId && <p style={S('margin:0;color:#5E6673;font-size:14px')}>This appointment has no client to message.</p>}
+            {mode === 'message' && cur && !cur.clientId && <Note>This appointment has no client to message.</Note>}
 
             {mode === 'blockview' && bvB && (<>
               <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><Chip tone="grey">Blocked</Chip><button onClick={close} aria-label="Close" style={S(RING)}>{CLOSE}</button></div>
@@ -409,7 +409,7 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
               : (() => {
                 const ITEM = 'display:flex;align-items:center;gap:14px;width:100%;min-height:56px;box-sizing:border-box;padding:0;border:0;background:transparent;font:inherit;font-size:16px;text-align:left;color:#0E1116;cursor:pointer';
                 const ico = (children: React.ReactNode) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')} aria-hidden="true">{children}</svg>;
-                const tick = <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={S('margin-left:auto;flex:0 0 auto')} aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>;
+                const tick = <Icon name="tick" size={22} color="#0E1116" style={S('margin-left:auto;flex:0 0 auto')} />;
                 const pick = (t: 'confirmed' | 'checked_in' | 'in_progress', label: string) => {
                   setSt('');
                   if (t !== 'confirmed' && sel.b.dayYmd > today) { setError('You can check someone in on the day of their appointment.'); return; }

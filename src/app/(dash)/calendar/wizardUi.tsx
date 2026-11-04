@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { fmtMin } from '@/lib/cal';
 import { findClients, recentClients, type ClientHit } from './actions';
 import { S } from './s';
-import { Avatar, avatarCss, BLACK, OUTLINE, RING, BACK, CLOSE, FieldError, dim } from '@/components/ui';
+import { Avatar, BACK, BLACK, CLOSE, FieldError, Icon, OUTLINE, RING, avatarCss, dim } from '@/components/ui';
 import { DayStrip, TimeGrid } from '@/components/DayTimePicker';
 
 /* Pieces shared by the phone step-by-step flows (new appointment, walk-in, running late, block time, checkout). */
@@ -22,7 +22,7 @@ export function useSteps(last: number, onNav: () => void, start = 0) {
 /** @deprecated A person's circle is `<Avatar>` from components/ui; this is its 40px style string for the one caller that still needs it. */
 export const AV = avatarCss('md');
 export const ROW = (on: boolean) => 'display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:64px;padding:8px 14px;margin-bottom:8px;border-radius:16px;font:inherit;text-align:left;color:#0E1116;cursor:pointer;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#F4F5F7' : '#FFFFFF') + (on ? ';box-shadow:inset 0 0 0 1px #0E1116' : '');
-export const TICK = <span aria-hidden="true" style={S('flex:0 0 22px;width:22px;height:22px;border-radius:999px;background:#0E1116;display:flex;align-items:center;justify-content:center')}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5 10 17.5 19 7.5" /></svg></span>;
+export const TICK = <span aria-hidden="true" style={S('flex:0 0 22px;width:22px;height:22px;border-radius:999px;background:#0E1116;display:flex;align-items:center;justify-content:center')}><Icon name="tick" size={12} color="#FFFFFF" w={3} /></span>;
 export const ico = (children: React.ReactNode) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')} aria-hidden="true">{children}</svg>;
 export const ICONS = {
   day: <><rect x="3.5" y="5" width="17" height="15.5" rx="3" /><path d="M3.5 10h17M8 3v4M16 3v4" /></>,
@@ -200,7 +200,7 @@ export function DetailRows({ rows, go }: { rows: { icon: React.ReactNode; text: 
   return (
     <div className="sum-rows" style={S('padding:2px 16px;border:1px solid #E6E8EC;border-radius:22px;background:#FFFFFF')}>
       {rows.map((r) => {
-        const inner = <>{ico(r.icon)}<span style={S('min-width:0;overflow-wrap:anywhere')}>{r.text}</span>{r.step !== undefined && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A93A0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto;margin-left:auto')}><path d="M9.5 6l6 6-6 6" /></svg>}</>;
+        const inner = <>{ico(r.icon)}<span style={S('min-width:0;overflow-wrap:anywhere')}>{r.text}</span>{r.step !== undefined && <Icon name="next" color="#8A93A0" style={S('flex:0 0 auto;margin-left:auto')} />}</>;
         return r.step !== undefined ? <button key={r.text + r.step} onClick={() => go(r.step!)} style={S(row + ';cursor:pointer')}>{inner}</button> : <div key={r.text} style={S(row)}>{inner}</div>;
       })}
     </div>

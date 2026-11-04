@@ -1,4 +1,5 @@
 'use client';
+import { Icon } from '@/components/ui';
 // Converted from the prototype's Landing/MobileLanding and Pricing/MobilePricing pages. Markup and style strings follow the prototype;
 // "Get started" links go to the register route instead of using a browser-storage flag.
 import Link from 'next/link';
@@ -198,7 +199,7 @@ export function PricingView({ dash = null }: { dash?: string | null }) {
   const included = (
     <div style={S(CARD(24, m ? 24 : 28))}><h2 style={S(`margin:0;font-size:${m ? 18 : 19}px;font-weight:600;letter-spacing:-0.02em`)}>Included in every plan</h2>
       <ul style={S(m ? 'margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px' : 'margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px')}>
-        {INCLUDED.map((t) => <li key={t} style={S('display:flex;gap:10px;align-items:center;font-size:15px')}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#14624A" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={S('flex:0 0 auto')}><path d="M5 12.5 10 17.5 19 7.5" /></svg><span>{t}</span></li>)}
+        {INCLUDED.map((t) => <li key={t} style={S('display:flex;gap:10px;align-items:center;font-size:15px')}><Icon name="tick" size={18} color="#14624A" w={2.4} style={S('flex:0 0 auto')} /><span>{t}</span></li>)}
       </ul>
     </div>
   );

@@ -7,7 +7,7 @@ import { decimalInput } from '@/lib/numeric';
 import { useNightMode } from '@/components/Theme';
 import { S } from '../calendar/pickers';
 import { addClosedPeriod, removeClosedPeriod } from './actions';
-import { BACK, BAR, BLACK, CARD, FIELD_IN, Field, FieldError, Notice, OUTLINE, PAGE, ScreenHeader, RING, Switch, SwitchRow, TIME_INPUT, dim } from '@/components/ui';
+import { BACK, BAR, BLACK, CARD, FIELD_IN, Field, FieldError, Icon, Notice, OUTLINE, PAGE, RING, ScreenHeader, Switch, SwitchRow, TIME_INPUT, dim } from '@/components/ui';
 import { dayInfo } from '@/lib/cal';
 import { PickSheet, SettingRow } from './forms/FormPage';
 import { DAY_FULL, GROUPS, SECTIONS, type Values } from './shared';
@@ -138,7 +138,7 @@ export function SectionPage({ c, inline }: { c: SettingsCtl; inline?: boolean })
           <Text id="st-tax" label="Sales tax rate (%)" c={c} k="tax" type="text" mode="decimal" ph="0" />
           <Link href="/settings/windcave" aria-label="Windcave card setup and tax mode" style={S('display:flex;align-items:center;gap:12px;box-sizing:border-box;min-height:64px;padding:12px 18px;border:1px solid #E6E8EC;border-radius:22px;background:#FFFFFF;text-decoration:none;color:#0E1116')}>
             <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600')}>Windcave card setup</span><span style={S('display:block;margin-top:2px;font-size:13px;color:#5E6673')}>Card keys, terminal and tax mode</span></span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A93A0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9.5 6l6 6-6 6" /></svg>
+            <Icon name="next" color="#8A93A0" decorative />
           </Link>
         </>)}
 

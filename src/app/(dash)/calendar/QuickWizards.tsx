@@ -1,4 +1,5 @@
 'use client';
+import { Note } from '@/components/ui';
 import { dayInfo, fmtMin, BLOCK_KINDS } from '@/lib/cal';
 import { S } from './s';
 import { ServicePicker } from './pickers';
@@ -49,7 +50,7 @@ export function LateWizard({ c }: { c: C }) {
     <StepShell step={step} titles={['Select team member', 'How late?', 'Summary']} onBack={back} onClose={close} error={hasError ? error : ''}
       actions={[step === 2 ? { label: busy ? 'Moving…' : 'Move ' + (lateList.length || ''), onClick: saveLate, disabled: busy || !lateList.length } : { label: 'Continue', onClick: () => { if (!canNext) { setError('Choose a team member.'); return; } forward(); }, disabled: !canNext }]}>
       {step === 0 && (<>
-        <p style={S('margin:0;color:#5E6673;font-size:14px')}>Moves everything not started for one person on {dayInfo(day).short}.</p>
+        <Note>Moves everything not started for one person on {dayInfo(day).short}.</Note>
         <PeopleStep team={team} selected={lf.s} onPick={(id) => { setLf({ ...lf, s: id }); setError(''); }} />
       </>)}
       {step === 1 && <Tiles label="Running late by" options={LATE_OPTS} value={lf.mins} onPick={(m) => { setLf({ ...lf, mins: m }); setError(''); }} />}
@@ -79,7 +80,7 @@ export function BlockWizard({ c }: { c: C }) {
     <StepShell step={step} titles={['Select team member', 'Select reason', 'Select length', 'Select time', 'Summary']} onBack={back} onClose={close} error={hasError ? error : ''}
       actions={[step === 4 ? { label: busy ? 'Blocking…' : 'Block time', onClick: saveBlock, disabled: busy } : { label: 'Continue', onClick: next, disabled: !canNext }]}>
       {step === 0 && (<>
-        <p style={S('margin:0;color:#5E6673;font-size:14px')}>Clients cannot book blocked time.</p>
+        <Note>Clients cannot book blocked time.</Note>
         <PeopleStep team={team} selected={bf.s} onPick={(id) => { setBf({ ...bf, s: id, start: null }); setError(''); }} />
       </>)}
       {step === 1 && <Tiles label="Reason" options={BLOCK_KINDS} value={bf.kind} onPick={(k) => setBf({ ...bf, kind: k })} />}

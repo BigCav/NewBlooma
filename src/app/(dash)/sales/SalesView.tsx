@@ -6,7 +6,7 @@ import { ConfirmBox } from '@/components/ConfirmBox';
 import { rootCls } from '@/components/drawer';
 import { useNewParam } from '@/components/useNewParam';
 import { decimalInput } from '@/lib/numeric';
-import { Avatar, BLACK, CLOSE, Chip, FIELD_IN, Field, FieldError, FilterChip, Notice, OUTLINE, RING, Stat, StatCard, dim } from '@/components/ui';
+import { Avatar, BLACK, CLOSE, Chip, FIELD_IN, Field, FieldError, FilterChip, Icon, Note, Notice, OUTLINE, RING, Stat, StatCard, dim } from '@/components/ui';
 import { dollars } from '@/lib/format';
 import { duration, refDigits } from '@/lib/display';
 import Link from 'next/link';
@@ -229,7 +229,7 @@ function MobileSale({ c, s }: { c: C; s: SaleRow }) {
 function Panel({ c }: { c: C }) {
   const s = c.sel;
   const err = !!c.error && <FieldError>{c.error}</FieldError>;
-  if (!s) return <p style={S('margin:0;color:#5E6673;font-size:14px')}>No sales yet. Record one with New sale.</p>;
+  if (!s) return <Note>No sales yet. Record one with New sale.</Note>;
   if (c.mode === 'refund' && c.termView.phase !== 'idle') return <TerminalStatus t={c.termView} amount={dollars(s.total)} refund />;
   if (c.mode === 'pay') return <SaleCheckout c={c} s={s} />;
   if (c.mode === 'edit') return (
@@ -290,7 +290,7 @@ function Desktop({ c }: { c: C }) {
                 </button>
               ))}
             </div></div>
-            {c.list.length === 0 && <p style={S('margin:0;padding:24px 20px;color:#5E6673;font-size:14px;border-top:1px solid #EEF0F3')}>{c.query.trim() ? `Nothing matches "${c.query.trim()}".` : 'No sales yet.'}</p>}
+            {c.list.length === 0 && <Note inList>{c.query.trim() ? `Nothing matches "${c.query.trim()}".` : 'No sales yet.'}</Note>}
           </section>
         </div>
       </div>
@@ -312,14 +312,14 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
         <div style={S('display:flex;gap:12px')}>
           <FilterButton onClick={() => setFopen(true)} active={c.filter !== 'all'} label="Filter sales" />
           <button onClick={c.openNew} style={S(BLACK + ';gap:8px')}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+            <Icon name="plus" color="#FFFFFF" />
             New sale
           </button>
         </div>
         {c.canDiscount && (
           <Link href="/sales/summary" style={S('display:flex;align-items:center;gap:12px;box-sizing:border-box;min-height:56px;padding:0 18px;border:1px solid #E6E8EC;border-radius:20px;background:#FFFFFF;color:#0E1116;font-size:15px;font-weight:500;text-decoration:none')}>
             <span style={S('flex:1 1 auto')}>Daily summary and cash-up</span>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9.5 6l6 6-6 6" /></svg>
+            <Icon name="next" size={18} color="#5E6673" w={1.9} decorative />
           </Link>
         )}
         <section aria-label="Last 7 days" style={S('background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:20px')}>

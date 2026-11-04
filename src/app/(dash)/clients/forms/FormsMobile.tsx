@@ -1,5 +1,5 @@
 'use client';
-import { AnswerBox, Avatar, BACK, BAR, BLACK, CHEV, Chip, FIELD_IN, Field, FieldError, Notice, OUTLINE, PAGE, RING, ScreenHeader, dim } from '@/components/ui';
+import { AnswerBox, Avatar, BACK, BAR, BLACK, CHEV, Chip, Note, FIELD_IN, Field, FieldError, Notice, OUTLINE, PAGE, RING, ScreenHeader, dim } from '@/components/ui';
 import { TONE, type ToneName } from '@/lib/tones';
 import Link from 'next/link';
 import { addMonthsYmd, niceDate } from '@/lib/forms-shared';
@@ -140,7 +140,7 @@ export function FormsOverlay({ c }: { c: FormsCtl }) {
           {!!c.notice && <Notice>{c.notice}</Notice>}
           {err}
           <h3 style={S('margin:6px 0 -4px;font-size:17px;font-weight:600;letter-spacing:-0.01em')}>Forms</h3>
-          {k.rows.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No forms are set up for this appointment.</p>}
+          {k.rows.length === 0 && <Note>No forms are set up for this appointment.</Note>}
           {k.rows.map((r) => {
             const st = c.stat[r.state];
             return <FormCard key={r.tplId} name={r.name} line={r.needed ? 'Needed for this appointment' : 'Optional'} tag={{ t: st.t, tone: st.tone }} onOpen={() => { c.setError(''); c.setFm(r.tplId); }} />;
@@ -203,7 +203,7 @@ export function FormsOverlay({ c }: { c: FormsCtl }) {
               <p style={S('margin:6px 0 0;font-size:14px;color:#5E6673;overflow-wrap:anywhere')}>{a.sub}</p>
             </div>
             {a.flagged && <div style={S('padding:12px 14px;border-radius:16px;background:' + TONE.red.bg + ';color:' + TONE.red.fg + ';font-size:13.5px;font-weight:600')}>A reaction was noted on this form.</div>}
-            {answers.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No answers were given.</p>}
+            {answers.length === 0 && <Note>No answers were given.</Note>}
             {answers.map((x, i) => (
               <AnswerBox key={i} label={x.k}>{x.v}</AnswerBox>
             ))}

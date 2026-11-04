@@ -8,7 +8,7 @@ import { TIP_OPTS } from './calUi';
 import { dollars, toCents } from '@/lib/format';
 import { plural } from '@/lib/display';
 import { TONE } from '@/lib/tones';
-import { Field, INPUT, dim } from '@/components/ui';
+import { Note, Field, INPUT, dim } from '@/components/ui';
 import { FIELD_IN } from '@/components/ui';
 import { DISC_PCTS, NO_DISC, discountCents, type CoPackage, type CoProduct, type DiscPick } from '../sales/shared';
 import { TerminalStatus, type TermView } from './TerminalStatus';
@@ -78,7 +78,7 @@ export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCha
     <StepShell plain step={0} titles={['Edit services']} onBack={() => { setError(''); setEditing(false); }} onClose={onClose} error={error}
       summary={<div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px')}><span style={S('color:#5E6673;font-size:14px')}>{plural(lines.length, 'service')}</span><span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{dollars(gross)}</span></div>}
       actions={[{ label: 'Done', onClick: () => { setError(''); setEditing(false); } }]}>
-      <p style={S('margin:0;color:#5E6673;font-size:14px')}>This only changes what is charged. The booking and its time stay as they were.</p>
+      <Note>This only changes what is charged. The booking and its time stay as they were.</Note>
       <ServicePicker lock={edit.lock} services={edit.services} selected={edit.selected} initialCat={edit.initialCat} chipHeight={44} onPick={edit.onPick} />
     </StepShell>
   );
@@ -97,10 +97,10 @@ export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCha
       <StepShell plain step={0} titles={['Add products']} onBack={discard} onClose={onClose} error={error}
         summary={<div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px')}><span style={S('color:#5E6673;font-size:14px')}>{plural(count, 'product')}</span><span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{dollars(prodTotal)}</span></div>}
         actions={[{ label: 'Done', onClick: close }]}>
-        <p style={S('margin:0;color:#5E6673;font-size:14px')}>Products are charged with the visit and come off your stock when it is paid.</p>
+        <Note>Products are charged with the visit and come off your stock when it is paid.</Note>
         <input aria-label="Search products" value={find} onChange={(e) => setFind(e.target.value)} placeholder="Search products" style={S(INPUT)} />
-        {!retail.products.length && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No products yet. Add some on the Products page.</p>}
-        {!!retail.products.length && !shown.length && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No products match that search.</p>}
+        {!retail.products.length && <Note>No products yet. Add some on the Products page.</Note>}
+        {!!retail.products.length && !shown.length && <Note>No products match that search.</Note>}
         {shown.map((p) => {
           const n = retail.qty[p.id] ?? 0, out = p.stock < 1;
           return (
