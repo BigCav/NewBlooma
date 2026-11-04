@@ -35,12 +35,18 @@ export async function getPublicSalon(slug: string) {
   return { salon, settings: settings!, services: mains, addons, team: team ?? [], cats: cats ?? [], hours: hours ?? [], links: allLinks };
 }
 
-/** Earliest open online time ("Today, 2:30pm") for the given services, or the quickest services on the menu when none are chosen. Past times, booked times and the notice window are already excluded by available_slots. */
+/** Earliest open online time ("Today, 2:30pm") for the given services, or the quickest services on the menu (the quickest ones that team member offers, when one is given) when none are chosen. Past times, booked times and the notice window are already excluded by available_slots. */
 export async function nextAvailableLabel(salonId: string, tz: string, serviceIds: string[] = [], staffId?: string): Promise<string | null> {
   const sb = supabaseAdmin();
   let sets: string[][] = serviceIds.length ? [serviceIds] : [];
   if (!sets.length) {
-    const { data } = await sb.from('services').select('id').eq('salon_id', salonId).eq('active', true).eq('online_bookable', true).eq('is_addon', false).order('duration_min').limit(4);
+    let q = sb.from('services').select('id').eq('salon_id', salonId).eq('active', true).eq('online_bookable', true).eq('is_addon', false);
+    if (staffId) {
+      const { data: mine } = await sb.from('service_staff').select('service_id').eq('staff_id', staffId);
+      if (!mine?.length) return null;
+      q = q.in('id', mine.map((l) => l.service_id));
+    }
+    const { data } = await q.order('duration_min').limit(4);
     sets = (data ?? []).map((s) => [s.id]);
   }
   const ymd = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(d);

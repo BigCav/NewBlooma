@@ -2,38 +2,39 @@
 // 1:1 conversion of the prototype's SalonProfile.dc.html and MobileSalonProfile.dc.html (the public salon page).
 // Markup and style strings are kept as written; the {{ }} holes are the salon's real data.
 import { AcctChip } from './AcctChip';
-import { clockStr, duration, plural, timeRange } from '@/lib/display';
+import { clockStr, plural, timeRange } from '@/lib/display';
 import { WEEKDAYS_FULL } from '@/lib/cal';
 import { firstName } from '@/lib/people';
-import { Avatar, BLACK, BOOK_TAG, Chip, Icon, KV_ROW, Note, OUTLINE, filterChipCss } from '@/components/ui';
+import { Avatar, BLACK, CHEV, Chip, KV_ROW, Note, OUTLINE, filterChipCss } from '@/components/ui';
+import { DrawerKeys } from '@/components/DrawerKeys';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { S } from '../../(dash)/calendar/pickers';
 import { ART } from './art';
 import type { BookingRow } from './account/AccountView';
+import { CARD, H2, ReviewCard, ServiceRow, Stars, bookHref, type Review, type Svc } from './parts';
+import { StaffSheet, type Member } from './StaffSheet';
 
-type Svc = { id: string; name: string; desc: string; cat: string; dur: number; price: string };
 type Props = {
-  reviews: { name: string; stars: number; text: string; reply: string; date: string }[]; rating: { avg: number; count: number; dist: number[] };
+  reviews: Review[]; rating: { avg: number; count: number; dist: number[] };
   slug: string; name: string; headline: string; intro: string; about: string; address: string; phone: string; email: string;
-  services: Svc[]; cats: string[]; team: { name: string; role: string; photo: string | null }[]; hours: ({ from: string; to: string } | null)[];
+  services: Svc[]; cats: string[]; team: Member[]; hours: ({ from: string; to: string } | null)[];
   today: number; nowMin: number; cancel: string; bookable: boolean; next: string | null; account: { name: string; email: string; phone: string } | null; visits: { upcoming: BookingRow[]; past: BookingRow[] };
 };
 const DAYS = [...WEEKDAYS_FULL.slice(1), WEEKDAYS_FULL[0]];
 const toMin = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
 const TILES: [string, string][] = [['hair', 'Hair'], ['colour', 'Colour'], ['nails', 'Nails'], ['barber', 'Barber']];
 const LABEL = 'position:absolute;left:14px;bottom:14px;padding:6px 14px;border-radius:999px;background:rgba(255,255,255,0.92);color:#0E1116;font-size:13px;font-weight:500';
-const CARD = (pad: number, gap: number) => `box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:${pad}px;display:flex;flex-direction:column;gap:${gap}px`;
 
 function Tile({ k, label, style }: { k: string; label?: string; style: string }) {
   return <div role="img" aria-label={(label ?? 'Salon') + ', illustration'} style={S('position:relative;overflow:hidden;border-radius:24px;' + style)}><div style={S('width:100%;height:100%')} dangerouslySetInnerHTML={{ __html: ART[k].replace('<svg ', '<svg width="100%" height="100%" aria-hidden="true" preserveAspectRatio="xMidYMid slice" style="display:block" ') }} />{!!label && <span style={S(LABEL)}>{label}</span>}</div>;
 }
 
-function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string; setCat: (c: string) => void; today: number }) {
+function Body({ p, m, cat, setCat, today, openMember }: { p: Props; m: boolean; cat: string; setCat: (c: string) => void; today: number; openMember: (id: string) => void }) {
   const t = p.hours[today];
   const open = !!t && p.nowMin >= toMin(t.from) && p.nowMin < toMin(t.to);
   const openText = open ? 'Open now, until ' + clockStr(t!.to) : 'Closed now';
-  const book = (svc?: string) => `/b/${p.slug}/book` + (svc ? `?service=${svc}` : '');
+  const book = (svc?: string) => bookHref(p.slug, svc);
   const matched = TILES.filter(([, n]) => p.cats.some((c) => c.toLowerCase() === n.toLowerCase())).map(([k, n]) => [k, n] as [string, string | undefined]);
   // The design always shows four tiles next to the salon picture; a salon with fewer categories gets unlabelled illustrations in the gaps.
   const tiles = matched.concat(TILES.filter(([k]) => !matched.some(([x]) => x === k)).map(([k]) => [k, undefined] as [string, string | undefined])).slice(0, 4);
@@ -53,30 +54,20 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
       </div>
       {shown.length === 0 && <span style={S('color:#5E6673;font-size:14px')}>No services are open for online booking yet.</span>}
       <ul style={S(`margin:0 -${m ? 20 : 24}px -${m ? 20 : 24}px;padding:0;list-style:none;border-top:1px solid #EEF0F3`)}>
-        {shown.map((s, i) => {
-          const row = 'display:flex;align-items:center;gap:16px;min-height:80px;box-sizing:border-box;padding:14px 20px;' + (i < shown.length - 1 ? 'border-bottom:1px solid #EEF0F3;' : '') + 'text-decoration:none;color:#0E1116';
-          const inner = (<>
-            <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{s.name}</span>{!!s.desc && <span style={S('display:block;margin-top:2px;font-size:13px;color:#5E6673;overflow-wrap:anywhere')}>{s.desc}</span>}<span style={S('display:block;margin-top:4px;font-size:13px;color:#5E6673')}>{duration(s.dur)}</span></span>
-            <span style={S('flex:0 0 auto;font-size:15px;font-weight:600')}>{s.price}</span>
-            {m ? <Icon name="next" size={18} color="#5E6673" w={1.9} style={S('flex:0 0 auto')} />
-              : <span style={S(BOOK_TAG)}>Book</span>}
-          </>);
-          return <li key={s.id}>{p.bookable ? <Link href={book(s.id)} aria-label={s.name + ', ' + duration(s.dur) + ', ' + s.price + '. Book'} style={S(row)}>{inner}</Link> : <div style={S(row)}>{inner}</div>}</li>;
-        })}
+        {shown.map((s, i) => <ServiceRow key={s.id} s={s} m={m} last={i === shown.length - 1} href={p.bookable ? book(s.id) : undefined} />)}
       </ul>
     </section>
   );
   const team = !!p.team.length && (
     <section aria-label="Team" style={S(CARD(m ? 20 : 24, 16))}>
-      <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Team</h2>
+      <h2 style={S(H2)}>Team</h2>
       <ul style={S('margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px')}>
         {p.team.map((x) => (
-          <li key={x.name} style={S('display:flex;align-items:center;gap:12px;padding:14px;border:1px solid #E6E8EC;border-radius:18px')}><Avatar name={x.name} photo={x.photo} size="lg" /><span style={S('min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{x.name}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{x.role}</span></span></li>
+          <li key={x.id}><button type="button" onClick={() => openMember(x.id)} aria-haspopup="dialog" aria-label={x.name + ', ' + x.role + '. View profile'} className="s-card" style={S('display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;padding:14px;border:1px solid #E6E8EC;border-radius:18px;background:#FFFFFF;text-align:left;font:inherit;color:#0E1116;cursor:pointer')}><Avatar name={x.name} photo={x.photo} size="lg" /><span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{x.name}</span><span style={S('display:block;font-size:13px;color:#5E6673')}>{x.role}</span></span>{CHEV}</button></li>
         ))}
       </ul>
     </section>
   );
-  const STARS = '★★★★★';
   const rounded = Math.round(p.rating.avg);
   const reviews = p.rating.count > 0 && (
     <section aria-label="Reviews" style={S(CARD(m ? 20 : 24, 18))}>
@@ -84,7 +75,7 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
       <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:' + (m ? '18px 24px' : '20px 36px') + ';padding:' + (m ? 18 : 22) + 'px;border-radius:20px;background:#F4F5F7')}>
         <div style={S(m ? 'flex:1 1 100%;text-align:center' : 'flex:0 0 auto')}>
           <div style={S('font-size:' + (m ? 44 : 52) + 'px;line-height:1;font-weight:600;letter-spacing:-0.04em')}>{p.rating.avg.toFixed(1)}</div>
-          <div aria-hidden="true" style={S('margin-top:6px;font-size:18px;letter-spacing:2px')}><span style={S('color:#E8A317')}>{STARS.slice(0, rounded)}</span><span style={S('color:#D5D9E0')}>{STARS.slice(rounded)}</span></div>
+          <div style={S('margin-top:6px')}><Stars n={rounded} size={18} /></div>
           <div style={S('margin-top:4px;color:#5E6673;font-size:13.5px')}>{plural(p.rating.count, 'review')}</div>
         </div>
         <div style={S('flex:1 1 200px;min-width:0;display:flex;flex-direction:column;gap:7px')}>
@@ -94,17 +85,7 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
         </div>
       </div>
       <ul style={S('margin:0;padding:0;list-style:none;display:grid;grid-template-columns:' + (m ? '1fr' : 'repeat(auto-fill,minmax(300px,1fr))') + ';gap:12px')}>
-        {p.reviews.map((r, i) => (
-          <li key={i} style={S('display:flex;flex-direction:column;gap:10px;padding:16px;border:1px solid #E6E8EC;border-radius:18px;min-width:0')}>
-            <div style={S('display:flex;align-items:center;gap:12px')}>
-              <Avatar name={r.name.replace('.', '')} size="md" />
-              <div style={S('flex:1 1 auto;min-width:0')}><div style={S('font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{r.name}</div><div style={S('font-size:12.5px;color:#5E6673')}>{r.date}</div></div>
-              <span role="img" aria-label={r.stars + ' out of 5 stars'} style={S('flex:0 0 auto;font-size:15px;letter-spacing:1px')}><span style={S('color:#E8A317')}>{STARS.slice(0, r.stars)}</span><span style={S('color:#D5D9E0')}>{STARS.slice(r.stars)}</span></span>
-            </div>
-            {!!r.text && <p style={S('margin:0;font-size:15px;line-height:1.5;overflow-wrap:anywhere')}>{r.text}</p>}
-            {!!r.reply && <div style={S('border-radius:14px;background:#F4F5F7;padding:10px 12px;font-size:14px;overflow-wrap:anywhere')}><div style={S('font-size:12.5px;font-weight:600;color:#5E6673;margin-bottom:2px')}>{'Reply from ' + p.name}</div>{r.reply}</div>}
-          </li>
-        ))}
+        {p.reviews.map((r, i) => <ReviewCard key={i} r={r} from={p.name} />)}
       </ul>
     </section>
   );
@@ -216,14 +197,17 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
 export function ProfileView(p: Props) {
   const [narrow, setNarrow] = useState<boolean | null>(null);
   const [cat, setCat] = useState('All');
+  const [who, setWho] = useState<string | null>(null);
   useEffect(() => {
     const mq = window.matchMedia('(max-width:900px)');
     const f = () => setNarrow(mq.matches);
     f(); mq.addEventListener('change', f);
     return () => mq.removeEventListener('change', f);
   }, []);
+  const member = p.team.find((t) => t.id === who);
+  const sheet = (drawer: boolean) => member && <StaffSheet key={member.id} t={member} slug={p.slug} salon={p.name} services={p.services} bookable={p.bookable} drawer={drawer} onClose={() => setWho(null)} />;
   return (<>
-    {narrow !== false && <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}><Body p={p} m={true} cat={cat} setCat={setCat} today={p.today} /></div>}
-    {narrow !== true && <div className="only-d d-cal cal-root" style={S("box-sizing:border-box;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4;min-height:100vh")}><Body p={p} m={false} cat={cat} setCat={setCat} today={p.today} /></div>}
+    {narrow !== false && <div className="only-m m-cal cal-root" style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}><Body p={p} m={true} cat={cat} setCat={setCat} today={p.today} openMember={setWho} />{sheet(false)}</div>}
+    {narrow !== true && <div className="only-d d-cal cal-root" style={S("box-sizing:border-box;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4;min-height:100vh")}><Body p={p} m={false} cat={cat} setCat={setCat} today={p.today} openMember={setWho} />{!!member && <div className="m-cal cal-root m-drawer">{sheet(true)}</div>}<DrawerKeys /></div>}
   </>);
 }

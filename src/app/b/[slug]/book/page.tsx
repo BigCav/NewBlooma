@@ -13,9 +13,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return { title: d ? `Book at ${d.salon.name}` : 'Booking' };
 }
 
-export default async function Page({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ service?: string }> }) {
+export default async function Page({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ service?: string; staff?: string }> }) {
   const { slug } = await params;
-  const { service } = await searchParams;
+  const { service, staff } = await searchParams;
   const d = await getPublicSalon(slug);
   if (!d) notFound();
   const { salon, settings } = d;
@@ -31,10 +31,13 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   if (services.some((s) => s.cat === 'Other')) cats.push('Other');
   const svcIds = new Set(services.map((s) => s.id));
   const team = d.team.map((t) => ({ id: t.id, name: t.name, role: t.role_title, photo: t.photo_url ?? null, svc: d.links.filter((l) => l.staff_id === t.id && svcIds.has(l.service_id)).map((l) => l.service_id) }));
+  // A team member picked on the salon page stays picked, unless they do not offer the service chosen with them.
+  const pick = service && svcIds.has(service) ? service : '';
+  const who = team.find((t) => t.id === staff && (!pick || t.svc.includes(pick)))?.id ?? '';
   const hours = Array.from({ length: 7 }, (_, i) => {
     const h = d.hours.find((x: any) => x.weekday === i) as any;
     return h && h.is_open ? { from: String(h.open_time).slice(0, 5), to: String(h.close_time).slice(0, 5) } : null;
   });
   return <BookingView slug={slug} name={salon.name} address={salon.address ?? ''} tz={salon.timezone} currency={salon.currency || 'NZD'} services={services} addons={addons} cats={cats} team={team} hours={hours}
-    today={ymd(now, salon.timezone)} nowMin={Number(get('hour')) * 60 + Number(get('minute'))} autoConfirm={settings.auto_confirm} windowDays={({ '1w': 8, '2w': 15, '4w': 29, '8w': 57 } as Record<string, number>)[settings.booking_window] ?? 29} emailOn={emailConfigured() && settings.email_confirmations !== false} account={account} preselect={service && svcIds.has(service) ? service : ''} />;
+    today={ymd(now, salon.timezone)} nowMin={Number(get('hour')) * 60 + Number(get('minute'))} autoConfirm={settings.auto_confirm} windowDays={({ '1w': 8, '2w': 15, '4w': 29, '8w': 57 } as Record<string, number>)[settings.booking_window] ?? 29} emailOn={emailConfigured() && settings.email_confirmations !== false} account={account} preselect={pick} preStaff={who} />;
 }

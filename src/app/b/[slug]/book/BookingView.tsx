@@ -18,7 +18,7 @@ type Member = { id: string; name: string; role: string; photo?: string | null; s
 type Props = {
   slug: string; name: string; address: string; tz: string; currency: string;
   services: Svc[]; addons: Addon[]; cats: string[]; team: Member[]; hours: ({ from: string; to: string } | null)[];
-  today: string; nowMin: number; autoConfirm: boolean; windowDays: number; emailOn: boolean; preselect: string; account: Account | null;
+  today: string; nowMin: number; autoConfirm: boolean; windowDays: number; emailOn: boolean; preselect: string; preStaff: string; account: Account | null;
 };
 
 const TITLES = ['Choose your services', 'Choose a team member', 'Pick a date and time', 'Your details'];
@@ -52,7 +52,7 @@ function useBooking(p: Props) {
   const [savePw, setSavePw] = useState('');
   const [sel, setSel] = useState<string[]>(p.preselect ? [p.preselect] : []);
   const [cat, setCat] = useState('All');
-  const [staff, setStaff] = useState('');
+  const [staff, setStaff] = useState(p.preStaff);
   const [nextAt, setNextAt] = useState<string | null>(null);
   useEffect(() => { let live = true; nextAvailable(p.slug, sel, staff && staff !== 'any' ? staff : undefined).then((l) => { if (live) setNextAt(l); }).catch(() => { if (live) setNextAt(null); }); return () => { live = false; }; }, [p.slug, sel, staff]);
   const [day, setDay] = useState(0);
