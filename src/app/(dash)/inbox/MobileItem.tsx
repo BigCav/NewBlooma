@@ -9,7 +9,7 @@ import { S } from '../calendar/pickers';
 import { ROW, TICK } from '../calendar/wizardUi';
 import { replyToItem } from './actions';
 import { BookingCard, BookingQuickView } from './BookingQuickView';
-import { REASONS, STATUS, TYPES, needsAction } from './shared';
+import { REASONS, STATUS, TYPES, isOpenRequest } from './shared';
 import type { InboxCtl } from './InboxView';
 
 function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
@@ -32,7 +32,7 @@ export function MobileItem({ c, onClose }: { c: InboxCtl; onClose: () => void })
   const mainRef = useRef<HTMLElement>(null);
   const first = firstName(sel.client);
   const isMsg = sel.type === 'message', isCancel = sel.type === 'cancellation', isResched = sel.type === 'reschedule';
-  const actionable = needsAction(sel);
+  const actionable = isOpenRequest(sel);
   const clientHref = sel.clientId ? `/clients/${sel.clientId}` : null;
   const calHref = sel.bookingId && sel.calendarDay ? `/calendar?d=${sel.calendarDay}&b=${sel.bookingId}` : null;
   const rebookHref = sel.clientId ? `/calendar/new?client=${sel.clientId}` : '/calendar?new=1';

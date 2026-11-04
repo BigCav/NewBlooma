@@ -41,7 +41,7 @@ declare
   uo uuid := gen_random_uuid(); us uuid := gen_random_uuid(); ub uuid := pg_temp.f('ub');
   sa uuid; cat uuid; svc uuid; own uuid; sty uuid; sty2 uuid; pk uuid; cpk uuid; pkg_sale uuid;
   c1 uuid; c2 uuid; c3 uuid; c4 uuid; c5 uuid; c6 uuid;
-  b1 uuid; b2 uuid; b3 uuid; b3b uuid; b4 uuid; b5 uuid; b6 uuid; b7 uuid; b8 uuid; b9 uuid; b10 uuid; b11 uuid; b11b uuid; b12 uuid; b13 uuid; b14 uuid; b15 uuid; b16 uuid;
+  b1 uuid; b2 uuid; b3 uuid; b3b uuid; b4 uuid; b5 uuid; b6 uuid; b7 uuid; b8 uuid; b9 uuid; b10 uuid; b11 uuid; b11b uuid; b12 uuid; b13 uuid; b14 uuid; b15 uuid; b16 uuid; bx uuid;
   s9 uuid; s10 uuid; s11 uuid; s11b uuid; s12 uuid; s13 uuid; s14 uuid; s15 uuid; s16 uuid;
   r text; j jsonb; n int; left_ int; tok text; obs text := '';
   use_json text;
@@ -137,13 +137,21 @@ begin
   perform pg_temp.ok((j ->> 's')::timestamptz = (day + time '11:00') at time zone tz and (j ->> 'e')::timestamptz = (day + time '12:00') at time zone tz and j ->> 'st' = 'confirmed', 'a moved booking has the wrong time, length or status: ' || j::text);
   perform pg_temp.ok((select count(*) from inbox_items where booking_id = b1 and type = 'reschedule') = 1, 'the salon should see one note that the client moved');
   perform pg_temp.ok(pg_temp.mails(b1, 'booking_confirmation') = 1, 'moving sent a second confirmation or lost the first');
-  if pg_temp.mails(b1, 'owner_new_booking') + pg_temp.mails(b1, 'owner_booking_cancelled') = 1 then obs := obs || ' | the salon is not emailed when a client moves their appointment (it only shows in the inbox)'; end if;
+  perform pg_temp.ok(pg_temp.mails(b1, 'owner_booking_moved') = 1 and (select to_address from notifications_outbox where booking_id = b1 and template = 'owner_booking_moved') = 'owner@shop.test', 'the salon should be emailed when a client moves their appointment');
   r := pg_temp.book(sa, c5, sty, (day + time '10:00') at time zone tz, svc);
   perform pg_temp.ok(r not like 'ERR%', 'the time the client left was not freed: ' || r);
   update bookings set status = 'cancelled' where id = r::uuid; -- only a probe
   -- a request to be moved by the salon (no time chosen) just reaches the inbox
   perform pg_temp.ok(pg_temp.try(format('select client_request_reschedule(%L, ''Could we go later in the day?'')', tok)) = 'none', 'a reschedule request was refused');
   perform pg_temp.ok((select count(*) from inbox_items where booking_id = b1 and type = 'reschedule' and body like 'Could we%') = 1, 'the reschedule request did not reach the inbox');
+  perform pg_temp.ok(pg_temp.mails(b1, 'owner_reschedule_request') = 1, 'the salon should be emailed when a client asks for a different time');
+  perform pg_temp.ok((select status from inbox_items where booking_id = b1 and type = 'reschedule' and body like 'Could we%') = 'new', 'a reschedule request should wait for staff');
+  -- moving again emails the salon again (the earlier note about this booking is replaced)
+  update notifications_outbox set status = 'sent' where booking_id = b1 and template = 'owner_booking_moved';
+  perform pg_temp.ok(pg_temp.try(format('select client_reschedule(%L, %L)', tok, (day + time '10:00') at time zone tz)) = 'none', 'moving back to the first time was refused');
+  perform pg_temp.ok(pg_temp.mails(b1, 'owner_booking_moved') = 1 and (select status from notifications_outbox where booking_id = b1 and template = 'owner_booking_moved') = 'queued', 'a second move did not email the salon again');
+  update notifications_outbox set status = 'sent' where booking_id = b1 and template = 'owner_booking_moved';
+  perform pg_temp.ok(pg_temp.try(format('select client_reschedule(%L, %L)', tok, (day + time '11:00') at time zone tz)) = 'none', 'moving to 11:00 again was refused'); -- back where the later steps expect it
 
   ---------------------------------------------------------------- 5. The client cancels with the link: in time, with a reason
   tok := pg_temp.link(b4);
@@ -306,5 +314,12 @@ begin
     'the stylist''s commission is not 40 percent of their service money');
 
   perform pg_temp.ok(pg_temp.jsonu(us, format('select sales_summary(%L, %L)', today - 1, day + 10)) ->> 'error' = '42501', 'a stylist saw the takings');
+  -- the "cancellations and changes" switch in Settings turns the salon's emails about moves and cancellations off
+  update salon_settings set notify_cancellation = false where salon_id = sa;
+  bx := pg_temp.book(sa, c6, sty, ((day + 5) + time '10:00') at time zone tz, svc)::uuid;
+  perform pg_temp.ok(pg_temp.try(format('select client_reschedule(%L, %L)', pg_temp.link(bx), ((day + 5) + time '11:00') at time zone tz)) = 'none', 'a move was refused');
+  perform pg_temp.ok(pg_temp.mails(bx, 'owner_booking_moved') = 0, 'a move emailed the salon although that switch is off');
+  perform pg_temp.ok(pg_temp.try(format('select client_cancel(%L, null)', pg_temp.link(bx))) = 'none', 'a cancellation was refused');
+  perform pg_temp.ok(pg_temp.mails(bx, 'owner_booking_cancelled') = 0, 'a cancellation emailed the salon although that switch is off');
   raise notice 'OBSERVATIONS:%', coalesce(nullif(obs, ''), ' none');
 end $t$;

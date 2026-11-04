@@ -33,7 +33,9 @@ export const STATUS: Record<Exclude<ItemStatus, 'new'>, { t: string; tone: ToneN
 };
 export const REASONS = ['Not available then', 'Fully booked', 'Something else'];
 export const FILTERS = [{ id: 'all', label: 'All' }, { id: 'action', label: 'Needs action' }, { id: 'message', label: 'Messages' }, { id: 'cancellation', label: 'Cancellations' }];
-/** Only a booking request has Approve / Decline buttons, so only a request that is still open "needs action" (a reschedule request is read, then marked done). */
-export const needsAction = (i: Pick<InboxItem, 'type' | 'status' | 'cancelled'>) => i.type === 'request' && i.status === 'new' && !i.cancelled;
+/** A booking request still waiting for Approve or Decline. Only these have those buttons. */
+export const isOpenRequest = (i: Pick<InboxItem, 'type' | 'status' | 'cancelled'>) => i.type === 'request' && i.status === 'new' && !i.cancelled;
+/** Something staff still have to do: an open request, or a client's request to move that nobody has dealt with yet. */
+export const needsAction = (i: Pick<InboxItem, 'type' | 'status' | 'cancelled'>) => isOpenRequest(i) || (i.type === 'reschedule' && i.status === 'new' && !i.cancelled);
 /** Nothing to approve or decline: shown so you know what happened. */
 export const isInfo = (t: ItemType) => t === 'booking' || t === 'cancellation' || t === 'rescheduled';

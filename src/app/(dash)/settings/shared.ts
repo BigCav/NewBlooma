@@ -16,7 +16,7 @@ export function validate(v: Values): { section: string; error: string } | null {
   const ph = checkPhone(v.bizPhone); if (ph.error) return { section: 'business', error: ph.error };
   if (!v.card && !v.cash && !v.gift) return { section: 'payments', error: 'Keep at least one payment method on so you can take payment at checkout.' };
   const tax = parseFloat(v.tax);
-  if (isNaN(tax) || tax < 0 || tax > 30) return { section: 'payments', error: 'Enter a sales tax rate between 0 and 30.' };
+  if (isNaN(tax) || tax < 0 || tax > 30) return { section: 'payments', error: 'Enter a GST rate between 0 and 30.' };
   for (let i = 0; i < 7; i++) if (!v.hours[i].from || !v.hours[i].to || v.hours[i].to <= v.hours[i].from) return { section: 'hours', error: `${DAY_FULL[i]}: closing time must be after opening time.` };
   return null;
 }
@@ -24,7 +24,7 @@ export const SECTIONS = [
   { id: 'business', label: 'Business details', desc: 'Name, contact and address' },
   { id: 'hours', label: 'Opening hours', desc: 'When the salon is open' },
   { id: 'booking', label: 'Online booking', desc: 'Booking rules for clients' },
-  { id: 'payments', label: 'Payments', desc: 'Methods, tips and tax' },
+  { id: 'payments', label: 'Payments', desc: 'Methods, tips and GST' },
   { id: 'notifications', label: 'Notifications', desc: 'Emails and reminders' },
   { id: 'appearance', label: 'Appearance', desc: 'Light or night mode' },
 ];

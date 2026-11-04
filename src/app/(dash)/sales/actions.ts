@@ -125,7 +125,7 @@ export async function sendReceipt(saleId: string): Promise<Res> {
   const lines = (s.sale_items as any[]).map((i) => `${i.label}${i.qty > 1 ? ` x${i.qty}` : ''} ${dollars(i.price_cents * i.qty)}`);
   if (s.discount_cents) lines.push(`Discount${s.discount_note ? ` (${s.discount_note})` : ''} -${dollars(s.discount_cents)}`);
   if (s.tip_cents) lines.push(`Tip ${dollars(s.tip_cents)}`);
-  if (!s.tax_inclusive && s.tax_cents) lines.push(`Tax ${dollars(s.tax_cents)}`);
+  if (!s.tax_inclusive && s.tax_cents) lines.push(`GST ${dollars(s.tax_cents)}`);
   const how = s.method === 'gift_card' ? 'gift card' : s.method;
   const text = `Hi ${first}, here is your receipt${s.paid_at ? ` from ${dateLong(s.paid_at, salon.timezone)}` : ''}.\n${lines.join('\n')}\nTotal ${dollars(s.total_cents)}${how ? `, paid by ${how}` : ''}. Thank you!`;
   const e = (x: string) => x.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]!));
@@ -134,9 +134,9 @@ export async function sendReceipt(saleId: string): Promise<Res> {
     ...(s.sale_items as any[]).map((i) => row(`${i.label}${i.qty > 1 ? ` × ${i.qty}` : ''}`, dollars(i.price_cents * i.qty))),
     ...(s.discount_cents ? [row(`Discount${s.discount_note ? ` (${s.discount_note})` : ''}`, '-' + dollars(s.discount_cents))] : []),
     ...(s.tip_cents ? [row('Tip', dollars(s.tip_cents))] : []),
-    ...(!s.tax_inclusive && s.tax_cents ? [row('Tax', dollars(s.tax_cents))] : []),
+    ...(!s.tax_inclusive && s.tax_cents ? [row('GST', dollars(s.tax_cents))] : []),
     row('Total', dollars(s.total_cents), true, true),
-    ...(s.tax_inclusive && s.tax_cents ? [`<tr><td colspan="2" style="padding:0 0 4px;font-size:12.5px;color:#5E6673">Includes ${e(dollars(s.tax_cents))} tax</td></tr>`] : []),
+    ...(s.tax_inclusive && s.tax_cents ? [`<tr><td colspan="2" style="padding:0 0 4px;font-size:12.5px;color:#5E6673">Includes ${e(dollars(s.tax_cents))} GST</td></tr>`] : []),
   ].join('');
   const when = s.paid_at ? dateLong(s.paid_at, salon.timezone) : '';
   const html = mailP(`Hi ${first}, thanks for visiting. Here is your receipt.`) + `<div style="font-size:13px;color:#5E6673;margin:-6px 0 14px">${[when, how ? 'Paid by ' + e(how) : ''].filter(Boolean).join(' · ')}</div><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse">${rows}</table>`;

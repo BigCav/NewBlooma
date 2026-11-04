@@ -50,7 +50,7 @@ type C = ReturnType<typeof useForm>;
 function Desktop({ c }: { c: C }) {
   return (
     <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
-      <PageHeader title="Card payments" subtitle="Windcave setup and tax mode" showSearch={false} showAction={false} />
+      <PageHeader title="Card payments" subtitle="Windcave setup and GST mode" showSearch={false} showAction={false} />
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
         <div style={S('flex:999 1 520px;min-width:0;max-width:760px')}><Mobile c={c} inline /></div>
       </div>
@@ -75,12 +75,12 @@ function Mobile({ c, inline }: { c: C; inline?: boolean }) {
   const tile = (on: boolean) => 'flex:1 1 0;min-height:56px;padding:10px 12px;border-radius:16px;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-align:center;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
   return (
     <div className={inline ? 'm-cal cal-root' : 'only-m m-cal cal-root'} style={S(PAGE.replace('position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;display:flex;', inline ? 'position:relative;width:100%;height:calc(100dvh - 170px);min-height:520px;box-sizing:border-box;border:1px solid #E6E8EC;border-radius:24px;display:flex;' : 'position:relative;width:100%;height:100dvh;box-sizing:border-box;'))}>
-      <ScreenHeader title={inline ? 'Payments' : 'Card payments'} sub={inline ? 'Back to payments settings' : 'Windcave setup and tax mode'} backHref="/settings?section=payments" backLabel="Back to payments" />
+      <ScreenHeader title={inline ? 'Payments' : 'Card payments'} sub={inline ? 'Back to payments settings' : 'Windcave setup and GST mode'} backHref="/settings?section=payments" backLabel="Back to payments" />
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:16px 20px 24px;display:flex;flex-direction:column;gap:14px')}>
         <div><h3 style={S(H3)}>Prices are</h3></div>
         <div role="group" aria-label="Prices are" style={S('display:flex;gap:10px')}>
-          <button onClick={() => set('inclusive', true)} aria-pressed={v.inclusive} style={S(tile(v.inclusive))}>Tax inclusive</button>
-          <button onClick={() => set('inclusive', false)} aria-pressed={!v.inclusive} style={S(tile(!v.inclusive))}>Tax exclusive</button>
+          <button onClick={() => set('inclusive', true)} aria-pressed={v.inclusive} style={S(tile(v.inclusive))}>GST inclusive</button>
+          <button onClick={() => set('inclusive', false)} aria-pressed={!v.inclusive} style={S(tile(!v.inclusive))}>GST exclusive</button>
         </div>
 
         <div><h3 style={S(H3)}>Card payments on screen</h3><p style={S(NOTE)}>Opens Windcave's secure payment page for the client to enter their card.</p></div>

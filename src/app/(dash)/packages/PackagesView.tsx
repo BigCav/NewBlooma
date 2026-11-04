@@ -7,6 +7,7 @@ import { BottomSheet } from '@/components/BottomSheet';
 import { dollars, toCents } from '@/lib/format';
 import { rootCls } from '@/components/drawer';
 import { decimalInput } from '@/lib/numeric';
+import { useNewParam } from '@/components/useNewParam';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
@@ -359,6 +360,7 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
 
 export function PackagesView(props: Props) {
   const c = usePackages(props);
+  useNewParam(() => c.openSell());
   return (<>
     {c.narrow !== false && <Mobile c={c} />}
     {c.narrow !== true && <Desktop c={c} />}

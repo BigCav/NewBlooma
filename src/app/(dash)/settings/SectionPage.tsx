@@ -135,9 +135,9 @@ export function SectionPage({ c, inline }: { c: SettingsCtl; inline?: boolean })
             <SwitchRow id="st-tips" title="Ask for a tip at checkout" sub="Show tip options when you take payment." on={v.tips} toggle={() => c.set('tips', !v.tips)} />
             <SettingRow label="Suggested tip" value={nameOf('tipDefault', v.tipDefault)} onClick={() => setPick('tipDefault')} last />
           </section>
-          <Text id="st-tax" label="Sales tax rate (%)" c={c} k="tax" type="text" mode="decimal" ph="0" />
-          <Link href="/settings/windcave" aria-label="Windcave card setup and tax mode" style={S('display:flex;align-items:center;gap:12px;box-sizing:border-box;min-height:64px;padding:12px 18px;border:1px solid #E6E8EC;border-radius:22px;background:#FFFFFF;text-decoration:none;color:#0E1116')}>
-            <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600')}>Windcave card setup</span><span style={S('display:block;margin-top:2px;font-size:13px;color:#5E6673')}>Card keys, terminal and tax mode</span></span>
+          <Text id="st-tax" label="GST rate (%)" c={c} k="tax" type="text" mode="decimal" ph="0" />
+          <Link href="/settings/windcave" aria-label="Windcave card setup and GST mode" style={S('display:flex;align-items:center;gap:12px;box-sizing:border-box;min-height:64px;padding:12px 18px;border:1px solid #E6E8EC;border-radius:22px;background:#FFFFFF;text-decoration:none;color:#0E1116')}>
+            <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600')}>Windcave card setup</span><span style={S('display:block;margin-top:2px;font-size:13px;color:#5E6673')}>Card keys, terminal and GST mode</span></span>
             <Icon name="next" color="#8A93A0" decorative />
           </Link>
         </>)}
@@ -148,7 +148,7 @@ export function SectionPage({ c, inline }: { c: SettingsCtl; inline?: boolean })
             <SwitchRow id="st-remind24" title="Reminder 24 hours before" sub="Email reminder for the day before." on={v.remind24} toggle={() => c.set('remind24', !v.remind24)} />
             <SwitchRow id="st-remind2" title="Reminder 2 hours before" sub="A short text reminder on the day." on={v.remind2} toggle={() => c.set('remind2', !v.remind2)} />
             <SwitchRow id="st-newBooking" title="Tell me about new online bookings" on={v.newBooking} toggle={() => c.set('newBooking', !v.newBooking)} />
-            <SwitchRow id="st-cancelled" title="Tell me about cancellations" on={v.cancelled} toggle={() => c.set('cancelled', !v.cancelled)} last />
+            <SwitchRow id="st-cancelled" title="Tell me about cancellations and changes" on={v.cancelled} toggle={() => c.set('cancelled', !v.cancelled)} last />
           </section>
         )}
 

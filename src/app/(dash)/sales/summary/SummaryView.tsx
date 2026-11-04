@@ -114,9 +114,9 @@ function Body({ d, from, to, today, presets, m }: { d: Summary; from: string; to
           <Row label="Services" value={dollars(d.services_cents)} />
           {d.products_cents > 0 && <Row label="Products" value={dollars(d.products_cents)} />}
           {d.discount_cents > 0 && <Row label="Discounts" value={'-' + dollars(d.discount_cents)} />}
-          <Row label="Sales" value={dollars(d.sales_cents)} strong sub="Before tips, and before any tax added on top" />
+          <Row label="Sales" value={dollars(d.sales_cents)} strong sub="Before tips, and before any GST added on top" />
           {d.tips_cents > 0 && <Row label="Tips" value={dollars(d.tips_cents)} />}
-          {added > 0 && <Row label="Tax added at checkout" value={dollars(added)} />}
+          {added > 0 && <Row label="GST added at checkout" value={dollars(added)} />}
           <Row label="Total taken" value={dollars(d.total_cents)} strong />
           {d.refund_cents > 0 && <Row label={`Refunds (${d.refund_count})`} value={'-' + dollars(d.refund_cents)} />}
           <Row label="Net takings" value={dollars(net)} strong />
@@ -138,11 +138,11 @@ function Body({ d, from, to, today, presets, m }: { d: Summary; from: string; to
             : <p style={S(NOTE)}>Choose a single day to count the drawer and close the till.</p>}
         </div>
       ))}
-      {card('Tax', 'Tax', (
-        d.tax_by_rate.length === 0 ? <p style={S(NOTE)}>No tax in this time.</p>
+      {card('GST', 'GST', (
+        d.tax_by_rate.length === 0 ? <p style={S(NOTE)}>No GST in this time.</p>
           : <div className="sum-rows">
             {d.tax_by_rate.map((t, i) => <Row key={i} label={`${t.rate}% ${t.inclusive ? 'included in prices' : 'added at checkout'}`} value={dollars(t.tax_cents)} sub={`On ${dollars(t.sales_cents)} of sales`} />)}
-            <Row label="Tax collected" value={dollars(d.tax_cents)} strong />
+            <Row label="GST collected" value={dollars(d.tax_cents)} strong />
           </div>
       ))}
       {card('Team', 'Team', (
@@ -183,9 +183,9 @@ function Body({ d, from, to, today, presets, m }: { d: Summary; from: string; to
             <Row label="Services" value={dollars(d.services_cents)} />
             {d.products_cents > 0 && <Row label="Products" value={dollars(d.products_cents)} />}
             {d.discount_cents > 0 && <Row label="Discounts" value={'-' + dollars(d.discount_cents)} />}
-            <Row label="Sales" value={dollars(d.sales_cents)} strong sub="Before tips, and before any tax added on top" />
+            <Row label="Sales" value={dollars(d.sales_cents)} strong sub="Before tips, and before any GST added on top" />
             {d.tips_cents > 0 && <Row label="Tips" value={dollars(d.tips_cents)} />}
-            {added > 0 && <Row label="Tax added at checkout" value={dollars(added)} />}
+            {added > 0 && <Row label="GST added at checkout" value={dollars(added)} />}
             <Row label="Total taken" value={dollars(d.total_cents)} strong />
             {d.refund_cents > 0 && <Row label={`Refunds (${d.refund_count})`} value={'-' + dollars(d.refund_cents)} />}
             <Row label="Net takings" value={dollars(net)} strong />
@@ -222,11 +222,11 @@ function Body({ d, from, to, today, presets, m }: { d: Summary; from: string; to
               : <p style={S(NOTE)}>Choose a single day to count the drawer and close the till.</p>}
           </div>
         </Card>
-        <Card title="Tax" label="Tax">
-          {d.tax_by_rate.length === 0 ? <p style={S(NOTE)}>No tax in this time.</p>
+        <Card title="GST" label="GST">
+          {d.tax_by_rate.length === 0 ? <p style={S(NOTE)}>No GST in this time.</p>
             : <div className="sum-rows">
               {d.tax_by_rate.map((t, i) => <Row key={i} label={`${t.rate}% ${t.inclusive ? 'included in prices' : 'added at checkout'}`} value={dollars(t.tax_cents)} sub={`On ${dollars(t.sales_cents)} of sales`} />)}
-              <Row label="Tax collected" value={dollars(d.tax_cents)} strong />
+              <Row label="GST collected" value={dollars(d.tax_cents)} strong />
             </div>}
         </Card>
       </div>

@@ -19,8 +19,33 @@ jobs:
         run: npm run typecheck
       - name: Unit tests
         run: npm test
-      # Database tests only run when a test database is connected (a repository secret named TEST_DATABASE_URL).
-      - name: Database tests
+      # Optional: database tests against a database you point at (a repository secret named TEST_DATABASE_URL).
+      - name: Database tests (your own test database)
         run: npm run test:db
         env:
           TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+
+  # Builds a throwaway Supabase on the runner, applies every migration, and runs the database tests (card payments, booking day,
+  # tenant isolation, money rules). Nothing is left behind and no real database is touched.
+  database:
+    runs-on: ubuntu-latest
+    # Remove this line once the job has run green once on GitHub; until then a problem in the set-up does not turn the whole run red.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Start a local Supabase and apply the migrations
+        run: |
+          supabase init --force
+          supabase start -x realtime,storage-api,imgproxy,studio,mailpit,postgres-meta,edge-runtime,logflare,vector,supavisor
+      - name: Database tests
+        run: npm run test:db
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
