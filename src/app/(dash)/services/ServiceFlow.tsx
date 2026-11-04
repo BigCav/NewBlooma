@@ -1,5 +1,5 @@
 'use client';
-import { Avatar, BARE, BLACK, BLACK_MD, CLOSE, DOTS, FIELD_IN, Field, MENU_ROW, Notice, OUTLINE, OUTLINE_MD, RING, dim } from '@/components/ui';
+import { Avatar, BARE, BLACK, BLACK_MD, BOOK_TAG, CLOSE, DOTS, FIELD_IN, Field, INPUT, MENU_ROW, Notice, OUTLINE, OUTLINE_MD, RING, dim } from '@/components/ui';
 import { BottomSheet } from '@/components/BottomSheet';
 import { ConfirmBox } from '@/components/ConfirmBox';
 import { dollars, toCents } from '@/lib/format';
@@ -44,7 +44,7 @@ export function ServiceFlow({ c }: { c: ServicesCtl }) {
   const people = (!d.addon ? team.filter((t) => d.staff.includes(t.id)).map((t) => t.name) : mains.filter((p) => d.parents.includes(p.id)).map((p) => p.name)).join(', ');
 
   const toggle = (arr: string[], id: string) => (arr.includes(id) ? arr.filter((i) => i !== id) : [...arr, id]);
-  const input = 'box-sizing:border-box;width:100%;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF';
+  const input = INPUT;
   const small = BLACK_MD;
 
   const summaryBar = (
@@ -158,7 +158,7 @@ export function ServiceFlow({ c }: { c: ServicesCtl }) {
                 <div style={S('font-size:12.5px;color:#5E6673')}>{duration(d.dur || 0) + (d.addon ? ', add-on' : ', ' + catName)}</div>
               </div>
               <div style={S('flex:0 0 auto;font-size:15px;font-weight:600')}>{dollars(cents)}</div>
-              <span style={S('flex:0 0 auto;padding:7px 14px;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:13px;font-weight:500')}>Book</span>
+              <span style={S(BOOK_TAG)}>Book</span>
             </div>
           ) : (
             <div style={S('box-sizing:border-box;padding:14px 16px;border:1px dashed #D5D9E0;border-radius:20px;color:#5E6673;font-size:13.5px')}>Hidden from online booking. You can still add it to the calendar yourself.</div>

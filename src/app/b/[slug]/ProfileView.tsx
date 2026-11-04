@@ -5,7 +5,7 @@ import { AcctChip } from './AcctChip';
 import { clockStr, duration, plural, timeRange } from '@/lib/display';
 import { WEEKDAYS_FULL } from '@/lib/cal';
 import { firstName } from '@/lib/people';
-import { Avatar, BLACK, Chip, Icon, KV_ROW, Note, OUTLINE, filterChipCss } from '@/components/ui';
+import { Avatar, BLACK, BOOK_TAG, Chip, Icon, KV_ROW, Note, OUTLINE, filterChipCss } from '@/components/ui';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { S } from '../../(dash)/calendar/pickers';
@@ -59,7 +59,7 @@ function Body({ p, m, cat, setCat, today }: { p: Props; m: boolean; cat: string;
             <span style={S('flex:1 1 auto;min-width:0')}><span style={S('display:block;font-size:15px;font-weight:600;overflow-wrap:anywhere')}>{s.name}</span>{!!s.desc && <span style={S('display:block;margin-top:2px;font-size:13px;color:#5E6673;overflow-wrap:anywhere')}>{s.desc}</span>}<span style={S('display:block;margin-top:4px;font-size:13px;color:#5E6673')}>{duration(s.dur)}</span></span>
             <span style={S('flex:0 0 auto;font-size:15px;font-weight:600')}>{s.price}</span>
             {m ? <Icon name="next" size={18} color="#5E6673" w={1.9} style={S('flex:0 0 auto')} />
-              : <span style={S('flex:0 0 auto;padding:8px 16px;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:13.5px;font-weight:500')}>Book</span>}
+              : <span style={S(BOOK_TAG)}>Book</span>}
           </>);
           return <li key={s.id}>{p.bookable ? <Link href={book(s.id)} aria-label={s.name + ', ' + duration(s.dur) + ', ' + s.price + '. Book'} style={S(row)}>{inner}</Link> : <div style={S(row)}>{inner}</div>}</li>;
         })}

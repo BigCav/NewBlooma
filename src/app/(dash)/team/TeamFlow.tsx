@@ -1,5 +1,5 @@
 'use client';
-import { Avatar, BLACK, CLOSE, Chip, DOTS, FIELD_IN, Field, MENU_ROW, Notice, RING, TIME_INPUT, dim } from '@/components/ui';
+import { Avatar, BLACK, CLOSE, Chip, DOTS, FIELD_IN, Field, INPUT, MENU_ROW, Notice, RING, TIME_INPUT, dim } from '@/components/ui';
 import { BottomSheet } from '@/components/BottomSheet';
 import { ConfirmBox } from '@/components/ConfirmBox';
 import { clockStr, timeRange } from '@/lib/display';
@@ -143,7 +143,7 @@ export function TeamFlow({ c }: { c: TeamCtl }) {
                 ? <span><Chip tone="green">Has their own login</Chip></span>
                 : c.invite
                   ? (<>
-                      <input readOnly aria-label="Invite link" value={c.invite} onFocus={(e) => e.currentTarget.select()} style={{ ...S('box-sizing:border-box;width:100%;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF'), minHeight: 0 }} />
+                      <input readOnly aria-label="Invite link" value={c.invite} onFocus={(e) => e.currentTarget.select()} style={S(INPUT)} />
                       <button type="button" className="ghost" onClick={() => { navigator.clipboard?.writeText(c.invite).catch(() => {}); }} style={S(PILL + ';height:48px')}>Copy link</button>
                     </>)
                   : (<>

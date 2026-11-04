@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { fmtMin } from '@/lib/cal';
 import { findClients, recentClients, type ClientHit } from './actions';
 import { S } from './s';
-import { Avatar, BACK, BLACK, CLOSE, FieldError, Icon, OUTLINE, RING, avatarCss, dim } from '@/components/ui';
+import { Avatar, BACK, BLACK, CLOSE, FieldError, INPUT, Icon, OUTLINE, RING, avatarCss, dim } from '@/components/ui';
 import { DayStrip, TimeGrid } from '@/components/DayTimePicker';
 
 /* Pieces shared by the phone step-by-step flows (new appointment, walk-in, running late, block time, checkout). */
@@ -113,7 +113,7 @@ export function ClientStep({ name, clientId, recent, onChange }: { name: string;
   return (<>
     <div style={S('position:relative')}>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A93A0" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={S('position:absolute;left:16px;top:15px')} aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m20 20-4-4" /></svg>
-      <input type="text" aria-label="Client" value={name} onChange={(e) => onChange(e.target.value, null)} placeholder="Search or type a client name" style={{ ...S('box-sizing:border-box;width:100%;height:48px;padding:0 14px 0 42px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF'), minHeight: 0 }} />
+      <input type="text" aria-label="Client" value={name} onChange={(e) => onChange(e.target.value, null)} placeholder="Search or type a client name" style={S(INPUT + ';padding:0 14px 0 42px')} />
     </div>
     {clientId ? (
       <button onClick={() => onChange('', null)} aria-pressed="true" style={S(ROW(true))}>{rowBody(name, phones[clientId] ?? list.find((r) => r.id === clientId)?.phone, true)}</button>

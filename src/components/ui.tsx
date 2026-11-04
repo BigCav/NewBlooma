@@ -20,6 +20,8 @@ export const OUTLINE_MD = PILL + ';height:48px;padding:0 18px;font-size:14.5px' 
 export const BLACK_ACTION = PILL + ';height:44px;padding:0 20px;font-size:14px' + DARK;
 export const BLACK_SM = PILL + ';height:40px;padding:0 16px;font-size:13.5px' + DARK;
 export const OUTLINE_SM = PILL + ';height:40px;padding:0 16px;font-size:13.5px' + LIGHT;
+/** The small dark "Book" tag at the end of a service row. */
+export const BOOK_TAG = 'flex:0 0 auto;padding:8px 16px;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:13.5px;font-weight:500';
 /** A 40px round outlined button (previous / next arrows on a toolbar). */
 export const RING_SM = 'flex:0 0 40px;width:40px;height:40px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0';
 /** One row of a quick-actions menu. */
