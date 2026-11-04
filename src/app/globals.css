@@ -40,6 +40,8 @@ button:disabled{cursor:default}
 input.field,textarea.field,select.field{display:revert;margin:0}
 input,select,textarea{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line2);border-radius:14px;padding:10px 14px;min-height:42px;width:100%}input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
 input[type=checkbox],input[type=radio]{width:auto;min-height:0}
+/* iPhone and iPad Safari zoom the whole page in when a text box smaller than 16px is tapped. On touch screens every text box is 16px, whatever its own style says. */
+@media (pointer:coarse){input:not([type=checkbox]):not([type=radio]),select,textarea{font-size:16px !important}}
 .auth{max-width:420px;margin:8vh auto;padding:0 16px}
 @media (max-width:900px){
  .rail{display:none}.only-d{display:none !important}.only-m{display:flex}.main{padding:18px 16px 110px}h1{font-size:22px}
