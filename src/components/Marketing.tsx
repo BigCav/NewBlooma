@@ -123,7 +123,7 @@ export function LandingView({ dash = null }: { dash?: string | null }) {
               <Link className="ghost" href="/pricing" style={S('display:flex;align-items:center;justify-content:center;height:52px;padding:0 28px;box-sizing:border-box;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:15.5px;font-weight:500;text-decoration:none')}>See pricing</Link>
             </div>
           </div>
-          {!m && <div style={S('flex:1 1 520px;min-width:0;max-width:700px')}><div style={S('border-radius:24px;overflow:hidden;border:1px solid #E6E8EC;background:#FFFFFF;box-shadow:0 24px 56px rgba(14,17,22,0.12)')}>{/* eslint-disable-next-line @next/next/no-img-element */}<img src="/landing-dashboard.jpg" alt="The Aster calendar showing a day of appointments for the whole team" width={2880} height={1800} style={{ display: 'block', width: '100%', height: 'auto' }} /></div></div>}
+          {!m && <div style={S('flex:1 1 520px;min-width:0;max-width:700px')}><div style={S('border-radius:24px;overflow:hidden;border:1px solid #E6E8EC;background:#FFFFFF;box-shadow:0 24px 56px rgba(14,17,22,0.12)')}>{/* eslint-disable-next-line @next/next/no-img-element */}<img src="/landing-dashboard.jpg" alt="The Aster calendar showing a day of appointments for the whole team" width={1920} height={1200} style={{ display: 'block', width: '100%', height: 'auto' }} /></div></div>}
         </section>
 
         <section id="features" aria-label="Features" style={S(`display:flex;flex-direction:column;gap:${m ? 16 : 32}px`)}>
