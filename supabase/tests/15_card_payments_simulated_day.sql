@@ -3,20 +3,6 @@
 -- so every rule in the database around card money is exercised without a card: in-flight locks, declines and retries, the same approval arriving
 -- twice, an approval for the wrong amount, stock, tips, tax, refunds, and finally that the daily summary, the till and payroll agree with the sales.
 
-create function pg_temp.id_as(uid uuid, q text) returns uuid language plpgsql as $$
-declare r uuid; begin
-  perform set_config('request.jwt.claims', json_build_object('sub', uid, 'role', 'authenticated')::text, true);
-  set local role authenticated;
-  begin execute q into r; reset role; return r; exception when others then reset role; raise; end;
-end $$;
-
-create function pg_temp.json_as(uid uuid, q text) returns jsonb language plpgsql as $$
-declare r jsonb; begin
-  perform set_config('request.jwt.claims', json_build_object('sub', uid, 'role', 'authenticated')::text, true);
-  set local role authenticated;
-  begin execute q into r; reset role; return r; exception when others then reset role; return jsonb_build_object('error', sqlstate); end;
-end $$;
-
 -- The customer taps their card: the app records the attempt for the sale's current total.
 create function pg_temp.card_start(p_sale uuid, p_kind card_kind) returns text language plpgsql as $$
 declare s sales; t text := 'SIM' || substr(gen_random_uuid()::text, 1, 12); begin

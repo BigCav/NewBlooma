@@ -37,6 +37,21 @@ begin
 exception when others then return sqlstate;
 end $$;
 
+-- Runs a query as a signed-in user and returns its single uuid or jsonb answer (errors are raised, or returned as {"error": sqlstate} for the json one).
+create function pg_temp.id_as(uid uuid, q text) returns uuid language plpgsql as $$
+declare r uuid; begin
+  perform set_config('request.jwt.claims', json_build_object('sub', uid, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  begin execute q into r; reset role; return r; exception when others then reset role; raise; end;
+end $$;
+
+create function pg_temp.json_as(uid uuid, q text) returns jsonb language plpgsql as $$
+declare r jsonb; begin
+  perform set_config('request.jwt.claims', json_build_object('sub', uid, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  begin execute q into r; reset role; return r; exception when others then reset role; return jsonb_build_object('error', sqlstate); end;
+end $$;
+
 do $fixture$
 declare
   tz text := 'Pacific/Auckland';
