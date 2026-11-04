@@ -3,8 +3,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { decimalInput } from '@/lib/numeric';
 import { dollars } from '@/lib/format';
-import { BLACK, FIELD_IN, FieldError, Notice, dim } from '@/components/ui';
-import { Field } from '../../settings/forms/FormPage';
+import { BLACK, FIELD_IN, Field, FieldError, Notice, dim } from '@/components/ui';
 import { S } from '../../calendar/pickers';
 import { closeTill } from './actions';
 

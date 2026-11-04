@@ -1,7 +1,7 @@
 'use client';
 import { PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
-import { Avatar, Chip, FieldError, FilterChip, Notice } from '@/components/ui';
+import { Avatar, Chip, FieldError, FilterChip, Notice, RING_SM, Stat } from '@/components/ui';
 import { dollars } from '@/lib/format';
 import { CELL, payTone, type PayRow } from './shared';
 import type { PayrollCtl } from './PayrollView';
@@ -9,7 +9,7 @@ import type { PayrollCtl } from './PayrollView';
 const ARROW = (d: string) => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>;
 const CARD = 'display:flex;flex-direction:column;gap:18px;box-sizing:border-box;width:100%;padding:22px;border:1px solid #E6E8EC;border-radius:24px;background:#FFFFFF;text-align:left;font:inherit;color:#0E1116;cursor:pointer';
 const LBL = 'font-size:12px;color:#5E6673';
-const big = (l: string, v: string) => <div key={l}><div style={S('color:#5E6673;font-size:13.5px')}>{l}</div><div style={S('margin-top:4px;font-size:38px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{v}</div></div>;
+const big = (l: string, v: string) => <Stat key={l} label={l} value={v} />;
 
 /** Desktop payroll: totals, then one table of the team for the chosen week. A row opens in the drawer. */
 export function PayrollDesk({ c, onOpen }: { c: PayrollCtl; onOpen: (id: string) => void }) {
@@ -34,9 +34,9 @@ export function PayrollDesk({ c, onOpen }: { c: PayrollCtl; onOpen: (id: string)
         {tabs.map(([id, label]) => <FilterChip key={id} on={c.tab === id} onClick={() => c.setTab(id)}>{label}</FilterChip>)}
       </div>
       <div role="group" aria-label="Pay period" style={S('display:flex;align-items:center;gap:12px')}>
-        <button className="ghost" onClick={() => c.go(c.w + 1)} disabled={c.w >= 104} aria-label="Previous week" style={S('width:40px;height:40px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center')}>{ARROW('M14.5 6l-6 6 6 6')}</button>
+        <button className="ghost" onClick={() => c.go(c.w + 1)} disabled={c.w >= 104} aria-label="Previous week" style={S(RING_SM)}>{ARROW('M14.5 6l-6 6 6 6')}</button>
         <div style={S('min-width:190px;text-align:center;white-space:nowrap')}><div style={S('font-size:14.5px;font-weight:600')}>{c.title}</div><div style={S('font-size:12.5px;color:#5E6673')}>{c.range}</div></div>
-        <button className="ghost" onClick={() => c.go(c.w - 1)} disabled={c.w === 0} aria-label="Next week" style={S('width:40px;height:40px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center')}>{ARROW('M9.5 6l6 6-6 6')}</button>
+        <button className="ghost" onClick={() => c.go(c.w - 1)} disabled={c.w === 0} aria-label="Next week" style={S(RING_SM)}>{ARROW('M9.5 6l6 6-6 6')}</button>
       </div>
     </div>
     {c.rows.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No team members yet.</p>}

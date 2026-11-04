@@ -9,8 +9,7 @@ import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../../calendar/pickers';
 import { dollars } from '@/lib/format';
 import { plural } from '@/lib/display';
-import { BACK, BLACK, FIELD_IN, FieldError, filterChipCss, RING } from '@/components/ui';
-import { Field } from '../../settings/forms/FormPage';
+import { BACK, BLACK, BLACK_SM, FIELD_IN, Field, FieldError, RING, StatCard, filterChipCss } from '@/components/ui';
 import { TillForm, type Till } from './TillForm';
 
 type Preset = { id: string; label: string; from: string; to: string };
@@ -103,7 +102,7 @@ function Body({ d, from, to, today, presets, m }: { d: Summary; from: string; to
   const input = 'box-sizing:border-box;height:' + (m ? 44 : 40) + 'px;padding:0 12px;border:1px solid #E1E4E9;border-radius:999px;font:inherit;font-size:13.5px;color:#0E1116;background:#FFFFFF;min-height:0;width:auto';
   const col = 'flex:1 1 ' + (m ? '100%' : '420px') + ';min-width:0;display:flex;flex-direction:column;gap:20px';
   if (m) {
-    const stat = (label: string, v: string) => <div key={label} style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:20px;padding:16px')}><div style={S('color:#5E6673;font-size:13px')}>{label}</div><div style={S('margin-top:2px;font-size:28px;line-height:1.1;font-weight:500;letter-spacing:-0.03em;font-variant-numeric:tabular-nums')}>{v}</div></div>;
+    const stat = (label: string, v: string) => <StatCard key={label} label={label} value={v} />;
     const card = (title: string, label: string, children: React.ReactNode) => <section key={label} aria-label={label} style={S(CARD + ';padding:18px 20px')}><h3 style={S('margin:0 0 4px;font-size:17px;font-weight:600;letter-spacing:-0.01em')}>{title}</h3>{children}</section>;
     return (<>
       <Period from={from} to={to} today={today} presets={presets} />
@@ -169,7 +168,7 @@ function Body({ d, from, to, today, presets, m }: { d: Summary; from: string; to
         <input type="date" name="from" aria-label="From" defaultValue={from} max={today} required style={S(input)} />
         <span style={S('color:#5E6673;font-size:13.5px')}>to</span>
         <input type="date" name="to" aria-label="To" defaultValue={to} max={today} required style={S(input)} />
-        <button type="submit" style={S('height:' + (m ? 44 : 40) + 'px;padding:0 20px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font:inherit;font-size:13.5px;font-weight:500;cursor:pointer')}>Show</button>
+        <button type="submit" style={S(BLACK_SM + (m ? ';height:44px' : ''))}>Show</button>
       </form>
     </section>
 

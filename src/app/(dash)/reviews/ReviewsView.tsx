@@ -4,7 +4,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { PageHeader } from '@/components/Chrome';
-import { FieldError, FilterChip, Notice } from '@/components/ui';
+import { FieldError, FilterChip, Notice, Stat } from '@/components/ui';
 import { plural } from '@/lib/display';
 import { S } from '../calendar/pickers';
 import { deleteReply, requestReviews, saveReply } from './actions';
@@ -67,7 +67,7 @@ function Filters({ c }: { c: C }) {
   </>);
 }
 
-const big = (l: string, v: string) => <div key={l}><div style={S('color:#5E6673;font-size:13.5px')}>{l}</div><div style={S('margin-top:4px;font-size:38px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{v}</div></div>;
+const big = (l: string, v: string) => <Stat key={l} label={l} value={v} />;
 
 function Desktop({ c }: { c: C }) {
   const [sel, setSel] = useState<string | null>(null);

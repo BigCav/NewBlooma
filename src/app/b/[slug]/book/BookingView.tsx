@@ -6,7 +6,7 @@ import { clock12, clockStr, duration, makeMoney, plural, timeRange } from '@/lib
 import { addDaysYmd, dayInfo } from '@/lib/cal';
 import { firstName } from '@/lib/people';
 import { TONE } from '@/lib/tones';
-import { Avatar, BACK, BLACK, Chip, FieldError, Notice, OUTLINE, RING, dim, filterChipCss } from '@/components/ui';
+import { Avatar, BACK, BLACK, Chip, FieldError, INPUT, LabelledField, Notice, OUTLINE, PasswordInput, RING, TEXTAREA, filterChipCss, dim } from '@/components/ui';
 import { checkPhone, phoneInput } from '@/lib/phone';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { S } from '../../../(dash)/calendar/pickers';
@@ -194,7 +194,6 @@ const Check = ({ size = 16, color = '#FFFFFF', w = 2.4 }: { size?: number; color
 );
 const Arrow = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M9 7h8v8" /></svg>;
 
-const INPUT = 'box-sizing:border-box;width:100%;height:48px;min-height:0;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:16px;color:#0E1116;background:#FFFFFF';
 const circle = (on: boolean) => 'flex:0 0 32px;width:32px;height:32px;border-radius:999px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border:1.5px solid ' + (on ? '#0E1116' : '#D5D9E0') + ';background:' + (on ? '#0E1116' : '#FFFFFF');
 
 type O = { rowH: number; rowPad: string; dayW: number; cols: string; btnH: number; mob: boolean };
@@ -295,8 +294,8 @@ function Steps({ m, o }: { m: M; o: O }) {
               <div style={S('display:flex;flex-direction:column;gap:12px')}>
                 <span style={S('font-size:15px;font-weight:600')}>Join the waitlist</span>
                 <span style={S('font-size:13.5px;color:#5E6673')}>We will message you if a time opens up for your services.</span>
-                <div style={S('display:flex;flex-direction:column;gap:6px')}><label htmlFor="wl-n" style={S('font-size:14px;font-weight:600')}>Full name</label><input id="wl-n" className="bkf" type="text" value={wl.name} onChange={(e) => m.setWlField('name', e.target.value)} placeholder="Your name" style={S(INPUT)} /></div>
-                <div style={S('display:flex;flex-direction:column;gap:6px')}><label htmlFor="wl-p" style={S('font-size:14px;font-weight:600')}>Mobile number</label><input id="wl-p" className="bkf" type="tel" value={wl.phone} onChange={(e) => m.setWlField('phone', phoneInput(e.target.value))} placeholder="Your number" style={S(INPUT)} /></div>
+                <LabelledField id="wl-n" label="Full name"><input id="wl-n" className="bkf" type="text" value={wl.name} onChange={(e) => m.setWlField('name', e.target.value)} placeholder="Your name" style={S(INPUT)} /></LabelledField>
+                <LabelledField id="wl-p" label="Mobile number"><input id="wl-p" className="bkf" type="tel" value={wl.phone} onChange={(e) => m.setWlField('phone', phoneInput(e.target.value))} placeholder="Your number" style={S(INPUT)} /></LabelledField>
                 {!!wl.error && <FieldError>{wl.error}</FieldError>}
                 <div style={S('display:flex;gap:10px')}><button onClick={m.submitWl} style={S(BLACK)}>Join waitlist</button><button className="ghost" onClick={() => m.setWl({ ...wl, open: false, error: '' })} style={S(OUTLINE)}>Cancel</button></div>
               </div>
@@ -319,14 +318,10 @@ function Steps({ m, o }: { m: M; o: O }) {
         {!m.acct && m.au.panel === 'in' && (
           <div role="group" aria-label="Sign in" style={S('display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:20px;background:#F4F5F7')}>
             <div style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 12px')}><span style={S('font-size:16px;font-weight:600')}>Sign in</span><button className="ghost" onClick={m.closePanel} style={S('min-height:44px;padding:0 14px;border:0;border-radius:999px;background:transparent;color:#5E6673;font-size:14px;font-weight:500')}>Continue as guest</button></div>
-            <div style={S('display:flex;flex-direction:column;gap:6px')}><label htmlFor="ac-email" style={S('font-size:14px;font-weight:600')}>Email</label><input id="ac-email" className="bkf" type="email" value={m.au.email} onChange={(e) => m.setAu({ email: e.target.value, error: '' })} placeholder="you@example.com" autoComplete="email" style={S(INPUT)} /></div>
-            <div style={S('display:flex;flex-direction:column;gap:6px')}>
-              <label htmlFor="ac-pw" style={S('font-size:14px;font-weight:600')}>Password</label>
-              <div style={S('position:relative')}>
-                <input id="ac-pw" className="bkf" type={m.au.show ? 'text' : 'password'} value={m.au.pw} onChange={(e) => m.setAu({ pw: e.target.value, error: '' })} onKeyDown={(e) => { if (e.key === 'Enter') m.submitIn(); }} placeholder="Password" autoComplete="current-password" style={S(INPUT + ';padding-right:76px')} />
-                <button type="button" onClick={() => m.setAu({ show: !m.au.show })} style={S('position:absolute;right:6px;top:4px;height:40px;padding:0 12px;border:0;border-radius:999px;background:transparent;color:#5B3DF5;font-size:13.5px;font-weight:600')}>{m.au.show ? 'Hide' : 'Show'}</button>
-              </div>
-            </div>
+            <LabelledField id="ac-email" label="Email"><input id="ac-email" className="bkf" type="email" value={m.au.email} onChange={(e) => m.setAu({ email: e.target.value, error: '' })} placeholder="you@example.com" autoComplete="email" style={S(INPUT)} /></LabelledField>
+            <LabelledField id="ac-pw" label="Password">
+              <PasswordInput id="ac-pw" value={m.au.pw} onChange={(v) => m.setAu({ pw: v, error: '' })} show={m.au.show} onToggle={() => m.setAu({ show: !m.au.show })} placeholder="Password" autoComplete="current-password" onEnter={() => m.submitIn()} />
+            </LabelledField>
             {!!m.au.error && <FieldError>{m.au.error}</FieldError>}
             <button onClick={m.submitIn} disabled={m.au.busy} style={S(BLACK + ';flex:0 0 auto' + dim(m.au.busy))}>{m.au.busy ? 'Signing in…' : 'Sign in'}</button>
           </div>
@@ -338,17 +333,16 @@ function Steps({ m, o }: { m: M; o: O }) {
           </div>
         )}
         {m.acct && !m.acct.name && (
-          <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="bk-name" style={S('font-size:14px;font-weight:600')}>Full name</label><input id="bk-name" className="bkf" type="text" autoComplete="name" value={m.form.name} onChange={(e) => m.setField('name', e.target.value)} placeholder="Your name" style={S(INPUT)} /></div>
+          <LabelledField id="bk-name" label="Full name"><input id="bk-name" className="bkf" type="text" autoComplete="name" value={m.form.name} onChange={(e) => m.setField('name', e.target.value)} placeholder="Your name" style={S(INPUT)} /></LabelledField>
         )}
         {!m.acct && m.au.panel === 'none' && <>
-          <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="bk-name" style={S('font-size:14px;font-weight:600')}>Full name</label><input id="bk-name" className="bkf" type="text" autoComplete="name" value={m.form.name} onChange={(e) => m.setField('name', e.target.value)} placeholder="Your name" style={S(INPUT)} /></div>
-          <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="bk-email" style={S('font-size:14px;font-weight:600')}>Email</label><input id="bk-email" className="bkf" type="email" autoComplete="email" value={m.form.email} onChange={(e) => m.setField('email', e.target.value)} placeholder="you@example.com" style={S(INPUT)} /></div>
+          <LabelledField id="bk-name" label="Full name"><input id="bk-name" className="bkf" type="text" autoComplete="name" value={m.form.name} onChange={(e) => m.setField('name', e.target.value)} placeholder="Your name" style={S(INPUT)} /></LabelledField>
+          <LabelledField id="bk-email" label="Email"><input id="bk-email" className="bkf" type="email" autoComplete="email" value={m.form.email} onChange={(e) => m.setField('email', e.target.value)} placeholder="you@example.com" style={S(INPUT)} /></LabelledField>
         </>}
-        {!(m.acct && m.acct.phone) && <div style={S('display:flex;flex-direction:column;gap:8px')}><label htmlFor="bk-phone" style={S('font-size:14px;font-weight:600')}>Phone</label><input id="bk-phone" className="bkf" type="tel" inputMode="tel" autoComplete="tel" value={m.form.phone} onChange={(e) => m.setField('phone', phoneInput(e.target.value))} placeholder="Required" style={S(INPUT)} /></div>}
-        <div style={S('display:flex;flex-direction:column;gap:8px')}>
-          <label htmlFor="bk-notes" style={S('font-size:14px;font-weight:600')}>Notes for the salon</label>
-          <textarea id="bk-notes" className="bkf" value={m.form.notes} onChange={(e) => m.setField('notes', e.target.value)} placeholder="Optional" style={S('box-sizing:border-box;width:100%;min-height:96px;resize:none;padding:12px 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:16px;color:#0E1116;background:#FFFFFF')} />
-        </div>
+        {!(m.acct && m.acct.phone) && <LabelledField id="bk-phone" label="Phone"><input id="bk-phone" className="bkf" type="tel" inputMode="tel" autoComplete="tel" value={m.form.phone} onChange={(e) => m.setField('phone', phoneInput(e.target.value))} placeholder="Required" style={S(INPUT)} /></LabelledField>}
+        <LabelledField id="bk-notes" label="Notes for the salon">
+          <textarea id="bk-notes" className="bkf" value={m.form.notes} onChange={(e) => m.setField('notes', e.target.value)} placeholder="Optional" style={S(TEXTAREA + ';min-height:96px;resize:none')} />
+        </LabelledField>
         {!m.acct && m.au.panel === 'none' && (
           <div style={S('display:flex;flex-direction:column;gap:14px;padding:16px;border:1px solid #E6E8EC;border-radius:18px')}>
             <button type="button" role="checkbox" aria-checked={m.save} onClick={() => { m.setSave(!m.save); m.setError(''); }} style={S('display:flex;align-items:flex-start;gap:12px;min-height:44px;padding:0;border:0;background:transparent;text-align:left;font:inherit;color:#0E1116')}>
@@ -356,13 +350,9 @@ function Steps({ m, o }: { m: M; o: O }) {
               <span><span style={S('display:block;font-size:14px;font-weight:600')}>Save my details for next time</span><span style={S('display:block;margin-top:2px;font-size:13px;color:#5E6673')}>Create an account so you can skip this step on your next booking.</span></span>
             </button>
             {m.save && (
-              <div style={S('display:flex;flex-direction:column;gap:6px')}>
-                <label htmlFor="bk-pw" style={S('font-size:14px;font-weight:600')}>Choose a password</label>
-                <div style={S('position:relative')}>
-                  <input id="bk-pw" className="bkf" type={m.au.show ? 'text' : 'password'} value={m.savePw} onChange={(e) => { m.setSavePw(e.target.value); m.setError(''); }} placeholder="At least 8 characters" autoComplete="new-password" style={S(INPUT + ';padding-right:76px')} />
-                  <button type="button" onClick={() => m.setAu({ show: !m.au.show })} style={S('position:absolute;right:6px;top:4px;height:40px;padding:0 12px;border:0;border-radius:999px;background:transparent;color:#5B3DF5;font-size:13.5px;font-weight:600')}>{m.au.show ? 'Hide' : 'Show'}</button>
-                </div>
-              </div>
+              <LabelledField id="bk-pw" label="Choose a password">
+                <PasswordInput id="bk-pw" value={m.savePw} onChange={(v) => { m.setSavePw(v); m.setError(''); }} show={m.au.show} onToggle={() => m.setAu({ show: !m.au.show })} placeholder="At least 8 characters" autoComplete="new-password" />
+              </LabelledField>
             )}
           </div>
         )}

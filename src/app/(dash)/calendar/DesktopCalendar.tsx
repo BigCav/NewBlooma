@@ -8,7 +8,7 @@ import { STEP, NoticeBar } from './calUi';
 import { dollars } from '@/lib/format';
 import { plural } from '@/lib/display';
 import { firstName } from '@/lib/people';
-import { Avatar, FieldError, FilterChip } from '@/components/ui';
+import { Avatar, BLACK_ACTION, BLACK_SM, FieldError, FilterChip, OUTLINE_SM, RING_SM, Stat } from '@/components/ui';
 import type { useCalendar } from './useCalendar';
 import type { Props } from './calUi';
 
@@ -76,7 +76,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></svg>
             <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search client, phone or service" aria-label="Search appointments" style={{ ...S('border:0;outline:none;background:transparent;font:inherit;color:#0E1116;width:150px'), padding: '1px 2px', minHeight: 0, borderRadius: 0 }} />
           </label>
-          <button onClick={openNew} style={S('display:flex;align-items:center;gap:8px;height:44px;padding:0 20px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500')}>
+          <button onClick={openNew} style={S(BLACK_ACTION)}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
             New appointment
           </button>
@@ -91,12 +91,9 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
       )}
 
       <section aria-label="Today at a glance" style={S('display:flex;flex-wrap:wrap;gap:20px 64px')}>
-        <div><div style={S('color:#5E6673;font-size:13.5px')}>Appointments</div><div style={S('margin-top:4px;font-size:38px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{String(events.length)}</div></div>
-        <div><div style={S('color:#5E6673;font-size:13.5px')}>Booked revenue</div><div style={S('margin-top:4px;font-size:38px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{revenue}</div></div>
-        <div>
-          <div style={S('color:#5E6673;font-size:13.5px')}>Next opening</div>
-          <div style={S('margin-top:4px;font-size:38px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{nextOpening}</div>
-        </div>
+        <Stat label="Appointments" value={String(events.length)} />
+        <Stat label="Booked revenue" value={revenue} />
+        <Stat label="Next opening" value={nextOpening} />
       </section>
 
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px')}>
@@ -106,10 +103,10 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
           <div style={S('border-bottom:1px solid #E6E8EC;padding:16px 20px;display:flex;flex-direction:column;gap:12px')}>
             <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:12px')}>
             <div style={S('display:flex;align-items:center;gap:8px;flex:1 1 220px;min-width:0')}>
-              <button className="ghost" onClick={() => stepDay(-1)} aria-label={view === 'week' ? 'Previous week' : 'Previous day'} style={S('width:40px;height:40px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center')}>
+              <button className="ghost" onClick={() => stepDay(-1)} aria-label={view === 'week' ? 'Previous week' : 'Previous day'} style={S(RING_SM)}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 6 8.5 12l6 6" /></svg>
               </button>
-              <button className="ghost" onClick={() => stepDay(1)} aria-label={view === 'week' ? 'Next week' : 'Next day'} style={S('width:40px;height:40px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center')}>
+              <button className="ghost" onClick={() => stepDay(1)} aria-label={view === 'week' ? 'Next week' : 'Next day'} style={S(RING_SM)}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 6l6 6-6 6" /></svg>
               </button>
               <span style={S('margin-left:8px;font-size:16px;font-weight:600;letter-spacing:-0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{view === 'week' ? wkRange : di.short}</span>
@@ -123,9 +120,9 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
               ))}
             </div>
             <div style={S('display:flex;gap:8px')}>
-              <button onClick={openWalkin} style={S('height:40px;padding:0 16px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:13.5px;font-weight:500')}>Walk-in</button>
-              <button className="ghost" onClick={openLate} style={S('height:40px;padding:0 16px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:13.5px;font-weight:500')}>Running late</button>
-              <button className="ghost" onClick={openBlockForm} style={S('height:40px;padding:0 16px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:13.5px;font-weight:500')}>Block time</button>
+              <button onClick={openWalkin} style={S(BLACK_SM)}>Walk-in</button>
+              <button className="ghost" onClick={openLate} style={S(OUTLINE_SM)}>Running late</button>
+              <button className="ghost" onClick={openBlockForm} style={S(OUTLINE_SM)}>Block time</button>
             </div>
               </div>
             </div>

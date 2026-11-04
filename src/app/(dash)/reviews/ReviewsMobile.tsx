@@ -1,8 +1,7 @@
 'use client';
-import { Avatar, Chip, FIELD_IN, FieldError, Notice, RING, BACK, BLACK, OUTLINE, dim, type AvatarSize } from '@/components/ui';
+import { Avatar, BACK, BAR, BLACK, Chip, FIELD_IN, Field, FieldError, Notice, OUTLINE, PAGE, ScreenHeader, RING, type AvatarSize, dim } from '@/components/ui';
 import { plural } from '@/lib/display';
 import { firstName } from '@/lib/people';
-import { BAR, Field, PAGE } from '../settings/forms/FormPage';
 import { ConfirmBox } from '@/components/ConfirmBox';
 import { rootCls } from '@/components/drawer';
 import { useEffect, useState } from 'react';
@@ -16,16 +15,6 @@ const STARS = '★★★★★';
 
 function Stars({ n, size }: { n: number; size: number }) {
   return <span role="img" aria-label={n + ' out of 5 stars'} style={S('font-size:' + size + 'px;letter-spacing:1px;line-height:1')}><span style={S('color:#E8A317')}>{STARS.slice(0, n)}</span><span style={S('color:#D5D9E0')}>{STARS.slice(n)}</span></span>;
-}
-
-function Header({ title, onBack, avatar }: { title: string; onBack: () => void; avatar?: string }) {
-  return (
-    <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px;border-bottom:1px solid #E6E8EC')}>
-      <button onClick={onBack} aria-label="Back" style={S(RING)}>{BACK}</button>
-      {avatar && <Avatar name={avatar} size="sm" />}
-      <div style={S('flex:1 1 auto;min-width:0;font-size:18px;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{title}</div>
-    </header>
-  );
 }
 
 /** One review. The reviewer's circle is 48 on the phone and 40 on a computer. */
@@ -94,7 +83,7 @@ export function ReviewsMobile({ c, filters, drawer, startId, onClose }: { c: Rev
 function ReviewPage({ c, r, onBack }: { c: ReviewsCtl; r: ReviewRow; onBack: () => void }) {
   return (
     <div role="dialog" aria-label="Review" style={S(PAGE)}>
-      <Header title={r.name} avatar={r.name} onBack={onBack} />
+      <ScreenHeader title={r.name} avatar={r.name} onBack={onBack} />
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:16px 20px 24px;display:flex;flex-direction:column;gap:16px')}>
         <div>
           <Stars n={r.stars} size={26} />
@@ -125,7 +114,7 @@ function ReplyPage({ c, r }: { c: ReviewsCtl; r: ReviewRow }) {
   const [ask, setAsk] = useState(false);
   return (
     <div role="dialog" aria-label="Reply" style={S(PAGE + ';z-index:6')}>
-      <Header title={'Reply to ' + firstName(r.name)} onBack={c.closeReply} />
+      <ScreenHeader title={'Reply to ' + firstName(r.name)} onBack={c.closeReply} />
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:16px 20px 24px;display:flex;flex-direction:column;gap:14px')}>
         <div style={S('box-sizing:border-box;padding:14px 16px;border:1px solid #E6E8EC;border-radius:20px;background:#FFFFFF;display:flex;flex-direction:column;gap:6px')}>
           <Stars n={r.stars} size={16} />

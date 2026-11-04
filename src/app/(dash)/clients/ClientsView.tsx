@@ -4,7 +4,7 @@
 import { BottomSheet } from '@/components/BottomSheet';
 import { rootCls } from '@/components/drawer';
 import { useNewParam } from '@/components/useNewParam';
-import { Avatar, BLACK, CLOSE, Chip, FieldError, FilterChip, Notice, OUTLINE, RING } from '@/components/ui';
+import { Avatar, BLACK, CLOSE, Chip, FieldError, FilterChip, Notice, OUTLINE, RING, Stat } from '@/components/ui';
 import { dollars } from '@/lib/format';
 import { plural } from '@/lib/display';
 import { firstName } from '@/lib/people';
@@ -130,7 +130,7 @@ function Desktop({ c }: { c: C }) {
   const router = useRouter();
   const rows = c.filtered.slice(0, SHOW_MAX);
   const rowS = (on: boolean) => 'display:flex;align-items:center;gap:16px;width:100%;box-sizing:border-box;min-height:64px;padding:8px 20px;border:0;border-bottom:1px solid #EEF0F3;text-align:left;font:inherit;font-size:14px;color:#0E1116;background:' + (on ? '#F4F5F7' : 'transparent');
-  const big = (l: string, v: string) => <div key={l}><div style={S('color:#5E6673;font-size:13.5px')}>{l}</div><div style={S('margin-top:4px;font-size:38px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{v}</div></div>;
+  const big = (l: string, v: string) => <Stat key={l} label={l} value={v} />;
   return (
     <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <PageHeader title="Clients" subtitle="Everyone who has booked with you" query={c.query} onQuery={c.setQuery} placeholder="Search clients" actionLabel="New client" onAction={c.openNew} />
@@ -185,8 +185,8 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
       <MobileHeader title="Clients" subtitle={plural(c.count, 'client')} query={c.query} onQuery={c.setQuery} placeholder="Search clients" />
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:20px')}>
         <section aria-label="Clients at a glance" style={S('display:flex;gap:40px')}>
-          <div><div style={S('color:#5E6673;font-size:13px')}>Clients</div><div style={S('margin-top:2px;font-size:30px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{String(c.count)}</div></div>
-          <div><div style={S('color:#5E6673;font-size:13px')}>New this month</div><div style={S('margin-top:2px;font-size:30px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{String(c.newThisMonth)}</div></div>
+          <Stat label="Clients" value={String(c.count)} small />
+          <Stat label="New this month" value={String(c.newThisMonth)} small />
         </section>
         <div style={S('display:flex;gap:10px')}>
           <FilterButton onClick={() => setFopen(true)} active={c.filter !== 'all'} label="Filter clients" />

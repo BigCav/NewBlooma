@@ -5,7 +5,7 @@ import { BottomSheet } from '@/components/BottomSheet';
 import { dollars, toCents } from '@/lib/format';
 import { duration } from '@/lib/display';
 import { initialsOf } from '@/lib/people';
-import { BLACK, Chip, FilterChip, Notice } from '@/components/ui';
+import { BLACK, Chip, FilterChip, Notice, Stat } from '@/components/ui';
 import { rootCls } from '@/components/drawer';
 import { useNewParam } from '@/components/useNewParam';
 import { useRouter } from 'next/navigation';
@@ -137,7 +137,7 @@ function Desktop({ c }: { c: C }) {
 
       <section aria-label="Services at a glance" style={S('display:flex;flex-wrap:wrap;gap:20px 64px')}>
         {([['Services', services.length], ['Categories', catCount], ['Bookable online', online]] as const).map(([l, v]) => (
-          <div key={l}><div style={S('color:#5E6673;font-size:13.5px')}>{l}</div><div style={S('margin-top:4px;font-size:38px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{String(v)}</div></div>
+          <Stat key={l} label={l} value={String(v)} />
         ))}
       </section>
 
@@ -193,8 +193,8 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
 
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:20px')}>
         <section aria-label="Services at a glance" style={S('display:flex;gap:40px')}>
-          <div><div style={S('color:#5E6673;font-size:13px')}>Services</div><div style={S('margin-top:2px;font-size:30px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{String(services.length)}</div></div>
-          <div><div style={S('color:#5E6673;font-size:13px')}>Bookable online</div><div style={S('margin-top:2px;font-size:30px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{String(online)}</div></div>
+          <Stat label="Services" value={String(services.length)} small />
+          <Stat label="Bookable online" value={String(online)} small />
         </section>
 
         {!!c.notice && !open && <Notice>{c.notice}</Notice>}

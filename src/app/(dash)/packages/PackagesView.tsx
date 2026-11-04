@@ -1,6 +1,5 @@
 'use client';
-import { BLACK, FIELD_IN, FilterChip, Notice, OUTLINE, Chip, dim } from '@/components/ui';
-import { Field } from '../settings/forms/FormPage';
+import { BLACK, BLACK_SM, Chip, FIELD_IN, Field, FilterChip, Notice, OUTLINE, Stat, StatCard, dim } from '@/components/ui';
 import { dayInfo } from '@/lib/cal';
 import { plural } from '@/lib/display';
 import { TONE, type ToneName } from '@/lib/tones';
@@ -252,7 +251,7 @@ function TypeCard({ t, c }: { t: PkgType; c: C }) {
 const noneSold = (c: C) => (c.allSold.length === 0 ? 'No packages sold yet.' : 'No packages match.');
 
 function Desktop({ c }: { c: C }) {
-  const stat = (l: string, v: string) => <div key={l}><div style={S('color:#5E6673;font-size:13.5px')}>{l}</div><div style={S('margin-top:4px;font-size:38px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{v}</div></div>;
+  const stat = (l: string, v: string) => <Stat key={l} label={l} value={v} />;
   const th = (l: string, f: string) => <div key={l} style={S('flex:' + f + ' 1 0;min-width:0')}>{l}</div>;
   const rowCss = 'display:flex;align-items:center;gap:16px;width:100%;box-sizing:border-box;min-height:68px;padding:10px 20px;border:0;border-bottom:1px solid #EEF0F3;text-align:left;font:inherit;color:#0E1116;background:transparent';
   const count = c.tab === 'sold' ? plural(c.sold.length, 'package') : plural(c.types.length, 'type');
@@ -268,7 +267,7 @@ function Desktop({ c }: { c: C }) {
           <div role="group" aria-label="Packages view" style={S('display:flex;flex-wrap:wrap;gap:8px')}>{([['sold', 'Sold to clients'], ['types', 'Your packages']] as const).map(([id, l]) => <FilterChip key={id} on={c.tab === id} onClick={() => c.setTab(id)}>{l}</FilterChip>)}</div>
           <div style={S('display:flex;align-items:center;gap:16px')}>
             <span style={S('color:#5E6673;font-size:13.5px')}>{count}</span>
-            {c.canEdit && c.tab === 'types' && <button onClick={c.openNew} style={S('height:40px;padding:0 20px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font:inherit;font-size:13.5px;font-weight:500;cursor:pointer')}>New package</button>}
+            {c.canEdit && c.tab === 'types' && <button onClick={c.openNew} style={S(BLACK_SM)}>New package</button>}
           </div>
         </div>
         <div style={S('overflow-x:auto')}>
@@ -315,7 +314,7 @@ function Desktop({ c }: { c: C }) {
 }
 
 function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
-  const stat = (l: string, v: string) => <div key={l} style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:20px;padding:16px')}><div style={S('color:#5E6673;font-size:13px')}>{l}</div><div style={S('margin-top:4px;font-size:26px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{v}</div></div>;
+  const stat = (l: string, v: string) => <StatCard key={l} label={l} value={v} />;
   return (
     <div className={rootCls(drawer)} style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <MobileHeader title="Packages" subtitle="Prepaid bundles of a service" query={c.query} onQuery={c.setQuery} placeholder="Search client or package" />

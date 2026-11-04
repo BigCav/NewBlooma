@@ -6,8 +6,7 @@ import { ConfirmBox } from '@/components/ConfirmBox';
 import { rootCls } from '@/components/drawer';
 import { useNewParam } from '@/components/useNewParam';
 import { decimalInput } from '@/lib/numeric';
-import { Avatar, BLACK, CLOSE, Chip, FIELD_IN, FieldError, FilterChip, Notice, OUTLINE, RING, dim } from '@/components/ui';
-import { Field } from '../settings/forms/FormPage';
+import { Avatar, BLACK, CLOSE, Chip, FIELD_IN, Field, FieldError, FilterChip, Notice, OUTLINE, RING, Stat, StatCard, dim } from '@/components/ui';
 import { dollars } from '@/lib/format';
 import { duration, refDigits } from '@/lib/display';
 import Link from 'next/link';
@@ -245,7 +244,7 @@ function Panel({ c }: { c: C }) {
 }
 
 function Desktop({ c }: { c: C }) {
-  const stat = (label: string, v: string) => <div><div style={S('color:#5E6673;font-size:13.5px')}>{label}</div><div style={S('margin-top:4px;font-size:38px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{v}</div></div>;
+  const stat = (label: string, v: string) => <Stat label={label} value={v} />;
   const max = Math.max(1, ...c.bars.map((b) => b.cents));
   const week = c.bars.reduce((a, b) => a + b.cents, 0);
   return (
@@ -302,7 +301,7 @@ function Desktop({ c }: { c: C }) {
 
 function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
   const [fopen, setFopen] = useState(false);
-  const stat = (label: string, v: string, tint?: boolean) => <div key={label} style={S('flex:1 1 0;min-width:0;box-sizing:border-box;padding:16px;border-radius:20px;border:1px solid ' + (tint ? '#F6D9A8' : '#E6E8EC') + ';background:' + (tint ? '#FFF4E5' : '#FFFFFF'))}><div style={S('color:#5E6673;font-size:13px')}>{label}</div><div style={S('margin-top:2px;font-size:30px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{v}</div></div>;
+  const stat = (label: string, v: string, tint?: boolean) => <StatCard key={label} label={label} value={v} tint={!!tint} />;
   const max = Math.max(1, ...c.bars.map((b) => b.cents));
   const fl = FILTERS.find((f) => f.id === c.filter)?.label ?? 'All sales';
   return (

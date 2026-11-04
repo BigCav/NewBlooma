@@ -1,7 +1,7 @@
 'use client';
 // Messaging a client: who it is, the conversation (newest at the bottom) and a box to reply. One panel for the calendar, the Clients list,
 // the client's profile and the inbox (on desktop and on the phone), so writing to a client looks the same everywhere.
-import { Avatar, BACK, FieldError, RING, SEND, dim } from '@/components/ui';
+import { Avatar, BACK, FieldError, PAGE, RING, SEND, dim } from '@/components/ui';
 import { useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
 import { clientThread } from '@/app/(dash)/clients/actions';
 import type { ChatMsg } from '@/app/(dash)/clients/thread';
@@ -41,7 +41,7 @@ export function ChatComposer({ first, draft, onDraft, onSend, busy }: { first: s
 /** The conversation as its own full page over whatever is open (the same page the client's profile opens), with the panel filling it. */
 export function ChatPage({ label, ...p }: { label: string } & Omit<Parameters<typeof ChatPanel>[0], 'fill'>) {
   return (
-    <div role="dialog" aria-label={label} style={S("position:absolute;left:0;right:0;top:0;bottom:0;z-index:8;display:flex;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
+    <div role="dialog" aria-label={label} style={S(PAGE + ';z-index:8')}>
       <ChatPanel fill {...p} />
     </div>
   );

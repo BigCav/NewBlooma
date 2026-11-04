@@ -1,5 +1,5 @@
 'use client';
-import { CHEV, RING, BACK, BLACK, CLOSE, DOTS, FIELD_IN, FieldError, MENU_ROW, Notice, OUTLINE, dim } from '@/components/ui';
+import { BACK, BAR, BLACK, CARD, CHEV, CLOSE, DOTS, FIELD_IN, Field, FieldError, MENU_ROW, Notice, OUTLINE, PAGE, ScreenHeader, RING, dim } from '@/components/ui';
 import { TONE } from '@/lib/tones';
 import { BottomSheet } from '@/components/BottomSheet';
 import { ConfirmBox } from '@/components/ConfirmBox';
@@ -12,15 +12,8 @@ import type { FormsCtl } from './FormsView';
 const UP = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 14l6-6 6 6" /></svg>;
 const DOWN = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 10l6 6 6-6" /></svg>;
 const TRASH = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12" /></svg>;
-export const PAGE = "position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;display:flex;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4";
-export const BAR = 'flex:0 0 auto;padding:14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3;display:flex;flex-direction:column;gap:12px';
-export const CARD = 'box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:4px 18px';
 const MINI = { ...S('box-sizing:border-box;height:36px;padding:0 10px;border:1px solid #E1E4E9;border-radius:999px;font:inherit;font-size:13px;color:#0E1116;background:#FFFFFF'), minHeight: 0, width: 'auto' } as const;
 const ICON_BTN = 'flex:0 0 auto;width:36px;height:36px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;';
-
-export function Field({ label, children, htmlFor }: { label: string; children: React.ReactNode; htmlFor?: string }) {
-  return <label htmlFor={htmlFor} style={S('display:block;box-sizing:border-box;padding:10px 16px 12px;border:1px solid #E1E4E9;border-radius:16px;background:#FFFFFF')}><span style={S('display:block;font-size:12.5px;color:#5E6673')}>{label}</span>{children}</label>;
-}
 
 type Opt = { id: string; label: string; off?: boolean };
 
@@ -78,11 +71,9 @@ export function FormPage({ c }: { c: FormsCtl }) {
 
   return (
     <div role="dialog" aria-label="Edit form" style={S(PAGE)}>
-      <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px;border-bottom:1px solid #E6E8EC')}>
-        <button onClick={close} aria-label="Back" style={S(RING)}>{BACK}</button>
-        <div style={S('flex:1 1 auto;min-width:0;font-size:18px;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{d.name || 'Untitled form'}</div>
+      <ScreenHeader title={d.name || 'Untitled form'} onBack={close}>
         <button onClick={() => { c.setConfirmDel(false); setSheet('more'); }} aria-label="More actions" aria-haspopup="dialog" style={S(RING)}>{DOTS}</button>
-      </header>
+      </ScreenHeader>
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:16px 20px 24px;display:flex;flex-direction:column;gap:16px')}>
         <Field label="Form name" htmlFor="fm-name"><input id="fm-name" type="text" maxLength={80} value={d.name} onChange={(e) => c.patch((x) => { x.name = e.target.value; })} style={FIELD_IN} /></Field>
 

@@ -1,6 +1,5 @@
 'use client';
-import { RING, BACK, FIELD_IN, CHEV, BLACK, OUTLINE, Avatar, Chip, FieldError, FilterChip, Notice, dim } from '@/components/ui';
-import { Field } from '../settings/forms/FormPage';
+import { Avatar, BACK, BLACK, CHEV, Chip, FIELD_IN, Field, FieldError, FilterChip, Notice, OUTLINE, PAGE, RING, ScreenHeader, StatCard, dim } from '@/components/ui';
 import { dollars } from '@/lib/format';
 import { ConfirmBox } from '@/components/ConfirmBox';
 import { useRouter } from 'next/navigation';
@@ -12,20 +11,9 @@ import { deleteTimesheet, loadTimesheets, saveTimesheet, type SheetRow } from '.
 import { CELL, payTone, type PayRow } from './shared';
 import type { PayrollCtl } from './PayrollView';
 
-const PAGE = "position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;display:flex;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4";
 const BAR = 'flex:0 0 auto;padding:14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3;display:flex;flex-direction:column;gap:12px';
 const CARD = 'box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:18px';
 const pct = (n: number) => (Math.round(n * 10) / 10) + '%';
-
-function Header({ title, onBack, p }: { title: string; onBack: () => void; p?: PayRow }) {
-  return (
-    <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px;border-bottom:1px solid #E6E8EC')}>
-      <button onClick={onBack} aria-label="Back" style={S(RING)}>{BACK}</button>
-      {p && <Avatar name={p.name} photo={p.photo} size="sm" />}
-      <div style={S('flex:1 1 auto;min-width:0;font-size:18px;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{title}</div>
-    </header>
-  );
-}
 
 function Week({ p, days, big }: { p: PayRow; days: number; big?: boolean }) {
   return (
@@ -80,7 +68,7 @@ export function PayrollMobile({ c, drawer, startId, onClose }: { c: PayrollCtl; 
   const tabs: [('time' | 'comm'), string][] = c.owner ? [['time', 'Timesheets'], ['comm', 'Commission']] : [['time', 'Timesheets']];
   const open = openId ? c.rows.find((r) => r.id === openId) ?? null : null;
   const edit = editId ? c.rows.find((r) => r.id === editId) ?? null : null;
-  const stat = (l: string, v: string) => <div key={l} style={S('flex:1 1 0;min-width:0;' + CARD + ';padding:16px;border-radius:20px')}><div style={S('color:#5E6673;font-size:13px')}>{l}</div><div style={S('margin-top:2px;font-size:28px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{v}</div></div>;
+  const stat = (l: string, v: string) => <StatCard key={l} label={l} value={v} />;
 
   return (
     <div className={rootCls(drawer)} style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
@@ -115,7 +103,7 @@ function TimePage({ c, p, onBack, onEdit }: { c: PayrollCtl; p: PayRow; onBack: 
   const clock = c.w === 0 && p.canClock;
   return (
     <div role="dialog" aria-label="Timesheet" style={S(PAGE)}>
-      <Header title={p.name} p={p} onBack={onBack} />
+      <ScreenHeader title={p.name} avatar={p.name} photo={p.photo} onBack={onBack} />
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:16px 20px 24px;display:flex;flex-direction:column;gap:16px')}>
         <div>
           <h2 style={S('margin:0;font-size:40px;line-height:1.1;font-weight:600;letter-spacing:-0.03em')}>{p.total}</h2>
@@ -147,7 +135,7 @@ function CommPage({ c, p, onBack }: { c: PayrollCtl; p: PayRow; onBack: () => vo
   const stat = (l: string, v: number) => <div key={l} style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:20px;padding:16px')}><div style={S('font-size:13px;color:#5E6673')}>{l}</div><div style={S('margin-top:2px;font-size:22px;font-weight:600;letter-spacing:-0.02em')}>{dollars(v)}</div></div>;
   return (
     <div role="dialog" aria-label="Commission" style={S(PAGE)}>
-      <Header title={p.name} p={p} onBack={onBack} />
+      <ScreenHeader title={p.name} avatar={p.name} photo={p.photo} onBack={onBack} />
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:16px 20px 24px;display:flex;flex-direction:column;gap:16px')}>
         <div>
           <h2 style={S('margin:0;font-size:40px;line-height:1.1;font-weight:600;letter-spacing:-0.03em')}>{dollars(p.commission + p.tips)}</h2>
@@ -194,7 +182,7 @@ function EditPage({ c, p, onBack }: { c: PayrollCtl; p: PayRow; onBack: () => vo
   const add = () => setRows((rs) => [...(rs ?? []), { id: 'new-' + Date.now(), inAt: c.from + 'T09:00', outAt: c.from + 'T17:00', fresh: true }]);
   return (
     <div role="dialog" aria-label="Edit times" style={S(PAGE + ';z-index:6')}>
-      <Header title="Edit times" onBack={onBack} />
+      <ScreenHeader title="Edit times" onBack={onBack} />
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:16px 20px 24px;display:flex;flex-direction:column;gap:14px')}>
         <div>
           <h2 style={S('margin:0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>{p.name}</h2>

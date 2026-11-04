@@ -1,5 +1,5 @@
 'use client';
-import { Avatar, Chip, FieldError, Notice, RING, BACK, CLOSE, DOTS, BLACK, MENU_ROW, OUTLINE, dim } from '@/components/ui';
+import { Avatar, BACK, BLACK, CLOSE, Chip, DOTS, FieldError, MENU_ROW, Notice, OUTLINE, PAGE, ScreenHeader, RING, dim } from '@/components/ui';
 import { TONE } from '@/lib/tones';
 import { BottomSheet } from '@/components/BottomSheet';
 import { ConfirmBox } from '@/components/ConfirmBox';
@@ -57,13 +57,10 @@ export function EntryPage({ c, r }: { c: WaitlistCtl; r: WlRow }) {
   const rowCss = MENU_ROW + ';color:#B42318';
   const prefs = r.prefs.split(', ');
   return (
-    <div role="dialog" aria-label="Waitlist entry" style={S("position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;display:flex;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
-      <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px;border-bottom:1px solid #E6E8EC')}>
-        <button onClick={close} aria-label="Back" style={S(RING)}>{BACK}</button>
-        <Avatar name={r.name} size="sm" />
-        <div style={S('flex:1 1 auto;min-width:0;font-size:18px;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{r.name}</div>
+    <div role="dialog" aria-label="Waitlist entry" style={S(PAGE)}>
+      <ScreenHeader title={r.name} avatar={r.name} onBack={close}>
         <button onClick={() => { setConfirm(false); setQa(true); }} aria-label="More actions" aria-haspopup="dialog" style={S(RING)}>{DOTS}</button>
-      </header>
+      </ScreenHeader>
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:16px 20px 20px;display:flex;flex-direction:column;gap:16px')}>
         <div>
           <h2 style={S('margin:0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em;overflow-wrap:anywhere')}>{r.service.split(',')[0]}</h2>

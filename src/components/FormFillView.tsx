@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { S } from '@/app/(dash)/calendar/pickers';
 import { checkForm, tickMany, type FillForm, type FormInput, type Question } from '@/lib/forms-shared';
-import { BACK, BLACK, FieldError, OUTLINE, dim } from '@/components/ui';
+import { BACK, BLACK, FieldError, INPUT, LabelledField, OUTLINE, dim } from '@/components/ui';
 import { TONE } from '@/lib/tones';
 
 type Submit = (inputs: { templateId: string; input: FormInput }[]) => Promise<{ error?: string; errors?: Record<string, Record<string, string>> }>;
@@ -21,7 +21,6 @@ export type FillProps = {
 
 const blank = (): FormInput => ({ answers: {}, details: {}, agree: false, photos: false, sign: '' });
 const CARD = 'box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;display:flex;flex-direction:column;gap:18px;';
-const INPUT = 'box-sizing:border-box;width:100%;height:52px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:16px;color:#0E1116;background:#FFFFFF';
 const noMin = { minHeight: 0 } as const;
 const pickCss = (on: boolean, wide = true) => (wide ? 'flex:1 1 0;' : 'width:100%;text-align:left;display:flex;align-items:center;gap:12px;') + 'box-sizing:border-box;min-height:52px;padding:8px 16px 8px 14px;border-radius:14px;font:inherit;font-size:15px;font-weight:500;cursor:pointer;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#F4F5F7' : '#FFFFFF') + ';color:#0E1116' + (on ? ';box-shadow:inset 0 0 0 1px #0E1116' : '');
 const ynCss = (on: boolean) => 'flex:1 1 0;height:52px;border-radius:14px;font:inherit;font-size:15px;font-weight:500;cursor:pointer;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
@@ -74,10 +73,9 @@ export function FormFillView(p: FillProps) {
             <button type="button" aria-pressed={ans === 'no'} onClick={() => { patch(f.id, (s) => ({ ...s, answers: { ...s.answers, [q.id]: 'no' }, details: { ...s.details, [q.id]: '' } })); }} style={S(ynCss(ans === 'no'))}>No</button>
           </div>
           {ans === 'yes' && !!q.detailPrompt && (
-            <div style={S('display:flex;flex-direction:column;gap:6px')}>
-              <label htmlFor={'d-' + q.id} style={S('font-size:14px;font-weight:600')}>{q.detailPrompt}</label>
-              <input id={'d-' + q.id} type="text" maxLength={200} value={v.details[q.id] ?? ''} onChange={(ev) => patch(f.id, (s) => ({ ...s, details: { ...s.details, [q.id]: ev.target.value } }))} style={{ ...S(INPUT), ...noMin }} />
-            </div>
+            <LabelledField id={'d-' + q.id} label={q.detailPrompt}>
+            <input id={'d-' + q.id} type="text" maxLength={200} value={v.details[q.id] ?? ''} onChange={(ev) => patch(f.id, (s) => ({ ...s, details: { ...s.details, [q.id]: ev.target.value } }))} style={{ ...S(INPUT), ...noMin }} />
+          </LabelledField>
           )}
         </>)}
         {q.type === 'short' && <><label htmlFor={'a-' + q.id} style={{ position: 'absolute', left: -9999 }}>{q.label}</label><input id={'a-' + q.id} type="text" maxLength={200} value={typeof ans === 'string' ? ans : ''} onChange={(ev) => set(ev.target.value)} style={{ ...S(INPUT), ...noMin }} /></>}
@@ -108,11 +106,10 @@ export function FormFillView(p: FillProps) {
         {!!e.agree && <FieldError>{e.agree}</FieldError>}
         {f.askPhotos && <button type="button" aria-pressed={v.photos} onClick={() => patch(f.id, (s) => ({ ...s, photos: !s.photos }))} style={S(pickCss(v.photos, false))}><Tick on={v.photos} /><span>It is OK to take before and after photos for my client record</span></button>}
         {!!f.consentText && (
-          <div style={S('display:flex;flex-direction:column;gap:6px')}>
-            <label htmlFor={'sg-' + f.id} style={S('font-size:14px;font-weight:600')}>Type your full name to sign</label>
+          <LabelledField id={'sg-' + f.id} label="Type your full name to sign">
             <input id={'sg-' + f.id} type="text" autoComplete="name" maxLength={80} value={v.sign} onChange={(ev) => patch(f.id, (s) => ({ ...s, sign: ev.target.value }))} style={{ ...S(INPUT + ';border-color:' + (e.sign ? '#B42318' : '#E1E4E9')), ...noMin }} />
             {!!e.sign && <FieldError>{e.sign}</FieldError>}
-          </div>
+          </LabelledField>
         )}
       </section>
     );

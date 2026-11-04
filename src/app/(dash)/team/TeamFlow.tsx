@@ -1,10 +1,9 @@
 'use client';
-import { FIELD_IN, Avatar, BLACK, CLOSE, DOTS, MENU_ROW, Chip, Notice, RING, dim } from '@/components/ui';
+import { Avatar, BLACK, CLOSE, Chip, DOTS, FIELD_IN, Field, MENU_ROW, Notice, RING, TIME_INPUT, dim } from '@/components/ui';
 import { BottomSheet } from '@/components/BottomSheet';
 import { ConfirmBox } from '@/components/ConfirmBox';
 import { clockStr, timeRange } from '@/lib/display';
 import { firstName } from '@/lib/people';
-import { Field } from '../settings/forms/FormPage';
 import { useState } from 'react';
 import { S } from '../calendar/pickers';
 import { ROW, TICK, ICONS, StepShell, useSteps, Tiles, DetailRows } from '../calendar/wizardUi';
@@ -12,7 +11,7 @@ import { OwnerStar } from './OwnerStar';
 import { DAYS, DAY_FULL, SHIFTS } from './shared';
 import type { TeamCtl } from './TeamView';
 
-const TIME_IN = { ...S('box-sizing:border-box;flex:1 1 0;min-width:0;max-width:150px;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF'), minHeight: 0 } as const;
+const TIME_IN = S(TIME_INPUT + ';max-width:150px');
 
 const PILL = 'display:inline-flex;align-items:center;justify-content:center;height:44px;padding:0 18px;border-radius:999px;border:1px solid #E1E4E9;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;cursor:pointer';
 

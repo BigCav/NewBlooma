@@ -1,7 +1,6 @@
 'use client';
-import { Avatar, BACK, BLACK, CHEV, Chip, FIELD_IN, FieldError, Notice, OUTLINE, RING, dim } from '@/components/ui';
+import { AnswerBox, Avatar, BACK, BAR, BLACK, CHEV, Chip, FIELD_IN, Field, FieldError, Notice, OUTLINE, PAGE, RING, ScreenHeader, dim } from '@/components/ui';
 import { TONE, type ToneName } from '@/lib/tones';
-import { BAR, Field, PAGE } from '../../settings/forms/FormPage';
 import Link from 'next/link';
 import { addMonthsYmd, niceDate } from '@/lib/forms-shared';
 import { S } from '../../calendar/pickers';
@@ -12,16 +11,6 @@ const FORM_ICON = <svg width="22" height="22" viewBox="0 0 24 24" fill="none" st
 /** The big button alone on its own line (the bars here stack their buttons). */
 const FULL = ';flex:0 0 auto;width:100%';
 const LEVEL: Record<ClientCard['level'], { t: string; tone: ToneName }> = { ok: { t: 'All set', tone: 'green' }, todo: { t: '', tone: 'amber' }, alert: { t: 'Reaction', tone: 'red' } };
-
-function Header({ title, onBack, avatar }: { title: string; onBack: () => void; avatar?: string }) {
-  return (
-    <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px;border-bottom:1px solid #E6E8EC')}>
-      <button onClick={onBack} aria-label="Back" style={S(RING)}>{BACK}</button>
-      {avatar && <Avatar name={avatar} size="sm" />}
-      <div style={S('flex:1 1 auto;min-width:0;font-size:18px;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{title}</div>
-    </header>
-  );
-}
 
 function levelChip(k: ClientCard) {
   const l = LEVEL[k.level];
@@ -133,7 +122,7 @@ export function FormsOverlay({ c }: { c: FormsCtl }) {
   return (<>
     {c.bk && k && (
       <div role="dialog" aria-label="Booking" style={S(PAGE)}>
-        <Header title={k.name} avatar={k.name} onBack={() => c.setBk(false)} />
+        <ScreenHeader title={k.name} avatar={k.name} onBack={() => c.setBk(false)} />
         <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:16px 20px 24px;display:flex;flex-direction:column;gap:16px')}>
           <div>
             <h2 style={S('margin:0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em;overflow-wrap:anywhere')}>{k.svc}</h2>
@@ -173,7 +162,7 @@ export function FormsOverlay({ c }: { c: FormsCtl }) {
       const canSend = row.canSend && !!k.email && !wasSent;
       return (
         <div role="dialog" aria-label={row.name} style={S(PAGE)}>
-          <Header title={row.name} onBack={() => c.setFm('')} />
+          <ScreenHeader title={row.name} onBack={() => c.setFm('')} />
           <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:16px 20px 24px;display:flex;flex-direction:column;gap:12px')}>
             <div>
               <h2 style={S('margin:0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em;overflow-wrap:anywhere')}>{row.name}</h2>
@@ -187,10 +176,7 @@ export function FormsOverlay({ c }: { c: FormsCtl }) {
             {err}
             {row.state === 'reaction' && <div style={S('padding:12px 14px;border-radius:16px;background:' + TONE.red.bg + ';color:' + TONE.red.fg + ';font-size:13.5px;font-weight:600')}>A reaction was noted on this form.</div>}
             {answers.map((x, i) => (
-              <div key={i} style={S('box-sizing:border-box;padding:12px 16px 14px;border:1px solid #E1E4E9;border-radius:16px;background:#FFFFFF')}>
-                <div style={S('font-size:12.5px;color:#5E6673;overflow-wrap:anywhere')}>{x.k}</div>
-                <div style={S('margin-top:3px;font-size:16px;font-weight:600;overflow-wrap:anywhere')}>{x.v}</div>
-              </div>
+              <AnswerBox key={i} label={x.k}>{x.v}</AnswerBox>
             ))}
           </main>
           {(canSend || row.canFill || row.canRecord) && (
@@ -210,7 +196,7 @@ export function FormsOverlay({ c }: { c: FormsCtl }) {
       const answers = a.answers.filter((x) => !/^signed$/i.test(x.k) && x.v !== 'No answer');
       return (
         <div role="dialog" aria-label={a.name} style={S(PAGE)}>
-          <Header title={a.name} onBack={() => c.setAns(null)} />
+          <ScreenHeader title={a.name} onBack={() => c.setAns(null)} />
           <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:16px 20px 24px;display:flex;flex-direction:column;gap:12px')}>
             <div>
               <h2 style={S('margin:0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em;overflow-wrap:anywhere')}>{a.name}</h2>
@@ -219,10 +205,7 @@ export function FormsOverlay({ c }: { c: FormsCtl }) {
             {a.flagged && <div style={S('padding:12px 14px;border-radius:16px;background:' + TONE.red.bg + ';color:' + TONE.red.fg + ';font-size:13.5px;font-weight:600')}>A reaction was noted on this form.</div>}
             {answers.length === 0 && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No answers were given.</p>}
             {answers.map((x, i) => (
-              <div key={i} style={S('box-sizing:border-box;padding:12px 16px 14px;border:1px solid #E1E4E9;border-radius:16px;background:#FFFFFF')}>
-                <div style={S('font-size:12.5px;color:#5E6673;overflow-wrap:anywhere')}>{x.k}</div>
-                <div style={S('margin-top:3px;font-size:16px;font-weight:600;overflow-wrap:anywhere')}>{x.v}</div>
-              </div>
+              <AnswerBox key={i} label={x.k}>{x.v}</AnswerBox>
             ))}
             <Link href={`/clients/${a.clientId}`} style={S(OUTLINE + FULL)}>Open profile</Link>
           </main>
@@ -232,7 +215,7 @@ export function FormsOverlay({ c }: { c: FormsCtl }) {
 
     {rec && recTpl && (
       <div role="dialog" aria-label="Record patch test" style={S(PAGE)}>
-        <Header title="Record result" onBack={() => { c.setRec(null); c.setError(''); }} />
+        <ScreenHeader title="Record result" onBack={() => { c.setRec(null); c.setError(''); }} />
         <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:16px 20px 24px;display:flex;flex-direction:column;gap:14px')}>
           <div>
             <h2 style={S('margin:0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>{recTpl.name}</h2>

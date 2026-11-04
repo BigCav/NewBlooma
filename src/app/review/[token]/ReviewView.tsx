@@ -4,11 +4,10 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { S } from '../../(dash)/calendar/pickers';
 import { submitReview } from './actions';
-import { BLACK, FieldError, dim } from '@/components/ui';
+import { BLACK, FieldError, LabelledField, TEXTAREA, dim } from '@/components/ui';
 import { TONE } from '@/lib/tones';
 
 const LABELS = ['', 'Poor', 'Fair', 'Good', 'Very good', 'Excellent'];
-const FIELD = 'box-sizing:border-box;width:100%;min-height:0;padding:12px 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:16px;color:#0E1116;background:#FFFFFF';
 
 export function ReviewView({ token, salon, slug }: { token: string; salon: string; slug: string; name: string }) {
   const [stars, setStars] = useState(0);
@@ -36,7 +35,7 @@ export function ReviewView({ token, salon, slug }: { token: string; salon: strin
               </div>
               <span style={S('font-size:14px;color:#5E6673')}>{LABELS[stars] || 'Tap a star'}</span>
             </div>
-            <div style={S('display:flex;flex-direction:column;gap:6px')}><label htmlFor="rv-t" style={S('font-size:14px;font-weight:600')}>Tell us more (optional)</label><textarea id="rv-t" className="bkf" rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder="What went well? What could be better?" style={S(FIELD + ';resize:vertical')} /></div>
+            <LabelledField id="rv-t" label="Tell us more (optional)"><textarea id="rv-t" className="bkf" rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder="What went well? What could be better?" style={S(TEXTAREA + ';resize:vertical')} /></LabelledField>
             {!!error && <FieldError>{error}</FieldError>}
             <button onClick={submit} disabled={busy} style={S(BLACK + ';flex:0 0 auto;padding:0 20px' + dim(busy))}>{busy ? 'Sending…' : 'Submit review'}</button>
           </section>

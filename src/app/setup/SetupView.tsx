@@ -4,14 +4,13 @@
 import { phoneInput, checkPhone } from '@/lib/phone';
 import { duration, makeMoney, plural } from '@/lib/display';
 import { TONE } from '@/lib/tones';
-import { Avatar, BLACK, CLOSE, FieldError, OUTLINE, RING, Switch, dim, filterChipCss } from '@/components/ui';
+import { Avatar, BLACK, CLOSE, FieldError, INPUT, LabelledField, OUTLINE, RING, Switch, filterChipCss, dim } from '@/components/ui';
 import Link from 'next/link';
 import { useEffect, useState, useTransition } from 'react';
 import { S } from '../(dash)/calendar/pickers';
 import { createSalon } from './actions';
 import { CATS, DAYS, PRESETS, ROLES, STARTERS, STEPS, currencyFor, slugOf } from './shared';
 
-const INPUT = 'box-sizing:border-box;width:100%;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:16px;color:#0E1116;background:#FFFFFF';
 const noMin = { minHeight: 0 } as const;
 const TITLES = ['Tell us about your salon', 'What do you offer?', 'When are you open?', 'Who is on your team?', 'You are ready to go'];
 const SUBS = ['This shows on your booking page and receipts.', 'Pick your categories. We add starter services you can edit later.', 'Clients can only book inside these hours.', 'Add the people who take bookings. You can invite them to sign in later.', ''];
@@ -63,12 +62,10 @@ function useSetup() {
 }
 type C = ReturnType<typeof useSetup>;
 
-const Label = ({ id, children }: { id: string; children: React.ReactNode }) => <label htmlFor={id} style={S('font-size:14px;font-weight:600')}>{children}</label>;
-
 function StepBody({ c, m }: { c: C; m: boolean }) {
   const g = m ? 16 : 18;
   const inp = (id: string, label: string, val: string, set: (v: string) => void, ph: string, type = 'text') => (
-    <div style={S('display:flex;flex-direction:column;gap:6px')}><Label id={id}>{label}</Label><input id={id} type={type} value={val} onChange={(e) => { set(type === 'tel' ? phoneInput(e.target.value) : e.target.value); c.setError(''); }} placeholder={ph} style={{ ...S(INPUT), ...noMin }} /></div>
+    <LabelledField id={id} label={label}><input id={id} type={type} value={val} onChange={(e) => { set(type === 'tel' ? phoneInput(e.target.value) : e.target.value); c.setError(''); }} placeholder={ph} style={{ ...S(INPUT), ...noMin }} /></LabelledField>
   );
   return (<>
     {c.step === 0 && (

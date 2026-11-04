@@ -4,7 +4,7 @@ import { ConfirmBox } from '@/components/ConfirmBox';
 import { dollars } from '@/lib/format';
 import { dayInfo } from '@/lib/cal';
 import { plural } from '@/lib/display';
-import { BLACK, CLOSE, Chip, FieldError, FilterChip, Notice, OUTLINE, RING } from '@/components/ui';
+import { BLACK, CLOSE, Chip, FieldError, FilterChip, Notice, OUTLINE, RING, Stat, StatCard } from '@/components/ui';
 import { PAYMENT_STATUS } from '@/lib/status';
 import type { ToneName } from '@/lib/tones';
 import { rootCls } from '@/components/drawer';
@@ -140,7 +140,7 @@ function Panel({ c }: { c: C }) {
 const noneText = (c: C) => (c.all.length === 0 ? (c.canIssue ? 'No gift cards yet. Issue your first one.' : 'No gift cards yet.') : 'No gift cards match.');
 
 function Desktop({ c }: { c: C }) {
-  const stat = (l: string, v: string) => <div key={l}><div style={S('color:#5E6673;font-size:13.5px')}>{l}</div><div style={S('margin-top:4px;font-size:38px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{v}</div></div>;
+  const stat = (l: string, v: string) => <Stat key={l} label={l} value={v} />;
   return (
     <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <PageHeader title="Gift cards" subtitle="Issue gift cards and track what is left on them" query={c.query} onQuery={c.setQuery} placeholder="Search code or name" actionLabel="Issue gift card" onAction={c.openNew} showAction={c.canIssue} />
@@ -186,7 +186,7 @@ function Desktop({ c }: { c: C }) {
 function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
   const [fopen, setFopen] = useState(false);
   const opts = FILTERS.map(([id, label]) => ({ id: id as string, label: label as string }));
-  const stat = (l: string, v: string) => <div key={l} style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:20px;padding:16px')}><div style={S('color:#5E6673;font-size:13px')}>{l}</div><div style={S('margin-top:4px;font-size:26px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{v}</div></div>;
+  const stat = (l: string, v: string) => <StatCard key={l} label={l} value={v} />;
   return (
     <div className={rootCls(drawer)} style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <MobileHeader title="Gift cards" subtitle="Issue and track balances" query={c.query} onQuery={c.setQuery} placeholder="Search code or name" />

@@ -19,7 +19,7 @@ import { duration, plural, bookingRef } from '@/lib/display';
 import { firstName } from '@/lib/people';
 import { bookingStatus, PAYMENT_STATUS } from '@/lib/status';
 import { TONE } from '@/lib/tones';
-import { Chip, FieldError, FilterChip, Notice, RING, CLOSE, DOTS, DANGER, dim } from '@/components/ui';
+import { BLACK, BLACK_MD, CLOSE, Chip, DANGER, DOTS, FieldError, FilterChip, Notice, OUTLINE_SM, RING, dim } from '@/components/ui';
 import { CancelPick } from './CancelPick';
 import { TerminalStatus } from './TerminalStatus';
 import { S, ServicePicker } from './pickers';
@@ -154,7 +154,7 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
           <div style={S('display:flex;flex-direction:column;gap:12px')}>
             <div style={S('display:flex;gap:10px')}>
               <button onClick={() => setQk(true)} aria-label="More actions" aria-haspopup="dialog" style={S(RING + ';flex:0 0 52px;width:52px;height:52px')}>{DOTS}</button>
-              <button onClick={() => setSum(true)} aria-haspopup="dialog" style={S('flex:1 1 0;height:52px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;cursor:pointer')}>{sumTitle}</button>
+              <button onClick={() => setSum(true)} aria-haspopup="dialog" style={S(BLACK)}>{sumTitle}</button>
             </div>
           </div>
 
@@ -184,7 +184,7 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
                         <span style={S('display:block;margin-top:4px;color:#5E6673;font-size:14px;overflow-wrap:anywhere')}>{c.line}</span>
                       </span>
                     </button>
-                    <button onClick={() => primary(c.b)} style={S('height:48px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14.5px;font-weight:500;cursor:pointer')}>{c.primaryLabel}</button>
+                    <button onClick={() => primary(c.b)} style={S(BLACK_MD)}>{c.primaryLabel}</button>
                   </div>
                 ))}
               </div>
@@ -229,8 +229,8 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
                 </button>
               </div>
             ))}
-            {!isOpen && rows.length > limit && <button onClick={() => setWkOpen({ ...wkOpen, [d.ymd]: true })} style={S('height:40px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:13.5px;font-weight:500;cursor:pointer')}>{'Show ' + (rows.length - limit) + ' more'}</button>}
-            {isOpen && rows.length > limit && <button onClick={() => setWkOpen({ ...wkOpen, [d.ymd]: false })} style={S('height:40px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:13.5px;font-weight:500;cursor:pointer')}>Show less</button>}
+            {!isOpen && rows.length > limit && <button onClick={() => setWkOpen({ ...wkOpen, [d.ymd]: true })} style={S(OUTLINE_SM)}>{'Show ' + (rows.length - limit) + ' more'}</button>}
+            {isOpen && rows.length > limit && <button onClick={() => setWkOpen({ ...wkOpen, [d.ymd]: false })} style={S(OUTLINE_SM)}>Show less</button>}
           </section>
         ))}
       </main>

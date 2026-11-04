@@ -5,8 +5,7 @@ import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/Chrome';
 import { S } from '../../calendar/pickers';
-import { BACK as BACK_ICON, BLACK, FIELD_IN, FieldError, Notice, OUTLINE, RING, SwitchRow, dim } from '@/components/ui';
-import { BAR, CARD, Field as CardField, PAGE } from '../forms/FormPage';
+import { BACK as BACK_ICON, BAR, BLACK, CARD, FIELD_IN, Field as CardField, FieldError, Notice, OUTLINE, PAGE, ScreenHeader, RING, SwitchRow, dim } from '@/components/ui';
 import { checkTerminal, savePayments } from './actions';
 
 type Props = { taxInclusive: boolean; online: boolean; terminal: boolean; station: string; saved: { online_user: boolean; online_key: boolean; hit_user: boolean; hit_key: boolean } };
@@ -76,13 +75,7 @@ function Mobile({ c, inline }: { c: C; inline?: boolean }) {
   const tile = (on: boolean) => 'flex:1 1 0;min-height:56px;padding:10px 12px;border-radius:16px;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-align:center;border:1px solid ' + (on ? '#0E1116' : '#E1E4E9') + ';background:' + (on ? '#0E1116' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#0E1116');
   return (
     <div className={inline ? 'm-cal cal-root' : 'only-m m-cal cal-root'} style={S(PAGE.replace('position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;display:flex;', inline ? 'position:relative;width:100%;height:calc(100dvh - 170px);min-height:520px;box-sizing:border-box;border:1px solid #E6E8EC;border-radius:24px;display:flex;' : 'position:relative;width:100%;height:100dvh;box-sizing:border-box;'))}>
-      <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px;border-bottom:1px solid #E6E8EC')}>
-        <Link href="/settings?section=payments" aria-label="Back to payments" style={S(RING + ';text-decoration:none')}>{BACK_ICON}</Link>
-        <div style={S('flex:1 1 auto;min-width:0')}>
-          <div style={S('font-size:18px;font-weight:600;letter-spacing:-0.02em')}>{inline ? 'Payments' : 'Card payments'}</div>
-          <div style={S('font-size:13px;color:#5E6673')}>{inline ? 'Back to payments settings' : 'Windcave setup and tax mode'}</div>
-        </div>
-      </header>
+      <ScreenHeader title={inline ? 'Payments' : 'Card payments'} sub={inline ? 'Back to payments settings' : 'Windcave setup and tax mode'} backHref="/settings?section=payments" backLabel="Back to payments" />
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:16px 20px 24px;display:flex;flex-direction:column;gap:14px')}>
         <div><h3 style={S(H3)}>Prices are</h3></div>
         <div role="group" aria-label="Prices are" style={S('display:flex;gap:10px')}>

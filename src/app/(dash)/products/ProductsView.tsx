@@ -7,7 +7,7 @@ import { useNewParam } from '@/components/useNewParam';
 import { dollars } from '@/lib/format';
 import { plural } from '@/lib/display';
 import { initialsOf } from '@/lib/people';
-import { BLACK, Chip, FilterChip, Notice } from '@/components/ui';
+import { BLACK, Chip, FilterChip, Notice, Stat } from '@/components/ui';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
@@ -83,7 +83,7 @@ const tile = (c: C, cat: string, size: number, r: number, fs: number) => { const
 
 
 function Desktop({ c }: { c: C }) {
-  const stat = (label: string, v: number) => <div><div style={S('color:#5E6673;font-size:13.5px')}>{label}</div><div style={S('margin-top:4px;font-size:38px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{v}</div></div>;
+  const stat = (label: string, v: number) => <Stat label={label} value={v} />;
   return (
     <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <PageHeader title="Products" subtitle="Retail and backbar stock" query={c.query} onQuery={c.setQuery} placeholder="Search products" actionLabel="New product" onAction={c.openNew} />
@@ -124,7 +124,7 @@ function Desktop({ c }: { c: C }) {
 
 function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
   const [fopen, setFopen] = useState(false);
-  const stat = (label: string, v: number) => <div><div style={S('color:#5E6673;font-size:13px')}>{label}</div><div style={S('margin-top:2px;font-size:30px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{v}</div></div>;
+  const stat = (label: string, v: number) => <Stat label={label} value={v} small />;
   return (
     <div className={rootCls(drawer)} style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <MobileHeader title="Products" subtitle="Retail and backbar stock" query={c.query} onQuery={c.setQuery} placeholder="Search products" />

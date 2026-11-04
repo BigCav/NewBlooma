@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { ActiveFilter, FilterButton, FilterSheet } from '@/components/FilterBits';
-import { Avatar, Chip, FilterChip, dim, filterChipCss } from '@/components/ui';
+import { Avatar, Chip, FilterChip, Stat, StatCard, filterChipCss, dim } from '@/components/ui';
 import { TONE } from '@/lib/tones';
 import { firstName } from '@/lib/people';
 import { S } from '../calendar/pickers';
@@ -142,7 +142,7 @@ function MRow({ c, i }: { c: C; i: InboxItem }) {
 }
 
 function Desktop({ c }: { c: C }) {
-  const big = (l: string, v: number) => <div key={l}><div style={S('color:#5E6673;font-size:13.5px')}>{l}</div><div style={S('margin-top:4px;font-size:38px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{String(v)}</div></div>;
+  const big = (l: string, v: number) => <Stat key={l} label={l} value={String(v)} />;
   return (
     <div className="only-d d-cal cal-root" style={S("flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 40px 32px;display:flex;flex-direction:column;gap:28px;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <PageHeader title="Inbox" subtitle="Requests, cancellations and messages" query={c.query} onQuery={c.setQuery} placeholder="Search inbox" showAction={false} />
@@ -170,7 +170,7 @@ function Desktop({ c }: { c: C }) {
 
 function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
   const [fopen, setFopen] = useState(false);
-  const card = (l: string, v: number, tint?: string) => <div key={l} style={S('flex:1 1 0;min-width:0;box-sizing:border-box;padding:16px;border-radius:20px;border:1px solid ' + (tint ? '#F6D9A8' : '#E6E8EC') + ';background:' + (tint ?? '#FFFFFF'))}><div style={S('color:#5E6673;font-size:13px')}>{l}</div><div style={S('margin-top:2px;font-size:30px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{String(v)}</div></div>;
+  const card = (l: string, v: number, tint?: string) => <StatCard key={l} label={l} value={String(v)} tint={!!tint} />;
   const close = () => { c.setOpen(false); c.setMode('view'); c.setError(''); };
   const fl = FILTERS.find((f) => f.id === c.filter)?.label ?? 'All';
   return (

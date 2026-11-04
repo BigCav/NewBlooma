@@ -8,8 +8,7 @@ import { TIP_OPTS } from './calUi';
 import { dollars, toCents } from '@/lib/format';
 import { plural } from '@/lib/display';
 import { TONE } from '@/lib/tones';
-import { dim } from '@/components/ui';
-import { Field } from '../settings/forms/FormPage';
+import { Field, INPUT, dim } from '@/components/ui';
 import { FIELD_IN } from '@/components/ui';
 import { DISC_PCTS, NO_DISC, discountCents, type CoPackage, type CoProduct, type DiscPick } from '../sales/shared';
 import { TerminalStatus, type TermView } from './TerminalStatus';
@@ -21,7 +20,6 @@ export type CoRetail = { products: CoProduct[]; qty: Record<string, number>; onQ
 export type CoLine = { key: string; name: string; sub?: string; cents: number };
 export type CoCfg = { canDiscount: boolean; askTip: boolean; taxInclusive: boolean; taxRate: number };
 
-const FIELD = 'box-sizing:border-box;width:100%;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:16px;color:#0E1116;background:#FFFFFF';
 
 /**
  * Checkout as steps, shared by the calendar and the Sales page: payment method, discount and tip when switched on,
@@ -100,7 +98,7 @@ export function CheckoutFlow({ who, methods, co, setCo, cfg, lines, gross, onCha
         summary={<div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px')}><span style={S('color:#5E6673;font-size:14px')}>{plural(count, 'product')}</span><span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{dollars(prodTotal)}</span></div>}
         actions={[{ label: 'Done', onClick: close }]}>
         <p style={S('margin:0;color:#5E6673;font-size:14px')}>Products are charged with the visit and come off your stock when it is paid.</p>
-        <input aria-label="Search products" value={find} onChange={(e) => setFind(e.target.value)} placeholder="Search products" style={{ ...S(FIELD), minHeight: 0 }} />
+        <input aria-label="Search products" value={find} onChange={(e) => setFind(e.target.value)} placeholder="Search products" style={S(INPUT)} />
         {!retail.products.length && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No products yet. Add some on the Products page.</p>}
         {!!retail.products.length && !shown.length && <p style={S('margin:0;color:#5E6673;font-size:14px')}>No products match that search.</p>}
         {shown.map((p) => {

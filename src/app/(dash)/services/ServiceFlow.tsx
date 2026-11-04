@@ -1,10 +1,9 @@
 'use client';
-import { FIELD_IN, BARE, BLACK, OUTLINE, Avatar, CLOSE, DOTS, MENU_ROW, Notice, RING, dim } from '@/components/ui';
+import { Avatar, BARE, BLACK, BLACK_MD, CLOSE, DOTS, FIELD_IN, Field, MENU_ROW, Notice, OUTLINE, OUTLINE_MD, RING, dim } from '@/components/ui';
 import { BottomSheet } from '@/components/BottomSheet';
 import { ConfirmBox } from '@/components/ConfirmBox';
 import { dollars, toCents } from '@/lib/format';
 import { duration } from '@/lib/display';
-import { Field } from '../settings/forms/FormPage';
 import { useState } from 'react';
 import { decimalInput, digitsInput } from '@/lib/numeric';
 import { S } from '../calendar/pickers';
@@ -46,7 +45,7 @@ export function ServiceFlow({ c }: { c: ServicesCtl }) {
 
   const toggle = (arr: string[], id: string) => (arr.includes(id) ? arr.filter((i) => i !== id) : [...arr, id]);
   const input = 'box-sizing:border-box;width:100%;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF';
-  const small = 'flex:0 0 auto;height:48px;padding:0 18px;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font-size:14px;font-weight:500';
+  const small = BLACK_MD;
 
   const summaryBar = (
     <div style={S('display:flex;gap:10px')}>
@@ -97,7 +96,7 @@ export function ServiceFlow({ c }: { c: ServicesCtl }) {
             <div style={S('display:flex;gap:8px')}>
               <input type="text" aria-label="Category name" value={ce.name} onChange={(e) => setCe({ mode: 'rename', name: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); c.renameCat(); } }} style={{ ...S(input), minHeight: 0 }} />
               <button type="button" onClick={c.renameCat} disabled={busy} style={S(small)}>Save</button>
-              <button type="button" className="ghost" onClick={() => setCe({ mode: '', name: '' })} style={S('flex:0 0 auto;height:48px;padding:0 16px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500')}>Cancel</button>
+              <button type="button" className="ghost" onClick={() => setCe({ mode: '', name: '' })} style={S(OUTLINE_MD)}>Cancel</button>
             </div>
           ) : (
             <ConfirmBox label="Confirm removal" title={'Remove ' + catName + '?'} body="Only works when it has no services in it." action="Remove category" keep="Keep category" onAction={c.removeCat} busy={busy} onKeep={() => setCe({ mode: '', name: '' })} />

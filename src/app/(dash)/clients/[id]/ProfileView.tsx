@@ -1,6 +1,6 @@
 'use client';
 // The client's profile, on a phone and on a computer. The computer shows the same pages in a drawer on the right.
-import { Avatar, BACK, BLACK, CHEV, CLOSE, Chip, DOTS, FIELD_IN, FieldError, FilterChip, MENU_ROW, Notice, OUTLINE, RING, SwitchRow, dim } from '@/components/ui';
+import { AnswerBox, Avatar, BACK, BAR, BLACK, CHEV, CLOSE, Chip, DOTS, FIELD_IN, Field, FieldError, FilterChip, MENU_ROW, Notice, OUTLINE, PAGE, RING, ScreenHeader, SwitchRow, dim } from '@/components/ui';
 import { BottomSheet } from '@/components/BottomSheet';
 import { ConfirmBox } from '@/components/ConfirmBox';
 import Link from 'next/link';
@@ -10,7 +10,6 @@ import { MobileTabs } from '@/components/Chrome';
 import { S } from '../../calendar/pickers';
 import { ChatPage, ChatPanel } from '@/components/ChatPanel';
 import { QaGroup, QA_ITEM, QuickActions } from '../../calendar/VisitSheet';
-import { BAR, Field, PAGE } from '../../settings/forms/FormPage';
 import { addNote, deleteClient, recordPatchTest, removeNote, saveFormula, sendClientMessage, setAllergies, setPatchTest, setPreference, updateClient } from '../actions';
 import { phoneInput } from '@/lib/phone';
 import { PATCH_TONE, TAG_TONE, patchInfo, type Channels, type ClientRow } from '../shared';
@@ -322,10 +321,7 @@ function ProfilePages({ c, view, setView, apFilter, setApFilter, openForm, setOp
             </div>
             {f.flagged && <div style={S('padding:12px 14px;border-radius:16px;background:' + TONE.red.bg + ';color:' + TONE.red.fg + ';font-size:13.5px;font-weight:600')}>A reaction was noted on this form.</div>}
             {answers.map((a, i) => (
-              <div key={i} style={S('box-sizing:border-box;padding:12px 16px 14px;border:1px solid #E1E4E9;border-radius:16px;background:#FFFFFF')}>
-                <div style={S('font-size:12.5px;color:#5E6673;overflow-wrap:anywhere')}>{a.k}</div>
-                <div style={S('margin-top:3px;font-size:16px;font-weight:600;overflow-wrap:anywhere;' + (a.v === 'No answer' ? 'color:#8A93A0;font-weight:400' : ''))}>{a.v}</div>
-              </div>
+              <AnswerBox key={i} label={a.k} muted={a.v === 'No answer'}>{a.v}</AnswerBox>
             ))}
           </>);
         })()}
@@ -381,12 +377,9 @@ function Desktop({ c, initial }: { c: C; initial?: string }) {
             {page === 'messages'
               ? <ChatPanel fill clientId={row.id} name={row.name} first={c.first} initial={thread} send={(t) => sendClientMessage(row.id, t)} onSent={(m) => setThread((x) => [...x, m])} onBack={back} />
               : (<>
-                <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px;border-bottom:1px solid #E6E8EC;margin-bottom:8px')}>
-                  <button onClick={back} aria-label="Back" style={S(RING)}>{BACK}</button>
-                  <Avatar name={row.name} size="sm" />
-                  <div style={S('flex:1 1 auto;min-width:0;font-size:18px;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{row.name}</div>
+                <ScreenHeader title={row.name} avatar={row.name} onBack={back} style="margin-bottom:8px">
                   <button onClick={close} aria-label="Close" style={S(RING)}>{CLOSE}</button>
-                </header>
+                </ScreenHeader>
                 <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 24px;display:flex;flex-direction:column;gap:16px')}>
                   {!!c.error && c.mode === 'view' && <FieldError>{c.error}</FieldError>}
                   <ProfilePages c={cc} view={page} setView={(v) => { setOpenForm(''); setPage(v === 'home' ? null : v); }} apFilter={apFilter} setApFilter={setApFilter} openForm={openForm} setOpenForm={setOpenForm} title />

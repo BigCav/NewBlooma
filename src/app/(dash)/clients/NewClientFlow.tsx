@@ -1,9 +1,8 @@
 'use client';
-import { Avatar, BLACK, FIELD_IN, dim } from '@/components/ui';
+import { Avatar, BLACK, FIELD_IN, Field, dim } from '@/components/ui';
 import { phoneInput } from '@/lib/phone';
 import { S } from '../calendar/pickers';
 import { ICONS, StepShell, useSteps, DetailRows } from '../calendar/wizardUi';
-import { Field } from '../settings/forms/FormPage';
 import type { ClientsCtl } from './ClientsView';
 
 const I_MAIL = <><rect x="3.5" y="5.5" width="17" height="13" rx="3" /><path d="m4.5 7.5 7.5 5.5 7.5-5.5" /></>;

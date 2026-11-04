@@ -1,7 +1,6 @@
 'use client';
-import { BLACK, FIELD_IN, OUTLINE, dim } from '@/components/ui';
+import { BLACK, FIELD_IN, Field, OUTLINE, dim } from '@/components/ui';
 import { dollars, toCents } from '@/lib/format';
-import { Field } from '../settings/forms/FormPage';
 import { useState } from 'react';
 import { decimalInput } from '@/lib/numeric';
 import { S } from '../calendar/pickers';

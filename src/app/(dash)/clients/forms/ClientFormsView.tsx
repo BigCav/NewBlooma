@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../../calendar/pickers';
-import { filterChipCss } from '@/components/ui';
+import { Stat, filterChipCss } from '@/components/ui';
 import type { ToneName } from '@/lib/tones';
 import { Done, FormsMain, FormsOverlay, Upcoming } from './FormsMobile';
 import type { FormState, How } from '@/lib/forms-shared';
@@ -49,7 +49,7 @@ function useClientForms(props: Props) {
 type C = ReturnType<typeof useClientForms>;
 export type FormsCtl = C;
 
-const bigD = (l: string, v: number) => <div key={l}><div style={S('color:#5E6673;font-size:13.5px')}>{l}</div><div style={S('margin-top:4px;font-size:38px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{String(v)}</div></div>;
+const bigD = (l: string, v: number) => <Stat key={l} label={l} value={String(v)} />;
 
 /** Desktop: the same cards as the phone, in a grid. A visit or a completed form opens in the right-hand drawer. */
 function Desktop({ c }: { c: C }) {

@@ -7,13 +7,13 @@ import { decimalInput } from '@/lib/numeric';
 import { useNightMode } from '@/components/Theme';
 import { S } from '../calendar/pickers';
 import { addClosedPeriod, removeClosedPeriod } from './actions';
-import { BACK, BLACK, FIELD_IN, FieldError, Notice, OUTLINE, RING, Switch, SwitchRow, dim } from '@/components/ui';
+import { BACK, BAR, BLACK, CARD, FIELD_IN, Field, FieldError, Notice, OUTLINE, PAGE, ScreenHeader, RING, Switch, SwitchRow, TIME_INPUT, dim } from '@/components/ui';
 import { dayInfo } from '@/lib/cal';
-import { BAR, CARD, Field, PAGE, PickSheet, SettingRow } from './forms/FormPage';
+import { PickSheet, SettingRow } from './forms/FormPage';
 import { DAY_FULL, GROUPS, SECTIONS, type Values } from './shared';
 import type { SettingsCtl } from './SettingsView';
 
-const TIME = { ...S('box-sizing:border-box;flex:1 1 0;min-width:0;width:100%;height:44px;padding:0 10px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:15px;color:#0E1116;background:#FFFFFF'), minHeight: 0 } as const;
+const TIME = S(TIME_INPUT);
 /** "Tue 3 Nov", with the year only when it is not this year. */
 const dayText = (d: string) => dayInfo(d).short + (d.slice(0, 4) === String(new Date().getFullYear()) ? '' : ' ' + d.slice(0, 4));
 const H3 = 'margin:6px 0 0;font-size:17px;font-weight:600;letter-spacing:-0.01em';
@@ -83,13 +83,7 @@ export function SectionPage({ c, inline }: { c: SettingsCtl; inline?: boolean })
   const showBar = s !== 'appearance';
   return (
     <div role={inline ? 'region' : 'dialog'} aria-label={cur.label} style={S(inline ? PAGE.replace('position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;', 'position:relative;height:calc(100dvh - 170px);min-height:520px;border:1px solid #E6E8EC;border-radius:24px;') : PAGE)}>
-      <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px;border-bottom:1px solid #E6E8EC')}>
-        {!inline && <button onClick={c.close} aria-label="Back" style={S(RING)}>{BACK}</button>}
-        <div style={S('flex:1 1 auto;min-width:0')}>
-          <div style={S('font-size:18px;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{cur.label}</div>
-          <div style={S('font-size:13px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{cur.desc}</div>
-        </div>
-      </header>
+      <ScreenHeader title={cur.label} sub={cur.desc} onBack={inline ? undefined : c.close} />
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:16px 20px 24px;display:flex;flex-direction:column;gap:14px')}>
         {s === 'business' && (<>
           <Text id="st-name" label="Business name" c={c} k="bizName" type="text" ph="Your business name" />

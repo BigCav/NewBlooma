@@ -1,7 +1,6 @@
 'use client';
-import { Avatar, Chip, FieldError, Notice, RING, BACK, CLOSE, DANGER, DOTS, BLACK, OUTLINE, MENU_ROW, dim } from '@/components/ui';
+import { Avatar, BACK, BAR, BLACK, CARD, CLOSE, Chip, DANGER, DOTS, FieldError, MENU_ROW, Notice, OUTLINE, PAGE, ScreenHeader, RING, dim } from '@/components/ui';
 import { firstName } from '@/lib/people';
-import { BAR, CARD, PAGE } from '../settings/forms/FormPage';
 import { ChatPanel } from '@/components/ChatPanel';
 import { BottomSheet } from '@/components/BottomSheet';
 import Link from 'next/link';
@@ -102,12 +101,9 @@ export function MobileItem({ c, onClose }: { c: InboxCtl; onClose: () => void })
           send={(t) => replyToItem(sel.id, t)} onSent={(m) => c.replied(m.text)} onBack={back} />
         {sheets}
       </>) : (<>
-      <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px;border-bottom:1px solid #E6E8EC')}>
-        <button onClick={back} aria-label="Back" style={S(RING)}>{BACK}</button>
-        <Avatar name={sel.client} size="sm" />
-        <div style={S('flex:1 1 auto;min-width:0;font-size:18px;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{sel.client}</div>
+      <ScreenHeader title={sel.client} avatar={sel.client} onBack={back}>
         {hasMore && <button onClick={() => setQa(true)} aria-label="More actions" aria-haspopup="dialog" style={S(RING)}>{DOTS}</button>}
-      </header>
+      </ScreenHeader>
       <main ref={mainRef} className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:16px 20px 20px;display:flex;flex-direction:column;gap:16px')}>
         {c.mode === 'decline' && actionable && (<>
           <h2 style={S('margin:0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>{title}</h2>

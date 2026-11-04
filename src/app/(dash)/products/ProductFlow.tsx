@@ -1,5 +1,5 @@
 'use client';
-import { FIELD_IN, BARE, BLACK as PRIMARY, OUTLINE as SECOND, CLOSE, DOTS, MENU_ROW, RING, Chip, FieldError, Notice, dim } from '@/components/ui';
+import { BARE, BLACK as PRIMARY, CLOSE, Chip, DOTS, FIELD_IN, Field, FieldError, MENU_ROW, Notice, OUTLINE as SECOND, RING, dim } from '@/components/ui';
 import { BottomSheet } from '@/components/BottomSheet';
 import { ConfirmBox } from '@/components/ConfirmBox';
 import { useState } from 'react';
@@ -7,7 +7,6 @@ import { decimalInput, digitsInput } from '@/lib/numeric';
 import { dollars, toCents } from '@/lib/format';
 import { plural } from '@/lib/display';
 import { initialsOf } from '@/lib/people';
-import { Field } from '../settings/forms/FormPage';
 import { S } from '../calendar/pickers';
 import { ROW, TICK, ICONS, StepShell, useSteps, Tiles, DetailRows } from '../calendar/wizardUi';
 import { STATUS, toneOf } from './shared';

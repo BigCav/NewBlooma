@@ -1,5 +1,6 @@
 // The small pieces every screen is built from, defined once: round icon buttons, the two big buttons, the menu row, the borderless
 // input that sits inside a labelled box, and the icons they hold. A screen that needs a variant adds to the string, it does not copy it.
+import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { S } from '@/app/(dash)/calendar/pickers';
 import { TONE, type ToneName } from '@/lib/tones';
@@ -10,10 +11,45 @@ export const RING = 'flex:0 0 44px;width:44px;height:44px;border:1px solid #E1E4
 /** The big black button and its outlined partner: 52px, sharing the row equally. */
 export const BLACK = 'flex:1 1 0;height:52px;box-sizing:border-box;border:0;border-radius:999px;background:#0E1116;color:#FFFFFF;font:inherit;font-size:14.5px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;text-decoration:none';
 export const OUTLINE = 'flex:1 1 0;height:52px;box-sizing:border-box;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;color:#0E1116;font:inherit;font-size:14.5px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;text-decoration:none';
+/** Smaller pill buttons for toolbars, cards and forms: 48px inside a card, 44px for a page's main action, 40px beside other controls. */
+const PILL = 'box-sizing:border-box;border-radius:999px;font:inherit;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;flex:0 0 auto';
+const DARK = ';border:0;background:#0E1116;color:#FFFFFF';
+const LIGHT = ';border:1px solid #E1E4E9;background:#FFFFFF;color:#0E1116';
+export const BLACK_MD = PILL + ';height:48px;padding:0 18px;font-size:14.5px' + DARK;
+export const OUTLINE_MD = PILL + ';height:48px;padding:0 18px;font-size:14.5px' + LIGHT;
+export const BLACK_ACTION = PILL + ';height:44px;padding:0 20px;font-size:14px' + DARK;
+export const BLACK_SM = PILL + ';height:40px;padding:0 16px;font-size:13.5px' + DARK;
+export const OUTLINE_SM = PILL + ';height:40px;padding:0 16px;font-size:13.5px' + LIGHT;
+/** A 40px round outlined button (previous / next arrows on a toolbar). */
+export const RING_SM = 'flex:0 0 40px;width:40px;height:40px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0';
 /** One row of a quick-actions menu. */
 export const MENU_ROW = 'display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;min-height:58px;padding:0 4px;border:0;background:transparent;font:inherit;font-size:16px;text-align:left;color:#0E1116;cursor:pointer;text-decoration:none';
 /** The input inside a labelled box (the box draws the border). */
 export const FIELD_IN = { ...S('box-sizing:border-box;width:100%;margin-top:2px;padding:0;border:0;outline:none;background:transparent;font:inherit;font-size:16px;color:#0E1116'), minHeight: 0, borderRadius: 0 } as const;
+/** A text box that stands on its own (sign in, booking, setup, search): 48px tall, 14px corners, 16px text so phones do not zoom in. */
+const BOX = 'box-sizing:border-box;width:100%;min-height:0;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:16px;color:#0E1116;background:#FFFFFF';
+export const INPUT = BOX + ';height:48px;padding:0 14px';
+/** The same for a longer answer. */
+export const TEXTAREA = BOX + ';padding:12px 14px';
+/** A time of day in a row of two (opens / closes). */
+export const TIME_INPUT = INPUT + ';flex:1 1 0;min-width:0;padding:0 10px';
+/** Add to an INPUT or TEXTAREA when its answer is wrong. */
+export const INPUT_ERROR = ';border-color:#B42318';
+/** A caption above a text box. */
+export function LabelledField({ id, label, children }: { id: string; label: string; children: ReactNode }) {
+  return <div style={S('display:flex;flex-direction:column;gap:6px')}><label htmlFor={id} style={S('font-size:14px;font-weight:600')}>{label}</label>{children}</div>;
+}
+/** A password box with its Show / Hide button. The page keeps whether it is shown. */
+export function PasswordInput({ id, value, onChange, show, onToggle, placeholder, autoComplete, onEnter }: {
+  id: string; value: string; onChange: (v: string) => void; show: boolean; onToggle: () => void; placeholder: string; autoComplete: 'current-password' | 'new-password'; onEnter?: () => void;
+}) {
+  return (
+    <div style={S('position:relative')}>
+      <input id={id} className="bkf" type={show ? 'text' : 'password'} value={value} onChange={(e) => onChange(e.target.value)} onKeyDown={onEnter ? (e) => { if (e.key === 'Enter') onEnter(); } : undefined} placeholder={placeholder} autoComplete={autoComplete} style={S(INPUT + ';padding-right:76px')} />
+      <button type="button" onClick={onToggle} style={S('position:absolute;right:6px;top:4px;height:40px;padding:0 12px;border:0;border-radius:999px;background:transparent;color:#5B3DF5;font-size:13.5px;font-weight:600')}>{show ? 'Hide' : 'Show'}</button>
+    </div>
+  );
+}
 /** The same, filling the space beside an icon or a button. */
 export const BARE = { ...S('flex:1 1 auto;min-width:0;border:0;outline:none;background:transparent;font:inherit;font-size:16px;color:#0E1116'), padding: 0, minHeight: 0, width: 'auto', borderRadius: 0 } as const;
 
@@ -86,6 +122,63 @@ export function SwitchRow({ id, title, sub, on, toggle, last }: { id: string; ti
     <div style={S('display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:' + (last ? '0' : '1px solid #EEF0F3'))}>
       <div style={S('min-width:0')}><div id={id} style={S('font-size:15px;font-weight:500')}>{title}</div>{sub && <div style={S('margin-top:2px;font-size:13px;color:#5E6673')}>{sub}</div>}</div>
       <Switch on={on} onToggle={toggle} labelledBy={id} />
+    </div>
+  );
+}
+
+/** A figure with its caption above it (Appointments 12). `small` is the phone's size. */
+export function Stat({ label, value, small }: { label: ReactNode; value: ReactNode; small?: boolean }) {
+  return (
+    <div>
+      <div style={S('color:#5E6673;font-size:' + (small ? 13 : 13.5) + 'px')}>{label}</div>
+      <div style={S('margin-top:' + (small ? 2 : 4) + 'px;font-size:' + (small ? 30 : 38) + 'px;line-height:1.1;font-weight:500;letter-spacing:-0.03em')}>{value}</div>
+    </div>
+  );
+}
+
+/** A figure on a white card, for the phone's row of numbers. `tint` turns it amber when something needs attention. */
+export function StatCard({ label, value, tint }: { label: ReactNode; value: ReactNode; tint?: boolean }) {
+  return (
+    <div style={S('flex:1 1 0;min-width:0;box-sizing:border-box;padding:16px;border-radius:20px;border:1px solid ' + (tint ? '#F6D9A8' : '#E6E8EC') + ';background:' + (tint ? TONE.amber.bg : '#FFFFFF'))}>
+      <div style={S('color:#5E6673;font-size:13px')}>{label}</div>
+      <div style={S('margin-top:2px;font-size:28px;line-height:1.1;font-weight:500;letter-spacing:-0.03em;font-variant-numeric:tabular-nums')}>{value}</div>
+    </div>
+  );
+}
+
+/* ---------- Full-page screens (the phone's pages that slide over the current one) ---------- */
+/** The screen itself: covers its parent, grey background. */
+export const PAGE = "position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;display:flex;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4";
+/** The white strip of buttons pinned to the bottom of such a screen. */
+export const BAR = 'flex:0 0 auto;padding:14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3;display:flex;flex-direction:column;gap:12px';
+/** A white card holding rows. */
+export const CARD = 'box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:4px 18px';
+/** The top of such a screen: back button, optional person's circle, title (and a grey line under it), and any buttons on the right. */
+export function ScreenHeader({ title, sub, onBack, backHref, backLabel = 'Back', avatar, photo, style, children }: {
+  title: ReactNode; sub?: ReactNode; onBack?: () => void; backHref?: string; backLabel?: string; avatar?: string; photo?: string | null; style?: string; children?: ReactNode;
+}) {
+  return (
+    <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px;border-bottom:1px solid #E6E8EC' + (style ? ';' + style : ''))}>
+      {backHref ? <Link href={backHref} aria-label={backLabel} style={S(RING + ';text-decoration:none')}>{BACK}</Link> : onBack && <button onClick={onBack} aria-label={backLabel} style={S(RING)}>{BACK}</button>}
+      {avatar && <Avatar name={avatar} photo={photo} size="sm" />}
+      <div style={S('flex:1 1 auto;min-width:0')}>
+        <div style={S('font-size:18px;font-weight:600;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{title}</div>
+        {sub && <div style={S('font-size:13px;color:#5E6673;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{sub}</div>}
+      </div>
+      {children}
+    </header>
+  );
+}
+/** A labelled box on a form: the caption on top, the input (FIELD_IN) inside. */
+export function Field({ label, children, htmlFor }: { label: string; children: ReactNode; htmlFor?: string }) {
+  return <label htmlFor={htmlFor} style={S('display:block;box-sizing:border-box;padding:10px 16px 12px;border:1px solid #E1E4E9;border-radius:16px;background:#FFFFFF')}><span style={S('display:block;font-size:12.5px;color:#5E6673')}>{label}</span>{children}</label>;
+}
+/** The same box showing an answer instead of asking for one. */
+export function AnswerBox({ label, children, muted }: { label: string; children: ReactNode; muted?: boolean }) {
+  return (
+    <div style={S('box-sizing:border-box;padding:10px 16px 12px;border:1px solid #E1E4E9;border-radius:16px;background:#FFFFFF')}>
+      <div style={S('font-size:12.5px;color:#5E6673;overflow-wrap:anywhere')}>{label}</div>
+      <div style={S('margin-top:3px;font-size:16px;overflow-wrap:anywhere;' + (muted ? 'color:#8A93A0;font-weight:400' : 'font-weight:600'))}>{children}</div>
     </div>
   );
 }

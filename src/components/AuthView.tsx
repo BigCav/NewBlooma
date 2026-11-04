@@ -5,12 +5,11 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { S } from '@/app/(dash)/calendar/pickers';
 import { requestReset, setNewPassword, signIn, signUp } from '@/app/auth-actions';
-import { BLACK, FieldError, OUTLINE, dim } from '@/components/ui';
+import { BLACK, FieldError, INPUT, LabelledField, OUTLINE, PasswordInput, dim } from '@/components/ui';
 import { TONE } from '@/lib/tones';
 import { firstName } from '@/lib/people';
 
 type Mode = 'in' | 'up' | 'reset' | 'new';
-const FIELD = 'box-sizing:border-box;width:100%;min-height:0;height:48px;padding:0 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:16px;color:#0E1116;background:#FFFFFF';
 const COPY: Record<Mode, { title: string; sub: string; cta: string }> = {
   in: { title: 'Welcome back', sub: 'Sign in to manage your salon.', cta: 'Sign in' },
   up: { title: 'Create your account', sub: 'Set up Aster in a few minutes. No card needed.', cta: 'Create account' },
@@ -79,18 +78,15 @@ export function AuthView({ mode: initial }: { mode: Mode }) {
           </div>
           {!done && <>
             <form onSubmit={submit} noValidate style={S('display:flex;flex-direction:column;gap:16px')}>
-              {mode === 'up' && <div style={S('display:flex;flex-direction:column;gap:6px')}><label htmlFor="si-name" style={S('font-size:14px;font-weight:600')}>Your name</label><input id="si-name" className="bkf" type="text" value={name} onChange={(e) => { setName(e.target.value); setError(''); }} placeholder="Full name" autoComplete="name" style={S(FIELD)} /></div>}
-              {mode !== 'new' && <div style={S('display:flex;flex-direction:column;gap:6px')}><label htmlFor="si-email" style={S('font-size:14px;font-weight:600')}>Email</label><input id="si-email" className="bkf" type="email" value={email} onChange={(e) => { setEmail(e.target.value); setError(''); }} placeholder="you@salon.com" autoComplete="email" style={S(FIELD)} /></div>}
+              {mode === 'up' && <LabelledField id="si-name" label="Your name"><input id="si-name" className="bkf" type="text" value={name} onChange={(e) => { setName(e.target.value); setError(''); }} placeholder="Full name" autoComplete="name" style={S(INPUT)} /></LabelledField>}
+              {mode !== 'new' && <LabelledField id="si-email" label="Email"><input id="si-email" className="bkf" type="email" value={email} onChange={(e) => { setEmail(e.target.value); setError(''); }} placeholder="you@salon.com" autoComplete="email" style={S(INPUT)} /></LabelledField>}
               {mode !== 'reset' && (
                 <div style={S('display:flex;flex-direction:column;gap:6px')}>
                   <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
                     <label htmlFor="si-pw" style={S('font-size:14px;font-weight:600')}>{mode === 'new' ? 'New password' : 'Password'}</label>
                     {mode === 'in' && <button type="button" onClick={() => goMode('reset')} style={S('border:0;background:transparent;padding:4px 0;color:#5B3DF5;font-size:13.5px;font-weight:600')}>Forgot password?</button>}
                   </div>
-                  <div style={S('position:relative')}>
-                    <input id="si-pw" className="bkf" type={show ? 'text' : 'password'} value={pw} onChange={(e) => { setPw(e.target.value); setError(''); }} placeholder="Password" autoComplete={mode === 'in' ? 'current-password' : 'new-password'} style={S(FIELD + ';padding-right:76px')} />
-                    <button type="button" onClick={() => setShow(!show)} style={S('position:absolute;right:6px;top:4px;height:40px;padding:0 12px;border:0;border-radius:999px;background:transparent;color:#5B3DF5;font-size:13.5px;font-weight:600')}>{show ? 'Hide' : 'Show'}</button>
-                  </div>
+                  <PasswordInput id="si-pw" value={pw} onChange={(v) => { setPw(v); setError(''); }} show={show} onToggle={() => setShow(!show)} placeholder="Password" autoComplete={mode === 'in' ? 'current-password' : 'new-password'} />
                 </div>
               )}
               {!!error && <FieldError>{error}</FieldError>}
