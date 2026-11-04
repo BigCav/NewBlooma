@@ -120,7 +120,7 @@ const CARD_STRUCK = 'background:color-mix(in srgb, ' + TONE.red.bg + ' 45%, #FFF
 /** The front page of a profile: who it is, the three round actions, contact details and the list of pages. */
 function ProfileHome({ c, messages, rec, setRec, onOpen, onMore }: { c: C; messages: number; rec: boolean; setRec: (v: boolean) => void; onOpen: (v: Sub) => void; onMore: () => void }) {
   const { row, d } = c;
-  const book = `/calendar?new=1&c=${encodeURIComponent(row.name)}`;
+  const book = `/calendar?new=1&cid=${encodeURIComponent(row.id)}`;
   const ring = RING + ';flex:0 0 52px;width:52px;height:52px';
   const counts: Partial<Record<Sub, number>> = { appointments: d.appts.length, messages, notes: c.notes.length, alerts: c.allergies.length, forms: d.forms.length };
   const menu = (id: Sub, label: string, indent?: boolean) => (

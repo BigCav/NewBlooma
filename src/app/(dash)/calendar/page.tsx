@@ -11,7 +11,7 @@ import { buildCfg, buildClosed, buildHours, buildOffers, buildRecent, buildServi
 export const metadata = { title: 'Calendar' };
 export const dynamic = 'force-dynamic';
 
-export default async function Calendar({ searchParams }: { searchParams: Promise<{ d?: string; v?: string; s?: string; new?: string; c?: string; b?: string }> }) {
+export default async function Calendar({ searchParams }: { searchParams: Promise<{ d?: string; v?: string; s?: string; new?: string; c?: string; cid?: string; b?: string }> }) {
   const { sb, salon, settings, staff } = await requireCtx();
   // A terminal payment that finished while nobody was watching still finishes its sale.
   await settleTerminals(salon.id);
@@ -36,6 +36,8 @@ export default async function Calendar({ searchParams }: { searchParams: Promise
     sb.from('closed_periods').select('starts_on,ends_on,reason').gte('ends_on', ymd(new Date(Date.now() - 2 * 86400000), salon.timezone)),
     sb.from('products').select('id,name,brand,price_cents,stock').eq('active', true).order('name'),
   ]);
+  // "Book" from a client's profile names the client by id, so the booking goes on them instead of a new client with the same name.
+  const known = /^[0-9a-f-]{36}$/i.test(sp.cid ?? '') ? (await sb.from('clients').select('id,name').eq('id', sp.cid!).maybeSingle()).data : null;
   const ids = (bk ?? []).map((x) => x.id);
   const { data: sales } = ids.length ? await sb.from('sales').select('id,booking_id,status,total_cents,method').in('booking_id', ids).order('created_at', { ascending: false }) : { data: [] as any[] };
   const cids = [...new Set((bk ?? []).map((x: any) => x.client_id).filter(Boolean))] as string[];
@@ -78,7 +80,7 @@ export default async function Calendar({ searchParams }: { searchParams: Promise
       day={day} today={today} view={view} nowMin={nowMin} tz={salon.timezone}
       team={(team ?? []).map((t) => ({ id: t.id, name: t.name, role: t.role_title ?? '', photo: t.photo_url ?? null }))}
       bookings={bookings} blocks={blocks} hours={hours} closed={closed} services={services}
-      staffFilter={sp.s ?? 'all'} slug={salon.slug} offers={offers} cfg={cfg} terminal={!!payset?.terminal_enabled} recent={recent} packages={packages} products={(pr ?? []).map((x) => ({ id: x.id, name: x.name, brand: x.brand ?? '', priceCents: x.price_cents, stock: x.stock }))} initialNew={sp.new === '1'} initialClient={sp.c ?? ''} initialSel={/^[0-9a-f-]{36}$/i.test(sp.b ?? '') ? sp.b : undefined}
+      staffFilter={sp.s ?? 'all'} slug={salon.slug} offers={offers} cfg={cfg} terminal={!!payset?.terminal_enabled} recent={recent} packages={packages} products={(pr ?? []).map((x) => ({ id: x.id, name: x.name, brand: x.brand ?? '', priceCents: x.price_cents, stock: x.stock }))} initialNew={sp.new === '1'} initialClient={known?.name ?? sp.c ?? ''} initialClientId={known?.id} initialSel={/^[0-9a-f-]{36}$/i.test(sp.b ?? '') ? sp.b : undefined}
     />
   );
 }

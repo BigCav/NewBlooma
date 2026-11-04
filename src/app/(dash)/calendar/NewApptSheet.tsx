@@ -9,8 +9,8 @@ import type { Props } from './calUi';
 export type NewApptData = Pick<Props, 'today' | 'nowMin' | 'tz' | 'slug' | 'team' | 'hours' | 'closed' | 'services' | 'offers' | 'cfg' | 'recent'>;
 
 /** The new-appointment sheet on its own, over whatever page the + button was pressed on. */
-export default function NewApptSheet({ data, onClose, onCreated }: { data: NewApptData; onClose: () => void; onCreated: (r: { id?: string; day: string }) => void }) {
-  const p: Props = { ...data, day: data.today, view: 'day', bookings: [], blocks: [], staffFilter: 'all', initialNew: true, onCreated };
+export default function NewApptSheet({ data, client, onClose, onCreated }: { data: NewApptData; /** An existing client to book (from their profile). */ client?: { id: string; name: string } | null; onClose: () => void; onCreated: (r: { id?: string; day: string }) => void }) {
+  const p: Props = { ...data, day: data.today, view: 'day', bookings: [], blocks: [], staffFilter: 'all', initialNew: true, initialClient: client?.name, initialClientId: client?.id, onCreated };
   const c = useCalendar(p);
   // Close once the sheet has been open and is then dismissed.
   const wasOpen = useRef(false);

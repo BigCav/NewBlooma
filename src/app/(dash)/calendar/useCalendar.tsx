@@ -406,7 +406,7 @@ export function useCalendar(props: Props) {
   };
   const openNew = () => { setNf(blank(firstOpenDay(day < today ? today : day))); setAmap({}); setMode('new'); setOpen(true); setError(''); setNotice(''); };
   const [pendingSel, setPendingSel] = useState<string | null>(null);
-  useEffect(() => { if (props.initialNew) { openNew(); if (props.initialClient) setNf((n) => ({ ...n, client: props.initialClient! })); } // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (props.initialNew) { openNew(); if (props.initialClient) setNf((n) => ({ ...n, client: props.initialClient!, clientId: props.initialClientId ?? null })); } // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   // Opened from a link (for example the inbox): show that booking.
   useEffect(() => { if (props.initialSel) { setSelId(props.initialSel); setOpen(true); setMode('view'); setError(''); setNotice(''); } // eslint-disable-next-line react-hooks/exhaustive-deps

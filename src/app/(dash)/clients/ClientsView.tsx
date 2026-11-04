@@ -2,6 +2,7 @@
 // 1:1 conversion of the prototype's Clients.dc.html and MobileClients.dc.html. Markup and style strings are kept as written;
 // only the {{ }} holes are real data and handlers are real server actions.
 import { BottomSheet } from '@/components/BottomSheet';
+import { openNewAppt } from '@/components/NewApptHost';
 import { rootCls } from '@/components/drawer';
 import { useNewParam } from '@/components/useNewParam';
 import { Avatar, BLACK, CLOSE, Chip, DESK_LIST, FieldError, FilterChip, Icon, Note, Notice, OUTLINE, RING, ROW_LIST, Stat, TILE } from '@/components/ui';
@@ -13,14 +14,13 @@ import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
-import { BookPanel, type BookData } from './BookPanel';
 import { createClient } from './actions';
 import { ActiveFilter, FilterButton, FilterSheet } from '@/components/FilterBits';
 import { NewClientFlow } from './NewClientFlow';
 import { FILTERS, TAG_TONE, type Channels, type ClientRow } from './shared';
 
-type Props = { clients: ClientRow[]; count: number; newThisMonth: number; rebookRate: string; book: BookData; channels: Channels };
-type Mode = 'view' | 'book' | 'new';
+type Props = { clients: ClientRow[]; count: number; newThisMonth: number; rebookRate: string; channels: Channels };
+type Mode = 'view' | 'new';
 const SHOW_MAX = 300;
 
 function useClients(props: Props) {
@@ -63,8 +63,7 @@ function useClients(props: Props) {
       router.refresh();
     });
   };
-  const booked = (when: string) => { setMode('view'); setError(''); setNotice('Booked for ' + when); router.refresh(); };
-  return { ...props, items, narrow, selectedId, filter, setFilter, query, setQuery, mode, setMode, notice, setNotice, error, setError, nc, setNc, open, setOpen, filtered, sel, first, select, cancel, openNew, create, booked, busy };
+  return { ...props, items, narrow, selectedId, filter, setFilter, query, setQuery, mode, setMode, notice, setNotice, error, setError, nc, setNc, open, setOpen, filtered, sel, first, select, cancel, openNew, create, busy };
 }
 type C = ReturnType<typeof useClients>;
 export type ClientsCtl = C;
@@ -110,19 +109,18 @@ function MobileClientView({ c, sel }: { c: C; sel: ClientRow }) {
       {!!c.error && <FieldError>{c.error}</FieldError>}
       <div style={S('display:flex;gap:10px')}>
         <Link href={`/clients/${sel.id}`} style={S(OUTLINE)}>Open profile</Link>
-        <button onClick={() => { c.setMode('book'); c.setError(''); c.setNotice(''); }} style={S(BLACK)}>Book appointment</button>
+        <button onClick={() => { c.setError(''); c.setNotice(''); openNewAppt({ id: sel.id, name: sel.name }); }} style={S(BLACK)}>Book appointment</button>
       </div>
     </div>
   </>);
 }
 
-/* What the sheet shows under its header: the quick view of the chosen client, or the Book appointment panel. */
+/* What the sheet shows under its header: the quick view of the chosen client (Book appointment opens the same new-appointment sheet as everywhere else). */
 function Panel({ c }: { c: C }) {
   const { sel } = c;
   if (c.mode === 'view' && sel) return <MobileClientView c={c} sel={sel} />;
   return (<>
     {c.mode === 'view' && !sel && c.items.length === 0 && <Note>No clients yet. Add your first client to get started.</Note>}
-    {c.mode === 'book' && sel && <BookPanel data={c.book} client={{ id: sel.id, name: sel.name, first: c.first }} mobile onBooked={c.booked} onCancel={c.cancel} />}
   </>);
 }
 

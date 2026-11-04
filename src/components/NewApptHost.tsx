@@ -10,8 +10,9 @@ const loadSheet = () => import('@/app/(dash)/calendar/NewApptSheet');
 const Sheet = dynamic(loadSheet, { ssr: false });
 
 export const NEW_APPT_EVENT = 'aster:new-appt';
-/** Opens the new-appointment sheet over the current page. */
-export const openNewAppt = () => window.dispatchEvent(new Event(NEW_APPT_EVENT));
+type Chosen = { id: string; name: string };
+/** Opens the new-appointment sheet over the current page, for an existing client when one is given (their profile's Book button). */
+export const openNewAppt = (client?: Chosen) => window.dispatchEvent(new CustomEvent<Chosen | null>(NEW_APPT_EVENT, { detail: client && typeof client.id === 'string' ? { id: client.id, name: client.name } : null }));
 
 const FRESH_MS = 5 * 60 * 1000;
 
@@ -20,6 +21,7 @@ export function NewApptHost() {
   const router = useRouter();
   const [show, setShow] = useState(false);
   const [data, setData] = useState<NewApptData | null>(null);
+  const [who, setWho] = useState<Chosen | null>(null);
   const cache = useRef<{ at: number; d: NewApptData } | null>(null);
   const fetching = useRef<Promise<NewApptData | null> | null>(null);
   const fetchData = () => {
@@ -33,7 +35,8 @@ export function NewApptHost() {
     return () => clearTimeout(t);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    const open = () => {
+    const open = (e: Event) => {
+      setWho((e as CustomEvent<Chosen | null>).detail ?? null);
       setShow(true);
       const c = cache.current;
       if (c && Date.now() - c.at < FRESH_MS) { setData(c.d); return; }
@@ -49,5 +52,5 @@ export function NewApptHost() {
       <div role="status" aria-label="Loading">Loading…</div>
     </BottomSheet>
   );
-  return <Sheet data={data} onClose={() => setShow(false)} onCreated={(r) => { setShow(false); cache.current = null; router.push(`/calendar?d=${r.day}${r.id ? '&b=' + r.id : ''}`); }} />;
+  return <Sheet data={data} client={who} onClose={() => setShow(false)} onCreated={(r) => { setShow(false); cache.current = null; router.push(`/calendar?d=${r.day}${r.id ? '&b=' + r.id : ''}`); }} />;
 }
