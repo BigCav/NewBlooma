@@ -57,6 +57,9 @@ export const NAV = {
 export const salonHref = (slug: string) => `/b/${slug}`;
 
 /** The desktop rail, top to bottom (the salon page and Settings sit at the bottom). */
+/** Pages only the owner can open (they send anyone else back to the calendar), so the other roles are not shown a link to them. */
+const OWNER_ONLY: ReadonlySet<string> = new Set(['reports', 'settings']);
+export const visibleTo = (id: string, role: string) => role === 'owner' || !OWNER_ONLY.has(id);
 const RAIL = ['calendar', 'inbox', 'clients', 'waitlist', 'services', 'team', 'payroll', 'sales', 'products', 'packages', 'gift', 'reviews', 'reports'] as const;
 /** The phone tab bar, left to right, with the + button between the second and third. */
 const TABS = ['calendar', 'services', 'clients', 'more'] as const;
@@ -136,9 +139,9 @@ export function SideNav({ slug, unread, role }: { slug: string; unread: number; 
       </button>
       <span className="rail-name" aria-hidden="true">Aster</span>
       </div>
-      {RAIL.map((id) => item(id))}
+      {RAIL.filter((id) => visibleTo(id, role)).map((id) => item(id))}
       {item('store', { marginTop: 'auto' })}
-      {item('settings')}
+      {visibleTo('settings', role) && item('settings')}
       <form action={signOut} style={{ display: 'contents' }}>
         <button type="submit" className="rail-link" title="Sign out" style={{ height: 44, borderRadius: 14, border: 0, font: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', background: 'transparent', color: '#4A525E' }}>
           {ICON.signout()}

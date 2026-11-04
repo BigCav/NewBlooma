@@ -1,6 +1,6 @@
 'use client';
 import { CHEV, OUTLINE, ROW_LIST } from '@/components/ui';
-import { NAV, UnreadBadge, salonHref } from '@/components/Nav';
+import { NAV, UnreadBadge, salonHref, visibleTo } from '@/components/Nav';
 import Link from 'next/link';
 import { MobileHeader, MobileTabs } from '@/components/Chrome';
 import { S } from '../calendar/pickers';
@@ -23,18 +23,19 @@ const ITEMS: [keyof typeof NAV, React.ReactNode][] = [
   ['settings', <><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></>]
 ];
 
-export function MoreView({ slug, signOut }: { slug: string; signOut: () => Promise<void> }) {
+export function MoreView({ slug, role, signOut }: { slug: string; role: string; signOut: () => Promise<void> }) {
+  const items = ITEMS.filter(([id]) => visibleTo(id, role));
   return (
     <div className="m-cal cal-root" style={S("display:flex;position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
       <MobileHeader title="More" subtitle="Everything else in one place" showSearch={false} />
       <main className="page" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:20px')}>
         <ul style={S(ROW_LIST)}>
-          {ITEMS.map(([id, icon], i) => {
+          {items.map(([id, icon], i) => {
             const booking = id === 'store';
             const { label } = NAV[id];
             return (
               <li key={id}>
-                <Link href={booking ? salonHref(slug) : NAV[id].href} target={booking ? '_blank' : undefined} style={S('display:flex;align-items:center;gap:14px;min-height:64px;box-sizing:border-box;padding:10px 16px;' + (i < ITEMS.length - 1 ? 'border-bottom:1px solid #EEF0F3;' : '') + 'text-decoration:none;color:#0E1116')}>
+                <Link href={booking ? salonHref(slug) : NAV[id].href} target={booking ? '_blank' : undefined} style={S('display:flex;align-items:center;gap:14px;min-height:64px;box-sizing:border-box;padding:10px 16px;' + (i < items.length - 1 ? 'border-bottom:1px solid #EEF0F3;' : '') + 'text-decoration:none;color:#0E1116')}>
                   <span style={S('flex:0 0 40px;width:40px;height:40px;border-radius:12px;background:#EEF0F3;display:flex;align-items:center;justify-content:center')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{icon}</svg></span>
                   <span style={S('flex:1 1 auto;min-width:0;font-size:15px;font-weight:600')}>{label}</span>{id === 'inbox' && <UnreadBadge />}{CHEV}
                 </Link>
