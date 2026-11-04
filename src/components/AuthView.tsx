@@ -30,7 +30,11 @@ const ALT: Record<Mode, [string, string, Mode] | null> = {
 };
 const BULLET = <span aria-hidden="true" style={S('width:8px;height:8px;border-radius:999px;background:#8F7CFF;flex:0 0 8px')}></span>;
 
-export function AuthView({ mode: initial }: { mode: Mode }) {
+const TEAM_POINTS = ['See your own appointments and shifts', 'Get notified when clients book you', 'Check out clients in a couple of taps'];
+const SALON_POINTS = ['One calendar for the whole team', 'Online booking that fills gaps for you', 'Checkout, receipts and reports in one place'];
+
+/** `invite`: opened from a team invite link, so the name is already known, no salon is set up, and signing up or in finishes joining that salon's team. */
+export function AuthView({ mode: initial, invite }: { mode: Mode; invite?: { token: string; name: string; salon: string } | null }) {
   const [mode, setMode] = useState<Mode>(initial);
   const [email, setEmail] = useState(''); const [pw, setPw] = useState(''); const [name, setName] = useState('');
   const [show, setShow] = useState(false); const [error, setError] = useState('');
@@ -39,17 +43,20 @@ export function AuthView({ mode: initial }: { mode: Mode }) {
   const goMode = (m: Mode) => { setMode(m); setError(''); setDone(null); };
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); if (busy) return;
-    if (mode === 'up' && !name.trim()) { setError('Add your name.'); return; }
+    if (mode === 'up' && !invite && !name.trim()) { setError('Add your name.'); return; }
     if (mode !== 'new' && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) { setError('Enter a valid email address.'); return; }
     if (mode === 'in' && !pw) { setError('Enter your password.'); return; }
     if ((mode === 'up' || mode === 'new') && pw.length < 8) { setError('Use at least 8 characters for your password.'); return; }
     setBusy(true);
     try {
-      const r = mode === 'in' ? await signIn({ email, password: pw }) : mode === 'up' ? await signUp({ name, email, password: pw }) : mode === 'reset' ? await requestReset({ email }) : await setNewPassword({ password: pw });
+      const r = mode === 'in' ? await signIn({ email, password: pw, invite: invite?.token }) : mode === 'up' ? await signUp({ name, email, password: pw, invite: invite?.token }) : mode === 'reset' ? await requestReset({ email }) : await setNewPassword({ password: pw });
       if (r?.error) setError(r.error); else if (r?.status) { setDone(r.status); setError(''); }
     } catch (err: any) { if (err?.digest?.startsWith?.('NEXT_REDIRECT')) throw err; setError('Something went wrong. Please try again.'); } finally { setBusy(false); }
   };
-  const c = COPY[mode], aside = ASIDE[mode], alt = ALT[mode];
+  const joining = !!invite && (mode === 'in' || mode === 'up');
+  const c = joining ? { ...COPY[mode], sub: mode === 'up' ? `You are joining ${invite.salon} as ${invite.name}.` : `Sign in to join ${invite.salon}.` } : COPY[mode];
+  const aside = joining ? ['You are invited to join the team.', 'See your appointments as soon as you are in.'] : ASIDE[mode];
+  const alt = ALT[mode];
   const first = firstName(name);
   const dc = done === 'created' ? { t: 'Account created', p: 'Welcome, ' + first + '. Next, tell us about your salon.', href: '/setup', label: 'Set up your salon' }
     : done === 'confirm' ? { t: 'Check your email', p: 'We sent a confirmation link to ' + email.trim() + '. Open it to finish creating your account.', href: '', label: '' }
@@ -61,7 +68,7 @@ export function AuthView({ mode: initial }: { mode: Mode }) {
         <div style={S('display:flex;flex-direction:column;gap:28px;max-width:440px')}>
           <h2 style={S('margin:0;font-size:44px;line-height:1.08;font-weight:600;letter-spacing:-0.03em')}>{aside[0]}</h2>
           <ul style={S('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:14px;color:#C9CDD5;font-size:16px')}>
-            {['One calendar for the whole team', 'Online booking that fills gaps for you', 'Checkout, receipts and reports in one place'].map((t) => <li key={t} style={S('display:flex;gap:12px;align-items:center')}>{BULLET}{t}</li>)}
+            {(joining ? TEAM_POINTS : SALON_POINTS).map((t) => <li key={t} style={S('display:flex;gap:12px;align-items:center')}>{BULLET}{t}</li>)}
           </ul>
         </div>
         <div aria-hidden="true" style={S('color:#8A93A0;font-size:13px')}>{' '}</div>
@@ -78,7 +85,7 @@ export function AuthView({ mode: initial }: { mode: Mode }) {
           </div>
           {!done && <>
             <form onSubmit={submit} noValidate style={S('display:flex;flex-direction:column;gap:16px')}>
-              {mode === 'up' && <LabelledField id="si-name" label="Your name"><input id="si-name" className="bkf" type="text" value={name} onChange={(e) => { setName(e.target.value); setError(''); }} placeholder="Full name" autoComplete="name" style={S(INPUT)} /></LabelledField>}
+              {mode === 'up' && !invite && <LabelledField id="si-name" label="Your name"><input id="si-name" className="bkf" type="text" value={name} onChange={(e) => { setName(e.target.value); setError(''); }} placeholder="Full name" autoComplete="name" style={S(INPUT)} /></LabelledField>}
               {mode !== 'new' && <LabelledField id="si-email" label="Email"><input id="si-email" className="bkf" type="email" value={email} onChange={(e) => { setEmail(e.target.value); setError(''); }} placeholder="you@salon.com" autoComplete="email" style={S(INPUT)} /></LabelledField>}
               {mode !== 'reset' && (
                 <div style={S('display:flex;flex-direction:column;gap:6px')}>

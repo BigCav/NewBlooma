@@ -34,9 +34,9 @@ export default async function Join({ params, searchParams }: { params: Promise<{
       {user ? (
         <form action={accept.bind(null, token)}><PrimaryButton>Accept invite</PrimaryButton></form>
       ) : (<>
-        <PrimaryLink href="/sign-up">Create account</PrimaryLink>
-        <Note>After signing up, open this invite link again to finish joining.</Note>
-        <SignInLine />
+        <PrimaryLink href={`/sign-up?invite=${encodeURIComponent(token)}`}>Create account</PrimaryLink>
+        <Note>Just an email and a password. You join the team straight after.</Note>
+        <SignInLine href={`/sign-in?invite=${encodeURIComponent(token)}`} />
       </>)}
     </Shell>
   );

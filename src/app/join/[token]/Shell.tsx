@@ -41,6 +41,6 @@ export const Problem = ({ children }: { children: React.ReactNode }) => <FieldEr
 export const PrimaryLink = ({ href, children }: { href: string; children: React.ReactNode }) => <Link href={href} style={S(DARK)}>{children}</Link>;
 export const LightLink = ({ href, children }: { href: string; children: React.ReactNode }) => <Link href={href} style={S(LIGHT)}>{children}</Link>;
 export const PrimaryButton = ({ children }: { children: React.ReactNode }) => <button style={S(DARK)}>{children}</button>;
-export const SignInLine = () => (
-  <div style={S('display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px;padding-top:20px;border-top:1px solid #E6E8EC;font-size:14.5px;color:#5E6673')}><span>Already have an account?</span><Link href="/sign-in" style={S('padding:6px 0;color:#5B3DF5;font-weight:600;text-decoration:none')}>Sign in</Link></div>
+export const SignInLine = ({ href = '/sign-in' }: { href?: string }) => (
+  <div style={S('display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px;padding-top:20px;border-top:1px solid #E6E8EC;font-size:14.5px;color:#5E6673')}><span>Already have an account?</span><Link href={href}style={S('padding:6px 0;color:#5B3DF5;font-weight:600;text-decoration:none')}>Sign in</Link></div>
 );

@@ -74,7 +74,7 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
         <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:10px')}>
           <label className="search" style={S('display:flex;align-items:center;gap:10px;height:44px;box-sizing:border-box;padding:0 16px;border-radius:999px;background:#FFFFFF;border:1px solid #E6E8EC;color:#5E6673')}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6673" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></svg>
-            <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search client, phone or service" aria-label="Search appointments" style={{ ...S('border:0;outline:none;background:transparent;font:inherit;color:#0E1116;width:150px'), padding: '1px 2px', minHeight: 0, borderRadius: 0 }} />
+            <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search client, phone or service" aria-label="Search appointments" style={{ ...S('border:0;outline:none;background:transparent;font:inherit;color:#0E1116;width:210px'), padding: '1px 2px', minHeight: 0, borderRadius: 0 }} />
           </label>
           <button onClick={openNew} style={S(BLACK_ACTION)}>
             <Icon name="plus" color="#FFFFFF" />

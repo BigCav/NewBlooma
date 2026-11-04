@@ -5,21 +5,30 @@ import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { supabaseServer } from '@/lib/supabase/server';
 import { allow, clientIp } from '@/lib/rate-limit';
+import { openInvite } from '@/lib/invites';
 
 type R = { error?: string; status?: 'created' | 'confirm' | 'sent' };
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const origin = async () => { const h = await headers(); return process.env.NEXT_PUBLIC_APP_URL ?? `https://${h.get('x-forwarded-host') ?? h.get('host')}`; };
 
-export async function signIn(input: { email: string; password: string }): Promise<R> {
+/** `invite` is the token of a team invite (the /join link): the person joins that salon straight after signing in instead of setting up a new one. */
+export async function signIn(input: { email: string; password: string; invite?: string }): Promise<R> {
   if (!EMAIL.test(input.email.trim()) || !input.password) return { error: 'Email or password is incorrect.' };
   const sb = await supabaseServer();
   const { error } = await sb.auth.signInWithPassword({ email: input.email.trim(), password: input.password });
   if (error) return { error: 'Email or password is incorrect.' };
+  if (input.invite) {
+    const { error: joinErr } = await sb.rpc('accept_staff_invite', { p_token: input.invite });
+    if (joinErr) redirect(`/join/${encodeURIComponent(input.invite)}?err=1`);
+  }
   redirect('/calendar');
 }
 
-export async function signUp(input: { name: string; email: string; password: string }): Promise<R> {
-  const name = input.name.trim(), email = input.email.trim();
+/** With an `invite` the name is the one already on the Team page, so only an email and a password are asked for. */
+export async function signUp(input: { name?: string; email: string; password: string; invite?: string }): Promise<R> {
+  const inv = input.invite ? await openInvite(input.invite) : null;
+  if (input.invite && !inv) return { error: 'This invite is no longer valid. Ask the salon owner to send you a new one.' };
+  const name = inv ? inv.name : (input.name ?? '').trim(), email = input.email.trim();
   if (!name) return { error: 'Add your name.' };
   if (name.length > 80) return { error: 'Keep your name under 80 characters.' };
   if (!EMAIL.test(email) || email.length > 254) return { error: 'Enter a valid email address.' };
@@ -32,6 +41,11 @@ export async function signUp(input: { name: string; email: string; password: str
   const sb = await supabaseServer();
   const { error: inErr } = await sb.auth.signInWithPassword({ email, password: input.password });
   if (inErr) return { error: 'Your account was created. Please sign in.' };
+  if (inv) {
+    const { error: joinErr } = await sb.rpc('accept_staff_invite', { p_token: inv.token });
+    if (joinErr) redirect(`/join/${encodeURIComponent(inv.token)}?err=1`);
+    redirect('/calendar');
+  }
   await sendWelcomeEmail(email, name);
   return { status: 'created' };
 }
