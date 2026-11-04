@@ -51,7 +51,8 @@ export function DrawerKeys() {
       if (!wide.matches || calm.matches) return;
       for (const m of list) {
         m.removedNodes.forEach((n) => {
-          if (!(n instanceof HTMLElement) || n.isConnected || n.classList.contains('m-drawer-out') || n.classList.contains('sheet-out')) return;
+          // data-instant: a placeholder drawer that is replaced by the real one in the same place, so it is not played out.
+          if (!(n instanceof HTMLElement) || n.isConnected || n.hasAttribute('data-instant') || n.classList.contains('m-drawer-out') || n.classList.contains('sheet-out')) return;
           if (n.classList.contains('m-drawer')) {
             const ghost = n.cloneNode(true) as HTMLElement;
             ghost.classList.add('m-drawer-out');

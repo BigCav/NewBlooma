@@ -181,7 +181,8 @@ export function DayTimeStep({ days, day, onDay, slots, why, time, onTime }: {
 }
 
 /** A client card with a Change button, as at the top of each summary. */
-export function ClientCard({ name, existing, onChange }: { name: string; existing: boolean; onChange: () => void }) {
+/** The client on a summary. Without `onChange` there is no Change button (the client was fixed by where the booking started). */
+export function ClientCard({ name, existing, onChange }: { name: string; existing: boolean; onChange?: () => void }) {
   return (
     <div style={S('display:flex;align-items:center;gap:14px;padding:16px;border:1px solid #E6E8EC;border-radius:22px')}>
       <Avatar name={name.trim()} size="xl" />
@@ -189,7 +190,7 @@ export function ClientCard({ name, existing, onChange }: { name: string; existin
         <div style={S('font-size:19px;font-weight:600;letter-spacing:-0.02em;line-height:1.2;overflow-wrap:anywhere')}>{name.trim()}</div>
         <div style={S('margin-top:2px;font-size:13.5px;color:#5E6673')}>{existing ? 'Existing client' : 'New client'}</div>
       </div>
-      <button onClick={onChange} style={S('flex:0 0 auto;height:36px;padding:0 14px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;font:inherit;font-size:13.5px;font-weight:500;cursor:pointer')}>Change</button>
+      {onChange && <button onClick={onChange} style={S('flex:0 0 auto;height:36px;padding:0 14px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF;font:inherit;font-size:13.5px;font-weight:500;cursor:pointer')}>Change</button>}
     </div>
   );
 }

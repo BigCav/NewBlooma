@@ -187,3 +187,5 @@ label:has(> input:focus-visible),label:has(> textarea:focus-visible),label:has(>
 .faq-panel>div{overflow:hidden;min-height:0}
 .faq-open .faq-panel{grid-template-rows:1fr;opacity:1;visibility:visible;transition-delay:0s}
 @media (prefers-reduced-motion:reduce){.faq-btn,.faq-v,.faq-panel{transition:none !important}}
+/* A drawer that takes the place of its own loading placeholder appears where it is, without sliding in a second time. */
+.m-drawer.swap,.m-drawer.swap *{animation:none !important}

@@ -17,13 +17,16 @@ export function NewApptWizard({ c, props, onCancel }: { c: ReturnType<typeof use
   const { nf, setNf, setError, error, hasError, busy, close, createNew, nLock, nFirstSvc, nPickSvc, nOffers, nSlots, nWhy, days14, offered, offers, staffName, services, team, nPlan } = c;
   const typed = nf.client.trim();
   const plan = nPlan();
-  const { step, go, jump, forward, back } = useSteps(4, () => setError(''));
+  // Booking for a client picked from their profile: they are already chosen, so the first step is the services.
+  const fixed = !!props.initialClientId;
+  const off = fixed ? 1 : 0;
+  const { step, go, jump, forward, back } = useSteps(4, () => setError(''), off);
   const canNext = step === 0 ? !!typed : step === 1 ? plan.sel.length > 0 : step === 2 ? !!nf.staff : step === 3 ? nf.time !== null && !nWhy(nf.time) : true;
   const next = () => { if (!canNext) { setError(step === 0 ? "Add the client's name." : step === 1 ? 'Choose a service.' : step === 2 ? 'Choose a team member.' : 'Choose a time.'); return; } forward(); };
   const shut = onCancel ?? close;
 
   return (
-    <StepShell step={step} titles={TITLES} onBack={back} onClose={shut} error={hasError ? error : ''}
+    <StepShell step={step - off} titles={fixed ? TITLES.slice(1) : TITLES} onBack={back} onClose={shut} error={hasError ? error : ''}
       summary={step >= 1 && plan.sel.length > 0 ? <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px')}><span style={S('color:#5E6673;font-size:14px')}>{plural(plan.sel.length, 'service') + ', ' + duration(plan.mins)}</span><span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{dollars(plan.priceC)}</span></div> : null}
       actions={[step === 4 ? { label: busy ? 'Adding…' : 'Add appointment', onClick: createNew, disabled: busy } : { label: 'Continue', onClick: next, disabled: !canNext }]}>
       {step === 0 && <ClientStep name={nf.client} clientId={nf.clientId} recent={props.recent ?? []} onChange={(name, id) => { setNf({ ...nf, client: name, clientId: id }); setError(''); }} />}
@@ -37,7 +40,7 @@ export function NewApptWizard({ c, props, onCancel }: { c: ReturnType<typeof use
       {step === 3 && <DayTimeStep days={days14} day={nf.day} onDay={(d) => { setNf({ ...nf, day: d, time: null }); setError(''); }} slots={nSlots} why={nWhy} time={nf.time} onTime={(t) => { setNf({ ...nf, time: t }); setError(''); }} />}
 
       {step === 4 && (<>
-        <ClientCard name={nf.client} existing={!!nf.clientId} onChange={() => jump(0)} />
+        <ClientCard name={nf.client} existing={!!nf.clientId} onChange={fixed ? undefined : () => jump(0)} />
         <DetailRows go={jump} rows={[
           { icon: ICONS.day, text: dayInfo(nf.day).full, step: 3 },
           { icon: ICONS.time, text: nf.time !== null ? spanText(nf.time, nf.time + plan.dur) : '', step: 3 },
