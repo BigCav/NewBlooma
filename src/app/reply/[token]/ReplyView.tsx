@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { sendClientReply } from './actions';
 import { S } from '@/app/(dash)/calendar/pickers';
-import { BLACK, FieldError, dim } from '@/components/ui';
+import { BLACK, FieldError, TEXTAREA, dim } from '@/components/ui';
 
 type Msg = { mine: boolean; text: string; at: string };
 const card: React.CSSProperties = { boxSizing: 'border-box', background: '#FFFFFF', border: '1px solid #E6E8EC', borderRadius: 24, padding: 24, display: 'flex', flexDirection: 'column', gap: 16 };
@@ -36,7 +36,7 @@ export function ReplyView({ token, salon, first, context, thread }: { token: str
             ))}
           </ul>
           <label htmlFor="reply" style={{ fontSize: 14, fontWeight: 600 }}>Your reply</label>
-          <textarea id="reply" value={text} onChange={(e) => { setText(e.target.value); setError(''); }} rows={4} maxLength={600} placeholder="Write a reply" style={{ boxSizing: 'border-box', width: '100%', padding: '12px 14px', border: '1px solid #E1E4E9', borderRadius: 14, font: 'inherit', fontSize: 16, resize: 'vertical' }} />
+          <textarea id="reply" value={text} onChange={(e) => { setText(e.target.value); setError(''); }} rows={4} maxLength={600} placeholder="Write a reply" style={S(TEXTAREA + ';resize:vertical')} />
           {!!error && <FieldError>{error}</FieldError>}
           <button onClick={send} disabled={busy} style={S(BLACK + ';flex:0 0 auto' + dim(busy))}>{busy ? 'Sending…' : 'Send reply'}</button>
           <p style={{ margin: 0, color: '#5E6673', fontSize: 13 }}>{salon} will see this in their inbox and may reply by email or text.</p>

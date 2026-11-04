@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { S } from '@/app/(dash)/calendar/pickers';
 import { checkForm, tickMany, type FillForm, type FormInput, type Question } from '@/lib/forms-shared';
-import { BACK, BLACK, FieldError, INPUT, LabelledField, OUTLINE, dim } from '@/components/ui';
+import { BACK, BLACK, FieldError, INPUT, LabelledField, OUTLINE, TEXTAREA, dim } from '@/components/ui';
 import { TONE } from '@/lib/tones';
 
 type Submit = (inputs: { templateId: string; input: FormInput }[]) => Promise<{ error?: string; errors?: Record<string, Record<string, string>> }>;
@@ -79,7 +79,7 @@ export function FormFillView(p: FillProps) {
           )}
         </>)}
         {q.type === 'short' && <><label htmlFor={'a-' + q.id} style={{ position: 'absolute', left: -9999 }}>{q.label}</label><input id={'a-' + q.id} type="text" maxLength={200} value={typeof ans === 'string' ? ans : ''} onChange={(ev) => set(ev.target.value)} style={{ ...S(INPUT), ...noMin }} /></>}
-        {q.type === 'long' && <><label htmlFor={'a-' + q.id} style={{ position: 'absolute', left: -9999 }}>{q.label}</label><textarea id={'a-' + q.id} rows={4} maxLength={2000} value={typeof ans === 'string' ? ans : ''} onChange={(ev) => set(ev.target.value)} style={{ ...S('box-sizing:border-box;width:100%;min-height:96px;padding:12px 14px;border:1px solid #E1E4E9;border-radius:14px;font:inherit;font-size:16px;color:#0E1116;background:#FFFFFF;resize:vertical'), ...noMin }} /></>}
+        {q.type === 'long' && <><label htmlFor={'a-' + q.id} style={{ position: 'absolute', left: -9999 }}>{q.label}</label><textarea id={'a-' + q.id} rows={4} maxLength={2000} value={typeof ans === 'string' ? ans : ''} onChange={(ev) => set(ev.target.value)} style={S(TEXTAREA + ';min-height:96px;resize:vertical')} /></>}
         {q.type === 'one' && (
           <div role="radiogroup" aria-label={q.label} style={S('display:flex;flex-direction:column;gap:8px')}>
             {q.options.map((o) => <button key={o} type="button" role="radio" aria-checked={ans === o} onClick={() => set(o)} style={S(pickCss(ans === o, false))}><span aria-hidden="true" style={S('flex:0 0 20px;width:20px;height:20px;border-radius:999px;border:1.5px solid ' + (ans === o ? '#0E1116' : '#B9BFC9') + ';background:' + (ans === o ? '#0E1116' : '#FFFFFF') + ';box-shadow:inset 0 0 0 4px #FFFFFF')} />{o}</button>)}
