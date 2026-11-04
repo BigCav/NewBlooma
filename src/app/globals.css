@@ -177,3 +177,13 @@ button.sheet-out,.sheet-out>button[aria-label^="Close"],.sheet-out>button[data-c
 }
 /* A labelled box (a label around a borderless input) shows the focus ring on the box, so every field in the app shows where you are typing. */
 label:has(> input:focus-visible),label:has(> textarea:focus-visible),label:has(> select:focus-visible){outline:2px solid #5B3DF5;outline-offset:2px}
+/* Landing and pricing questions: a hand cursor and a soft tint on hover, and the answer slides open (height and fade) and shuts the same way back. The plus turns into a minus. */
+.faq-btn{cursor:pointer;transition:background-color .15s ease}
+@media (hover:hover){.faq-btn:hover{background:#F7F8FA !important}}
+.faq-btn:focus-visible{outline-offset:-3px}
+.faq-v{transform-origin:12px 12px;transition:transform .3s cubic-bezier(.2,.8,.2,1),opacity .2s ease}
+.faq-open .faq-v{transform:rotate(90deg);opacity:0}
+.faq-panel{display:grid;grid-template-rows:0fr;opacity:0;visibility:hidden;transition:grid-template-rows .3s cubic-bezier(.2,.8,.2,1),opacity .22s ease,visibility 0s linear .3s}
+.faq-panel>div{overflow:hidden;min-height:0}
+.faq-open .faq-panel{grid-template-rows:1fr;opacity:1;visibility:visible;transition-delay:0s}
+@media (prefers-reduced-motion:reduce){.faq-btn,.faq-v,.faq-panel{transition:none !important}}

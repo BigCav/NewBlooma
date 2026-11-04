@@ -3,7 +3,7 @@ import { Icon } from '@/components/ui';
 // Converted from the prototype's Landing/MobileLanding and Pricing/MobilePricing pages. Markup and style strings follow the prototype;
 // "Get started" links go to the register route instead of using a browser-storage flag.
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { S } from '@/app/(dash)/calendar/pickers';
 
 const REGISTER = '/sign-up';
@@ -54,17 +54,21 @@ function useNarrow() {
 
 function Faq({ items, m, title, sub }: { items: { q: string; a: string }[]; m: boolean; title?: string; sub?: string }) {
   const [open, setOpen] = useState(0);
+  const uid = useId();
   const list = (
     <ul style={S('margin:0;padding:0;list-style:none;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;overflow:hidden')}>
       {items.map((f, i) => {
         const on = open === i;
         return (
-          <li key={f.q} style={S('border-top:1px solid #EEF0F3')}>
-            <button type="button" onClick={() => setOpen(on ? -1 : i)} aria-expanded={on} style={S(`display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;box-sizing:border-box;min-height:64px;padding:12px ${m ? 18 : 24}px;border:0;background:transparent;text-align:left;font:inherit;font-size:${m ? 15.5 : 16}px;font-weight:600;color:#0E1116`)}>
+          <li key={f.q} className={on ? 'faq-item faq-open' : 'faq-item'} style={S('border-top:1px solid #EEF0F3')}>
+            <button type="button" className="faq-btn" id={`${uid}-q${i}`} onClick={() => setOpen(on ? -1 : i)} aria-expanded={on} aria-controls={`${uid}-a${i}`} style={S(`display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;box-sizing:border-box;min-height:64px;padding:12px ${m ? 18 : 24}px;border:0;background:transparent;text-align:left;font:inherit;font-size:${m ? 15.5 : 16}px;font-weight:600;color:#0E1116`)}>
               <span>{f.q}</span>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round" style={S('flex:0 0 auto')}><path d={on ? 'M6 12h12' : 'M6 12h12M12 6v12'} /></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1116" strokeWidth="1.9" strokeLinecap="round" style={S('flex:0 0 auto')} aria-hidden="true"><path d="M6 12h12" /><path className="faq-v" d="M12 6v12" /></svg>
             </button>
-            {on && <p style={S(`margin:0;padding:0 ${m ? 18 : 24}px 20px;color:#5E6673;font-size:15px;line-height:1.5`)}>{f.a}</p>}
+            {/* Always in the page, so it can slide open and shut; hidden from screen readers and the tab order while closed. */}
+            <div className="faq-panel" id={`${uid}-a${i}`} role="region" aria-labelledby={`${uid}-q${i}`}>
+              <div><p style={S(`margin:0;padding:0 ${m ? 18 : 24}px 20px;color:#5E6673;font-size:15px;line-height:1.5`)}>{f.a}</p></div>
+            </div>
           </li>
         );
       })}
