@@ -29,6 +29,8 @@ class Query {
     const rows = (db.tables[this.table] ??= []);
     if (this.op === 'insert') {
       if (this.table === 'card_payments' && rows.some((r) => r.txn_ref === this.row.txn_ref)) return { data: null, error: { message: 'duplicate txn_ref' } };
+      // The database allows one open (pending) card step per sale.
+      if (this.table === 'card_payments' && (this.row.status ?? 'pending') === 'pending' && rows.some((r) => r.sale_id === this.row.sale_id && r.status === 'pending')) return { data: null, error: { code: '23505', message: 'one open card step per sale' } };
       const r = { id: `id${++seq}`, status: 'pending', needs_review: false, ...this.row }; rows.push(r);
       return { data: [r], error: null };
     }
@@ -45,6 +47,12 @@ const sb = {
   from: (t: string) => new Query(t),
   rpc: async (name: string, args: any) => {
     db.rpcs.push({ name, args });
+    if (name === 'claim_card_refund') { // as in the database: only an approved payment, claimed once, free again two minutes after an abandoned claim
+      const cp = (db.tables.card_payments ?? []).find((x) => x.id === args.p_payment);
+      if (!cp || cp.status !== 'approved' || (cp.refund_claimed_at && Date.now() - cp.refund_claimed_at < 120000)) return { data: false, error: null };
+      cp.refund_claimed_at = Date.now();
+      return { data: true, error: null };
+    }
     const s = db.tables.sales.find((x) => x.id === args.p_sale)!;
     if (name === 'finalize_sale') {
       if (s.status === 'paid') return s.method === args.p_method ? { error: null } : { error: { message: 'sale_already_paid_another_way' } };
@@ -80,7 +88,11 @@ globalThis.fetch = vi.fn(async (url: any, init: any = {}) => {
   restCalls.push({ url: u, method: init.method ?? 'GET', body });
   if (u.endsWith('/api/v1/sessions') && init.method === 'POST') return new Response(JSON.stringify({ id: 'SESS1', links: [{ rel: 'hpp', href: 'https://uat.windcave.com/hpp/SESS1' }] }), { status: 200 });
   if (u.includes('/api/v1/sessions/SESS1')) return new Response(JSON.stringify(sessionState), { status: 200 });
-  if (u.endsWith('/api/v1/transactions')) return new Response(JSON.stringify(refundReply.body), { status: refundReply.ok ? 200 : 400 });
+  if (u.endsWith('/api/v1/transactions')) {
+    if (refundReply.unreachable) throw new Error('network down');
+    await new Promise((r) => setTimeout(r, 5)); // Windcave takes a moment: a second click can arrive meanwhile
+    return new Response(JSON.stringify(refundReply.body), { status: refundReply.ok ? 200 : 400 });
+  }
   return new Response('{}', { status: 404 });
 }) as any;
 
@@ -327,5 +339,58 @@ describe('card refunds', () => {
     expect(r.error).toMatch(/declined the refund: NOT ALLOWED/);
     expect(sale().status).toBe('paid');
     expect(payments()[0].status).toBe('approved');
+  });
+
+  describe('two clicks at the same moment', () => {
+    const paidOnScreen = () => {
+      sale().status = 'paid'; sale().method = 'card';
+      db.tables.card_payments = [{ id: 'cp2', salon_id: SALON, sale_id: SALE, kind: 'online', txn_ref: 'ON1', status: 'approved', amount_cents: 6000, dps_txn_ref: 'T9' }];
+    };
+    const refundsSent = () => restCalls.filter((c) => c.url.endsWith('/api/v1/transactions')).length;
+
+    it('an on-screen refund clicked twice (or from two devices) is sent to Windcave once', async () => {
+      paidOnScreen();
+      const [a, b] = await Promise.all([refundCard(SALE), refundCard(SALE)]);
+      expect([a, b].filter((r) => r.ok)).toHaveLength(1);
+      expect([a, b].find((r) => r.error)!.error).toMatch(/already being processed/);
+      expect(refundsSent()).toBe(1);
+      expect(sale().status).toBe('refunded');
+      expect(db.rpcs.filter((x) => x.name === 'refund_sale_internal')).toHaveLength(1);
+    });
+
+    it('a refund Windcave declined can be tried again straight away', async () => {
+      paidOnScreen();
+      refundReply = { ok: true, body: { authorised: false, responseText: 'NOT ALLOWED' } };
+      expect((await refundCard(SALE)).error).toMatch(/declined/);
+      refundReply = { ok: true, body: { authorised: true } };
+      expect(await refundCard(SALE)).toEqual({ ok: true });
+      expect(sale().status).toBe('refunded');
+    });
+
+    it('a refund whose outcome is unknown (Windcave unreachable) is not sent a second time straight away', async () => {
+      paidOnScreen();
+      refundReply = { unreachable: true };
+      expect((await refundCard(SALE)).error).toMatch(/Could not reach/);
+      refundReply = { ok: true, body: { authorised: true } };
+      expect((await refundCard(SALE)).error).toMatch(/already being processed/);
+      expect(refundsSent()).toBe(1); // only the first attempt (the one that could not be confirmed) went out
+      expect(sale().status).toBe('paid');
+    });
+
+    it('a terminal payment started twice at the same moment is sent to the terminal once', async () => {
+      const [a, b] = await Promise.all([startTerminal(SALE), startTerminal(SALE)]);
+      expect([a, b].filter((r) => r.txn)).toHaveLength(1);
+      expect([a, b].find((r) => r.error)!.error).toMatch(/already in progress/);
+      expect(hitCalls.filter((c) => c.type === 'Purchase')).toHaveLength(1);
+      expect(payments()).toHaveLength(1);
+    });
+
+    it('a terminal refund started twice at the same moment is sent to the terminal once', async () => {
+      paidOnTerminal();
+      const [a, b] = await Promise.all([startRefund(SALE), startRefund(SALE)]);
+      // The second click either watches the first one's reference or is told one is in progress; either way only one refund goes to the terminal.
+      expect(new Set([a, b].map((r) => r.txn).filter(Boolean)).size).toBe(1);
+      expect(hitCalls.filter((c) => c.type === 'Refund')).toHaveLength(1);
+    });
   });
 });

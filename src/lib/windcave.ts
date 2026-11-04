@@ -71,7 +71,7 @@ export async function startOnline(saleId: string, origin: string): Promise<{ url
   const hpp = (j.links ?? []).find((l: any) => l.rel === 'hpp');
   if (!j.id || !hpp?.href) return { error: 'The payment provider returned an unexpected response.' };
   const ins = await supabaseAdmin().from('card_payments').insert({ salon_id: sale.salon_id, sale_id: sale.id, kind: 'online', txn_ref: txn, session_id: j.id, amount_cents: sale.total_cents });
-  if (ins.error) return { error: 'Could not record the payment attempt.' };
+  if (ins.error) return { error: ins.error.code === '23505' ? 'A card payment is already in progress for this sale.' : 'Could not record the payment attempt.' };
   return { url: hpp.href };
 }
 
@@ -193,7 +193,7 @@ export async function startTerminal(saleId: string, origin?: string): Promise<{ 
   if (open?.length) return { error: 'A card payment is already in progress for this sale.' };
   const txn = ref('TM');
   const ins = await sb.from('card_payments').insert({ salon_id: sale.salon_id, sale_id: sale.id, kind: 'terminal', txn_ref: txn, amount_cents: sale.total_cents });
-  if (ins.error) return { error: 'Could not record the payment attempt.' };
+  if (ins.error) return { error: ins.error.code === '23505' ? 'A card payment is already in progress for this sale.' : 'Could not record the payment attempt.' };
   return dispatch(c, { Station: c.station, Amount: dollars(sale.total_cents), Cur: sale.salons.currency, TxnType: 'Purchase', TxnRef: txn, MRef: sale.salons.name.slice(0, 60) }, txn, origin);
 }
 
@@ -292,7 +292,7 @@ export async function startRefund(saleId: string, origin?: string): Promise<{ tx
   if (!c.hitUser || !c.hitKey || !c.station) return { error: 'The card terminal is not set up. Add its details in Settings.' };
   const txn = ref('RF');
   const ins = await sb.from('card_payments').insert({ salon_id: cp.salon_id, sale_id: saleId, kind: 'terminal', txn_ref: txn, amount_cents: cp.amount_cents });
-  if (ins.error) return { error: 'Could not record the refund attempt.' };
+  if (ins.error) return { error: ins.error.code === '23505' ? 'A refund for this sale is already in progress.' : 'Could not record the refund attempt.' };
   return dispatch(c, { Station: c.station, Amount: dollars(cp.amount_cents), Cur: sale.salons.currency, TxnType: 'Refund', TxnRef: txn, DpsTxnRef: cp.dps_txn_ref, MRef: sale.salons.name.slice(0, 60) }, txn, origin);
 }
 
@@ -345,14 +345,20 @@ export async function refundCard(saleId: string): Promise<{ ok?: true; error?: s
   if (!cp || !cp.dps_txn_ref) return { error: 'No approved card payment found for this sale.' };
   const sale = await loadSale(saleId); if (!sale) return { error: 'Sale not found.' };
   const c = await getCreds(cp.salon_id);
+  if (!c.restUser || !c.restKey) return { error: 'Windcave credentials are missing.' };
+  // Claim the refund before asking Windcave, so a double click or a second device cannot send it twice.
+  const { data: claimed } = await sb.rpc('claim_card_refund', { p_payment: cp.id });
+  if (!claimed) return { error: 'A refund for this sale is already being processed.' };
   const rtxn = ref('RO');
   try {
-    if (!c.restUser || !c.restKey) return { error: 'Windcave credentials are missing.' };
     const res = await fetch(`${REST()}/api/v1/transactions`, { method: 'POST', headers: { Authorization: basic(c.restUser, c.restKey), 'Content-Type': 'application/json' },
       body: JSON.stringify({ type: 'refund', amount: dollars(cp.amount_cents), currency: sale.salons.currency, merchantReference: rtxn, parentTransactionId: cp.dps_txn_ref }) });
     const j = await res.json().catch(() => ({}));
-    if (!res.ok || j.authorised === false) return { error: `Windcave declined the refund${j.responseText ? `: ${j.responseText}` : ''}.` };
-  } catch { return { error: 'Could not reach the payment provider.' }; }
+    if (!res.ok || j.authorised === false) {
+      await sb.from('card_payments').update({ refund_claimed_at: null }).eq('id', cp.id); // declined: nothing was refunded, so it can be tried again
+      return { error: `Windcave declined the refund${j.responseText ? `: ${j.responseText}` : ''}.` };
+    }
+  } catch { return { error: 'Could not reach the payment provider.' }; } // outcome unknown: the claim stays for two minutes so it is not sent twice
   await sb.from('card_payments').update({ status: 'refunded', resolved_at: new Date().toISOString() }).eq('id', cp.id);
   const { error } = await sb.rpc('refund_sale_internal', { p_sale: saleId });
   if (error) return { error: 'Refunded with Windcave but could not update the sale. Contact support.' };

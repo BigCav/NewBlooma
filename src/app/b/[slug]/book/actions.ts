@@ -106,8 +106,12 @@ export async function publicBook(slug: string, i: BookInput): Promise<{ error?: 
   let { data: client } = await sb.from('clients').select('id').eq('salon_id', salon.id).ilike('email', email.replace(/[%_]/g, '\\$&')).maybeSingle();
   if (!client) {
     const ins = await sb.from('clients').insert({ salon_id: salon.id, name, email, phone: phone || null }).select('id').single();
-    if (ins.error) return { error: 'Could not save your details. Please try again.' };
-    client = ins.data;
+    if (ins.error?.code === '23505') {
+      // Two requests for the same new email at once (a double tap): the other one created the client first, so use theirs.
+      ({ data: client } = await sb.from('clients').select('id').eq('salon_id', salon.id).ilike('email', email.replace(/[%_]/g, '\\$&')).maybeSingle());
+      if (!client) return { error: 'Could not save your details. Please try again.' };
+    } else if (ins.error) return { error: 'Could not save your details. Please try again.' };
+    else client = ins.data;
   }
   const { count: upcoming } = await sb.from('bookings').select('id', { count: 'exact', head: true }).eq('client_id', client.id).in('status', ['pending', 'confirmed']).gt('starts_at', new Date().toISOString());
   if ((upcoming ?? 0) >= 5) return { error: 'You already have several upcoming appointments with us. Please call the salon to book more.' };
