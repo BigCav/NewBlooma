@@ -22,7 +22,7 @@ export default async function Payroll({ searchParams }: { searchParams: Promise<
 
   const [pw, { data: team }, { data: shifts }, { data: sheets }] = await Promise.all([
     owner ? sb.rpc('payroll_week', { p_from: from, p_to: to }) : Promise.resolve({ data: null as any[] | null }),
-    sb.from('staff').select('id,name,role_title,commission_pct,photo_url').eq('active', true).order('name'),
+    sb.from('staff').select('id,name,role_title,photo_url').eq('active', true).order('name'),
     sb.from('staff_shifts').select('staff_id,weekday,start_time,end_time'),
     sb.from('timesheets').select('staff_id,clock_in,clock_out').lt('clock_in', new Date(edges[7]).toISOString()).or(`clock_out.is.null,clock_out.gt.${new Date(edges[0]).toISOString()}`),
   ]);
