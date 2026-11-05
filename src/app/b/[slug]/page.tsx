@@ -37,6 +37,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
   const next = settings.online_booking ? await nextAvailableLabel(salon.id, salon.timezone).catch(() => null) : null;
   const me = await currentClient(salon.id).catch(() => null);
   const visits = me ? await loadClientVisits(salon, me.email).catch(() => ({ upcoming: [], past: [] })) : { upcoming: [], past: [] };
+  const { data: ph } = await supabaseAdmin().from('salon_photos').select('url').eq('salon_id', salon.id).order('sort').order('created_at').limit(5);
   const { data: rv } = await supabaseAdmin().from('reviews').select('staff_id,stars,body,reply,created_at,reviewer_name,clients(name)').eq('salon_id', salon.id).order('created_at', { ascending: false }).limit(200);
   const thisYear = ymd(new Date(), salon.timezone).slice(0, 4);
   const allRv = (rv ?? []) as any[];
@@ -53,7 +54,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
     const mine = allRv.filter((r) => r.staff_id === t.id);
     return { id: t.id, name: t.name, role: t.role_title, photo: t.photo_url ?? null, svc: d.links.filter((l) => l.staff_id === t.id && svcIds.has(l.service_id)).map((l) => l.service_id), rating: { avg: mine.length ? mine.reduce((a, r) => a + r.stars, 0) / mine.length : 0, count: mine.length }, reviews: mine.slice(0, 4).map(shape) };
   });
-  return <ProfileView reviews={reviews} rating={rating} slug={slug} name={salon.name} headline={salon.headline || salon.name} intro={salon.intro || 'Book your next visit online in under a minute, with the team member you like and a time that suits you.'}
+  return <ProfileView photos={(ph ?? []).map((x) => x.url as string)} reviews={reviews} rating={rating} slug={slug} name={salon.name} headline={salon.headline || salon.name} intro={salon.intro || 'Book your next visit online in under a minute, with the team member you like and a time that suits you.'}
     about={salon.about || ''} address={salon.address || ''} phone={salon.phone || ''} email={salon.email || ''}
     services={services} cats={cats} team={team} hours={hours} today={today} nowMin={nowMin} cancel={cancel} bookable={settings.online_booking} next={next} account={me ? { name: me.name, email: me.email, phone: me.phone } : null} visits={visits} />;
 }

@@ -23,6 +23,7 @@ export function validate(v: Values): { section: string; error: string } | null {
 export const SECTIONS = [
   { id: 'business', label: 'Business details', desc: 'Name, contact and address' },
   { id: 'hours', label: 'Opening hours', desc: 'When the salon is open' },
+  { id: 'photos', label: 'Photos', desc: 'Pictures on your booking page' },
   { id: 'booking', label: 'Online booking', desc: 'Booking rules for clients' },
   { id: 'payments', label: 'Payments', desc: 'Methods, tips and GST' },
   { id: 'notifications', label: 'Notifications', desc: 'Emails and reminders' },

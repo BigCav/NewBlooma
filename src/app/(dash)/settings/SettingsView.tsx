@@ -9,12 +9,13 @@ import { CHEV, Notice, ROW_LIST } from '@/components/ui';
 import { TONE } from '@/lib/tones';
 import { S } from '../calendar/pickers';
 import { saveSettings } from './actions';
+import type { SalonPhoto } from './photos';
 import { SECTIONS, validate, type Closed, type Values } from './shared';
 import { SectionPage } from './SectionPage';
 
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
 
-function useSettings(initial: Values, start?: string, closedInit: Closed[] = []) {
+function useSettings(initial: Values, start?: string, closedInit: Closed[] = [], photos: SalonPhoto[] = []) {
   const router = useRouter();
   const [busy, startT] = useTransition();
   const [narrow, setNarrow] = useState<boolean | null>(null);
@@ -43,7 +44,7 @@ function useSettings(initial: Values, start?: string, closedInit: Closed[] = [])
       setSaved(clone(v)); setNotice('Settings saved'); setError(''); setOpen(false); router.refresh();
     });
   };
-  return { narrow, v, set, setHour, closed, setClosed, section, pick: (id: string) => { setSection(id); setOpen(true); setError(''); setNotice(''); }, open, close: () => { setOpen(false); setError(''); },
+  return { narrow, v, set, setHour, closed, setClosed, photos, section, pick: (id: string) => { setSection(id); setOpen(true); setError(''); setNotice(''); }, open, close: () => { setOpen(false); setError(''); },
     error, notice, dirty, busy, save, discard: () => { setV(clone(saved)); setError(''); setNotice(''); } };
 }
 type C = ReturnType<typeof useSettings>;
@@ -52,6 +53,7 @@ export type SettingsCtl = C;
 const ICO = (d: React.ReactNode) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3A2BB5" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>;
 const SEC_ICON: Record<string, React.ReactNode> = {
   business: ICO(<><path d="M4 9.5 5.2 4.5h13.6L20 9.5" /><path d="M5 12.5V20h14v-7.5" /><path d="M10 20v-4.5h4V20" /></>),
+  photos: ICO(<><rect x="3.5" y="5" width="17" height="14" rx="3" /><circle cx="9" cy="10" r="1.6" /><path d="m4.5 17 4.5-4.5 3 3 2.5-2.5 5 4" /></>),
   hours: ICO(<><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></>),
   booking: ICO(<><rect x="3.5" y="5" width="17" height="15.5" rx="3" /><path d="M3.5 10h17M8 3v4M16 3v4" /></>),
   payments: ICO(<><rect x="3" y="6" width="18" height="12.5" rx="3" /><path d="M3 10.5h18M7 15h3" /></>),
@@ -117,8 +119,8 @@ function Mobile({ c }: { c: C }) {
   );
 }
 
-export function SettingsView({ initial, section, closed }: { initial: Values; section?: string; closed?: Closed[] }) {
-  const c = useSettings(initial, SECTIONS.some((x) => x.id === section) ? section : undefined, closed);
+export function SettingsView({ initial, section, closed, photos }: { initial: Values; section?: string; closed?: Closed[]; photos?: SalonPhoto[] }) {
+  const c = useSettings(initial, SECTIONS.some((x) => x.id === section) ? section : undefined, closed, photos);
   const deep = useRef(section);
   useEffect(() => { if (c.narrow === false && deep.current && SECTIONS.some((x) => x.id === deep.current)) { c.pick(deep.current); deep.current = undefined; } }, [c.narrow]); // eslint-disable-line react-hooks/exhaustive-deps
   return (<>

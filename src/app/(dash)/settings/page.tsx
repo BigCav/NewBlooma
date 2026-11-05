@@ -9,11 +9,12 @@ export const dynamic = 'force-dynamic';
 export default async function Settings({ searchParams }: { searchParams: Promise<{ section?: string }> }) {
   const { section } = await searchParams;
   const { sb, salon } = await requireOwner();
-  const [{ data: s }, { data: st }, { data: hrs }, { data: cp }] = await Promise.all([
+  const [{ data: s }, { data: st }, { data: hrs }, { data: cp }, { data: ph }] = await Promise.all([
     sb.from('salons').select('name,phone,email,address,slug').eq('id', salon.id).single(),
     sb.from('salon_settings').select('*').eq('salon_id', salon.id).single(),
     sb.from('opening_hours').select('weekday,is_open,open_time,close_time').eq('salon_id', salon.id).order('weekday'),
     sb.from('closed_periods').select('id,starts_on,ends_on,reason').eq('salon_id', salon.id).gte('ends_on', ymd(new Date(), salon.timezone)).order('starts_on'),
+    sb.from('salon_photos').select('id,url').order('sort').order('created_at'),
   ]);
   const closed: Closed[] = (cp ?? []).map((x: any) => ({ id: x.id, from: x.starts_on, to: x.ends_on, reason: x.reason ?? '' }));
   const hours = Array.from({ length: 7 }, (_, i) => {
@@ -27,5 +28,5 @@ export default async function Settings({ searchParams }: { searchParams: Promise
     card: !!x.accept_card, cash: !!x.accept_cash, gift: !!x.accept_gift_cards, tips: !!x.ask_for_tip, tipDefault: String(x.suggested_tip_pct ?? 0), tax: String(Number(x.tax_rate ?? 0)),
     confirmEmail: !!x.email_confirmations, remind24: !!x.remind_24h, remind2: !!x.remind_2h, newBooking: !!x.notify_new_booking, cancelled: !!x.notify_cancellation,
   };
-  return <SettingsView initial={initial} section={section} closed={closed} />;
+  return <SettingsView initial={initial} section={section} closed={closed} photos={(ph ?? []).map((p) => ({ id: p.id as string, url: p.url as string }))} />;
 }

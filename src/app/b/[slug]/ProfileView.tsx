@@ -16,6 +16,8 @@ import { CARD, H2, ReviewCard, ServiceRow, Stars, bookHref, type Review, type Sv
 import { StaffSheet, type Member } from './StaffSheet';
 
 type Props = {
+  /** The salon's own pictures, first one large. Any gaps are filled with the illustrations. */
+  photos: string[];
   reviews: Review[]; rating: { avg: number; count: number; dist: number[] };
   slug: string; name: string; headline: string; intro: string; about: string; address: string; phone: string; email: string;
   services: Svc[]; cats: string[]; team: Member[]; hours: ({ from: string; to: string } | null)[];
@@ -25,6 +27,12 @@ const DAYS = [...WEEKDAYS_FULL.slice(1), WEEKDAYS_FULL[0]];
 const toMin = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
 const TILES: [string, string][] = [['hair', 'Hair'], ['colour', 'Colour'], ['nails', 'Nails'], ['barber', 'Barber']];
 const LABEL = 'position:absolute;left:14px;bottom:14px;padding:6px 14px;border-radius:999px;background:rgba(255,255,255,0.92);color:#0E1116;font-size:13px;font-weight:500';
+
+/** A picture the salon uploaded, in the same rounded frame as the illustrations. The large first picture loads at once; the rest load as they scroll into view. */
+function Photo({ src, n, style, first }: { src: string; n: number; style: string; first?: boolean }) {
+  // eslint-disable-next-line @next/next/no-img-element
+  return <div style={S('position:relative;overflow:hidden;border-radius:24px;background:#EEF0F3;' + style)}><img src={src} alt={`Photo ${n} of the salon`} loading={first ? 'eager' : 'lazy'} decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /></div>;
+}
 
 function Tile({ k, label, style }: { k: string; label?: string; style: string }) {
   return <div role="img" aria-label={(label ?? 'Salon') + ', illustration'} style={S('position:relative;overflow:hidden;border-radius:24px;' + style)}><div style={S('width:100%;height:100%')} dangerouslySetInnerHTML={{ __html: ART[k].replace('<svg ', '<svg width="100%" height="100%" aria-hidden="true" preserveAspectRatio="xMidYMid slice" style="display:block" ') }} />{!!label && <span style={S(LABEL)}>{label}</span>}</div>;
@@ -42,8 +50,8 @@ function Body({ p, m, cat, setCat, today, openMember }: { p: Props; m: boolean; 
   const shown = p.services.filter((s) => cat === 'All' || s.cat === cat);
   const photos = (
     <section aria-label="Photos of the salon and our work" style={S(m ? 'display:flex;gap:12px;overflow-x:auto;flex:0 0 auto;margin:0 -20px;padding:0 20px 4px' : 'display:grid;grid-template-columns:2fr 1fr 1fr;grid-template-rows:repeat(2,minmax(0,1fr));gap:12px;height:440px')}>
-      <Tile k="salon" label="The salon" style={m ? 'flex:0 0 260px;height:320px' : 'grid-row:span 2'} />
-      {tiles.map(([k, n]) => <Tile key={k} k={k} label={n} style={m ? 'flex:0 0 260px;height:320px' : ''} />)}
+      {p.photos[0] ? <Photo src={p.photos[0]} n={1} first style={m ? 'flex:0 0 260px;height:320px' : 'grid-row:span 2'} /> : <Tile k="salon" label="The salon" style={m ? 'flex:0 0 260px;height:320px' : 'grid-row:span 2'} />}
+      {tiles.map(([k, n], i) => p.photos[i + 1] ? <Photo key={k} src={p.photos[i + 1]} n={i + 2} style={m ? 'flex:0 0 260px;height:320px' : ''} /> : <Tile key={k} k={k} label={n} style={m ? 'flex:0 0 260px;height:320px' : ''} />)}
     </section>
   );
   const services = (

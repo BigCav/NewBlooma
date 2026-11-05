@@ -11,6 +11,7 @@ import { BACK, BAR, BLACK, CARD, FIELD_IN, Field, FieldError, Icon, Notice, OUTL
 import { dayInfo } from '@/lib/cal';
 import { PickSheet, SettingRow } from './forms/FormPage';
 import { DAY_FULL, GROUPS, SECTIONS, type Values } from './shared';
+import { PhotosSection } from './PhotosSection';
 import type { SettingsCtl } from './SettingsView';
 
 const TIME = S(TIME_INPUT);
@@ -80,7 +81,7 @@ export function SectionPage({ c }: { c: SettingsCtl }) {
   const [night, setNight] = useNightMode();
   const [pick, setPick] = useState<Pick>(null);
   const key = pick as keyof Values;
-  const showBar = s !== 'appearance';
+  const showBar = s !== 'appearance' && s !== 'photos';
   return (
     <div role="dialog" aria-label={cur.label} style={S(PAGE)}>
       <ScreenHeader title={cur.label} sub={cur.desc} onBack={c.close} />
@@ -114,6 +115,8 @@ export function SectionPage({ c }: { c: SettingsCtl }) {
           </section>
           <Closed c={c} />
         </>)}
+
+        {s === 'photos' && <PhotosSection initial={c.photos} />}
 
         {s === 'booking' && (<>
           <section style={S(CARD)}><SwitchRow id="st-online" title="Accept online bookings" sub="Clients can book services you have set to bookable online." on={v.online} toggle={() => c.set('online', !v.online)} last /></section>
