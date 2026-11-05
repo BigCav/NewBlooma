@@ -24,7 +24,7 @@ export default async function ClientProfile({ params, searchParams }: { params: 
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const tz = salon.timezone, today = ymd(new Date(), tz);
   const [{ data: c }, ov, { data: notes }, { data: allBk }, { data: sls }, { data: subs }] = await Promise.all([
-    sb.from('clients').select('id,name,email,phone,created_at,allergies,patch_test_on,colour_formula,reminders,marketing').eq('id', id).maybeSingle(),
+    sb.from('clients').select('id,name,email,phone,created_at,allergies,patch_test_on,colour_formula,reminders,marketing,birthday').eq('id', id).maybeSingle(),
     loadOverview(ctx),
     sb.from('client_notes').select('id,body').eq('client_id', id).order('created_at'),
     sb.from('bookings').select('id,ref_no,starts_at,ends_at,status,staff(name),booking_services(price_cents,services(name))').eq('client_id', id).order('starts_at', { ascending: false }).limit(200),
@@ -62,7 +62,7 @@ export default async function ClientProfile({ params, searchParams }: { params: 
   visits.sort((a, b) => (a.at < b.at ? 1 : -1));
   const appts: ProfileData['appts'] = visits.map(({ at, ...rest }) => rest);
   const data: ProfileData = {
-    row, since: sinceText(c.created_at), allergies: c.allergies ?? [], patchOn: c.patch_test_on, formula: c.colour_formula ?? '', reminders: c.reminders, marketing: c.marketing,
+    row, since: sinceText(c.created_at), allergies: c.allergies ?? [], patchOn: c.patch_test_on, formula: c.colour_formula ?? '', reminders: c.reminders, marketing: c.marketing, birthday: c.birthday ?? '',
     notes: (notes ?? []).map((n) => ({ id: n.id, text: n.body })), appts, messages,
     forms: ((subs ?? []) as any[]).map((s) => ({ id: s.id, name: s.form_templates?.name ?? 'Form', date: (s.performed_on ? `Applied ${niceDate(s.performed_on)} · recorded ` : '') + `${niceDate(ymd(s.completed_at, tz))}, ${time12(s.completed_at, tz)}` + (s.bookings?.ref_no ? ' · ' + bookingRef(s.bookings.ref_no) : ''), flagged: !!s.flagged, answers: ((s.answers ?? []) as { q: string; a: string }[]).map((a) => ({ k: a.q, v: a.a || 'No answer' })) })), today, channels: { sms: smsConfigured(), email: emailConfigured() },
   };

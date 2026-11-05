@@ -5,7 +5,10 @@ import { bookingRef } from '@/lib/display';
 import { firstName } from '@/lib/people';
 import { dateShort } from '@/lib/public';
 import { outstandingForBooking } from '@/lib/forms';
-import { esc, mailShell, mailP, mailNote, mailButton, mailButtonPair, mailDetails, textDetails } from '@/lib/email-layout';
+import { esc, mailShell, mailP, mailNote, mailButton, mailButtonPair, mailDetails, mailLinks, textDetails } from '@/lib/email-layout';
+import { MARKETING_TEMPLATES, composeMarketing } from '@/lib/marketing';
+import { calEventFor, icsUrl } from '@/lib/booking-cal';
+import { googleCalUrl } from '@/lib/ics';
 
 const base = () => process.env.NEXT_PUBLIC_APP_URL ?? '';
 
@@ -26,8 +29,9 @@ async function compose(r: Row): Promise<Mail | null> {
   const sb = supabaseAdmin();
   const { data: salon } = await sb.from('salons').select('name,phone,timezone,slug,email').eq('id', r.salon_id).single();
   if (!salon) return null;
+  if (MARKETING_TEMPLATES.has(r.template)) { const m = await composeMarketing(r, salon); return m && { ...m, from: fromFor(salon.name), replyTo: salon.email || undefined }; }
   let service = '', staffName = '', date = '', time = '', bref = '', clientName = '';
-  let manage = '';
+  let manage = '', token = '';
   if (r.booking_id) {
     const { data: b } = await sb.from('bookings').select('ref_no,starts_at,status,staff(name),clients(name,reminders),booking_services(services(name))').eq('id', r.booking_id).single();
     if (!b) return null;
@@ -41,7 +45,7 @@ async function compose(r: Row): Promise<Mail | null> {
     service = (b as any).booking_services.map((x: any) => x.services.name).join(', ');
     staffName = (b as any).staff?.name ?? '';
     const { data: t } = await sb.from('booking_tokens').select('token').eq('booking_id', r.booking_id).eq('purpose', 'manage_booking').maybeSingle();
-    if (t) manage = `${base()}/manage/${t.token}`;
+    if (t) { manage = `${base()}/manage/${t.token}`; token = t.token; }
   }
   const first = firstName(clientName);
   const visit: [string, string][] = [['Service', service], ['With', staffName], ['Date', date], ['Time', time], ['Booking', bref]];
@@ -64,11 +68,14 @@ async function compose(r: Row): Promise<Mail | null> {
   }
   // Forms the client still owes for this visit go in the same email, with their own link.
   const forms = r.booking_id && (r.template === 'booking_confirmation' || r.template === 'reminder_24h') ? await outstandingForBooking(r.booking_id).catch(() => null) : null;
+  // Confirmations and reminders carry an "add to calendar" link: a file for Apple and Outlook, and a Google Calendar link.
+  const cal = token && ['booking_confirmation', 'reminder_24h', 'reminder_2h'].includes(r.template) ? await calEventFor(r.booking_id!, token).catch(() => null) : null;
+  const calLinks = cal ? [{ label: 'Apple or Outlook', url: icsUrl(token) }, { label: 'Google', url: googleCalUrl(cal) }] : [];
   const formLine = forms ? `Before your visit, please complete: ${forms.names.join(', ')}. It takes about two minutes.` : '';
-  const text = [heading, '', intro, textDetails(details), outro, formLine, '', link ? `${cta}: ${link}` : '', forms ? `Complete your form: ${forms.url}` : '', '', bref ? `${salon.name} · ${bref}` : footerFor(salon)]
+  const text = [heading, '', intro, textDetails(details), outro, formLine, '', link ? `${cta}: ${link}` : '', forms ? `Complete your form: ${forms.url}` : '', ...(cal ? ['', `Add to calendar (Apple, Outlook): ${calLinks[0].url}`, `Add to Google Calendar: ${calLinks[1].url}`] : []), '', bref ? `${salon.name} · ${bref}` : footerFor(salon)]
     .filter((x, i, a) => x !== '' || (i > 0 && a[i - 1] !== '')).join('\n').replace(/\n{3,}/g, '\n\n').trim();
   const body = mailP(intro) + mailDetails(details) + (outro ? `<div style="height:8px"></div>${mailP(outro)}` : '') + (formLine ? `<div style="height:8px"></div>${mailP(formLine)}` : '')
-    + (link && forms ? mailButtonPair({ label: 'Manage booking', url: link }, { label: 'Complete form', url: forms.url }) : link ? mailButton(cta, link) : '');
+    + (link && forms ? mailButtonPair({ label: 'Manage booking', url: link }, { label: 'Complete form', url: forms.url }) : link ? mailButton(cta, link) : '') + (calLinks.length ? mailLinks('Add to calendar', calLinks) : '');
   return { subject, text, html: mailShell({ brand: salon.name, heading, body, footer: bref ? `${salon.name} · ${bref}` : footerFor(salon), preheader: intro }), from: fromFor(salon.name), replyTo: salon.email || undefined };
 }
 
@@ -150,6 +157,15 @@ export async function sendCustomMessage(salonId: string, to: { phone?: string | 
   }
   await sb.from('notifications_outbox').insert({ ...row, status: 'sent', attempts: 1, sent_at: new Date().toISOString() });
   return { ok: true, via: channel };
+}
+
+/** Sends one already-made email (the owner's own test copy of a marketing message), as the salon. */
+export async function sendRendered(salonId: string, to: string, m: { subject: string; text: string; html: string }): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!emailConfigured()) return { ok: false, error: 'Email is not set up yet. Add the Resend key to send.' };
+  const { data: salon } = await supabaseAdmin().from('salons').select('name,email').eq('id', salonId).single();
+  if (!salon) return { ok: false, error: 'Salon not found.' };
+  try { await sendEmail(to, { ...m, from: fromFor(salon.name), replyTo: salon.email || undefined }); return { ok: true }; }
+  catch { return { ok: false, error: 'The test could not be sent. Try again in a moment.' }; }
 }
 
 /** Sends whatever is queued right now so a confirmation does not wait for the next scheduled run. Never throws. */

@@ -18,6 +18,8 @@ type Props = {
   hours: ({ from: string; to: string } | null)[]; today: string; windowDays: number;
   /** Forms this client still has to complete before the visit. */
   forms?: { names: string[]; url: string } | null;
+  /** Where to add the appointment to a calendar: a file for Apple and Outlook, and a Google Calendar link. */
+  cal?: { ics: string; google: string } | null;
 };
 const REASONS = ['Change of plans', 'Found another time', 'Something else'];
 const toMin = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
@@ -151,6 +153,15 @@ function CancelledCard({ m, pad, h1 }: { m: M; pad: number; h1: number }) {
   </div>;
 }
 
+/** Two ways to put the appointment in a calendar. Shown only while it can still go ahead. */
+function CalendarLinks({ cal }: { cal?: { ics: string; google: string } | null }) {
+  if (!cal) return null;
+  return (<>
+    <a href={cal.ics} download="appointment.ics" className="ghost" style={S(BTN_G + ';text-decoration:none')}>Add to Apple or Outlook calendar</a>
+    <a href={cal.google} target="_blank" rel="noopener noreferrer" className="ghost" style={S(BTN_G + ';text-decoration:none')}>Add to Google Calendar</a>
+  </>);
+}
+
 function Desktop({ m }: { m: M }) {
   const { p } = m;
   const view = m.mode === 'view' && !m.cancelled;
@@ -189,6 +200,7 @@ function Desktop({ m }: { m: M }) {
               <Note>{m.policyLine}</Note>
               <button onClick={m.openResched} style={S(BTN_D)}>Reschedule</button>
               <button className="ghost" onClick={m.openCancel} style={S(BTN_G)}>Cancel appointment</button>
+              <CalendarLinks cal={p.cal} />
             </div>}
             {m.mode === 'resched' && <div style={S(ASIDE_CARD)}>
               <h2 style={S('margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Your change</h2>
@@ -230,6 +242,7 @@ function Mobile({ m }: { m: M }) {
             <div style={S(col)}>
               <button onClick={m.openResched} style={S(BTN_D)}>Reschedule</button>
               <button className="ghost" onClick={m.openCancel} style={S(BTN_G)}>Cancel appointment</button>
+              <CalendarLinks cal={p.cal} />
             </div>
           </>}
         </div>

@@ -8,6 +8,7 @@ import { dropEmptyThread, ensureThread, logStaffMessage, replyUrl } from '@/lib/
 import { channelNote, type ClientRow } from './shared';
 import { emailConfigured, smsConfigured } from '@/lib/notify';
 import { loadThread, type ChatMsg } from './thread';
+import { birthdayDate } from '@/lib/marketing-shared';
 
 type R = { error?: string; ok?: boolean };
 
@@ -27,15 +28,19 @@ export async function createClient(name: string, email: string, phone: string): 
   return { ok: true, row: { id: data.id, name, email, phone, tag: 'New', last: 'None yet', lastService: 'No visits', next: 'Not booked', staff: 'Not set', visits: 0, spentCents: 0 } };
 }
 
-/** Change a client's name, email and phone. Email is optional, but must be valid and not used by another client. */
-export async function updateClient(id: string, name: string, email: string, phone: string): Promise<R> {
+/** Change a client's name, email, phone and birthday. Email is optional, but must be valid and not used by another client. */
+export async function updateClient(id: string, name: string, email: string, phone: string, birthday?: { month: number; day: number } | null): Promise<R> {
   const { sb } = await requireCtx();
   name = name.trim(); email = email.trim(); phone = phone.trim();
   if (!name) return { error: "Add the client's name." };
   if (name.length > 80 || email.length > 254) return { error: 'That name or email is too long.' };
   if (email && !/^\S+@\S+\.\S+$/.test(email)) return { error: 'Add a valid email address.' };
   const ph = checkPhone(phone); if (ph.error) return { error: ph.error };
-  const { error } = await sb.from('clients').update({ name, email: email || null, phone: ph.value || null }).eq('id', id);
+  // Birthday: undefined leaves it alone, null clears it, otherwise it must be a real day of the year.
+  let bd: string | null | undefined;
+  if (birthday === null) bd = null;
+  else if (birthday) { bd = birthdayDate(birthday.month, birthday.day); if (!bd) return { error: 'That is not a real birthday.' }; }
+  const { error } = await sb.from('clients').update({ name, email: email || null, phone: ph.value || null, ...(bd !== undefined ? { birthday: bd } : {}) }).eq('id', id);
   if (error) return { error: error.code === '23505' ? 'Another client already has that email.' : friendly(error.message) };
   revalidatePath('/clients'); revalidatePath(`/clients/${id}`);
   return { ok: true };

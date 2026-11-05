@@ -17,11 +17,16 @@ import { niceDate } from '@/lib/forms-shared';
 import { dollars } from '@/lib/format';
 import { plural } from '@/lib/display';
 import { firstName } from '@/lib/people';
+import { MONTHS_FULL } from '@/lib/cal';
+import { birthdayParts } from '@/lib/marketing-shared';
 import { PAYMENT_STATUS, bookingStatus } from '@/lib/status';
 import { TONE } from '@/lib/tones';
 
+/** "14 March" from a stored birthday (the year is never shown or used). */
+const birthdayText = (b: string) => { const p = birthdayParts(b); return p ? `${p.day} ${MONTHS_FULL[p.month - 1]}` : 'Not added'; };
+
 export type ProfileData = {
-  row: ClientRow; since: string; allergies: string[]; patchOn: string | null; formula: string; reminders: boolean; marketing: boolean;
+  row: ClientRow; since: string; allergies: string[]; patchOn: string | null; formula: string; reminders: boolean; marketing: boolean; birthday: string;
   notes: { id: string; text: string }[];
   forms: { id: string; name: string; date: string; flagged: boolean; answers: { k: string; v: string }[] }[];
   today: string; channels: Channels;
@@ -50,7 +55,7 @@ function useProfile(d: ProfileData) {
   const [noteDraft, setNoteDraft] = useState('');
   const [allergyDraft, setAllergyDraft] = useState('');
   const [mode, setMode] = useState<'view' | 'edit'>('view');
-  const [ed, setEd] = useState({ name: '', email: '', phone: '' });
+  const [ed, setEd] = useState({ name: '', email: '', phone: '', bm: '', bd: '' });
   const [confirmDel, setConfirmDel] = useState(false);
   const [ask, setAsk] = useState<{ kind: 'note' | 'allergy'; key: string; label: string } | null>(null);
   const [notice, setNotice] = useState('');
@@ -70,8 +75,8 @@ function useProfile(d: ProfileData) {
     saveFormula: () => run(() => saveFormula(row.id, formula), () => { setSaved(formula); setNotice('Formula saved'); }),
     toggle: (k: 'reminders' | 'marketing') => { const v = k === 'reminders' ? !reminders : !marketing; run(() => setPreference(row.id, k, v), () => (k === 'reminders' ? setReminders(v) : setMarketing(v))); },
     ed, setEd, confirmDel, setConfirmDel, ask, setAsk,
-    startEdit: () => { setEd({ name: row.name, email: row.email, phone: row.phone }); setConfirmDel(false); setMode('edit'); setError(''); setNotice(''); },
-    saveEdit: () => { if (!ed.name.trim()) { setError("Add the client's name."); return; } run(() => updateClient(row.id, ed.name, ed.email, ed.phone), () => { setMode('view'); setNotice('Details saved'); router.refresh(); }); },
+    startEdit: () => { const b = birthdayParts(d.birthday); setEd({ name: row.name, email: row.email, phone: row.phone, bm: b ? String(b.month) : '', bd: b ? String(b.day) : '' }); setConfirmDel(false); setMode('edit'); setError(''); setNotice(''); },
+    saveEdit: () => { if (!ed.name.trim()) { setError("Add the client's name."); return; } if (!!ed.bm !== !!ed.bd) { setError('Choose both the day and the month of the birthday, or neither.'); return; } run(() => updateClient(row.id, ed.name, ed.email, ed.phone, ed.bm && ed.bd ? { month: Number(ed.bm), day: Number(ed.bd) } : null), () => { setMode('view'); setNotice('Details saved'); router.refresh(); }); },
     removeClient: () => run(() => deleteClient(row.id), () => { router.push('/clients'); router.refresh(); }),
   };
 }
@@ -232,7 +237,7 @@ function ProfilePages({ c, view, setView, apFilter, setApFilter, openForm, setOp
 
         {view === 'details' && (<>
           <div style={S(card + ';display:flex;flex-direction:column')} className="sum-rows">
-            {([['Name', row.name], ['Phone', row.phone || 'Not added'], ['Email', row.email || 'Not added'], ['Client since', d.since.replace('Client since ', '')]] as [string, string][]).map(([l, v]) => <div key={l} style={S('display:flex;justify-content:space-between;gap:12px;padding:14px 0;font-size:15px')}><span style={S('color:#5E6673')}>{l}</span><span style={S('font-weight:500;text-align:right;overflow-wrap:anywhere')}>{v}</span></div>)}
+            {([['Name', row.name], ['Phone', row.phone || 'Not added'], ['Email', row.email || 'Not added'], ['Birthday', birthdayText(d.birthday)], ['Client since', d.since.replace('Client since ', '')]] as [string, string][]).map(([l, v]) => <div key={l} style={S('display:flex;justify-content:space-between;gap:12px;padding:14px 0;font-size:15px')}><span style={S('color:#5E6673')}>{l}</span><span style={S('font-weight:500;text-align:right;overflow-wrap:anywhere')}>{v}</span></div>)}
           </div>
           <button className="ghost" onClick={c.startEdit} style={S(OUTLINE + ';flex:0 0 auto')}>Edit details</button>
         </>)}
@@ -424,6 +429,12 @@ function Mobile({ c, initial, drawer }: { c: C; initial?: string; drawer?: boole
           <Field label="Full name"><input type="text" value={c.ed.name} onChange={(e) => { c.setEd({ ...c.ed, name: e.target.value }); c.setError(''); }} style={FIELD_IN} /></Field>
           <Field label="Email"><input type="email" inputMode="email" value={c.ed.email} onChange={(e) => { c.setEd({ ...c.ed, email: e.target.value }); c.setError(''); }} placeholder="name@example.com" style={FIELD_IN} /></Field>
           <Field label="Phone"><input type="tel" inputMode="tel" value={c.ed.phone} onChange={(e) => { c.setEd({ ...c.ed, phone: phoneInput(e.target.value) }); c.setError(''); }} placeholder="Optional" style={FIELD_IN} /></Field>
+          <Field label="Birthday (optional)">
+            <div style={S('display:flex;gap:10px;margin-top:2px')}>
+              <select aria-label="Birthday day" value={c.ed.bd} onChange={(e) => { c.setEd({ ...c.ed, bd: e.target.value }); c.setError(''); }} style={{ ...FIELD_IN, width: 84, flex: '0 0 84px' }}><option value="">Day</option>{Array.from({ length: 31 }, (_, i) => <option key={i + 1} value={i + 1}>{i + 1}</option>)}</select>
+              <select aria-label="Birthday month" value={c.ed.bm} onChange={(e) => { c.setEd({ ...c.ed, bm: e.target.value }); c.setError(''); }} style={{ ...FIELD_IN, flex: '1 1 auto', minWidth: 0 }}><option value="">Month</option>{MONTHS_FULL.map((n, i) => <option key={n} value={i + 1}>{n}</option>)}</select>
+            </div>
+          </Field>
         </main>
         <div style={S(BAR)}>
           {!!c.error && <FieldError>{c.error}</FieldError>}

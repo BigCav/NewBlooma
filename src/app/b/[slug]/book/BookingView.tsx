@@ -3,7 +3,7 @@
 // Markup and style strings are kept as written; the {{ }} holes are the salon's real data and the handlers are real server actions.
 import { DayStrip, TimeGrid } from '@/components/DayTimePicker';
 import { clock12, clockStr, duration, makeMoney, plural, timeRange } from '@/lib/display';
-import { addDaysYmd, dayInfo } from '@/lib/cal';
+import { MONTHS_FULL, addDaysYmd, dayInfo } from '@/lib/cal';
 import { firstName } from '@/lib/people';
 import { TONE } from '@/lib/tones';
 import { Avatar, BACK, BLACK, Chip, FieldError, INPUT, Icon, KV_ROW, LabelledField, Note, Notice, OUTLINE, PasswordInput, RING, TEXTAREA, filterChipCss, dim } from '@/components/ui';
@@ -45,11 +45,14 @@ function useBooking(p: Props) {
   const money = useMemo(() => makeMoney(p.currency), [p.currency]);
 
   const [step, setStep] = useState(1);
-  const [done, setDone] = useState<{ staffName: string; email: string; first: string; when: string; count: string; dur: string; total: string; note: string; forms?: { names: string[]; url: string; ask: boolean } } | null>(null);
+  const [done, setDone] = useState<{ staffName: string; email: string; first: string; when: string; count: string; dur: string; total: string; note: string; forms?: { names: string[]; url: string; ask: boolean }; ics?: string } | null>(null);
   const [acct, setAcct] = useState<Account | null>(p.account);
   const [au, setAuState] = useState<Au>(EMPTY_AU);
   const [save, setSave] = useState(false);
   const [savePw, setSavePw] = useState('');
+  const [mk, setMk] = useState(false);
+  const [bd, setBdState] = useState({ month: '', day: '' });
+  const setBd = (v: Partial<{ month: string; day: string }>) => setBdState((b) => ({ ...b, ...v }));
   const [sel, setSel] = useState<string[]>(p.preselect ? [p.preselect] : []);
   const [cat, setCat] = useState('All');
   const [staff, setStaff] = useState(p.preStaff);
@@ -100,7 +103,7 @@ function useBooking(p: Props) {
   const goStep = (n: number) => { if (n < step) { setStep(n); setError(''); } };
   const setField = (k: keyof Form, v: string) => { setForm((f) => ({ ...f, [k]: v })); setError(''); };
   const setWlField = (k: 'name' | 'phone', v: string) => setWl((w) => ({ ...w, [k]: v, error: '' }));
-  const reset = () => { setStep(1); setDone(null); setSel([]); setCat('All'); setStaff(''); setDay(0); setSlot(''); setSlotMin(null); setForm(formFor(acct)); setError(''); setCalOpen(false); setWl(EMPTY_WL); setSave(false); setSavePw(''); setAuState(EMPTY_AU); };
+  const reset = () => { setStep(1); setDone(null); setSel([]); setCat('All'); setStaff(''); setDay(0); setSlot(''); setSlotMin(null); setForm(formFor(acct)); setError(''); setCalOpen(false); setWl(EMPTY_WL); setSave(false); setSavePw(''); setMk(false); setBdState({ month: '', day: '' }); setAuState(EMPTY_AU); };
   const setAu = (v: Partial<Au>) => setAuState((a) => ({ ...a, ...v }));
   const openIn = () => setAu({ panel: 'in', error: '' });
   const closePanel = () => setAu({ panel: 'none', error: '', pw: '' });
@@ -137,12 +140,12 @@ function useBooking(p: Props) {
       if (wantsAccount && savePw.length < 8) { setError('Choose a password with at least 8 characters.'); return; }
       setBusy(true);
       try {
-        const r = await publicBook(p.slug, { services: sel, slot, name: form.name, email: form.email, phone: form.phone, notes: form.notes, website: hp, password: wantsAccount ? savePw : undefined });
+        const r = await publicBook(p.slug, { services: sel, slot, name: form.name, email: form.email, phone: form.phone, notes: form.notes, website: hp, password: wantsAccount ? savePw : undefined, marketing: mk, birthday: mk && bd.month && bd.day ? { month: Number(bd.month), day: Number(bd.day) } : undefined });
         if (r.error) { setError(r.error); return; }
         const note = r.account === 'created' ? 'Your account is ready. Sign in next time to skip the details step.' : r.account === 'saved' ? 'Saved to your account.' : r.account === 'exists' ? 'You already have an account with this email. Sign in next time to skip the details step.' : '';
         if (r.account === 'created') setAcct({ name: form.name.trim(), email: form.email.trim().toLowerCase(), phone: form.phone.trim() });
         else if (r.account === 'saved' && acct) setAcct({ ...acct, name: acct.name || form.name.trim(), phone: form.phone.trim() || acct.phone });
-        setDone({ staffName: r.staffName || member?.name || 'The team', email: form.email.trim(), first: firstName(form.name), when: whenOf(slotMin ?? 0), count: countText, dur: durText, total: money(totalCents), note, forms: r.forms });
+        setDone({ staffName: r.staffName || member?.name || 'The team', email: form.email.trim(), first: firstName(form.name), when: whenOf(slotMin ?? 0), count: countText, dur: durText, total: money(totalCents), note, forms: r.forms, ics: r.ics });
         setError('');
       } catch { setError('Something went wrong. Please try again.'); } finally { setBusy(false); }
       return;
@@ -184,7 +187,7 @@ function useBooking(p: Props) {
   })();
 
   const canGo = (step === 1 && sel.length > 0) || (step === 2 && !!staff) || (step === 3 && !!slot) || step === 4;
-  return { p, nextAt, offers, acct, au, setAu, openIn, closePanel, submitIn, signOutNow, save, setSave, savePw, setSavePw, setError, days, money, step, done, sel, cat, setCat, staff, setStaff, day, setDay, slot, setSlot, slotMin, setSlotMin, form, setField, hp, setHp, error, busy, calOpen, setCalOpen, wl, setWl, setWlField, submitWl,
+  return { p, nextAt, offers, acct, au, setAu, openIn, closePanel, submitIn, signOutNow, save, setSave, savePw, setSavePw, mk, setMk, bd, setBd, setError, days, money, step, done, sel, cat, setCat, staff, setStaff, day, setDay, slot, setSlot, slotMin, setSlotMin, form, setField, hp, setHp, error, busy, calOpen, setCalOpen, wl, setWl, setWlField, submitWl,
     slots, loading, slotErr, list, totalDur, totalCents, member, hoursToday, toggle, back, goStep, reset, next, whenOf, countText, durText, grid, open, calLinks, canGo };
 }
 type M = ReturnType<typeof useBooking>;
@@ -343,6 +346,20 @@ function Steps({ m, o }: { m: M; o: O }) {
         <LabelledField id="bk-notes" label="Notes for the salon">
           <textarea id="bk-notes" className="bkf" value={m.form.notes} onChange={(e) => m.setField('notes', e.target.value)} placeholder="Optional" style={S(TEXTAREA + ';min-height:96px;resize:none')} />
         </LabelledField>
+        <div style={S('display:flex;flex-direction:column;gap:14px;padding:16px;border:1px solid #E6E8EC;border-radius:18px')}>
+          <button type="button" role="checkbox" aria-checked={m.mk} onClick={() => m.setMk(!m.mk)} style={S('display:flex;align-items:flex-start;gap:12px;min-height:44px;padding:0;border:0;background:transparent;text-align:left;font:inherit;color:#0E1116')}>
+            <span style={S('flex:0 0 22px;width:22px;height:22px;margin-top:1px;border-radius:7px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border:1.5px solid ' + (m.mk ? '#0E1116' : '#D5D9E0') + ';background:' + (m.mk ? '#0E1116' : '#FFFFFF'))}>{m.mk && <Check size={14} w={3} />}</span>
+            <span><span style={S('display:block;font-size:14px;font-weight:600')}>Send me offers and news</span><span style={S('display:block;margin-top:2px;font-size:13px;color:#5E6673')}>An occasional email from {m.p.name}. You can unsubscribe at any time.</span></span>
+          </button>
+          {m.mk && (
+            <LabelledField id="bk-bd-day" label="Birthday (optional)">
+              <div style={S('display:flex;gap:10px')}>
+                <select id="bk-bd-day" className="bkf" aria-label="Birthday day" value={m.bd.day} onChange={(e) => m.setBd({ day: e.target.value })} style={S(INPUT + ';flex:0 0 88px')}><option value="">Day</option>{Array.from({ length: 31 }, (_, i) => <option key={i + 1} value={i + 1}>{i + 1}</option>)}</select>
+                <select className="bkf" aria-label="Birthday month" value={m.bd.month} onChange={(e) => m.setBd({ month: e.target.value })} style={S(INPUT + ';flex:1 1 auto;min-width:0')}><option value="">Month</option>{MONTHS_FULL.map((n, i) => <option key={n} value={i + 1}>{n}</option>)}</select>
+              </div>
+            </LabelledField>
+          )}
+        </div>
         {!m.acct && m.au.panel === 'none' && (
           <div style={S('display:flex;flex-direction:column;gap:14px;padding:16px;border:1px solid #E6E8EC;border-radius:18px')}>
             <button type="button" role="checkbox" aria-checked={m.save} onClick={() => { m.setSave(!m.save); m.setError(''); }} style={S('display:flex;align-items:flex-start;gap:12px;min-height:44px;padding:0;border:0;background:transparent;text-align:left;font:inherit;color:#0E1116')}>
@@ -408,6 +425,7 @@ function DoneCard({ m, wide = false }: { m: M; wide?: boolean }) {
 }
 
 function DoneActions({ m }: { m: M }) {
+  const d = m.done!;
   return (
     <>
       <div style={S('display:flex;gap:10px')}>
@@ -417,8 +435,8 @@ function DoneActions({ m }: { m: M }) {
       <a href={'/b/' + m.p.slug} style={S(OUTLINE + ';flex:0 0 auto')}>Back to {m.p.name}</a>
       {m.calOpen && (
         <div role="menu" aria-label="Add to calendar" style={S('display:flex;flex-direction:column;border:1px solid #E6E8EC;border-radius:18px;overflow:hidden;background:#FFFFFF')}>
-          {([['Google Calendar', m.calLinks.google], ['Outlook', m.calLinks.outlook], ['Yahoo Calendar', m.calLinks.yahoo]] as const).map(([l, h], i) => (
-            <a key={l} role="menuitem" href={h} target="_blank" rel="noopener noreferrer" style={S('display:flex;align-items:center;justify-content:space-between;min-height:52px;box-sizing:border-box;padding:0 16px;color:#0E1116;text-decoration:none;font-size:14.5px;font-weight:500' + (i < 2 ? ';border-bottom:1px solid #EEF0F3' : ''))}>{l}<Arrow /></a>
+          {([...(d.ics ? [['Apple Calendar or file', d.ics, true]] : []), ['Google Calendar', m.calLinks.google, false], ['Outlook', m.calLinks.outlook, false], ['Yahoo Calendar', m.calLinks.yahoo, false]] as [string, string, boolean][]).map(([l, h, file], i, all) => (
+            <a key={l} role="menuitem" href={h} {...(file ? { download: 'appointment.ics' } : { target: '_blank', rel: 'noopener noreferrer' })} style={S('display:flex;align-items:center;justify-content:space-between;min-height:52px;box-sizing:border-box;padding:0 16px;color:#0E1116;text-decoration:none;font-size:14.5px;font-weight:500' + (i < all.length - 1 ? ';border-bottom:1px solid #EEF0F3' : ''))}>{l}<Arrow /></a>
           ))}
         </div>
       )}

@@ -25,6 +25,7 @@ const ICON: Record<string, (s?: number, w?: number) => ReactNode> = {
   settings: (s, w) => S(<><path d="M4 7h10M18 7h2M4 17h2M10 17h10" /><circle cx="16" cy="7" r="2" /><circle cx="8" cy="17" r="2" /></>, s, w),
   packages: (s, w) => S(<><path d="M12 3.5 3.5 8 12 12.5 20.5 8z" /><path d="M3.5 12 12 16.5 20.5 12M3.5 16 12 20.5 20.5 16" /></>, s, w),
   gift: (s, w) => S(<><rect x="4" y="9" width="16" height="11" rx="2" /><path d="M12 9v11M4 13h16M12 9c-1.5-3-5-3-5-.5S10.5 9 12 9zm0 0c1.5-3 5-3 5-.5S13.5 9 12 9z" /></>, s, w),
+  marketing: (s, w) => S(<><path d="M4 10.5v3a1 1 0 0 0 1 1h2.5L15 18.5v-13L7.5 9.5H5a1 1 0 0 0-1 1z" /><path d="M18 9.5a3.5 3.5 0 0 1 0 5" /></>, s, w),
   more: (s, w) => S(<><circle cx="5.5" cy="12" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="18.5" cy="12" r="1.2" /></>, s, w),
   signout: (s, w) => S(<><path d="M10 4.5H6.5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2H10" /><path d="M15 8l4 4-4 4M19 12H9.5" /></>, s, w),
 };
@@ -48,6 +49,7 @@ export const NAV = {
   packages: { href: '/packages', label: 'Packages' },
   gift: { href: '/gift-cards', label: 'Gift cards' },
   reviews: { href: '/reviews', label: 'Reviews' },
+  marketing: { href: '/marketing', label: 'Marketing' },
   reports: { href: '/reports', label: 'Reports' },
   store: { href: '', label: 'Your salon page' },
   settings: { href: '/settings', label: 'Settings' },
@@ -58,11 +60,11 @@ export const salonHref = (slug: string) => `/b/${slug}`;
 
 /** The desktop rail, top to bottom (the salon page and Settings sit at the bottom). */
 /** Pages only the owner can open (they send anyone else back to the calendar), so the other roles are not shown a link to them. */
-const OWNER_ONLY: ReadonlySet<string> = new Set(['reports', 'settings']);
+const OWNER_ONLY: ReadonlySet<string> = new Set(['reports', 'settings', 'marketing']);
 /** Pages a stylist is not shown either: gift card codes are as good as cash. */
 const NOT_STYLIST: ReadonlySet<string> = new Set(['gift']);
 export const visibleTo = (id: string, role: string) => role === 'owner' || (!OWNER_ONLY.has(id) && !(role === 'stylist' && NOT_STYLIST.has(id)));
-const RAIL = ['calendar', 'inbox', 'clients', 'waitlist', 'services', 'team', 'payroll', 'sales', 'products', 'packages', 'gift', 'reviews', 'reports'] as const;
+const RAIL = ['calendar', 'inbox', 'clients', 'waitlist', 'services', 'team', 'payroll', 'sales', 'products', 'packages', 'gift', 'reviews', 'marketing', 'reports'] as const;
 /** The phone tab bar, left to right, with the + button between the second and third. */
 const TABS = ['calendar', 'services', 'clients', 'more'] as const;
 export type TabId = (typeof TABS)[number];

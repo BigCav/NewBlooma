@@ -13,6 +13,14 @@ export const mailNote = (text: string) => `<p style="margin:14px 0 0;font-size:1
 export const mailButton = (label: string, url: string, _tone: 'primary' | 'dark' = 'primary') =>
   `<p style="margin:20px 0 0"><a href="${esc(url)}" style="display:inline-block;background:#0E1116;color:#FFFFFF;text-decoration:none;font-weight:500;font-size:15px;line-height:1;padding:14px 26px;border-radius:999px">${esc(label)}</a></p>`;
 
+/** A small line of text links under the buttons, e.g. "Add to calendar: Apple or Outlook · Google". */
+export const mailLinks = (lead: string, links: { label: string; url: string }[]) =>
+  `<p style="margin:16px 0 0;font-size:13px;line-height:1.5;color:#5E6673">${esc(lead)}: ${links.map((l) => `<a href="${esc(l.url)}" style="color:#0E1116;font-weight:500">${esc(l.label)}</a>`).join(' · ')}</p>`;
+
+/** The line at the bottom of a marketing message that lets the client stop receiving them. */
+export const mailUnsub = (url: string) =>
+  `<p style="margin:22px 0 0;font-size:12.5px;line-height:1.5;color:#5E6673">You are getting this because you agreed to hear from us. <a href="${esc(url)}" style="color:#5E6673">Unsubscribe</a></p>`;
+
 /** A tinted box of label / value rows, e.g. Service, Date, Time. Empty values are left out. */
 export function mailDetails(rows: [string, string | null | undefined][]) {
   const shown = rows.filter((r): r is [string, string] => !!r[1]);
