@@ -9,9 +9,13 @@ export const mailP = (text: string) => `<p style="margin:0 0 14px;font-size:15px
 /** A small grey note under the body. */
 export const mailNote = (text: string) => `<p style="margin:14px 0 0;font-size:13px;line-height:1.5;color:#5E6673">${esc(text).replace(/\n/g, '<br>')}</p>`;
 
-/** A pill button: black, the same as the primary button on every screen. (The tone argument is kept so older callers still compile; both look the same.) */
+/** The accent every email button uses. A saturated colour is kept as it is by Gmail and Outlook dark mode; a near-black button turned into a dark patch on a dark card. */
+const BTN = '#5B3DF5';
+
+/** A pill button in the accent colour. It is a table cell with a background colour, not just a styled link, so mail apps keep the colour in dark mode.
+ *  (The tone argument is kept so older callers still compile; both look the same.) */
 export const mailButton = (label: string, url: string, _tone: 'primary' | 'dark' = 'primary') =>
-  `<p style="margin:20px 0 0"><a href="${esc(url)}" style="display:inline-block;background:#0E1116;color:#FFFFFF;text-decoration:none;font-weight:500;font-size:15px;line-height:1;padding:14px 26px;border-radius:999px">${esc(label)}</a></p>`;
+  `<table role="presentation" cellspacing="0" cellpadding="0" style="margin:20px 0 0;border-collapse:separate"><tr><td bgcolor="${BTN}" style="background:${BTN};border:1.5px solid ${BTN};border-radius:999px"><a href="${esc(url)}" style="display:inline-block;background:${BTN};color:#FFFFFF;text-decoration:none;font-weight:600;font-size:15px;line-height:1;padding:14px 26px;border-radius:999px">${esc(label)}</a></td></tr></table>`;
 
 /** A small line of text links under the buttons, e.g. "Add to calendar: Apple or Outlook · Google". */
 export const mailLinks = (lead: string, links: { label: string; url: string }[]) =>
@@ -44,9 +48,9 @@ export function mailShell(o: { brand: string; heading?: string; body: string; fo
     + `<div style="max-width:480px;margin:14px auto 0;text-align:center;font-size:12.5px;line-height:1.5;color:#5E6673">${esc(o.footer ?? o.brand)}</div></div></body></html>`;
 }
 
-/** Two buttons side by side: the main action in black, the second outlined. */
+/** Two buttons side by side: the main action in solid accent, the second a soft tint with an accent border (so it never looks see-through). */
 export const mailButtonPair = (a: { label: string; url: string }, b: { label: string; url: string }) =>
-  `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:20px"><tr>`
-  + `<td width="50%" style="padding-right:5px"><a href="${esc(a.url)}" style="display:block;text-align:center;background:#0E1116;color:#FFFFFF;text-decoration:none;font-weight:500;font-size:14.5px;padding:14px 8px;border-radius:999px">${esc(a.label)}</a></td>`
-  + `<td width="50%" style="padding-left:5px"><a href="${esc(b.url)}" style="display:block;text-align:center;background:#FFFFFF;color:#0E1116;border:1.5px solid #D5D9E0;text-decoration:none;font-weight:500;font-size:14.5px;padding:12.5px 8px;border-radius:999px">${esc(b.label)}</a></td>`
+  `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:20px;border-collapse:separate"><tr>`
+  + `<td width="50%" style="padding-right:5px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:separate"><tr><td bgcolor="${BTN}" align="center" style="background:${BTN};border:1.5px solid ${BTN};border-radius:999px"><a href="${esc(a.url)}" style="display:block;text-align:center;background:${BTN};color:#FFFFFF;text-decoration:none;font-weight:600;font-size:14.5px;padding:13px 8px;border-radius:999px">${esc(a.label)}</a></td></tr></table></td>`
+  + `<td width="50%" style="padding-left:5px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:separate"><tr><td bgcolor="#EEEAFE" align="center" style="background:#EEEAFE;border:1.5px solid ${BTN};border-radius:999px"><a href="${esc(b.url)}" style="display:block;text-align:center;background:#EEEAFE;color:#3A2BB5;text-decoration:none;font-weight:600;font-size:14.5px;padding:13px 8px;border-radius:999px">${esc(b.label)}</a></td></tr></table></td>`
   + `</tr></table>`;
