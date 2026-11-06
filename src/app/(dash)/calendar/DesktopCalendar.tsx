@@ -126,12 +126,12 @@ export function DesktopCalendar({ c, props }: { c: ReturnType<typeof useCalendar
             </div>
               </div>
             </div>
-            <div role="group" aria-label="Filter by team member" className="hscroll tb-chips" style={S('display:flex;gap:8px;overflow-x:auto')}>
+            {team.length > 1 && <div role="group" aria-label="Filter by team member" className="hscroll tb-chips" style={S('display:flex;gap:8px;overflow-x:auto')}>
               {(view === 'week' ? [] : [{ id: 'all', label: 'Whole team' }]).concat(team.map((x) => ({ id: x.id, label: firstName(x.name, '') }))).map((ch) => {
                 const on = (view === 'week' ? wkStaff : staffSel) === ch.id;
                 return <FilterChip key={ch.id} on={on} onClick={() => setStaffSel(ch.id)}>{ch.label}</FilterChip>;
               })}
-            </div>
+            </div>}
           </div>
 
           {view === 'day' && (

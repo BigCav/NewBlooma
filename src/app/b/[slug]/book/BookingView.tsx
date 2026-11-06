@@ -76,6 +76,12 @@ function useBooking(p: Props) {
   const totalDur = list.reduce((a, s) => a + s.dur, 0);
   const totalCents = list.reduce((a, s) => a + s.cents, 0);
   const member = p.team.find((t) => t.id === staff);
+  // Only one person can do what was chosen (a solo salon, or one specialist): there is nobody to choose between, so that step is left out and they are picked.
+  const mains = list.filter((s) => !p.addons.some((a) => a.id === s.id));
+  const able = sel.length ? p.team.filter((t) => mains.every((s) => t.svc.includes(s.id))) : [];
+  const lone = able.length === 1 ? able[0].id : null;
+  const flow = lone ? [1, 3, 4] : [1, 2, 3, 4];
+  useEffect(() => { if (lone && staff !== lone) setStaff(lone); }, [lone]); // eslint-disable-line react-hooks/exhaustive-deps
   const hoursToday = days[day] ? p.hours[days[day].dow] : null;
 
   useEffect(() => {
@@ -97,7 +103,7 @@ function useBooking(p: Props) {
     setSel(next);
   };
   // On the first step, back returns to the salon page instead of doing nothing.
-  const back = () => { if (done) window.location.assign('/b/' + p.slug); else if (step > 1) { setStep(step - 1); setError(''); } else window.location.assign('/b/' + p.slug); };
+  const back = () => { if (done) window.location.assign('/b/' + p.slug); else if (step > 1) { setStep(flow[Math.max(0, flow.indexOf(step) - 1)]); setError(''); } else window.location.assign('/b/' + p.slug); };
   // Every step starts at the top: the phone layout scrolls inside .bk-flow, the desktop layout scrolls the window.
   useEffect(() => { window.scrollTo(0, 0); document.querySelectorAll('.bk-flow').forEach((el) => { el.scrollTop = 0; }); }, [step, done]);
   const goStep = (n: number) => { if (n < step) { setStep(n); setError(''); } };
@@ -150,7 +156,7 @@ function useBooking(p: Props) {
       } catch { setError('Something went wrong. Please try again.'); } finally { setBusy(false); }
       return;
     }
-    setStep(step + 1); setError('');
+    setStep(flow[Math.min(flow.length - 1, flow.indexOf(step) + 1)]); setError('');
   };
 
   const submitWl = async () => {
@@ -187,7 +193,7 @@ function useBooking(p: Props) {
   })();
 
   const canGo = (step === 1 && sel.length > 0) || (step === 2 && !!staff) || (step === 3 && !!slot) || step === 4;
-  return { p, nextAt, offers, acct, au, setAu, openIn, closePanel, submitIn, signOutNow, save, setSave, savePw, setSavePw, mk, setMk, bd, setBd, setError, days, money, step, done, sel, cat, setCat, staff, setStaff, day, setDay, slot, setSlot, slotMin, setSlotMin, form, setField, hp, setHp, error, busy, calOpen, setCalOpen, wl, setWl, setWlField, submitWl,
+  return { flow, p, nextAt, offers, acct, au, setAu, openIn, closePanel, submitIn, signOutNow, save, setSave, savePw, setSavePw, mk, setMk, bd, setBd, setError, days, money, step, done, sel, cat, setCat, staff, setStaff, day, setDay, slot, setSlot, slotMin, setSlotMin, form, setField, hp, setHp, error, busy, calOpen, setCalOpen, wl, setWl, setWlField, submitWl,
     slots, loading, slotErr, list, totalDur, totalCents, member, hoursToday, toggle, back, goStep, reset, next, whenOf, countText, durText, grid, open, calLinks, canGo };
 }
 type M = ReturnType<typeof useBooking>;
@@ -476,11 +482,11 @@ function Desktop({ m }: { m: M }) {
       {!m.done && <>
         <nav aria-label="Booking steps">
           <ol style={S('margin:0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:12px 28px')}>
-            {LABELS.map((l, i) => {
-              const n = i + 1; const cur = m.step === n; const past = n < m.step;
+            {m.flow.map((n, i) => {
+              const l = LABELS[n - 1]; const cur = m.step === n; const past = n < m.step;
               return <li key={l}>
-                <button onClick={() => m.goStep(n)} disabled={!past} aria-label={`Step ${n}, ${l}` + (cur ? ', current step' : past ? ', completed' : '')} style={S('display:flex;align-items:center;gap:10px;min-height:44px;padding:0;border:0;background:transparent;font:inherit')}>
-                  <span style={S('flex:0 0 28px;width:28px;height:28px;box-sizing:content-box;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;background:' + (cur ? '#0E1116' : past ? TONE.green.bg : '#FFFFFF') + ';color:' + (cur ? '#FFFFFF' : past ? TONE.green.fg : '#5E6673') + ';border:1px solid ' + (cur ? '#0E1116' : past ? TONE.green.bg : '#E1E4E9'))}>{n}</span>
+                <button onClick={() => m.goStep(n)} disabled={!past} aria-label={`Step ${i + 1}, ${l}` + (cur ? ', current step' : past ? ', completed' : '')} style={S('display:flex;align-items:center;gap:10px;min-height:44px;padding:0;border:0;background:transparent;font:inherit')}>
+                  <span style={S('flex:0 0 28px;width:28px;height:28px;box-sizing:content-box;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;background:' + (cur ? '#0E1116' : past ? TONE.green.bg : '#FFFFFF') + ';color:' + (cur ? '#FFFFFF' : past ? TONE.green.fg : '#5E6673') + ';border:1px solid ' + (cur ? '#0E1116' : past ? TONE.green.bg : '#E1E4E9'))}>{i + 1}</span>
                   <span style={S('font-size:14px;font-weight:' + (cur ? 600 : 500) + ';color:' + (cur ? '#0E1116' : '#5E6673'))}>{l}</span>
                 </button>
               </li>;
@@ -539,11 +545,11 @@ function Mobile({ m }: { m: M }) {
     <header style={S('flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:20px 20px 12px')}>
       <button className="ghost" onClick={m.back} aria-label={m.step <= 1 ? `Back to ${p.name}` : 'Back to previous step'} style={S(RING)}>{BACK}</button>
       <div style={S('flex:1 1 auto;min-width:0')}>
-        <div style={S('font-size:13px;color:#5E6673')}>{p.name}, Step {m.step} of 4</div>
+        <div style={S('font-size:13px;color:#5E6673')}>{p.name}, Step {m.flow.indexOf(m.step) + 1} of {m.flow.length}</div>
         <h1 style={S('margin:0;font-size:20px;line-height:1.2;font-weight:600;letter-spacing:-0.02em')}>{TITLES[m.step - 1]}</h1>
       </div>
     </header>
-    <div style={S('flex:0 0 auto;margin:0 20px 16px;height:4px;border-radius:999px;background:#E1E4E9;overflow:hidden')}><div style={S('height:100%;border-radius:999px;background:#0E1116;width:' + m.step * 25 + '%')}></div></div>
+    <div style={S('flex:0 0 auto;margin:0 20px 16px;height:4px;border-radius:999px;background:#E1E4E9;overflow:hidden')}><div style={S('height:100%;border-radius:999px;background:#0E1116;width:' + ((m.flow.indexOf(m.step) + 1) / m.flow.length) * 100 + '%')}></div></div>
     <main className="bk-flow" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:20px')}>
       <Steps m={m} o={o} />
     </main>

@@ -30,7 +30,7 @@ function useServices(props: Props) {
   const { services, team } = props;
   const [extraCats, setExtraCats] = useState<{ id: string; name: string }[]>([]);
   const cats = [...props.cats, ...extraCats.filter((e) => !props.cats.some((c) => c.id === e.id))];
-  const blank = (): Draft => ({ name: '', catId: cats[0]?.id ?? '', dur: 60, price: '', desc: '', online: true, staff: [], addon: false, parents: [] });
+  const blank = (): Draft => ({ name: '', catId: cats[0]?.id ?? '', dur: 60, price: '', desc: '', online: true, staff: team.length === 1 ? [team[0].id] : [], addon: false, parents: [] });
   const [selectedId, setSelectedId] = useState<string | null>(services[0]?.id ?? null);
   const [mode, setMode] = useState<'edit' | 'new'>(services.length ? 'edit' : 'new');
   const [draft, setDraft] = useState<Draft>(services[0] ? draftOf(services[0]) : blank());
@@ -62,9 +62,9 @@ function useServices(props: Props) {
     if (!draft.addon && !draft.catId) { setError('Choose a category.'); return; }
     if (!(draft.dur > 0)) { setError('Enter how many minutes it takes.'); return; }
     if (draft.addon && !draft.parents.length) { setError('Choose at least one service this add-on goes with.'); return; }
-    if (!draft.addon && !draft.staff.length) { setError('Choose who does this service, so clients can book it.'); return; }
+    if (!draft.addon && !draft.staff.length && team.length !== 1) { setError('Choose who does this service, so clients can book it.'); return; }
     startT(async () => {
-      const r = await saveService({ id: mode === 'edit' ? selectedId ?? undefined : undefined, name, categoryId: draft.catId, dur: draft.dur, price: draft.price, desc: draft.desc, online: draft.online, staffIds: draft.staff, addon: draft.addon, parentIds: draft.parents });
+      const r = await saveService({ id: mode === 'edit' ? selectedId ?? undefined : undefined, name, categoryId: draft.catId, dur: draft.dur, price: draft.price, desc: draft.desc, online: draft.online, staffIds: draft.staff.length || team.length !== 1 ? draft.staff : [team[0].id], addon: draft.addon, parentIds: draft.parents });
       if (r.error) { setError(r.error); return; }
       setError(''); setConfirm(false); setFilter('all');
       if (r.created) { setSelectedId(r.id!); setMode('edit'); setNotice('Service added'); } else setNotice('Service saved');

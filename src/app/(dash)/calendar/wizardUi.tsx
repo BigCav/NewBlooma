@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { hop } from '@/lib/steps';
 import { fmtMin } from '@/lib/cal';
 import { findClients, recentClients, type ClientHit } from './actions';
 import { S } from './s';
@@ -9,13 +10,13 @@ import { DayStrip, TimeGrid } from '@/components/DayTimePicker';
 /* Pieces shared by the phone step-by-step flows (new appointment, walk-in, running late, block time, checkout). */
 
 /** Step state. Opening a step from the summary (`jump`) sends Continue and Back straight back to the summary. */
-export function useSteps(last: number, onNav: () => void, start = 0) {
+export function useSteps(last: number, onNav: () => void, start = 0, skip: readonly number[] = []) {
   const [step, setStep] = useState(start);
   const [ret, setRet] = useState(false);
   const go = (n: number) => { onNav(); setStep(n); };
   const jump = (n: number) => { setRet(true); go(n); };
-  const forward = () => { if (ret) { setRet(false); go(last); } else go(step + 1); };
-  const back = () => { if (ret) { setRet(false); go(last); } else go(step - 1); };
+  const forward = () => { if (ret) { setRet(false); go(last); } else go(hop(step + 1, 1, last, skip)); };
+  const back = () => { if (ret) { setRet(false); go(last); } else go(hop(step - 1, -1, last, skip)); };
   return { step, go, jump, forward, back };
 }
 

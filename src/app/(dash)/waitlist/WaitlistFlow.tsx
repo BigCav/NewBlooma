@@ -13,12 +13,15 @@ import type { WaitlistCtl } from './WaitlistView';
 /** Add to waitlist as steps: client, service, team member, days, time of day, then a summary. */
 export function AddFlow({ c }: { c: WaitlistCtl }) {
   const a = c.add;
-  const kinds = ['client', 'service', 'team', 'days', 'time', 'summary'] as const;
-  const last = kinds.length - 1;
-  const { step, jump, forward, back } = useSteps(last, () => c.setError(''));
-  const kind = kinds[step];
-  const titles: Record<string, string> = { client: 'Select client', service: 'Select service', team: 'Select team member', days: 'Which days?', time: 'Time of day', summary: 'Summary' };
   const svc = c.services.find((x) => x.id === a.svc);
+  // Nobody to choose between (a solo salon, or one person who does this service): the team step is left out.
+  const lone = c.team.length === 1 || (!!svc && c.team.filter((t) => (c.offers[svc.id] ?? []).includes(t.id)).length === 1);
+  const kinds = ['client', 'service', ...(lone ? [] : ['team']), 'days', 'time', 'summary'] as const;
+  const last = kinds.length - 1;
+  const at = (k: string) => (kinds as readonly string[]).indexOf(k);
+  const { step, jump, forward, back } = useSteps(last, () => c.setError(''));
+  const kind = kinds[Math.min(step, last)];
+  const titles: Record<string, string> = { client: 'Select client', service: 'Select service', team: 'Select team member', days: 'Which days?', time: 'Time of day', summary: 'Summary' };
   const proName = a.pro === 'any' ? 'First available team member' : c.team.find((t) => t.id === a.pro)?.name ?? 'First available team member';
   const ready = () => (kind === 'client' && !a.name.trim() ? "Add the client's name." : kind === 'service' && !a.svc ? 'Choose a service.' : '');
   const next = () => { const e = ready(); if (e) { c.setError(e); return; } forward(); };
@@ -36,9 +39,9 @@ export function AddFlow({ c }: { c: WaitlistCtl }) {
         <ClientCard name={a.name} existing={!!a.clientId} onChange={() => jump(0)} />
         <DetailRows go={jump} rows={[
           { icon: ICONS.scissors, text: svc?.name ?? 'No service', step: 1 },
-          { icon: ICONS.person, text: proName, step: 2 },
-          { icon: ICONS.day, text: DAY_PREFS.find((d) => d[0] === a.dayPref)?.[1] ?? 'Any day', step: 3 },
-          { icon: ICONS.time, text: WINDOWS.find((w) => w[0] === a.win)?.[1] ?? 'Any time', step: 4 },
+          ...(lone ? [] : [{ icon: ICONS.person, text: proName, step: at('team') }]),
+          { icon: ICONS.day, text: DAY_PREFS.find((d) => d[0] === a.dayPref)?.[1] ?? 'Any day', step: at('days') },
+          { icon: ICONS.time, text: WINDOWS.find((w) => w[0] === a.win)?.[1] ?? 'Any time', step: at('time') },
         ]} />
         <p style={S('margin:0;font-size:13px;color:#5E6673')}>We will suggest times as they open up.</p>
       </>)}

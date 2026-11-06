@@ -18,7 +18,9 @@ import type { ServicesCtl } from './ServicesView';
 export function ServiceFlow({ c }: { c: ServicesCtl }) {
   const { draft: d, set, cats, team, mains, mode, confirm, setConfirm, error, setError, nc, setNc, ce, setCe, canEdit, busy } = c;
   const isNew = mode === 'new';
-  const kinds = ['details', ...(d.addon ? [] : ['category']), 'duration', 'price', d.addon ? 'with' : 'who', 'online', 'summary'] as const;
+  // With one person in the salon there is no one to choose, so "who does it" is not asked.
+  const solo = team.length === 1;
+  const kinds = ['details', ...(d.addon ? [] : ['category']), 'duration', 'price', ...(d.addon ? ['with'] : solo ? [] : ['who']), 'online', 'summary'] as const;
   const last = kinds.length - 1;
   const { step, go, jump, forward, back } = useSteps(last, () => setError(''), isNew ? 0 : last);
   const [custom, setCustom] = useState(false);
@@ -168,7 +170,7 @@ export function ServiceFlow({ c }: { c: ServicesCtl }) {
             ...(d.addon ? [] : [{ icon: ICONS.tag, text: catName || 'No category', step: canEdit ? at('category') : undefined }]),
             { icon: ICONS.time, text: duration(d.dur || 0), step: canEdit ? at('duration') : undefined },
             { icon: ICONS.tag, text: dollars(cents), step: canEdit ? at('price') : undefined },
-            { icon: d.addon ? ICONS.scissors : ICONS.person, text: d.addon ? (people ? 'Offered with ' + people : 'No services chosen') : (people || 'No one chosen'), step: canEdit ? at(d.addon ? 'with' : 'who') : undefined },
+            ...(solo && !d.addon ? [] : [{ icon: d.addon ? ICONS.scissors : ICONS.person, text: d.addon ? (people ? 'Offered with ' + people : 'No services chosen') : (people || 'No one chosen'), step: canEdit ? at(d.addon ? 'with' : 'who') : undefined }]),
             { icon: ICONS.day, text: d.online ? 'Bookable online' : 'Hidden online', step: canEdit ? at('online') : undefined },
           ]} />
           {!canEdit && <p style={S('margin:0;color:#5E6673;font-size:13.5px')}>Only the owner can change services.</p>}

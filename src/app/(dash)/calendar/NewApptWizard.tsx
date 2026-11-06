@@ -6,6 +6,7 @@ import { spanText } from './calUi';
 import { dollars } from '@/lib/format';
 import { duration, plural } from '@/lib/display';
 import { firstName } from '@/lib/people';
+import { visible } from '@/lib/steps';
 import { useSteps, StepShell, ClientStep, PeopleStep, DayTimeStep, ClientCard, DetailRows, ICONS } from './wizardUi';
 import type { useCalendar } from './useCalendar';
 import type { Props } from './calUi';
@@ -14,19 +15,21 @@ const TITLES = ['Select client', 'Select services', 'Select team member', 'Selec
 
 /** Phone version of "New appointment": client, services (and extras), team member, time, then a summary like the booking view. */
 export function NewApptWizard({ c, props, onCancel }: { c: ReturnType<typeof useCalendar>; props: Props; onCancel?: () => void }) {
-  const { nf, setNf, setError, error, hasError, busy, close, createNew, nLock, nFirstSvc, nPickSvc, nOffers, nSlots, nWhy, days14, offered, offers, staffName, services, team, nPlan } = c;
+  const { nLone, nf, setNf, setError, error, hasError, busy, close, createNew, nLock, nFirstSvc, nPickSvc, nOffers, nSlots, nWhy, days14, offered, offers, staffName, services, team, nPlan } = c;
   const typed = nf.client.trim();
   const plan = nPlan();
   // Booking for a client picked from their profile: they are already chosen, so the first step is the services.
   const fixed = !!props.initialClientId;
   const off = fixed ? 1 : 0;
-  const { step, go, jump, forward, back } = useSteps(4, () => setError(''), off);
+  const skip = nLone ? [2] : [];
+  const { step, go, jump, forward, back } = useSteps(4, () => setError(''), off, skip);
+  const shown = visible(TITLES, [...(fixed ? [0] : []), ...skip], step);
   const canNext = step === 0 ? !!typed : step === 1 ? plan.sel.length > 0 : step === 2 ? !!nf.staff : step === 3 ? nf.time !== null && !nWhy(nf.time) : true;
   const next = () => { if (!canNext) { setError(step === 0 ? "Add the client's name." : step === 1 ? 'Choose a service.' : step === 2 ? 'Choose a team member.' : 'Choose a time.'); return; } forward(); };
   const shut = onCancel ?? close;
 
   return (
-    <StepShell step={step - off} titles={fixed ? TITLES.slice(1) : TITLES} onBack={back} onClose={shut} error={hasError ? error : ''}
+    <StepShell step={shown.at} titles={shown.titles} onBack={back} onClose={shut} error={hasError ? error : ''}
       summary={step >= 1 && plan.sel.length > 0 ? <div style={S('display:flex;justify-content:space-between;align-items:baseline;gap:12px')}><span style={S('color:#5E6673;font-size:14px')}>{plural(plan.sel.length, 'service') + ', ' + duration(plan.mins)}</span><span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{dollars(plan.priceC)}</span></div> : null}
       actions={[step === 4 ? { label: busy ? 'Adding…' : 'Add appointment', onClick: createNew, disabled: busy } : { label: 'Continue', onClick: next, disabled: !canNext }]}>
       {step === 0 && <ClientStep name={nf.client} clientId={nf.clientId} recent={props.recent ?? []} onChange={(name, id) => { setNf({ ...nf, client: name, clientId: id }); setError(''); }} />}
@@ -44,7 +47,7 @@ export function NewApptWizard({ c, props, onCancel }: { c: ReturnType<typeof use
         <DetailRows go={jump} rows={[
           { icon: ICONS.day, text: dayInfo(nf.day).full, step: 3 },
           { icon: ICONS.time, text: nf.time !== null ? spanText(nf.time, nf.time + plan.dur) : '', step: 3 },
-          { icon: ICONS.person, text: staffName(nf.staff), step: 2 },
+          ...(nLone ? [] : [{ icon: ICONS.person, text: staffName(nf.staff), step: 2 }]),
         ]} />
         <div style={S('display:flex;flex-direction:column;gap:10px')}>
           <div style={S('display:flex;align-items:center;justify-content:space-between')}><h3 style={S('margin:0;font-size:17px;font-weight:600;letter-spacing:-0.01em')}>Services</h3><button onClick={() => jump(1)} style={S('border:0;background:transparent;font:inherit;font-size:14px;font-weight:500;text-decoration:underline;cursor:pointer;color:#0E1116')}>Edit</button></div>

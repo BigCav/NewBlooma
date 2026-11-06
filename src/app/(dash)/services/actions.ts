@@ -49,6 +49,11 @@ export async function saveService(i: SvcInput): Promise<{ error?: string; id?: s
   if (!categoryId) return { error: 'Choose a category.' };
   if (!(i.dur > 0)) return { error: 'Choose how long it takes.' };
   if (i.addon && !i.parentIds.length) return { error: 'Choose at least one service this add-on goes with.' };
+  // Alone in the salon there is no one to choose: the service is theirs.
+  if (!i.addon && !i.staffIds.length) {
+    const { data: only } = await sb.from('staff').select('id').eq('active', true);
+    if (only?.length === 1) i = { ...i, staffIds: [only[0].id] };
+  }
   if (!i.addon && !i.staffIds.length) return { error: 'Choose who does this service, so clients can book it.' };
   const row = { salon_id: salon.id, category_id: categoryId, name, description: i.desc.trim() || null, duration_min: i.dur, price_cents: cents, online_bookable: i.online, is_addon: i.addon };
   let id = i.id;
