@@ -6,11 +6,12 @@ import { clock12, clockStr, duration, makeMoney, plural, timeRange } from '@/lib
 import { MONTHS_FULL, addDaysYmd, dayInfo } from '@/lib/cal';
 import { firstName } from '@/lib/people';
 import { TONE } from '@/lib/tones';
-import { Avatar, BACK, BLACK, Chip, FieldError, INPUT, Icon, KV_ROW, LabelledField, Note, Notice, OUTLINE, PasswordInput, RING, TEXTAREA, filterChipCss, dim } from '@/components/ui';
+import { Avatar, BACK, BLACK, FieldError, INPUT, Icon, KV_ROW, LabelledField, Note, Notice, OUTLINE, PasswordInput, RING, TEXTAREA, filterChipCss, dim } from '@/components/ui';
 import { checkPhone, phoneInput } from '@/lib/phone';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { S } from '../../../(dash)/calendar/pickers';
-import { clientSignIn, clientSignOut, nextAvailable, publicBook, publicSlots, publicWaitlist, type Account, type Slot } from './actions';
+import { SalonHeader } from '../SalonHeader';
+import { clientSignIn, nextAvailable, publicBook, publicSlots, publicWaitlist, type Account, type Slot } from './actions';
 
 type Svc = { id: string; name: string; desc: string; cat: string; dur: number; cents: number };
 type Addon = Svc & { parents: string[] };
@@ -24,7 +25,6 @@ type Props = {
 const TITLES = ['Choose your services', 'Choose a team member', 'Pick a date and time', 'Your details'];
 const LABELS = ['Services', 'Team member', 'Time', 'Details'];
 const toMin = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
-const firstOf = (a: Account) => firstName(a.name, a.email.split('@')[0]);
 /** The signed-in chip keeps its dark ink look. */
 const INK = { bg: '#0E1116', fg: '#FFFFFF' };
 const ANY_ICON = <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8.5" r="3.5" /><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5" /><path d="M16 5.2a3.4 3.4 0 0 1 0 6.6M18.5 14.8c1.6.8 2.6 2.4 3 5.2" /></svg>;
@@ -124,10 +124,6 @@ function useBooking(p: Props) {
       setAcct(r.account); setForm((f) => formFor(r.account ?? null, f.notes)); setSave(false); setSavePw(''); setError(''); setAuState(EMPTY_AU);
     } catch { setAu({ busy: false, error: 'Something went wrong. Please try again.' }); }
   };
-  const signOutNow = async () => {
-    try { await clientSignOut(); } catch { /* the session is cleared on the next load either way */ }
-    setAcct(null); setForm((f) => formFor(null, f.notes)); setError(''); setAuState(EMPTY_AU);
-  };
 
   const whenOf = (min: number) => days[day].full + ', ' + timeRange(clock12(min), clock12(min + totalDur));
   const countText = plural(list.length, 'service');
@@ -193,7 +189,7 @@ function useBooking(p: Props) {
   })();
 
   const canGo = (step === 1 && sel.length > 0) || (step === 2 && !!staff) || (step === 3 && !!slot) || step === 4;
-  return { flow, p, nextAt, offers, acct, au, setAu, openIn, closePanel, submitIn, signOutNow, save, setSave, savePw, setSavePw, mk, setMk, bd, setBd, setError, days, money, step, done, sel, cat, setCat, staff, setStaff, day, setDay, slot, setSlot, slotMin, setSlotMin, form, setField, hp, setHp, error, busy, calOpen, setCalOpen, wl, setWl, setWlField, submitWl,
+  return { flow, p, nextAt, offers, acct, au, setAu, openIn, closePanel, submitIn, save, setSave, savePw, setSavePw, mk, setMk, bd, setBd, setError, days, money, step, done, sel, cat, setCat, staff, setStaff, day, setDay, slot, setSlot, slotMin, setSlotMin, form, setField, hp, setHp, error, busy, calOpen, setCalOpen, wl, setWl, setWlField, submitWl,
     slots, loading, slotErr, list, totalDur, totalCents, member, hoursToday, toggle, back, goStep, reset, next, whenOf, countText, durText, grid, open, calLinks, canGo };
 }
 type M = ReturnType<typeof useBooking>;
@@ -459,25 +455,8 @@ function Desktop({ m }: { m: M }) {
   const hasWhen = m.slotMin !== null;
   return (
     <div style={S('max-width:1180px;margin:0 auto;box-sizing:border-box;padding:24px 32px 56px;display:flex;flex-direction:column;gap:28px')}>
-      <header style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px')}>
-        <div style={S('display:flex;align-items:center;gap:12px')}>
-          <button className="ghost" onClick={m.back} aria-label={m.step <= 1 ? `Back to ${p.name}` : 'Back to previous step'} style={S(RING)}>{BACK}</button>
-          <div>
-            <a href={'/b/' + p.slug} style={S('display:block;font-size:17px;font-weight:600;letter-spacing:-0.01em;color:#0E1116;text-decoration:none')}>{p.name}</a>
-            <div style={S('font-size:13px;color:#5E6673')}>Online booking</div>
-          </div>
-        </div>
-        <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:10px')}>
-          {m.acct && (
-            <div style={S('display:flex;align-items:center;gap:8px;min-height:44px;box-sizing:border-box;padding:0 6px;border:1px solid #E1E4E9;border-radius:999px;background:#FFFFFF')}>
-              <Avatar name={m.acct.name || m.acct.email} size="xs" tone={INK} />
-              <span style={S('font-size:14px;font-weight:500')}>{firstOf(m.acct)}</span>
-              <button className="ghost" onClick={m.signOutNow} style={S('height:32px;padding:0 12px;border:0;border-radius:999px;background:transparent;color:#5B3DF5;font-size:13px;font-weight:600')}>Sign out</button>
-            </div>
-          )}
-          <Chip tone={pillOn ? 'green' : 'grey'}>{pill}</Chip>
-        </div>
-      </header>
+      <SalonHeader slug={p.slug} name={p.name} subtitle="Online booking" back={{ onClick: m.back, label: m.step <= 1 ? `Back to ${p.name}` : 'Back to previous step' }}
+        status={{ open: pillOn, text: pill }} account={m.acct ? { name: m.acct.name || m.acct.email } : null} />
 
       {!m.done && <>
         <nav aria-label="Booking steps">

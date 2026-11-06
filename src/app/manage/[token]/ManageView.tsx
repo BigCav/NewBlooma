@@ -9,6 +9,7 @@ import { BLACK, Chip, DANGER, FieldError, Icon, KV_ROW, Note, Notice, OUTLINE, f
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { S } from '../../(dash)/calendar/pickers';
 import { cancelBooking, manageSlots, moveBooking } from './actions';
+import { SalonHeader } from '@/app/b/[slug]/SalonHeader';
 import { publicStatus } from './shared';
 
 type Item = { name: string; dur: number; cents: number };
@@ -169,9 +170,7 @@ function Desktop({ m }: { m: M }) {
   const showAside = !m.cancelled && (m.mode !== 'view' || p.canAct);
   return (
     <div className="bk-flow" style={S('max-width:1180px;margin:0 auto;box-sizing:border-box;padding:24px 32px 56px;display:flex;flex-direction:column;gap:28px')}>
-      <header style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px')}>
-        <div style={S('display:flex;align-items:center;gap:12px')}><div><a href={'/b/' + p.slug} style={S('display:block;font-size:17px;font-weight:600;letter-spacing:-0.01em;color:#0E1116;text-decoration:none')}>{p.salonName}</a><div style={S('font-size:13px;color:#5E6673')}>Manage your booking</div></div></div>
-      </header>
+      <SalonHeader slug={p.slug} name={p.salonName} subtitle="Manage your booking" />
       {view && <div style={S('display:flex;flex-direction:column;gap:20px')}>
         <StatusRow m={m} />
         <h1 style={S('margin:0;font-size:34px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>Your appointment</h1>
@@ -231,7 +230,7 @@ function Mobile({ m }: { m: M }) {
   const col = 'display:flex;flex-direction:column;gap:10px';
   return (
     <div className="bk-flow" style={S('flex:1 1 0;min-height:0;box-sizing:border-box;overflow-y:auto;padding:24px 20px 28px;display:flex;flex-direction:column;gap:20px')}>
-      <header style={S('display:flex;align-items:center;gap:12px')}><div><a href={'/b/' + p.slug} style={S('display:block;font-size:17px;font-weight:600;letter-spacing:-0.01em;color:#0E1116;text-decoration:none')}>{p.salonName}</a><div style={S('font-size:13px;color:#5E6673')}>Manage your booking</div></div></header>
+      <SalonHeader m slug={p.slug} name={p.salonName} subtitle="Manage your booking" />
       {view && <>
         <StatusRow m={m} />
         <h1 style={S(H1)}>Your appointment</h1>

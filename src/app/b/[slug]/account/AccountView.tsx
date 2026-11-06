@@ -8,8 +8,8 @@ import { S } from '@/app/(dash)/calendar/pickers';
 import { phoneInput } from '@/lib/phone';
 import { Chip, FieldError, Notice, BLACK, OUTLINE, dim } from '@/components/ui';
 import { TONE, type ToneName } from '@/lib/tones';
-import { clientSignIn, clientSignOut } from '../book/actions';
-import { AcctChip } from '../AcctChip';
+import { clientSignIn } from '../book/actions';
+import { SalonHeader } from '../SalonHeader';
 import { changePassword, saveDetails } from './actions';
 
 export type BookingRow = { id: string; date: string; when: string; what: string; who: string; meta: string; price: string; status: string; statusLabel: string; statusTone: ToneName; manage: string | null; again: string | null };
@@ -84,7 +84,6 @@ function AccountInner({ slug, salon, account, upcoming, past }: Props) {
 
   const dirty = f.name !== saved.name || f.email !== saved.email || f.phone !== saved.phone;
   const setField = (k: keyof Acct, v: string) => { setF({ ...f, [k]: k === 'phone' ? phoneInput(v) : v }); setError(''); setNote(''); };
-  const signOut = async () => { try { await clientSignOut(); } catch { /* cleared on the next load */ } window.location.assign('/b/' + slug); };
   const save = async () => {
     setBusy(true); setError('');
     const r = await saveDetails(slug, f).catch(() => ({ error: 'Something went wrong. Please try again.' } as { error?: string; notice?: string }));
@@ -114,20 +113,10 @@ function AccountInner({ slug, salon, account, upcoming, past }: Props) {
   return (
     <div style={page}>
       <div className="acct-wrap">
-        <header className="only-d" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-          <Link href={`/b/${slug}`} style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: '#0E1116', textDecoration: 'none' }}>{salon}</Link>
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
-            <AcctChip slug={slug} name={saved.name || saved.email} />
-            <Link href={`/b/${slug}/book`} style={{ ...dark, padding: '0 22px' }}>Book now</Link>
-          </div>
-        </header>
-        <header className="only-m" style={{ flexDirection: 'column', gap: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <Link href={`/b/${slug}`} style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: '#0E1116', textDecoration: 'none' }}>{salon}</Link>
-            <Link href={`/b/${slug}/book`} style={{ ...dark, padding: '0 22px' }}>Book now</Link>
-          </div>
-          <AcctChip slug={slug} name={saved.name || saved.email} wide />
-        </header>
+        <div className="only-d"><SalonHeader slug={slug} name={salon} account={{ name: saved.name || saved.email }}
+          action={<Link href={`/b/${slug}/book`} style={{ ...dark, padding: '0 22px' }}>Book now</Link>} /></div>
+        <div className="only-m"><SalonHeader m slug={slug} name={salon} account={{ name: saved.name || saved.email }}
+          action={<Link href={`/b/${slug}/book`} style={{ ...dark, padding: '0 22px' }}>Book now</Link>} /></div>
         <div><h1 style={{ margin: 0, fontSize: 34, lineHeight: 1.1, fontWeight: 600, letterSpacing: '-0.03em' }}>Your account</h1><p style={{ margin: '6px 0 0', color: '#5E6673', fontSize: 15, overflowWrap: 'anywhere' }}>{saved.name}, {saved.email}</p></div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>

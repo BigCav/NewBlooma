@@ -1,11 +1,11 @@
 'use client';
 // 1:1 conversion of the prototype's SalonProfile.dc.html and MobileSalonProfile.dc.html (the public salon page).
 // Markup and style strings are kept as written; the {{ }} holes are the salon's real data.
-import { AcctChip } from './AcctChip';
+import { SalonHeader } from './SalonHeader';
 import { clockStr, plural, timeRange } from '@/lib/display';
 import { WEEKDAYS_FULL } from '@/lib/cal';
 import { firstName } from '@/lib/people';
-import { Avatar, BLACK, CHEV, Chip, KV_ROW, Note, OUTLINE, filterChipCss } from '@/components/ui';
+import { Avatar, BLACK, CHEV, KV_ROW, Note, OUTLINE, filterChipCss } from '@/components/ui';
 import { DrawerKeys } from '@/components/DrawerKeys';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -164,21 +164,15 @@ function Body({ p, m, cat, setCat, today, openMember }: { p: Props; m: boolean; 
 
   if (m) return (<>
     <main className="flow" style={S('flex:1 1 0;min-height:0;overflow-y:auto;padding:24px 20px 24px;display:flex;flex-direction:column;gap:20px')}>
-      <header style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}><span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{p.name}</span><Chip tone={open ? 'green' : 'grey'}>{openText}</Chip></header>
-      {p.account && <AcctChip slug={p.slug} name={p.account.name || 'Your account'} wide />}
+      <SalonHeader m slug={p.slug} name={p.name} status={{ open, text: openText }} account={p.account ? { name: p.account.name || 'Your account' } : null} />
       {upNextM}{photos}{services}{team}{reviews}{about}{info}{manage}
     </main>
     {p.bookable && <div style={S('flex:0 0 auto;box-sizing:border-box;padding:12px 20px 24px;background:#FFFFFF;border-top:1px solid #E6E8EC')}><Link href={book()} style={S(BLACK + ';flex:0 0 auto')}>Book now</Link></div>}
   </>);
   return (
     <div className="flow" style={S('max-width:1180px;margin:0 auto;box-sizing:border-box;padding:24px 32px 56px;display:flex;flex-direction:column;gap:32px')}>
-      <header style={S('display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px')}>
-        <div style={S('display:flex;align-items:center;gap:12px')}><span style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{p.name}</span><Chip tone={open ? 'green' : 'grey'}>{openText}</Chip></div>
-        <div style={S('display:flex;flex-wrap:wrap;align-items:center;gap:10px')}>
-          {p.account && <AcctChip slug={p.slug} name={p.account.name || 'Your account'} />}
-          {p.bookable && <Link href={book()} style={S(BLACK + ';flex:0 0 auto;height:44px;padding:0 22px')}>Book now</Link>}
-        </div>
-      </header>
+      <SalonHeader slug={p.slug} name={p.name} status={{ open, text: openText }} account={p.account ? { name: p.account.name || 'Your account' } : null}
+        action={p.bookable ? <Link href={book()} style={S(BLACK + ';flex:0 0 auto;height:44px;padding:0 22px')}>Book now</Link> : undefined} />
       {photos}
       {visits}
       <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:24px')}>
