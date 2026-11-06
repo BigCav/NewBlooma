@@ -1,5 +1,5 @@
 /** Phone numbers are digits only, with an optional leading + for international numbers. Safe to import from client and server code. */
-export const PHONE_MSG = 'Phone numbers can only contain numbers (7 to 15 digits).';
+export const PHONE_MSG = 'Enter a phone number with 7 to 15 digits (numbers only).';
 
 /** Strips anything that is not a digit as the person types; a + is kept only as the first character. */
 export const phoneInput = (v: string) => {

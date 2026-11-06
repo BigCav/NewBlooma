@@ -3,7 +3,7 @@ import { CardText, PublicCard } from '@/app/b/[slug]/PublicCard';
 import { ReviewView } from './ReviewView';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Leave a review' };
+export const metadata = { title: 'Leave a review', robots: { index: false } };
 
 export default async function Review({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;

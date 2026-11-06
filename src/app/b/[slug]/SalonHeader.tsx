@@ -37,7 +37,7 @@ export function SalonHeader({ slug, name, subtitle, back, status, account, actio
 }) {
   const title = (
     <div style={S('min-width:0')}>
-      <Link href={`/b/${slug}`} style={S('display:block;font-size:20px;font-weight:600;letter-spacing:-0.02em;color:#0E1116;text-decoration:none;overflow-wrap:anywhere')}>{name}</Link>
+      <Link href={`/b/${slug}`} style={S('display:flex;align-items:center;min-height:' + (subtitle ? 0 : 44) + 'px;font-size:20px;font-weight:600;letter-spacing:-0.02em;color:#0E1116;text-decoration:none;overflow-wrap:anywhere')}>{name}</Link>
       {!!subtitle && <div style={S('font-size:13px;color:#5E6673')}>{subtitle}</div>}
     </div>
   );

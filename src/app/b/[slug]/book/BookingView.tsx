@@ -11,6 +11,7 @@ import { checkPhone, phoneInput } from '@/lib/phone';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { S } from '../../../(dash)/calendar/pickers';
 import { SalonHeader } from '../SalonHeader';
+import { birthdayDate } from '@/lib/marketing-shared';
 import { clientSignIn, nextAvailable, publicBook, publicSlots, publicWaitlist, type Account, type Slot } from './actions';
 
 type Svc = { id: string; name: string; desc: string; cat: string; dur: number; cents: number };
@@ -58,7 +59,8 @@ function useBooking(p: Props) {
   const [staff, setStaff] = useState(p.preStaff);
   const [nextAt, setNextAt] = useState<string | null>(null);
   useEffect(() => { let live = true; nextAvailable(p.slug, sel, staff && staff !== 'any' ? staff : undefined).then((l) => { if (live) setNextAt(l); }).catch(() => { if (live) setNextAt(null); }); return () => { live = false; }; }, [p.slug, sel, staff]);
-  const [day, setDay] = useState(0);
+  const firstOpen = days.findIndex((d, i) => { const t = p.hours[d.dow]; return !!t && (i > 0 || p.nowMin < toMin(t.to)); });
+  const [day, setDay] = useState(Math.max(0, firstOpen));
   const [slot, setSlot] = useState('');
   const [slotMin, setSlotMin] = useState<number | null>(null);
   const [form, setForm] = useState<Form>(formFor(p.account));
@@ -109,9 +111,9 @@ function useBooking(p: Props) {
   const goStep = (n: number) => { if (n < step) { setStep(n); setError(''); } };
   const setField = (k: keyof Form, v: string) => { setForm((f) => ({ ...f, [k]: v })); setError(''); };
   const setWlField = (k: 'name' | 'phone', v: string) => setWl((w) => ({ ...w, [k]: v, error: '' }));
-  const reset = () => { setStep(1); setDone(null); setSel([]); setCat('All'); setStaff(''); setDay(0); setSlot(''); setSlotMin(null); setForm(formFor(acct)); setError(''); setCalOpen(false); setWl(EMPTY_WL); setSave(false); setSavePw(''); setMk(false); setBdState({ month: '', day: '' }); setAuState(EMPTY_AU); };
+  const reset = () => { setStep(1); setDone(null); setSel([]); setCat('All'); setStaff(''); setDay(Math.max(0, firstOpen)); setSlot(''); setSlotMin(null); setForm(formFor(acct)); setError(''); setCalOpen(false); setWl(EMPTY_WL); setSave(false); setSavePw(''); setMk(false); setBdState({ month: '', day: '' }); setAuState(EMPTY_AU); };
   const setAu = (v: Partial<Au>) => setAuState((a) => ({ ...a, ...v }));
-  const openIn = () => setAu({ panel: 'in', error: '' });
+  const openIn = () => { setError(''); setAu({ panel: 'in', error: '' }); };
   const closePanel = () => setAu({ panel: 'none', error: '', pw: '' });
   const submitIn = async () => {
     if (au.busy) return;
@@ -138,6 +140,9 @@ function useBooking(p: Props) {
       if (!form.name.trim()) { setError('Please add your name.'); return; }
       if (!/\S+@\S+\.\S+/.test(form.email)) { setError('Please add a valid email so we can confirm your booking.'); return; }
       if (!(acct && acct.phone)) { const ph = checkPhone(form.phone, true); if (ph.error) { setError(ph.error); return; } }
+      if (au.panel !== 'none') { setError('Sign in above, or choose Continue as guest.'); return; }
+      if (mk && !!bd.month !== !!bd.day) { setError('Choose both the day and the month of your birthday, or neither.'); return; }
+      if (mk && bd.month && bd.day && !birthdayDate(Number(bd.month), Number(bd.day))) { setError('That is not a real birthday. Check the day and month.'); return; }
       const wantsAccount = !acct && save;
       if (wantsAccount && savePw.length < 8) { setError('Choose a password with at least 8 characters.'); return; }
       setBusy(true);
@@ -314,6 +319,12 @@ function Steps({ m, o }: { m: M; o: O }) {
     {m.step === 4 && (
       <div className="bk-flow" style={S('position:relative;display:flex;flex-direction:column;gap:18px;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px')}>
         <input tabIndex={-1} autoComplete="off" aria-hidden="true" name="website" value={m.hp} onChange={(e) => m.setHp(e.target.value)} style={S('position:absolute;left:-9999px;width:1px;height:1px;min-height:0;padding:0;opacity:0')} />
+        {o.mob && m.slotMin !== null && (
+          <dl style={S('margin:0;display:flex;flex-direction:column;padding:4px 16px;border-radius:16px;background:#F4F5F7')}>
+            <div style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #E6E8EC')}><dt style={S('color:#5E6673')}>When</dt><dd style={S('margin:0;font-weight:500;text-align:right')}>{m.whenOf(m.slotMin)}</dd></div>
+            <div style={S('display:flex;justify-content:space-between;gap:12px;padding:10px 0')}><dt style={S('color:#5E6673')}>With</dt><dd style={S('margin:0;font-weight:500;text-align:right;overflow-wrap:anywhere')}>{m.member ? m.member.name : 'Any team member'}</dd></div>
+          </dl>
+        )}
         {!m.acct && m.au.panel === 'none' && (
           <div style={S(o.mob ? 'display:flex;flex-direction:column;align-items:stretch;gap:12px;padding:16px;border-radius:16px;background:#F4F5F7' : 'display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;padding:14px 16px;border-radius:16px;background:#F4F5F7')}>
             <span style={S(o.mob ? 'font-size:14px;line-height:1.45;color:#5E6673' : 'flex:1 1 220px;font-size:14px;color:#5E6673')}>Have an account? Sign in to use your saved details.</span>
@@ -344,7 +355,7 @@ function Steps({ m, o }: { m: M; o: O }) {
           <LabelledField id="bk-name" label="Full name"><input id="bk-name" className="bkf" type="text" autoComplete="name" value={m.form.name} onChange={(e) => m.setField('name', e.target.value)} placeholder="Your name" style={S(INPUT)} /></LabelledField>
           <LabelledField id="bk-email" label="Email"><input id="bk-email" className="bkf" type="email" autoComplete="email" value={m.form.email} onChange={(e) => m.setField('email', e.target.value)} placeholder="you@example.com" style={S(INPUT)} /></LabelledField>
         </>}
-        {!(m.acct && m.acct.phone) && <LabelledField id="bk-phone" label="Phone"><input id="bk-phone" className="bkf" type="tel" inputMode="tel" autoComplete="tel" value={m.form.phone} onChange={(e) => m.setField('phone', phoneInput(e.target.value))} placeholder="Required" style={S(INPUT)} /></LabelledField>}
+        {!(m.acct && m.acct.phone) && m.au.panel === 'none' && <LabelledField id="bk-phone" label="Phone"><input id="bk-phone" className="bkf" type="tel" inputMode="tel" autoComplete="tel" value={m.form.phone} onChange={(e) => m.setField('phone', phoneInput(e.target.value))} placeholder="Required" style={S(INPUT)} /></LabelledField>}
         <LabelledField id="bk-notes" label="Notes for the salon">
           <textarea id="bk-notes" className="bkf" value={m.form.notes} onChange={(e) => m.setField('notes', e.target.value)} placeholder="Optional" style={S(TEXTAREA + ';min-height:96px;resize:none')} />
         </LabelledField>

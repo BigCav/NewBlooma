@@ -1,6 +1,6 @@
 import { CardText, PublicCard } from '@/app/b/[slug]/PublicCard';
 
-export const metadata = { title: 'Manage your booking' };
+export const metadata = { title: 'Manage your booking', robots: { index: false } };
 export default function ManageIndex() {
   return (
     <PublicCard title="Manage your booking">

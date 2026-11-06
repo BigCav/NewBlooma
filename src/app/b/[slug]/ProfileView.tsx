@@ -112,9 +112,9 @@ function Body({ p, m, cat, setCat, today, openMember }: { p: Props; m: boolean; 
       {!!(p.address || p.phone || p.email) && <>
         <h2 style={S('margin:4px 0 0;font-size:18px;font-weight:600;letter-spacing:-0.01em')}>Find us</h2>
         <dl style={S('margin:-8px 0 0;display:flex;flex-direction:column')}>
-          {!!p.address && <div style={S(KV_ROW)}><dt style={S('color:#5E6673')}>Address</dt><dd style={S('margin:0;text-align:right;font-weight:500;overflow-wrap:anywhere')}>{p.address}</dd></div>}
-          {!!p.phone && <div style={S(KV_ROW)}><dt style={S('color:#5E6673')}>Phone</dt><dd style={S('margin:0;text-align:right;font-weight:500;white-space:nowrap')}>{p.phone}</dd></div>}
-          {!!p.email && <div style={S(KV_ROW)}><dt style={S('color:#5E6673')}>Email</dt><dd style={S('margin:0;text-align:right;font-weight:500;overflow-wrap:anywhere')}>{p.email}</dd></div>}
+          {!!p.address && <div style={S(KV_ROW)}><dt style={S('color:#5E6673')}>Address</dt><dd style={S('margin:0;text-align:right;font-weight:500;overflow-wrap:anywhere')}><a href={'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(p.address)} target="_blank" rel="noopener noreferrer" style={S('color:inherit;text-decoration:underline;text-underline-offset:3px;display:inline-flex;align-items:center;min-height:44px')}>{p.address}</a></dd></div>}
+          {!!p.phone && <div style={S(KV_ROW)}><dt style={S('color:#5E6673')}>Phone</dt><dd style={S('margin:0;text-align:right;font-weight:500;white-space:nowrap')}><a href={'tel:' + p.phone.replace(/[^\d+]/g, '')} style={S('color:inherit;text-decoration:underline;text-underline-offset:3px;display:inline-flex;align-items:center;min-height:44px')}>{p.phone}</a></dd></div>}
+          {!!p.email && <div style={S(KV_ROW)}><dt style={S('color:#5E6673')}>Email</dt><dd style={S('margin:0;text-align:right;font-weight:500;overflow-wrap:anywhere')}><a href={'mailto:' + p.email} style={S('color:inherit;text-decoration:underline;text-underline-offset:3px;display:inline-flex;align-items:center;min-height:44px')}>{p.email}</a></dd></div>}
         </dl></>}
     </section>
   );

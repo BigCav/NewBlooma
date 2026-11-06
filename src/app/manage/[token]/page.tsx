@@ -10,7 +10,7 @@ import { calEventFor, icsPath } from '@/lib/booking-cal';
 import { googleCalUrl } from '@/lib/ics';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Your appointment' };
+export const metadata = { title: 'Your appointment', robots: { index: false } };
 
 export default async function Manage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -34,6 +34,6 @@ export default async function Manage({ params }: { params: Promise<{ token: stri
   const forms = canAct ? await outstandingForBooking(t.booking_id!).catch(() => null) : null;
   const ev = canAct ? await calEventFor(t.booking_id!, token).catch(() => null) : null;
   const pol = policyInfo(b.starts_at, tz, CANCEL_HOURS[st!.free_cancel_before] ?? 24);
-  return <ManageView bookingRef={bookingRef((b as any).ref_no)} token={token} salonName={salon!.name} slug={salon!.slug} address={salon!.address ?? ''} currency={salon!.currency || 'NZD'} staffName={(b as any).staff?.name ?? ''} status={b.status}
+  return <ManageView bookingRef={bookingRef((b as any).ref_no)} token={token} salonName={salon!.name} slug={salon!.slug} address={salon!.address ?? ''} currency={salon!.currency || 'NZD'} staffName={(b as any).staff?.name ?? ''} status={['pending', 'confirmed'].includes(b.status) && new Date((b as any).ends_at) < new Date() ? 'past' : b.status}
     items={items} startYmd={ymd(b.starts_at, tz)} startMin={minutesOfDay(b.starts_at, tz)} canAct={canAct} free={pol.free} deadline={pol.deadline} hours={hours} today={ymd(new Date(), tz)} forms={forms ? { names: forms.names, url: forms.url } : null} cal={ev ? { ics: icsPath(token), google: googleCalUrl(ev) } : null} windowDays={({ '1w': 8, '2w': 15, '4w': 29, '8w': 57 } as Record<string, number>)[st!.booking_window] ?? 29} />;
 }

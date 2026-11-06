@@ -4,7 +4,7 @@ import { dateShort } from '@/lib/public';
 import { CardText, PrimaryButton, PublicCard } from '@/app/b/[slug]/PublicCard';
 import { flushOutbox } from '@/lib/notify';
 
-export const metadata = { title: 'Appointment offer' };
+export const metadata = { title: 'Appointment offer', robots: { index: false } };
 
 async function accept(token: string) {
   'use server';

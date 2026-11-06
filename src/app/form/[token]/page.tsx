@@ -7,7 +7,7 @@ import { clientPending, loadBooking, rowsForBooking, toFill } from '@/lib/forms'
 import { FormFillView } from '@/components/FormFillView';
 import { submitPublicForms } from './actions';
 
-export const metadata = { title: 'Before your visit' };
+export const metadata = { title: 'Before your visit', robots: { index: false } };
 export const dynamic = 'force-dynamic';
 
 const Card = ({ title, text, link }: { title: string; text: string; link?: { href: string; label: string } }) => (
