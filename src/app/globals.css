@@ -112,9 +112,12 @@ html::-webkit-scrollbar,body::-webkit-scrollbar{display:none;width:0;height:0}
 }
 /* Night mode: the dashboard colours are set inline, so the page is inverted as a whole and pictures are turned back. */
 html[data-theme=dark]{filter:invert(.93) hue-rotate(180deg);background:#fff}
-html[data-theme=dark] img,html[data-theme=dark] video,html[data-theme=dark] iframe,html[data-theme=dark] [data-keep]{filter:hue-rotate(180deg) invert(.93)}
+/* The exact undo of the page's own filter (hue-rotate, then invert(1) with contrast 1.1628 reverses invert(.93) and hue-rotate), so photos keep their real colours instead of looking washed out. */
+html[data-theme=dark] img,html[data-theme=dark] video,html[data-theme=dark] iframe,html[data-theme=dark] [data-keep]{filter:hue-rotate(180deg) invert(1) contrast(1.1628)}
+/* Gold is outside the colours the inverted page can show, so filled rating stars take the nearest one it can: a clear amber rather than a muddy brown. */
+html[data-theme=dark] .star-on{color:rgb(205,96,0) !important}
 /* Fallback for any photo still drawn as a CSS background image. */
-html[data-theme=dark] [style*="background-image"]{filter:hue-rotate(180deg) invert(.93)}
+html[data-theme=dark] [style*="background-image"]{filter:hue-rotate(180deg) invert(1) contrast(1.1628)}
 .sk{background:linear-gradient(90deg,#E9ECF0 25%,#F4F5F7 50%,#E9ECF0 75%);background-size:200% 100%;animation:skm 1.2s ease-in-out infinite;border-radius:16px}
 @keyframes skm{from{background-position:200% 0}to{background-position:-200% 0}}
 .sk-page{display:flex;flex-direction:column;gap:14px;max-width:720px}

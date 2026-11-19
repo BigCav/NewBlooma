@@ -14,7 +14,7 @@ import type { ReviewRow, ReviewsCtl } from './ReviewsView';
 const STARS = '★★★★★';
 
 function Stars({ n, size }: { n: number; size: number }) {
-  return <span role="img" aria-label={n + ' out of 5 stars'} style={S('font-size:' + size + 'px;letter-spacing:1px;line-height:1')}><span style={S('color:#E8A317')}>{STARS.slice(0, n)}</span><span style={S('color:#D5D9E0')}>{STARS.slice(n)}</span></span>;
+  return <span role="img" aria-label={n + ' out of 5 stars'} style={S('font-size:' + size + 'px;letter-spacing:1px;line-height:1')}><span className="star-on" style={S('color:#E8A317')}>{STARS.slice(0, n)}</span><span style={S('color:#D5D9E0')}>{STARS.slice(n)}</span></span>;
 }
 
 /** One review. The reviewer's circle is 48 on the phone and 40 on a computer. */
@@ -52,7 +52,7 @@ export function ReviewsMobile({ c, filters, drawer, startId, onClose }: { c: Rev
         <section aria-label="Rating summary" style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:20px;display:flex;align-items:center;gap:20px')}>
           <div style={S('flex:0 0 auto')}>
             <div style={S('font-size:44px;line-height:1;font-weight:600;letter-spacing:-0.04em')}>{c.avg.toFixed(1)}</div>
-            <div aria-hidden="true" style={S('margin-top:6px;font-size:16px;letter-spacing:2px')}><span style={S('color:#E8A317')}>{STARS.slice(0, rounded)}</span><span style={S('color:#D5D9E0')}>{STARS.slice(rounded)}</span></div>
+            <div aria-hidden="true" style={S('margin-top:6px;font-size:16px;letter-spacing:2px')}><span className="star-on" style={S('color:#E8A317')}>{STARS.slice(0, rounded)}</span><span style={S('color:#D5D9E0')}>{STARS.slice(rounded)}</span></div>
             <div style={S('margin-top:4px;color:#5E6673;font-size:13px')}>{plural(c.n, 'review')}</div>
           </div>
           <div style={S('flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:6px')}>
