@@ -113,7 +113,8 @@ export async function emailCardReceipt(txn: string, which: 'customer' | 'merchan
   else r = latestReceipt(await storedReceipts(txn));
   if (!r) return { error: 'There is no receipt for this payment.' };
   const text = receiptLines(r.text, r.width).join('\n');
-  const html = `<pre style="margin:0 0 14px;font:13px/1.3 'Courier New',Courier,monospace;white-space:pre;color:#0E1116">${esc(text)}</pre>`;
+  // A full-width panel with the receipt centred in it (the receipt's own spacing is untouched).
+  const html = `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;margin:0 0 14px;border-collapse:separate"><tr><td align="center" bgcolor="#F4F5F7" style="background:#F4F5F7;border:1px solid #E6E8EC;border-radius:14px;padding:20px 8px"><pre style="display:inline-block;margin:0 auto;text-align:left;font:14px/1.4 'Courier New',Courier,monospace;white-space:pre;color:#0E1116">${esc(text)}</pre></td></tr></table>`;
   const sent = await sendCustomMessage(salon.id, { email: addr }, text, { subject: `Your card receipt from ${salon.name}`, heading: 'Your card receipt', html });
   return sent.ok ? { notice: 'Receipt sent to ' + addr } : { error: sent.error };
 }
