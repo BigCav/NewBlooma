@@ -140,7 +140,6 @@ function AccountInner({ slug, salon, account, upcoming, past }: Props) {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 12 }}>
                   <p style={{ margin: 0, color: '#5E6673', fontSize: 15 }}>You have nothing booked right now.</p>
-                  <Link href={`/b/${slug}/book`} style={dark}>Book now</Link>
                 </div>
               )}
             </section>

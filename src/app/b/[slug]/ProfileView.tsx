@@ -147,7 +147,6 @@ function Body({ p, m, cat, setCat, today, openMember }: { p: Props; m: boolean; 
         ) : (
           <div style={S('border-radius:' + (m ? 18 : 20) + 'px;background:#F4F5F7;padding:' + (m ? 16 : 20) + 'px;display:flex;flex-direction:column;align-items:flex-start;gap:12px')}>
             <span style={S('color:#5E6673;font-size:15px')}>You have nothing booked right now.</span>
-            {p.bookable && <Link href={book()} style={S(BLACK + ';flex:0 0 auto;height:44px;padding:0 20px')}>Book now</Link>}
           </div>
         )}
       </div>
