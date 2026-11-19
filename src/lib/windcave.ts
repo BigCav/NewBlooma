@@ -3,13 +3,14 @@ import { randomBytes } from 'node:crypto';
 import { after } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { decrypt } from '@/lib/crypto';
+import { splitAmounts } from '@/lib/hit-amounts';
 
 const prod = () => process.env.WINDCAVE_ENV === 'prod';
 const REST = () => (prod() ? 'https://sec.windcave.com' : 'https://uat.windcave.com');
 const HIT_LIVE = 'https://sec.windcave.com/hit/pos.aspx', HIT_TEST = 'https://uat.windcave.com/hit/pos.aspx';
 const HIT = () => (prod() ? HIT_LIVE : HIT_TEST);
 
-type Creds = { restUser?: string; restKey?: string; hitUser?: string; hitKey?: string; station?: string; onlineEnabled: boolean; terminalEnabled: boolean };
+type Creds = { salonId: string; restUser?: string; restKey?: string; hitUser?: string; hitKey?: string; station?: string; onlineEnabled: boolean; terminalEnabled: boolean };
 
 /** Per-salon encrypted credentials first, then platform env vars. Never returned to the browser. */
 export async function getCreds(salonId: string): Promise<Creds> {
@@ -20,7 +21,7 @@ export async function getCreds(salonId: string): Promise<Creds> {
   ]);
   const d = (v?: string | null) => (v ? decrypt(v) : undefined);
   return {
-    restUser: d(s?.online_user) ?? process.env.WINDCAVE_REST_USER, restKey: d(s?.online_key) ?? process.env.WINDCAVE_REST_KEY,
+    salonId, restUser: d(s?.online_user) ?? process.env.WINDCAVE_REST_USER, restKey: d(s?.online_key) ?? process.env.WINDCAVE_REST_KEY,
     hitUser: d(s?.hit_user) ?? process.env.WINDCAVE_HIT_USER, hitKey: d(s?.hit_key) ?? process.env.WINDCAVE_HIT_KEY,
     station: p?.terminal_station_id ?? undefined, onlineEnabled: !!p?.online_cards_enabled, terminalEnabled: !!p?.terminal_enabled,
   };
@@ -128,11 +129,23 @@ const pick = (x: string, k: string) => x.match(new RegExp(`<${k}>([^<]*)</${k}>`
 /** The spec requires DeviceId, PosName and VendorId (1 to 32 characters) on Purchase and Refund; Status and button requests carry only Station, TxnType and TxnRef. */
 const POS_IDS = () => ({ DeviceId: process.env.WINDCAVE_DEVICE_ID || 'Aster-1', PosName: process.env.WINDCAVE_POS_NAME || 'Aster', PosVersion: '1', VendorId: process.env.WINDCAVE_VENDOR_ID || 'Aster' });
 
+/** Every request to and reply from the terminal service is kept with a time (the key is blanked), so a payment can be traced afterwards. Logging never stops a payment. */
+const scrub = (t: string) => t.replace(/(\bkey=")[^"]*(")/g, '$1***$2');
+async function logHit(c: Creds, txn: string | null, direction: 'request' | 'response' | 'error', text: string, status?: number) {
+  try { await supabaseAdmin().from('hit_log').insert({ salon_id: c.salonId, txn_ref: txn, direction, body: scrub(text).slice(0, 20000), http_status: status ?? null }); } catch { /* the payment goes on */ }
+}
 async function hit(c: Creds, body: Record<string, string | number>, url: string = HIT()) {
   const money = body.TxnType === 'Purchase' || body.TxnType === 'Refund';
-  const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/xml' }, body: xml({ action: 'doScrHIT', user: c.hitUser!, key: c.hitKey! }, money ? { ...body, ...POS_IDS() } : body) });
+  const payload = xml({ action: 'doScrHIT', user: c.hitUser!, key: c.hitKey! }, money ? { ...body, ...POS_IDS() } : body);
+  const txn = typeof body.TxnRef === 'string' ? body.TxnRef : null;
+  await logHit(c, txn, 'request', `POST ${url}\n${payload}`);
+  let res: Response;
+  try { res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/xml' }, body: payload }); }
+  catch (e) { await logHit(c, txn, 'error', 'Could not reach Windcave: ' + (e instanceof Error ? e.message : String(e))); throw e; }
+  const text = await res.text().catch(() => '');
+  await logHit(c, txn, res.ok ? 'response' : 'error', text || '(empty reply)', res.status);
   if (!res.ok) throw new Error('hit_http');
-  return res.text();
+  return text;
 }
 
 /** What Windcave's two-letter ReCo codes mean for the person at the till (spec: Response Codes). PJ is only "that reference is unknown". */
@@ -219,7 +232,7 @@ async function dispatch(c: Creds, body: Record<string, string | number>, txn: st
   return bad ? { error: bad } : { txn };
 }
 
-export async function pollTerminal(txn: string): Promise<{ state: 'pending' | 'approved' | 'declined' | 'error'; text?: string; buttons?: { name: string; label: string }[] }> {
+export async function pollTerminal(txn: string): Promise<Poll> {
   const sb = supabaseAdmin();
   const { data: cp } = await sb.from('card_payments').select('*').eq('txn_ref', txn).eq('kind', 'terminal').maybeSingle();
   if (!cp) return { state: 'error' };
@@ -237,49 +250,49 @@ export async function pollTerminal(txn: string): Promise<{ state: 'pending' | 'a
     await sb.from('card_payments').update({ status: 'error', response_code: pick(out, 'ReCo') ?? null, response_text: bad, resolved_at: new Date().toISOString() }).eq('id', cp.id);
     return { state: 'error', text: bad };
   }
-  if (pick(out, 'Complete') !== '1') return { state: 'pending', text: [pick(out, 'DL1'), pick(out, 'DL2')].filter((x) => x && x.trim()).join(' ').trim() || undefined, buttons: hitButtons(out).filter((b) => b.label.toUpperCase() !== 'CANCEL') };
+  if (pick(out, 'Complete') !== '1') return stillRunning(cp, out);
   // Final reply: the outcome is inside <Result> (AP 1 = approved, RC/RT = response code and text, AmtA = amount in cents).
   const approved = pick(out, 'AP') === '1';
   const paid = Number(pick(out, 'AmtA') ?? '0'); // cents
   const tip = Number(pick(out, 'AmtT') ?? '0');
-  const patch = { response_code: pick(out, 'RC') ?? pick(out, 'ReCo') ?? null, response_text: pick(out, 'RT') || pick(out, 'DL1') || null, auth_code: pick(out, 'AC') ?? null, dps_txn_ref: pick(out, 'TR') ?? null, resolved_at: new Date().toISOString() };
+  const patch = { response_code: pick(out, 'RC') ?? pick(out, 'ReCo') ?? null, response_text: pick(out, 'RT') || pick(out, 'DL1') || null, auth_code: pick(out, 'AC') ?? null, dps_txn_ref: pick(out, 'TR') ?? null, resolved_at: new Date().toISOString(), ui_buttons: null };
   if (!approved) { await sb.from('card_payments').update({ ...patch, status: 'declined' }).eq('id', cp.id); return { state: 'declined', text: patch.response_text ?? undefined }; }
-  if (paid - tip !== cp.amount_cents && paid !== cp.amount_cents) {
+  // The ticket, the tip and any surcharge Windcave's host added are kept apart: the sale stays the ticket amount and the surcharge shows beside it.
+  const surRaw = pick(out, 'AmtS');
+  const split = splitAmounts(paid, tip, surRaw === undefined || surRaw.trim() === '' ? undefined : Number(surRaw), cp.amount_cents);
+  if (!split) {
     await sb.from('card_payments').update({ ...patch, status: 'error', needs_review: true, review_note: `Terminal approved ${paid} cents, sale was ${cp.amount_cents}` }).eq('id', cp.id);
     return { state: 'error', text: 'Amount mismatch. Check with your payment provider.' };
   }
-  const { data: won } = await sb.from('card_payments').update({ ...patch, status: 'approved' }).eq('id', cp.id).eq('status', 'pending').select('id');
+  const { data: won } = await sb.from('card_payments').update({ ...patch, tip_cents: split.tip, surcharge_cents: split.surcharge, status: 'approved' }).eq('id', cp.id).eq('status', 'pending').select('id');
   if (!won?.length) return { state: 'approved' }; // another check got here first and finishes the sale
   const { error } = await sb.rpc('finalize_sale', { p_sale: cp.sale_id, p_method: 'card' });
   if (error) await sb.from('card_payments').update({ needs_review: true, review_note: `Approved but sale not finalised: ${error.message}` }).eq('id', cp.id);
   return { state: 'approved' };
 }
 
-/** A button the terminal asked the POS to show (such as YES / NO at a signature). */
+/** A button the terminal asked the POS to show (such as YES / NO at a signature). Only a button the terminal's latest reply allowed is sent. */
 export async function pressTerminalButton(txn: string, name: string, label: string) {
-  const { data: cp } = await supabaseAdmin().from('card_payments').select('salon_id').eq('txn_ref', txn).eq('status', 'pending').maybeSingle();
-  if (!cp || (name !== 'B1' && name !== 'B2')) return;
+  const { data: cp } = await supabaseAdmin().from('card_payments').select('salon_id,ui_buttons').eq('txn_ref', txn).eq('status', 'pending').maybeSingle();
+  const b = ((cp?.ui_buttons ?? []) as Btn[]).find((x) => x.name === name && x.label.toUpperCase() === label.toUpperCase());
+  if (!cp || !b || isCancel(b)) return;
   const c = await getCreds(cp.salon_id);
-  try { await hit(c, { Station: c.station!, TxnType: 'UI', UiType: 'Bn', Name: name, Val: label.toUpperCase(), TxnRef: txn }); } catch { /* the next status poll shows where it stands */ }
+  try { await hit(c, { Station: c.station!, TxnType: 'UI', UiType: 'Bn', Name: b.name, Val: b.label.toUpperCase(), TxnRef: txn }); } catch { /* the next status poll shows where it stands */ }
 }
 
-export async function cancelTerminal(txn: string) {
+/** Cancels the payment, once, and only while the terminal's latest reply offered a CANCEL button (it does not once the card has been read: a signature must be accepted or declined). Returns whether it was sent. */
+export async function cancelTerminal(txn: string): Promise<boolean> {
   const sb = supabaseAdmin();
-  const { data: cp } = await sb.from('card_payments').select('*').eq('txn_ref', txn).eq('status', 'pending').maybeSingle();
-  if (!cp) return;
+  const { data: cp } = await sb.from('card_payments').select('salon_id,ui_buttons').eq('txn_ref', txn).eq('status', 'pending').maybeSingle();
+  const b = ((cp?.ui_buttons ?? []) as Btn[]).find(isCancel);
+  if (!cp || !b) return false;
   const c = await getCreds(cp.salon_id);
-  // Spec: a button request names the button (B1 or B2) and sends its value. While the terminal waits for a card the CANCEL button is B2; asking for both needs no status call, which Windcave can hold for many seconds.
-  for (const name of ['B2', 'B1']) {
-    try {
-      const r = await hit(c, { Station: c.station!, TxnType: 'UI', UiType: 'Bn', Name: name, Val: 'CANCEL', TxnRef: txn });
-      console.log('windcave cancel', name, 'reply:', r.replace(/\s+/g, ' ').slice(0, 200));
-    } catch (e) { console.error('windcave cancel failed', name, e); }
-  }
+  try { await hit(c, { Station: c.station!, TxnType: 'UI', UiType: 'Bn', Name: b.name, Val: 'CANCEL', TxnRef: txn }); return true; } catch { return false; }
 }
 
 /* ---------------- Refunds ---------------- */
 /** A matched refund on the terminal (spec: Refund with the original DpsTxnRef). Returns the reference to watch, like a payment. */
-export async function startRefund(saleId: string, origin?: string): Promise<{ txn?: string; error?: string }> {
+export async function startRefund(saleId: string, origin?: string, unmatched = false): Promise<{ txn?: string; error?: string }> {
   const sb = supabaseAdmin();
   const sale = await loadSale(saleId);
   if (!sale) return { error: 'Sale not found.' };
@@ -287,16 +300,24 @@ export async function startRefund(saleId: string, origin?: string): Promise<{ tx
   if (open) return { txn: open };
   if (sale.status !== 'paid') return { error: 'Only a paid sale can be refunded.' };
   const { data: cp } = await sb.from('card_payments').select('*').eq('sale_id', saleId).eq('status', 'approved').eq('kind', 'terminal').maybeSingle();
-  if (!cp || !cp.dps_txn_ref) return { error: 'No approved card payment found for this sale.' };
+  if (!cp || (!unmatched && !cp.dps_txn_ref)) return { error: 'No approved card payment found for this sale.' };
   const c = await getCreds(cp.salon_id);
   if (!c.hitUser || !c.hitKey || !c.station) return { error: 'The card terminal is not set up. Add its details in Settings.' };
   const txn = ref('RF');
-  const ins = await sb.from('card_payments').insert({ salon_id: cp.salon_id, sale_id: saleId, kind: 'terminal', txn_ref: txn, amount_cents: cp.amount_cents });
+  const ins = await sb.from('card_payments').insert({ salon_id: cp.salon_id, sale_id: saleId, kind: 'terminal', txn_ref: txn, amount_cents: cp.amount_cents, unmatched });
   if (ins.error) return { error: ins.error.code === '23505' ? 'A refund for this sale is already in progress.' : 'Could not record the refund attempt.' };
-  return dispatch(c, { Station: c.station, Amount: dollars(cp.amount_cents), Cur: sale.salons.currency, TxnType: 'Refund', TxnRef: txn, DpsTxnRef: cp.dps_txn_ref, MRef: sale.salons.name.slice(0, 60) }, txn, origin);
+  return dispatch(c, { Station: c.station, Amount: dollars(cp.amount_cents), Cur: sale.salons.currency, TxnType: 'Refund', TxnRef: txn, ...(unmatched ? {} : { DpsTxnRef: cp.dps_txn_ref }), MRef: sale.salons.name.slice(0, 60) }, txn, origin);
 }
 
-type Poll = { state: 'pending' | 'approved' | 'declined' | 'error'; text?: string; buttons?: { name: string; label: string }[] };
+type Poll = { state: 'pending' | 'approved' | 'declined' | 'error'; text?: string; buttons?: { name: string; label: string }[]; canCancel?: boolean };
+type Btn = { name: string; label: string };
+const isCancel = (b: Btn) => b.label.toUpperCase() === 'CANCEL';
+/** A reply that is not final: what to show, and which buttons the terminal allows right now. They are remembered, so Cancel and the signature buttons only ever send what is valid at that moment. */
+async function stillRunning(cp: any, out: string): Promise<Poll> {
+  const all = hitButtons(out);
+  if (JSON.stringify(all) !== JSON.stringify(cp.ui_buttons ?? [])) await supabaseAdmin().from('card_payments').update({ ui_buttons: all }).eq('id', cp.id);
+  return { state: 'pending', text: [pick(out, 'DL1'), pick(out, 'DL2')].filter((x) => x && x.trim()).join(' ').trim() || undefined, buttons: all.filter((b) => !isCancel(b)), canCancel: all.some(isCancel) };
+}
 async function pollRefund(cp: any): Promise<Poll> {
   const sb = supabaseAdmin();
   if (cp.status === 'refunded') return { state: 'approved' };
@@ -311,8 +332,8 @@ async function pollRefund(cp: any): Promise<Poll> {
     await sb.from('card_payments').update({ status: 'error', response_code: pick(out, 'ReCo') ?? null, response_text: bad, resolved_at: new Date().toISOString() }).eq('id', cp.id);
     return { state: 'error', text: bad };
   }
-  if (pick(out, 'Complete') !== '1') return { state: 'pending', text: [pick(out, 'DL1'), pick(out, 'DL2')].filter((x) => x && x.trim()).join(' ').trim() || undefined, buttons: hitButtons(out).filter((b) => b.label.toUpperCase() !== 'CANCEL') };
-  const patch = { response_code: pick(out, 'RC') ?? pick(out, 'ReCo') ?? null, response_text: pick(out, 'RT') || pick(out, 'DL1') || null, dps_txn_ref: pick(out, 'TR') ?? null, resolved_at: new Date().toISOString() };
+  if (pick(out, 'Complete') !== '1') return stillRunning(cp, out);
+  const patch = { response_code: pick(out, 'RC') ?? pick(out, 'ReCo') ?? null, response_text: pick(out, 'RT') || pick(out, 'DL1') || null, dps_txn_ref: pick(out, 'TR') ?? null, resolved_at: new Date().toISOString(), ui_buttons: null };
   if (pick(out, 'AP') !== '1') {
     await sb.from('card_payments').update({ ...patch, status: 'declined' }).eq('id', cp.id);
     return { state: 'declined', text: patch.response_text ?? undefined };
@@ -330,12 +351,14 @@ async function pollRefund(cp: any): Promise<Poll> {
 }
 
 /** Refund a card sale: on the terminal it returns the reference to watch, an on-screen payment is refunded at once. */
-export async function refundByCard(saleId: string, origin?: string): Promise<{ txn?: string; ok?: true; error?: string }> {
+/** `unmatched`: the refund goes to a different card than the one that paid (the terminal asks for it; no original reference is sent). Only for payments taken on the terminal. */
+export async function refundByCard(saleId: string, origin?: string, unmatched = false): Promise<{ txn?: string; ok?: true; error?: string }> {
   const open = await terminalInFlight(saleId);
   if (open) return { txn: open };
   const { data: cp } = await supabaseAdmin().from('card_payments').select('kind').eq('sale_id', saleId).eq('status', 'approved').maybeSingle();
   if (!cp) return { error: 'No approved card payment found for this sale.' };
-  return cp.kind === 'terminal' ? startRefund(saleId, origin) : refundCard(saleId);
+  if (unmatched && cp.kind !== 'terminal') return { error: 'Refunding to a different card is only possible for a payment taken on the terminal.' };
+  return cp.kind === 'terminal' ? startRefund(saleId, origin, unmatched) : refundCard(saleId);
 }
 
 /** Card payments made on screen are refunded through Windcave's online service. Terminal payments use startRefund. */

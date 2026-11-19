@@ -5,6 +5,8 @@ import type { TermBtn, TermPhase } from '../sales/useTerminal';
 
 export type TermView = {
   phase: TermPhase; text: string; btns: TermBtn[]; cancelling: boolean; hasTxn: boolean;
+  /** Whether the terminal currently allows cancelling: null before its first reply, false once the card has been read. */
+  canCancel: boolean | null;
   onCancel: () => void; onPress: (b: TermBtn) => void;
   /** Approved: finish up. */
   onDone: () => void;
@@ -56,7 +58,8 @@ export function TerminalStatus({ t, amount, refund }: { t: TermView; amount: str
         )}
       </div>
       <div style={S('flex:0 0 auto;padding:14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3;display:flex;flex-direction:column;gap:12px')}>
-        {phase === 'pending' && <button onClick={t.onCancel} disabled={!t.hasTxn || t.cancelling} style={S(SECOND + ';opacity:' + (!t.hasTxn || t.cancelling ? 0.45 : 1))}>{t.cancelling ? 'Cancelling' : 'Cancel ' + what}</button>}
+        {phase === 'pending' && t.canCancel === true && <button onClick={t.onCancel} disabled={!t.hasTxn || t.cancelling} style={S(SECOND + ';opacity:' + (!t.hasTxn || t.cancelling ? 0.45 : 1))}>{t.cancelling ? 'Cancelling' : 'Cancel ' + what}</button>}
+        {phase === 'pending' && t.canCancel === false && <p style={S('margin:0;text-align:center;font-size:13px;color:#5E6673')}>The card has been read, so this {what} can no longer be cancelled. Finish it on the terminal{t.btns.length ? ' or choose above' : ''}.</p>}
         {phase === 'approved' && <button onClick={t.onDone} style={S(PRIMARY)}>Done</button>}
         {phase === 'failed' && <>
           <button onClick={t.onRetry} style={S(PRIMARY)}>Try again</button>

@@ -105,12 +105,14 @@ export async function setPrice(saleId: string, amount: string): Promise<Res> {
   revalidatePath('/sales'); return { notice: 'Sale saved' };
 }
 
-export async function refundSale(saleId: string): Promise<Res & { txn?: string }> {
+/** `unmatched`: refund to a different card than the one that paid (the terminal asks for it). Owner only, and only for a payment taken on the terminal. */
+export async function refundSale(saleId: string, unmatched = false): Promise<Res & { txn?: string }> {
   const { sb, staff } = await requireCtx();
   if (staff.app_role !== 'owner') return { error: 'Only the owner can refund a sale.' };
   const { data: s } = await sb.from('sales').select('method').eq('id', saleId).single();
   // A terminal refund runs on the terminal: hand back the reference to watch instead of waiting here.
-  if (s?.method === 'card') { const r = await refundByCard(saleId, await origin()); if (r.error) return { error: r.error }; if (r.txn) return { txn: r.txn }; }
+  if (unmatched && s?.method !== 'card') return { error: 'Only a card payment can be refunded to a different card.' };
+  if (s?.method === 'card') { const r = await refundByCard(saleId, await origin(), unmatched); if (r.error) return { error: r.error }; if (r.txn) return { txn: r.txn }; }
   else { const { error } = await sb.rpc('refund_sale', { p_sale: saleId }); if (error) return { error: friendly(error.message) }; }
   revalidatePath('/sales'); return { notice: 'Refund issued' };
 }

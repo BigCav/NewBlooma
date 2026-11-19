@@ -12,7 +12,7 @@ import { duration, refDigits } from '@/lib/display';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { serviceRules, type CalService } from '@/lib/cal';
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { MobileHeader, MobileTabs, PageHeader } from '@/components/Chrome';
 import { ActiveFilter, FilterButton, FilterSheet } from '@/components/FilterBits';
 import { S } from '../calendar/pickers';
@@ -122,12 +122,15 @@ function useSales(props: Props) {
   };
   const saveEdit = () => { if (sel) startT(async () => { const r = await setPrice(sel.id, editAmount); if (r.error) { setError(r.error); return; } setMode('view'); setError(''); setNotice(r.notice ?? ''); router.refresh(); }); };
   // A refund to a card paid on the terminal goes back through the terminal: same pending step, tick or cross as a payment.
-  const doRefund = () => {
+  const otherCard = useRef(false);
+  const doRefund = (unmatched?: boolean) => {
     if (!sel) return;
     const t = sel.method === 'Card' && props.methods.some((m) => m.id === 'terminal');
+    // Try again repeats the same kind of refund.
+    if (unmatched !== undefined) otherCard.current = unmatched;
     if (t) { setMode('refund'); setOpen(true); term.begin(); }
     startT(async () => {
-      const r = await refundSale(sel.id); setConfirmRefund(false);
+      const r = await refundSale(sel.id, otherCard.current); setConfirmRefund(false);
       if (r.error) { if (t) term.fail(r.error); else setError(r.error); return; }
       if (r.txn) { setMode('refund'); setOpen(true); term.start(r.txn); setError(''); return; }
       if (t) { term.reset(); setMode('view'); }
@@ -154,7 +157,7 @@ function useSales(props: Props) {
   const sq = query.trim().toLowerCase();
   const list = rows.filter((t) => (filter === 'all' || t.status === filter) && (!sq || (t.client + ' ' + t.ref + ' ' + t.ref.replace('-', '') + ' ' + t.service + ' ' + t.staffName + ' ' + t.status + ' ' + t.method + ' ' + t.total / 100).toLowerCase().includes(sq.replace(/[$,]/g, '')) || (/^\d+$/.test(refDigits(sq)) && t.ref.slice(2).includes(refDigits(sq)))));
   return { ...props, busy, narrow, rows, list, sel, selectedId, filter, setFilter, query, setQuery, mode, setMode, open, notice, error, setError, confirmRefund, setConfirmRefund, qa, setQa, prodQty, onQty, rules, canExtra, svcIds, svcEdited: !!mine?.svc, pickSvc, pkgIds, togglePack,
-    canDiscount: props.canDiscount, pay, setPay, tipPctOf, editAmount, setEditAmount, nw, setNw, txn: term.txn, termView: { ...term.view, onDone: () => { const r = mode === 'refund'; term.reset(); setMode('view'); setNotice(r ? 'Refund issued' : 'Payment taken'); setError(''); router.refresh(); }, onRetry: mode === 'refund' ? doRefund : takePayment, onBack: () => { term.reset(); if (mode === 'refund') setMode('view'); } }, pick, openNew, cancel, close, takePayment, payNow, saveEdit, doRefund, receipt, createSale,
+    canDiscount: props.canDiscount, pay, setPay, tipPctOf, editAmount, setEditAmount, nw, setNw, txn: term.txn, termView: { ...term.view, onDone: () => { const r = mode === 'refund'; term.reset(); setMode('view'); setNotice(r ? 'Refund issued' : 'Payment taken'); setError(''); router.refresh(); }, onRetry: mode === 'refund' ? () => doRefund() : takePayment, onBack: () => { term.reset(); if (mode === 'refund') setMode('view'); } }, pick, openNew, cancel, close, takePayment, payNow, saveEdit, doRefund, receipt, createSale,
     paidTotal: props.todayTotal, pendingCount: rows.filter((r) => r.status === 'Pending').length };
 }
 type C = ReturnType<typeof useSales>;
@@ -193,6 +196,7 @@ function MobileSale({ c, s }: { c: C; s: SaleRow }) {
   const extra: [string, string][] = [
     ...(s.discount ? [['Discount' + (s.discountNote ? ' (' + s.discountNote + ')' : ''), '-' + dollars(s.discount)] as [string, string]] : []),
     ...(s.tip ? [['Tip', dollars(s.tip)] as [string, string]] : []),
+    ...(s.surcharge ? [['Card surcharge', dollars(s.surcharge)] as [string, string]] : []),
     ...(!pending && s.gst ? [[s.taxIncl ? 'Includes ' + s.taxRate + '% GST' : 'GST ' + s.taxRate + '%', dollars(s.gst)] as [string, string]] : []),
   ];
   const startCheckout = () => { c.setPay({ method: c.methods[0]?.id ?? 'cash', tip: c.tipPctOf(s), code: '', disc: discOf(s) }); c.setMode('pay'); c.setError(''); };
@@ -208,7 +212,7 @@ function MobileSale({ c, s }: { c: C; s: SaleRow }) {
         {!!c.error && <FieldError>{c.error}</FieldError>}
       </>}
       actions={c.confirmRefund ? (
-        <ConfirmBox label="Confirm refund" title={'Refund ' + dollars(s.total) + '?'} body="The sale is marked as refunded and removed from today's sales." action="Refund" onAction={c.doRefund} busy={c.busy} onKeep={() => c.setConfirmRefund(false)} />
+        <ConfirmBox label="Confirm refund" title={'Refund ' + dollars(s.total) + '?'} body="The sale is marked as refunded and removed from today's sales." action="Refund" onAction={() => c.doRefund(false)} busy={c.busy} onKeep={() => c.setConfirmRefund(false)} extra={s.method === 'Card' && c.methods.some((m) => m.id === 'terminal') ? { label: 'Refund to a different card', onClick: () => c.doRefund(true) } : undefined} />
       ) : (
         <div style={S('display:flex;gap:10px')}>
           <MoreButton onClick={() => c.setQa(true)} />

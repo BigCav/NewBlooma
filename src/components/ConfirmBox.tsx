@@ -6,11 +6,13 @@ import { FieldError, dim } from '@/components/ui';
 
 const BTN = 'flex:1 1 0;height:48px;border-radius:999px;font:inherit;font-size:14px;font-weight:500;cursor:pointer';
 
-export function ConfirmBox({ label, title, body, error, action, keep = 'Keep', onAction, onKeep, busy }: {
+export function ConfirmBox({ label, title, body, error, action, keep = 'Keep', onAction, onKeep, busy, extra }: {
   /** Read out by a screen reader when the box appears. */
   label: string; title: string; body?: string; error?: string;
   /** The red button, for example "Remove product". */
   action: string; keep?: string; onAction: () => void; onKeep: () => void; busy?: boolean;
+  /** A third, quieter choice under the two buttons (for example "Refund to a different card"). */
+  extra?: { label: string; onClick: () => void };
 }) {
   return (
     <div role="alertdialog" className="mo-pop" aria-label={label} style={S('display:flex;flex-direction:column;gap:12px;box-sizing:border-box;padding:16px;border:1px solid ' + TONE.red.fg + '33;border-radius:20px;background:' + TONE.red.bg)}>
@@ -23,6 +25,7 @@ export function ConfirmBox({ label, title, body, error, action, keep = 'Keep', o
         <button type="button" className="ghost" onClick={onKeep} style={S(BTN + ';border:1px solid #E1E4E9;background:#FFFFFF;color:#0E1116')}>{keep}</button>
         <button type="button" onClick={onAction} disabled={busy} style={S(BTN + ';border:0;background:#B42318;color:#FFFFFF' + dim(!!busy))}>{action}</button>
       </div>
+      {extra && <button type="button" onClick={extra.onClick} disabled={busy} style={S('align-self:center;min-height:44px;padding:0 12px;border:0;background:transparent;font:inherit;font-size:13.5px;font-weight:500;color:#0E1116;text-decoration:underline;cursor:pointer' + dim(!!busy))}>{extra.label}</button>}
     </div>
   );
 }

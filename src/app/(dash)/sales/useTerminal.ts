@@ -17,6 +17,9 @@ export function useTerminal(onSettled?: (approved: boolean) => void) {
   const [text, setText] = useState('');
   const [btns, setBtns] = useState<TermBtn[]>([]);
   const [cancelling, setCancelling] = useState(false);
+  // Whether the terminal's latest reply offered Cancel: null until the first reply, false once the card has been read (a signature must be accepted or declined).
+  const [canCancel, setCanCancel] = useState<boolean | null>(null);
+  const cancelAt = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const seen = useRef(new Set<string>());
   const done = useRef(onSettled);
@@ -29,8 +32,13 @@ export function useTerminal(onSettled?: (approved: boolean) => void) {
       let r: Awaited<ReturnType<typeof terminalPoll>>;
       try { r = await terminalPoll(txn); } catch { if (!stop) timer.current = setTimeout(tick, 3000); return; }
       if (stop) return;
-      if (r.state === 'pending') { setText(r.text || 'Waiting for the customer'); setBtns(r.buttons ?? []); timer.current = setTimeout(tick, 2000); return; }
-      setTxn(''); setBtns([]); setCancelling(false);
+      if (r.state === 'pending') {
+        setText(r.text || 'Waiting for the customer'); setBtns(r.buttons ?? []); setCanCancel(!!r.canCancel);
+        // A cancel that did not take (the terminal still offers it a few seconds later) can be pressed again.
+        if (r.canCancel && Date.now() - cancelAt.current > 4000) setCancelling(false);
+        timer.current = setTimeout(tick, 2000); return;
+      }
+      setTxn(''); setBtns([]); setCancelling(false); setCanCancel(null);
       if (r.state === 'approved') { setPhase('approved'); setText(''); }
       else { setPhase('failed'); setText(r.state === 'declined' ? (r.text ? 'Not approved: ' + r.text : 'The payment was not approved.') : r.text || 'Something went wrong. Check the terminal.'); }
       done.current?.(r.state === 'approved');
@@ -39,12 +47,11 @@ export function useTerminal(onSettled?: (approved: boolean) => void) {
     return () => { stop = true; clearTimeout(timer.current); };
   }, [txn]);
 
-  // Cancel pressed: tell the terminal now, and again every couple of seconds until the payment ends (the first press can land before the terminal is ready for it).
+  // Cancel pressed: the terminal is told once. The server only sends it while the terminal offers Cancel.
   useEffect(() => {
     if (!cancelling || !txn) return;
+    cancelAt.current = Date.now();
     send({ op: 'cancel', txn });
-    const id = setInterval(() => send({ op: 'cancel', txn }), 2000);
-    return () => clearInterval(id);
   }, [cancelling, txn]);
 
   // A reload or closed tab does not stop the terminal; at least say so.
@@ -58,14 +65,14 @@ export function useTerminal(onSettled?: (approved: boolean) => void) {
   return {
     txn, phase,
     /** The moment Charge is pressed, before the server has answered. */
-    begin: () => { setPhase('pending'); setText('Sending to the terminal'); setBtns([]); setCancelling(false); },
-    start: (t: string) => { seen.current.add(t); setTxn(t); setPhase('pending'); setText('Sent to the terminal'); setBtns([]); setCancelling(false); },
+    begin: () => { setPhase('pending'); setText('Sending to the terminal'); setBtns([]); setCancelling(false); setCanCancel(null); },
+    start: (t: string) => { seen.current.add(t); setTxn(t); setPhase('pending'); setText('Sent to the terminal'); setBtns([]); setCancelling(false); setCanCancel(null); },
     /** Pick up a payment that was already running when the page opened. Each one is only picked up once. */
     resume: (t: string) => { if (seen.current.has(t) || phase !== 'idle') return; seen.current.add(t); setTxn(t); setPhase('pending'); setText('Payment in progress on the terminal'); },
-    fail: (msg: string) => { setTxn(''); setBtns([]); setCancelling(false); setPhase('failed'); setText(msg); },
-    reset: () => { setTxn(''); setPhase('idle'); setText(''); setBtns([]); setCancelling(false); },
+    fail: (msg: string) => { setTxn(''); setBtns([]); setCancelling(false); setCanCancel(null); setPhase('failed'); setText(msg); },
+    reset: () => { setTxn(''); setPhase('idle'); setText(''); setBtns([]); setCancelling(false); setCanCancel(null); },
     view: {
-      phase, text, btns, cancelling, hasTxn: !!txn,
+      phase, text, btns, cancelling, canCancel, hasTxn: !!txn,
       onCancel: () => { if (!txn) return; setCancelling(true); },
       onPress: (b: TermBtn) => { if (txn) send({ op: 'press', txn, name: b.name, label: b.label }); },
     },

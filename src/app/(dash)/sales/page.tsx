@@ -22,7 +22,7 @@ export default async function Sales({ searchParams }: { searchParams: Promise<{ 
   // A stylist sees their own sales, and any still open so a checkout can be finished, but not the rest of the salon's takings.
   const scope = staff.app_role === 'stylist' ? `and(created_at.gte.${since},staff_id.eq.${staff.id}),status.eq.pending` : `created_at.gte.${since},status.eq.pending`;
   const [{ data: sales }, { data: svcs }, { data: pay }, { data: flagged }, { data: prods }, { data: sa }, { data: ss }] = await Promise.all([
-    sb.from('sales').select('id,status,method,subtotal_cents,discount_cents,discount_note,tax_rate,tip_cents,tax_cents,tax_inclusive,total_cents,created_at,paid_at,clients(id,name),staff(id,name,photo_url),bookings(id,ref_no,starts_at,ends_at),sale_items(label,qty,price_cents,service_id,product_id)')
+    sb.from('sales').select('id,status,method,subtotal_cents,discount_cents,discount_note,tax_rate,tip_cents,tax_cents,tax_inclusive,total_cents,created_at,paid_at,clients(id,name),staff(id,name,photo_url),bookings(id,ref_no,starts_at,ends_at),sale_items(label,qty,price_cents,service_id,product_id),card_payments(surcharge_cents,status)')
       .or(scope).order('created_at', { ascending: false }).limit(300),
     sb.from('services').select('id,name,price_cents,duration_min,is_addon,service_categories(name,sort)').eq('active', true).order('name'),
     sb.from('salon_payment_settings').select('online_cards_enabled,terminal_enabled').eq('salon_id', salon.id).maybeSingle(),
@@ -54,7 +54,7 @@ export default async function Sales({ searchParams }: { searchParams: Promise<{ 
       service: first ? `${first.label}${first.qty > 1 ? ` x${first.qty}` : ''}${extra > 0 ? ` +${extra} more` : ''}` : 'Sale',
       time: status === 'Pending' ? 'In progress' : day === today ? time12(when, tz) : dShort(day),
       method: status === 'Pending' ? 'Not taken yet' : METHOD[s.method] ?? '', status,
-      amount: s.subtotal_cents + s.discount_cents, discount: s.discount_cents, discountNote: s.discount_note ?? '', taxRate: Number(s.tax_rate), taxIncl: !!s.tax_inclusive, tip: s.tip_cents, tax: s.tax_inclusive ? 0 : s.tax_cents, total: s.total_cents,
+      amount: s.subtotal_cents + s.discount_cents, discount: s.discount_cents, discountNote: s.discount_note ?? '', taxRate: Number(s.tax_rate), taxIncl: !!s.tax_inclusive, tip: s.tip_cents, surcharge: ((s.card_payments ?? []) as { surcharge_cents: number; status: string }[]).filter((x) => x.status === 'approved' || x.status === 'refunded').reduce((a, x) => a + x.surcharge_cents, 0), tax: s.tax_inclusive ? 0 : s.tax_cents, total: s.total_cents,
       dayShort: dShort(day), gst: s.tax_cents, range: s.bookings?.starts_at && s.bookings?.ends_at ? timeRange(time12(s.bookings.starts_at, tz), time12(s.bookings.ends_at, tz)) : '',
       lines: items.map((i) => ({ label: i.label as string, qty: i.qty as number, cents: i.price_cents as number, dur: i.service_id ? durOf.get(i.service_id as string) ?? null : null, svc: !!i.service_id, productId: (i.product_id as string | null) ?? null, serviceId: (i.service_id as string | null) ?? null })),
       txn: openTxn.get(s.id),

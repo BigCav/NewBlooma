@@ -260,7 +260,7 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
                 total={sel.priceText} label={sel.b.paid ? 'Paid' : sel.b.refunded ? 'Refunded' : 'To pay'}
                 message={<>{!!notice && <Notice>{notice}</Notice>}{errP()}</>}
                 actions={c.confirmRefund ? (
-                  <ConfirmBox label="Confirm refund" title={'Refund ' + dollars(sel.b.saleCents ?? sel.b.priceCents) + '?'} body="The sale is marked as refunded and removed from today's sales." action="Refund" keep="Cancel" onAction={() => c.doRefund()} busy={busy} onKeep={() => c.setConfirmRefund(false)} />
+                  <ConfirmBox label="Confirm refund" title={'Refund ' + dollars(sel.b.saleCents ?? sel.b.priceCents) + '?'} body="The sale is marked as refunded and removed from today's sales." action="Refund" keep="Cancel" onAction={() => c.doRefund(false, false)} busy={busy} onKeep={() => c.setConfirmRefund(false)} extra={props.terminal && /by card/i.test(sel.b.paidText) ? { label: 'Refund to a different card', onClick: () => c.doRefund(false, true) } : undefined} />
                 ) : <>
                   {sel.b.paid && sel.b.saleId && <div style={S('display:flex;gap:10px')}>
                     <button disabled={busy} onClick={() => act(() => sendReceipt(sel.b.saleId!), 'Receipt sent')} style={S(SECOND + ';height:52px' + dim(busy))}>Send receipt</button>

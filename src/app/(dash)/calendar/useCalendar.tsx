@@ -191,12 +191,15 @@ export function useCalendar(props: Props) {
   const retryCard = () => { if (!cardSale.current) return; term.begin(); startT(async () => { await sendToTerminal(cardSale.current); }); };
   const finishCard = () => { term.reset(); setMode('view'); setNotice(''); refresh(); };
   // Refund of a paid appointment: asked first (the same box Sales uses), and a card paid on the terminal goes back through the terminal.
-  const doRefund = (retry = false) => {
+  const otherCard = useRef(false);
+  const doRefund = (retry = false, unmatched?: boolean) => {
     const saleId = cur?.saleId; if (!saleId) return;
+    // Try again repeats the same kind of refund.
+    if (unmatched !== undefined) otherCard.current = unmatched;
     if (retry) term.begin();
     startT(async () => {
       setError('');
-      const r = await refundSale(saleId); setConfirmRefund(false);
+      const r = await refundSale(saleId, otherCard.current); setConfirmRefund(false);
       if (r.error) { if (retry) term.fail(r.error); else setError(r.error); return; }
       if (r.txn) { setMode('refund'); setOpen(true); term.start(r.txn); return; }
       setNotice(r.notice ?? 'Refund issued'); refresh();

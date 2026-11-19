@@ -9,7 +9,7 @@ import { BACK as BACK_ICON, BAR, BLACK, CARD, FIELD_IN, Field as CardField, Fiel
 import { SettingsCards } from '../SettingsView';
 import { checkTerminal, savePayments } from './actions';
 
-type Props = { taxInclusive: boolean; online: boolean; terminal: boolean; station: string; saved: { online_user: boolean; online_key: boolean; hit_user: boolean; hit_key: boolean } };
+type Props = { logs: { ref: string; label: string }[]; taxInclusive: boolean; online: boolean; terminal: boolean; station: string; saved: { online_user: boolean; online_key: boolean; hit_user: boolean; hit_key: boolean } };
 
 
 function useForm(p: Props) {
@@ -25,6 +25,7 @@ function useForm(p: Props) {
   const [v, setV] = useState({ inclusive: p.taxInclusive, online: p.online, terminal: p.terminal, station: p.station, online_user: '', online_key: '', hit_user: '', hit_key: '' });
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [logTxn, setLogTxn] = useState('');
   const set = <K extends keyof typeof v>(k: K, val: (typeof v)[K]) => { setV((o) => ({ ...o, [k]: val })); setError(''); setNotice(''); };
   const save = () => startT(async () => {
     const fd = new FormData();
@@ -43,7 +44,7 @@ function useForm(p: Props) {
     if (r.error) { setError(r.error); setNotice(''); return; }
     setError(''); setNotice(r.ok ?? '');
   });
-  return { narrow, v, set, save, test, busy, error, notice, saved: p.saved, back: () => router.push('/settings?section=payments') };
+  return { narrow, v, set, save, test, busy, error, notice, logs: p.logs, logTxn, setLogTxn, saved: p.saved, back: () => router.push('/settings?section=payments') };
 }
 type C = ReturnType<typeof useForm>;
 
@@ -97,6 +98,15 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
         <Key id="wc-hk" label="HIT key" value={v.hit_key} set={(x) => set('hit_key', x)} saved={saved.hit_key} secret />
         <p style={S(NOTE)}>Save first, then test. Testing asks Windcave about a made-up payment, so nothing is charged.</p>
         <button onClick={c.test} disabled={c.busy} className="ghost" style={S(OUTLINE + ';flex:0 0 auto' + dim(c.busy))}>Test terminal connection</button>
+
+        <div><h3 style={S(H3)}>Terminal log</h3><p style={S(NOTE)}>Every message sent to the terminal and every reply, with the time (UTC). Windcave asks for this when a payment needs investigating.</p></div>
+        <CardField label="Which payment" htmlFor="wc-log">
+          <select id="wc-log" value={c.logTxn} onChange={(e) => c.setLogTxn(e.target.value)} style={FIELD_IN}>
+            <option value="">Everything from the last 30 days</option>
+            {c.logs.map((l) => <option key={l.ref} value={l.ref}>{l.label}</option>)}
+          </select>
+        </CardField>
+        <a href={'/api/windcave/log' + (c.logTxn ? '?txn=' + encodeURIComponent(c.logTxn) : '')} download className="ghost" style={S(OUTLINE + ';flex:0 0 auto;text-decoration:none')}>Download log</a>
       </main>
       <div style={S(BAR)}>
         {!!c.error && <FieldError>{c.error}</FieldError>}
