@@ -15,6 +15,7 @@ import { TONE } from '@/lib/tones';
 import { S } from '../../../(dash)/calendar/pickers';
 import { DetailRows, ICONS, PeopleStep, ROW, StepShell, TICK } from '../../../(dash)/calendar/wizardUi';
 import { SalonHeader } from '../SalonHeader';
+import { useAppEnter } from '@/components/Motion';
 import { clientSignIn, nextAvailable, publicBook, publicSlots, publicWaitlist, type Account, type Slot } from './actions';
 
 type Svc = { id: string; name: string; desc: string; cat: string; dur: number; cents: number };
@@ -79,6 +80,8 @@ export function BookFlow(p: Props) {
   const [kind, setKind] = useState<Kind>('services');
   const here: Kind = kinds.includes(kind) ? kind : 'time';
   const stepNo = kinds.indexOf(here);
+  // On a computer the whole page replays its motion on every step (and on the finished screen); on a phone the step shell does it.
+  useAppEnter(narrow === false ? here + (done ? '-done' : '') : 'phone');
 
   /* ---------- open times ---------- */
   const [slots, setSlots] = useState<Slot[]>([]);
@@ -374,7 +377,7 @@ export function BookFlow(p: Props) {
   /* ---------- a phone: one full-screen step at a time ---------- */
   if (!wide) {
     if (done) return (
-      <div className="cal-root" style={S(`min-height:100dvh;box-sizing:border-box;background:#FFFFFF;padding:24px 20px 32px;display:flex;flex-direction:column;gap:16px;${fontCss}`)}>
+      <div className="cal-root" data-rise="" style={S(`min-height:100dvh;box-sizing:border-box;background:#FFFFFF;padding:24px 20px 32px;display:flex;flex-direction:column;gap:16px;${fontCss}`)}>
         <h1 style={S('margin:0;font-size:30px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>{p.autoConfirm ? `You are booked, ${firstName(form.name, 'there')}` : 'Request sent'}</h1>
         {doneBody}
       </div>
@@ -399,7 +402,7 @@ export function BookFlow(p: Props) {
       <div style={S('max-width:1180px;margin:0 auto;box-sizing:border-box;padding:24px 32px 56px;display:flex;flex-direction:column;gap:28px')}>
         <SalonHeader slug={p.slug} name={p.name} subtitle="Online booking" back={{ onClick: back, label: done || stepNo === 0 ? `Back to ${p.name}` : 'Back to previous step' }} status={{ open: pillOn, text: pill }} account={acct ? { name: acct.name || acct.email } : null} />
         {done ? (
-          <div style={S('width:100%;max-width:640px;margin:0 auto;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:32px;display:flex;flex-direction:column;gap:16px')}>
+          <div data-rise="" style={S('width:100%;max-width:640px;margin:0 auto;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:32px;display:flex;flex-direction:column;gap:16px')}>
             <h1 style={S('margin:0;font-size:30px;line-height:1.15;font-weight:600;letter-spacing:-0.03em')}>{p.autoConfirm ? 'You are booked' : 'Request sent'}</h1>
             {doneBody}
           </div>
@@ -411,7 +414,7 @@ export function BookFlow(p: Props) {
           <div style={S('display:flex;flex-wrap:wrap;align-items:flex-start;gap:24px')}>
             <div className="bk-scroll" style={S('flex:999 1 400px;min-width:0;display:flex;flex-direction:column;gap:20px')}>
               <h1 style={S('margin:0;font-size:34px;line-height:1.1;font-weight:600;letter-spacing:-0.03em')}>{TITLES[here]}</h1>
-              {body}
+              <div data-rise="">{body}</div>
               {!!error && <FieldError>{error}</FieldError>}
             </div>
             <aside aria-label="Your booking" style={S('flex:1 1 320px;max-width:380px;min-width:0;position:sticky;top:24px;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:18px')}>

@@ -41,7 +41,7 @@ export function ChatComposer({ first, draft, onDraft, onSend, busy }: { first: s
 /** The conversation as its own full page over whatever is open (the same page the client's profile opens), with the panel filling it. */
 export function ChatPage({ label, ...p }: { label: string } & Omit<Parameters<typeof ChatPanel>[0], 'fill'>) {
   return (
-    <div role="dialog" aria-label={label} style={S(PAGE + ';z-index:8')}>
+    <div role="dialog" className="mo-in" aria-label={label} style={S(PAGE + ';z-index:8')}>
       <ChatPanel fill {...p} />
     </div>
   );

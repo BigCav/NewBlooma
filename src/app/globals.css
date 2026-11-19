@@ -189,3 +189,48 @@ label:has(> input:focus-visible),label:has(> textarea:focus-visible),label:has(>
 @media (prefers-reduced-motion:reduce){.faq-btn,.faq-v,.faq-panel{transition:none !important}}
 /* A drawer that takes the place of its own loading placeholder appears where it is, without sliding in a second time. */
 .m-drawer.swap,.m-drawer.swap *{animation:none !important}
+
+/* ===================== Motion =====================
+   Quiet and quick (0.15s to 0.35s), nothing loops. The animations run when an `enter` class is on a container: the page's own container
+   (#app) gets it on every route change, and a wizard gets it on its own root on every step change (see components/Motion.tsx); it comes off
+   again after about 700ms. Only a `from` keyframe is used, so every element ends exactly where its own style puts it. */
+@keyframes moRise{from{opacity:0;transform:translateY(10px)}}
+@keyframes moPop{from{opacity:0;transform:scale(.96)}}
+@keyframes moFade{from{opacity:0}}
+@keyframes moToast{from{opacity:0;transform:translateY(12px)}}
+/* Cards, tiles, stat boxes, rows and form fields: the children of a page's sections rise in, the first few staggered by 40ms. */
+.enter :is(main,section,form,fieldset,.page,.flow,.d-cal,.bk-flow,.acct-wrap,[data-rise])>:where(:not(nav,.sk,.sheet,[hidden],[aria-hidden=true],[data-close],script,style)):nth-child(-n+12){animation:moRise .34s cubic-bezier(.2,.7,.2,1) backwards}
+.enter :is(main,section,form,fieldset,.page,.flow,.d-cal,.bk-flow,.acct-wrap,[data-rise])>:where(:not(nav,.sk,.sheet,[hidden],[aria-hidden=true],[data-close],script,style)):nth-child(2){animation-delay:40ms}
+.enter :is(main,section,form,fieldset,.page,.flow,.d-cal,.bk-flow,.acct-wrap,[data-rise])>:where(:not(nav,.sk,.sheet,[hidden],[aria-hidden=true],[data-close],script,style)):nth-child(3){animation-delay:80ms}
+.enter :is(main,section,form,fieldset,.page,.flow,.d-cal,.bk-flow,.acct-wrap,[data-rise])>:where(:not(nav,.sk,.sheet,[hidden],[aria-hidden=true],[data-close],script,style)):nth-child(4){animation-delay:120ms}
+.enter :is(main,section,form,fieldset,.page,.flow,.d-cal,.bk-flow,.acct-wrap,[data-rise])>:where(:not(nav,.sk,.sheet,[hidden],[aria-hidden=true],[data-close],script,style)):nth-child(5){animation-delay:160ms}
+.enter :is(main,section,form,fieldset,.page,.flow,.d-cal,.bk-flow,.acct-wrap,[data-rise])>:where(:not(nav,.sk,.sheet,[hidden],[aria-hidden=true],[data-close],script,style)):nth-child(6){animation-delay:200ms}
+.enter :is(main,section,form,fieldset,.page,.flow,.d-cal,.bk-flow,.acct-wrap,[data-rise])>:where(:not(nav,.sk,.sheet,[hidden],[aria-hidden=true],[data-close],script,style)):nth-child(n+7){animation-delay:240ms}
+/* A step whose whole body is one wrapper: the wrapper stays still and its own children rise instead. */
+.enter [data-rise]>:only-child{animation:none}
+.enter [data-rise]>:only-child>:where(:not(nav,.sk,[hidden],[aria-hidden=true])):nth-child(-n+12){animation:moRise .34s cubic-bezier(.2,.7,.2,1) backwards}
+.enter [data-rise]>:only-child>:nth-child(2){animation-delay:40ms}
+.enter [data-rise]>:only-child>:nth-child(3){animation-delay:80ms}
+.enter [data-rise]>:only-child>:nth-child(4){animation-delay:120ms}
+.enter [data-rise]>:only-child>:nth-child(5){animation-delay:160ms}
+.enter [data-rise]>:only-child>:nth-child(6){animation-delay:200ms}
+.enter [data-rise]>:only-child>:nth-child(n+7){animation-delay:240ms}
+/* Headings and the line under them, form fields, and cards that sit outside a section. */
+.enter :is(h1,.mo-rise,.card,.field){animation:moRise .34s cubic-bezier(.2,.7,.2,1) backwards}
+.enter h1+:where(p,div,span){animation:moRise .34s cubic-bezier(.2,.7,.2,1) 40ms backwards}
+/* Something that appears on its own after the page is up: a full-page overlay (chat, form editor), a confirm box, a message. */
+.mo-in{animation:moRise .34s cubic-bezier(.2,.7,.2,1) backwards}
+.mo-pop{animation:moPop .2s cubic-bezier(.2,.7,.2,1) backwards}
+.mo-toast{animation:moToast .25s cubic-bezier(.2,.7,.2,1) backwards}
+/* A dimmed backdrop fades in (the desktop drawer's own rule is more specific and keeps its fade). */
+[data-close]{animation:moFade .2s ease-out backwards}
+/* Press feedback: buttons, cards, tabs, chips and back buttons shrink a little while pressed. */
+:where(button,.btn,summary,[role=button],[role=tab],.rail-link,.subpanel-link,nav a,a[style*="border-radius"]){transition:transform .15s cubic-bezier(.2,.7,.2,1)}
+:is(button,.btn,summary,[role=button],[role=tab],.rail-link,.subpanel-link,nav a,a[style*="border-radius"]):not(:disabled,[disabled],[data-close],[aria-hidden=true]):active{transform:scale(.97)}
+.s-row:not(:disabled):active{transform:scale(.985)}
+/* Reduced motion: no animation, no press shrink. */
+@media (prefers-reduced-motion:reduce){
+ .enter :is(main,section,form,fieldset,.page,.flow,.d-cal,.bk-flow,.acct-wrap,[data-rise])>*,.enter [data-rise]>:only-child>*,.enter :is(h1,.mo-rise,.card,.field),.enter h1+*,.mo-in,.mo-pop,.mo-toast,[data-close]{animation:none !important}
+ :where(button,.btn,summary,[role=button],[role=tab],.rail-link,.subpanel-link,nav a,a[style*="border-radius"]){transition:none !important}
+ :is(button,.btn,summary,[role=button],[role=tab],.rail-link,.subpanel-link,nav a,a[style*="border-radius"],.s-row):active{transform:none !important}
+}

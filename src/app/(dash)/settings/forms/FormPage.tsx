@@ -70,7 +70,7 @@ export function FormPage({ c }: { c: FormsCtl }) {
   const rowCss = MENU_ROW;
 
   return (
-    <div role="dialog" aria-label="Edit form" style={S(PAGE)}>
+    <div role="dialog" className="mo-in" aria-label="Edit form" style={S(PAGE)}>
       <ScreenHeader title={d.name || 'Untitled form'} onBack={close}>
         <button onClick={() => { c.setConfirmDel(false); setSheet('more'); }} aria-label="More actions" aria-haspopup="dialog" style={S(RING)}>{DOTS}</button>
       </ScreenHeader>

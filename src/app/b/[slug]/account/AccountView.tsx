@@ -36,7 +36,7 @@ function SignIn({ slug, salon }: { slug: string; salon: string }) {
     setBusy(false);
   };
   return (
-    <div style={{ ...page, display: 'flex', alignItems: 'center' }}><div style={{ ...wrap, maxWidth: 1000, width: '100%', gap: 20 }}>
+    <div style={{ ...page, display: 'flex', alignItems: 'center' }}><div data-rise="" style={{ ...wrap, maxWidth: 1000, width: '100%', gap: 20 }}>
       <Link href={`/b/${slug}`} className="only-m" style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: '#0E1116', textDecoration: 'none' }}>{salon}</Link>
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'stretch', gap: 20 }}>
         <aside className="only-d" style={{ display: 'flex', flex: '1 1 0', minWidth: 0, boxSizing: 'border-box', borderRadius: 28, background: '#0E1116', color: '#FFFFFF', padding: 40, flexDirection: 'column', justifyContent: 'space-between', gap: 40 }}>

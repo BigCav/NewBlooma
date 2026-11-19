@@ -9,7 +9,7 @@ import { BLACK } from '@/components/ui';
 export function PublicCard({ title, brand, children }: { title: string; brand?: string; children?: ReactNode }) {
   return (
     <div className="cal-root" style={S("min-height:100dvh;box-sizing:border-box;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4;display:flex;align-items:center;justify-content:center;padding:24px 16px")}>
-      <div style={S('width:100%;max-width:420px;box-sizing:border-box;display:flex;flex-direction:column;gap:20px')}>
+      <div data-rise="" style={S('width:100%;max-width:420px;box-sizing:border-box;display:flex;flex-direction:column;gap:20px')}>
         {!!brand && <div style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em')}>{brand}</div>}
         <section style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:28px;display:flex;flex-direction:column;gap:16px')}>
           <h1 style={S('margin:0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-0.03em;overflow-wrap:anywhere')}>{title}</h1>

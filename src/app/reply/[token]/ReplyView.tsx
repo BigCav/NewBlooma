@@ -21,7 +21,7 @@ export function ReplyView({ token, salon, first, context, thread }: { token: str
   };
   return (
     <div style={{ minHeight: '100dvh', background: '#F4F5F7', color: '#0E1116', fontFamily: "'Geist', system-ui, sans-serif", fontSize: 14, lineHeight: 1.4, padding: '24px 16px 48px', boxSizing: 'border-box' }}>
-      <div style={{ maxWidth: 520, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div data-rise="" style={{ maxWidth: 520, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
         <div style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em' }}>{salon}</div>
         <section style={card} aria-label="Conversation">
           <div><h1 style={{ margin: 0, fontSize: 26, fontWeight: 600, letterSpacing: '-0.03em' }}>Hi {first}</h1>{!!context && <p style={{ margin: '6px 0 0', color: '#5E6673' }}>{context}</p>}</div>

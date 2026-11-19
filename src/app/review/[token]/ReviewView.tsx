@@ -24,7 +24,7 @@ export function ReviewView({ token, salon, slug }: { token: string; salon: strin
   };
   return (
     <div className="bk-flow cal-root" style={S("min-height:100vh;box-sizing:border-box;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4;display:flex;flex-direction:column;align-items:center;padding:56px 24px;gap:20px")}>
-      <div style={S('width:100%;max-width:560px;box-sizing:border-box;display:flex;flex-direction:column;gap:20px;flex:0 0 auto')}>
+      <div data-rise="" style={S('width:100%;max-width:560px;box-sizing:border-box;display:flex;flex-direction:column;gap:20px;flex:0 0 auto')}>
         <div><Link href={'/b/' + slug} style={S('font-size:20px;font-weight:600;letter-spacing:-0.02em;color:#0E1116;text-decoration:none')}>{salon}</Link></div>
         {!done && (
           <section style={S('box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:32px;display:flex;flex-direction:column;gap:20px')}>

@@ -136,7 +136,7 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
       {fopen && <FilterSheet title="Filter waitlist" options={WL_FILTERS} value={filter} onPick={setFilter} onClose={() => setFopen(false)} />}
       {open && <EntryPage key={open.id} c={c} r={open} />}
       {c.mode === 'add' && (
-        <div role="dialog" aria-label="Add to waitlist" style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;display:flex;flex-direction:column;overflow:hidden;background:#FFFFFF;padding:12px 20px 40px;box-sizing:border-box')}>
+        <div role="dialog" className="mo-in" aria-label="Add to waitlist" style={S('position:absolute;left:0;right:0;top:0;bottom:0;z-index:5;display:flex;flex-direction:column;overflow:hidden;background:#FFFFFF;padding:12px 20px 40px;box-sizing:border-box')}>
           <AddFlow c={c} />
         </div>
       )}

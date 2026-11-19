@@ -2,6 +2,7 @@
 // 1:1 conversion of the prototype's ManageBooking.dc.html and MobileManageBooking.dc.html (the client's appointment page).
 // Markup and style strings are kept as written; the {{ }} holes are the appointment's real data and the handlers are real server actions.
 import { DayStrip, TimeGrid } from '@/components/DayTimePicker';
+import { useAppEnter } from '@/components/Motion';
 import { clock12, duration, makeMoney, timeRange } from '@/lib/display';
 import { addDaysYmd, dayInfo as dayOf } from '@/lib/cal';
 import { TONE } from '@/lib/tones';
@@ -30,6 +31,7 @@ function useManage(p: Props) {
   const days = useMemo(() => Array.from({ length: Math.min(p.windowDays, 57) }, (_, i) => dayInfo(addDaysYmd(p.today, i))), [p.today, p.windowDays]);
   const money = useMemo(() => makeMoney(p.currency), [p.currency]);
   const [mode, setMode] = useState<'view' | 'resched' | 'cancel'>('view');
+  useAppEnter(mode);
   const [cancelled, setCancelled] = useState(p.status === 'cancelled');
   const [when, setWhen] = useState({ ymd: p.startYmd, min: p.startMin });
   const [pol, setPol] = useState({ free: p.free, deadline: p.deadline });

@@ -3,6 +3,7 @@
 // "new" is the one extra mode: choosing a new password after following the reset email.
 import Link from 'next/link';
 import { useState } from 'react';
+import { useAppEnter } from '@/components/Motion';
 import { S } from '@/app/(dash)/calendar/pickers';
 import { requestReset, setNewPassword, signIn, signUp } from '@/app/auth-actions';
 import { BLACK, FieldError, INPUT, Icon, LabelledField, OUTLINE, PasswordInput, dim } from '@/components/ui';
@@ -39,6 +40,7 @@ export function AuthView({ mode: initial, invite }: { mode: Mode; invite?: { tok
   const [email, setEmail] = useState(''); const [pw, setPw] = useState(''); const [name, setName] = useState('');
   const [show, setShow] = useState(false); const [error, setError] = useState('');
   const [done, setDone] = useState<null | 'created' | 'confirm' | 'sent'>(null);
+  useAppEnter(mode + (done ?? ''));
   const [busy, setBusy] = useState(false);
   const goMode = (m: Mode) => { setMode(m); setError(''); setDone(null); };
   const submit = async (e: React.FormEvent) => {
@@ -74,7 +76,7 @@ export function AuthView({ mode: initial, invite }: { mode: Mode; invite?: { tok
         <div aria-hidden="true" style={S('color:#8A93A0;font-size:13px')}>{' '}</div>
       </aside>
       <main className="si-main" style={S('flex:1 1 auto;min-width:0;display:flex;align-items:center;justify-content:center;padding:56px 32px;box-sizing:border-box')}>
-        <div style={S('display:flex;flex-direction:column;gap:24px;width:100%;max-width:420px')}>
+        <div data-rise="" style={S('display:flex;flex-direction:column;gap:24px;width:100%;max-width:420px')}>
           <div className="si-mob" style={S('flex-direction:column;gap:20px')}>
             <Link href="/" aria-label="Aster home" style={S('align-self:flex-start;display:flex;align-items:center;min-height:44px;color:#0E1116;text-decoration:none;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Aster</Link>
             <div style={S('display:flex;flex-direction:column;gap:6px;padding:20px;border-radius:24px;background:#0E1116;color:#FFFFFF')}><div style={S('font-size:22px;font-weight:600;letter-spacing:-0.02em;line-height:1.15')}>{aside[0]}</div><div style={S('color:#C9CDD5;font-size:14px')}>{aside[1]}</div></div>

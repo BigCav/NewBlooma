@@ -15,5 +15,5 @@ export function Notice({ tone = 'green', children, onDone, ms = 4000 }: { tone?:
     return () => clearTimeout(t);
   }, [key, tone, ms]); // eslint-disable-line react-hooks/exhaustive-deps
   if (gone) return null;
-  return <p role={tone === 'red' ? 'alert' : 'status'} style={S(`margin:0;align-self:flex-start;display:inline-block;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:500;background:${TONE[tone].bg};color:${TONE[tone].fg}`)}>{children}</p>;
+  return <p role={tone === 'red' ? 'alert' : 'status'} className="mo-toast" style={S(`margin:0;align-self:flex-start;display:inline-block;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:500;background:${TONE[tone].bg};color:${TONE[tone].fg}`)}>{children}</p>;
 }

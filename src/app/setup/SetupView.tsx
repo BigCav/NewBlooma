@@ -1,6 +1,7 @@
 'use client';
 // 1:1 conversion of the prototype's Setup.dc.html and MobileSetup.dc.html (first-run wizard).
 // Markup and style strings are kept as written; the last step creates the real salon, categories, starter services and team.
+import { useAppEnter } from '@/components/Motion';
 import { phoneInput, checkPhone } from '@/lib/phone';
 import { duration, makeMoney, plural } from '@/lib/display';
 import { TONE } from '@/lib/tones';
@@ -26,6 +27,7 @@ function useSetup() {
   }, []);
   const [busy, startT] = useTransition();
   const [step, setStep] = useState(0);
+  useAppEnter(step);
   const [name, setName] = useState(''); const [phone, setPhone] = useState(''); const [address, setAddress] = useState('');
   const [cats, setCats] = useState<string[]>([]);
   const [preset, setPreset] = useState('std');
@@ -167,7 +169,7 @@ function Desktop({ c }: { c: C }) {
         </nav>
       </aside>
       <main style={S('flex:1 1 auto;min-width:0;display:flex;justify-content:center;padding:48px 32px 64px 0;box-sizing:border-box')}>
-        <div style={S('width:100%;max-width:640px;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:40px;display:flex;flex-direction:column;gap:28px;align-self:flex-start')}>
+        <div data-rise="" style={S('width:100%;max-width:640px;box-sizing:border-box;background:#FFFFFF;border:1px solid #E6E8EC;border-radius:24px;padding:40px;display:flex;flex-direction:column;gap:28px;align-self:flex-start')}>
           {c.step < 4 ? (<><Head c={c} m={false} /><StepBody c={c} m={false} /><Err c={c} /><Buttons c={c} m={false} /></>) : <Done c={c} m={false} />}
         </div>
       </main>

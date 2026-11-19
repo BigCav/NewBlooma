@@ -22,7 +22,7 @@ export function Shell({ children, title }: { children: React.ReactNode; title: s
         <div aria-hidden="true" style={S('color:#8A93A0;font-size:13px')}>{' '}</div>
       </aside>
       <main className="si-main" style={S('flex:1 1 auto;min-width:0;display:flex;align-items:center;justify-content:center;padding:56px 32px;box-sizing:border-box')}>
-        <div style={S('width:100%;max-width:420px;display:flex;flex-direction:column;gap:20px')}>
+        <div data-rise="" style={S('width:100%;max-width:420px;display:flex;flex-direction:column;gap:20px')}>
           <div className="si-mob" style={S('flex-direction:column;gap:20px')}>
             <Link href="/" aria-label="Aster home" style={S('align-self:flex-start;display:flex;align-items:center;min-height:44px;color:#0E1116;text-decoration:none;font-size:20px;font-weight:600;letter-spacing:-0.02em')}>Aster</Link>
             <div style={S('padding:20px;border-radius:24px;background:#0E1116;color:#FFFFFF;font-size:22px;font-weight:600;letter-spacing:-0.02em;line-height:1.15')}>You are invited to join the team.</div>
