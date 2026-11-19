@@ -64,6 +64,6 @@ export function MobileHeader({ title, subtitle, query, onQuery, placeholder = 'S
 }
 
 /** The phone tab bar drawn in place at the bottom of a page: the one shared component from Nav, so every page shows the same tabs, names and unread count. */
-export function MobileTabs({ active }: { active?: TabId }) {
-  return <PhoneTabs active={active} inPage />;
+export function MobileTabs({ active, onNew }: { active?: TabId; onNew?: () => void }) {
+  return <PhoneTabs active={active} inPage onNew={onNew} />;
 }

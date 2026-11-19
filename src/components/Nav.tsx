@@ -174,7 +174,7 @@ const GRID = { boxSizing: 'border-box', display: 'grid', gridTemplateColumns: 'r
  * on pages that draw their own); every phone page draws the same bar in place through `inPage` (see MobileTabs in Chrome).
  * The unread Inbox count shows on More, because Inbox lives under More.
  */
-export function PhoneTabs({ active, inPage = false }: { active?: TabId; inPage?: boolean }) {
+export function PhoneTabs({ active, inPage = false, onNew }: { active?: TabId; inPage?: boolean; onNew?: () => void }) {
   const p = usePathname();
   const unread = useUnread();
   const now = active ?? tabOf(p);
@@ -196,7 +196,7 @@ export function PhoneTabs({ active, inPage = false }: { active?: TabId; inPage?:
     <nav className={inPage ? undefined : 'tabs-bar'} aria-label="Main" style={inPage ? { ...GRID, fontFamily: "'Geist',system-ui,sans-serif" } : undefined}>
       {tab('calendar')}
       {tab('services')}
-      <button type="button" onClick={() => openNewMenu()} aria-label="Create new" aria-haspopup="dialog" style={{ width: 48, height: 48, padding: 0, border: 0, cursor: 'pointer', borderRadius: 999, background: '#0E1116', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <button type="button" onClick={() => openNewMenu(onNew)} aria-label="Create new" aria-haspopup="dialog" style={{ width: 48, height: 48, padding: 0, border: 0, cursor: 'pointer', borderRadius: 999, background: '#0E1116', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Icon name="plus" size={22} color="#fff" decorative />
       </button>
       {tab('clients')}

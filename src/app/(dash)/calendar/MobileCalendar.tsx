@@ -3,7 +3,7 @@
 // only the {{ }} holes are real data and handlers are real server actions.
 import { ConfirmBox } from '@/components/ConfirmBox';
 import { BottomSheet } from '@/components/BottomSheet';
-import { openNewMenu } from '@/components/NewMenu';
+import { MobileTabs } from '@/components/Chrome';
 import { rootCls } from '@/components/drawer';
 import { useState } from 'react';
 import { NewApptForm } from './NewApptForm';
@@ -70,12 +70,6 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
               </div>
   );
   const errP = () => hasError ? <FieldError>{error}</FieldError> : null;
-  const tabsA = (id: string, href: string, label: string, on: boolean, svg: React.ReactNode) => (
-    <Link key={id} href={href} aria-current={on ? 'page' : 'false'} style={S('width:100%;min-height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;text-decoration:none;font-size:12px;font-weight:' + (on ? 600 : 500) + ';color:' + (on ? '#0E1116' : '#5E6673'))}>
-      {svg}{label}
-    </Link>
-  );
-  const ic = (color: string, children: React.ReactNode) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{children}</svg>;
 
   return (
     <div className={rootCls(drawer)} style={S("position:relative;width:100%;height:100dvh;box-sizing:border-box;flex-direction:column;overflow:hidden;background:#F4F5F7;color:#0E1116;font-family:'Geist',system-ui,sans-serif;font-size:14px;line-height:1.4")}>
@@ -235,16 +229,7 @@ export function MobileCalendar({ c, props, drawer }: { c: ReturnType<typeof useC
         ))}
       </main>
 
-      {/* MobileTabs */}
-      <nav aria-label="Main" style={S("box-sizing:border-box;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center;justify-items:center;padding:10px 8px 22px;background:#FFFFFF;border-top:1px solid #E6E8EC;font-family:'Geist',system-ui,sans-serif")}>
-        {tabsA('calendar', '/calendar', 'Calendar', true, ic('#0E1116', <><rect x="3.5" y="5" width="17" height="15.5" rx="3" /><path d="M3.5 10h17M8 3v4M16 3v4" /></>))}
-        {tabsA('services', '/services', 'Services', false, ic('#5E6673', <><circle cx="6" cy="7" r="2.5" /><circle cx="6" cy="17" r="2.5" /><path d="M8 8.5 20 18M8 15.5 20 6" /></>))}
-        <button onClick={() => openNewMenu(openNew)} aria-label="Create new" aria-haspopup="dialog" style={S('width:48px;height:48px;padding:0;border:0;border-radius:999px;background:#0E1116;display:flex;align-items:center;justify-content:center;text-decoration:none;cursor:pointer')}>
-          <Icon name="plus" size={22} color="#FFFFFF" />
-        </button>
-        {tabsA('clients', '/clients', 'Clients', false, ic('#5E6673', <><circle cx="9" cy="8.5" r="3.5" /><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5" /><path d="M16 5.2a3.4 3.4 0 0 1 0 6.6M18.5 14.8c1.6.8 2.6 2.4 3 5.2" /></>))}
-        {tabsA('more', '/more', 'More', false, ic('#5E6673', <><circle cx="5.5" cy="12" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="18.5" cy="12" r="1.2" /></>))}
-      </nav>
+      <MobileTabs active="calendar" onNew={openNew} />
 
       {open && !(mode === 'message' && cur?.clientId) && (
         <BottomSheet label="Appointment details" onClose={close} backdropLabel="Close details">
