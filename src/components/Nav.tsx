@@ -143,8 +143,10 @@ export function SideNav({ slug, unread, role }: { slug: string; unread: number; 
       </button>
       <span className="rail-name" aria-hidden="true">Aster</span>
       </div>
-      {RAIL.filter((id) => visibleTo(id, role)).map((id) => item(id))}
-      {item('store', { marginTop: 'auto' })}
+      {/* The pages scroll if the window is too short for them; Your salon page, Settings and Sign out stay pinned at the bottom whatever the window height. */}
+      <div className="rail-main">{RAIL.filter((id) => visibleTo(id, role)).map((id) => item(id))}</div>
+      <div className="rail-foot">
+      {item('store')}
       {visibleTo('settings', role) && item('settings')}
       <form action={signOut} style={{ display: 'contents' }}>
         <button type="submit" className="rail-link" title="Sign out" style={{ height: 44, borderRadius: 14, border: 0, font: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', background: 'transparent', color: '#4A525E' }}>
@@ -152,6 +154,7 @@ export function SideNav({ slug, unread, role }: { slug: string; unread: number; 
           <span className="rail-label">Sign out</span>
         </button>
       </form>
+      </div>
     </nav>
     <div id="subpanel" className={'subpanel' + (open ? ' open' : '')}>
       <nav className="subpanel-in" aria-label={shown ? MENUS[shown].title : undefined}>
