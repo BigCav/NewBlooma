@@ -26,5 +26,6 @@ export function patchInfo(on: string | null, today: string): { text: string; ton
 export const sinceText = (iso: string) => { const d = new Date(iso); return `Client since ${MON[d.getUTCMonth()]} ${d.getUTCFullYear()}`; };
 
 export type Channels = { sms: boolean; email: boolean };
+/** Only said when there is nothing to send with; how a message goes out (text or email) is not spelled out under the chat. */
 export const channelNote = (ch: Channels, phone: string, email: string) =>
-  ch.sms && phone ? `Sent as a text to ${phone}.` : ch.email && email ? `Sent by email to ${email}.` : 'Messaging is not set up yet. Add Twilio or Resend keys to send.';
+  (ch.sms && phone) || (ch.email && email) ? '' : 'Messaging is not set up yet. Add Twilio or Resend keys to send.';
