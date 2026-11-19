@@ -4,6 +4,7 @@ import { after } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { decrypt } from '@/lib/crypto';
 import { splitAmounts } from '@/lib/hit-amounts';
+import { decodeXml, latestReceipt, withReceipt, type HitReceipt } from '@/lib/hit-receipt';
 
 const prod = () => process.env.WINDCAVE_ENV === 'prod';
 const REST = () => (prod() ? 'https://sec.windcave.com' : 'https://uat.windcave.com');
@@ -237,8 +238,8 @@ export async function pollTerminal(txn: string): Promise<Poll> {
   const { data: cp } = await sb.from('card_payments').select('*').eq('txn_ref', txn).eq('kind', 'terminal').maybeSingle();
   if (!cp) return { state: 'error' };
   if (txn.startsWith('RF')) return pollRefund(cp);
-  if (cp.status === 'approved') return { state: 'approved' };
-  if (cp.status !== 'pending') return { state: cp.status === 'declined' || cp.status === 'cancelled' ? 'declined' : 'error', text: cp.response_text ?? undefined };
+  if (cp.status === 'approved') return { state: 'approved', receipt: latestReceipt(cp.receipts) };
+  if (cp.status !== 'pending') return { state: cp.status === 'declined' || cp.status === 'cancelled' ? 'declined' : 'error', text: cp.response_text ?? undefined, receipt: latestReceipt(cp.receipts) };
   const c = await getCreds(cp.salon_id);
   if (!c.station) return { state: 'error' };
   let out: string;
@@ -255,20 +256,21 @@ export async function pollTerminal(txn: string): Promise<Poll> {
   const approved = pick(out, 'AP') === '1';
   const paid = Number(pick(out, 'AmtA') ?? '0'); // cents
   const tip = Number(pick(out, 'AmtT') ?? '0');
-  const patch = { response_code: pick(out, 'RC') ?? pick(out, 'ReCo') ?? null, response_text: pick(out, 'RT') || pick(out, 'DL1') || null, auth_code: pick(out, 'AC') ?? null, dps_txn_ref: pick(out, 'TR') ?? null, resolved_at: new Date().toISOString(), ui_buttons: null };
-  if (!approved) { await sb.from('card_payments').update({ ...patch, status: 'declined' }).eq('id', cp.id); return { state: 'declined', text: patch.response_text ?? undefined }; }
+  const rc = receiptOf(out, 'final');
+  const patch = { response_code: pick(out, 'RC') ?? pick(out, 'ReCo') ?? null, response_text: pick(out, 'RT') || pick(out, 'DL1') || null, auth_code: pick(out, 'AC') ?? null, dps_txn_ref: pick(out, 'TR') ?? null, resolved_at: new Date().toISOString(), ui_buttons: null, receipts: rc ? withReceipt(cp.receipts, rc) : cp.receipts ?? [] };
+  if (!approved) { await sb.from('card_payments').update({ ...patch, status: 'declined' }).eq('id', cp.id); return { state: 'declined', text: patch.response_text ?? undefined, receipt: rc ?? undefined }; }
   // The ticket, the tip and any surcharge Windcave's host added are kept apart: the sale stays the ticket amount and the surcharge shows beside it.
   const surRaw = pick(out, 'AmtS');
   const split = splitAmounts(paid, tip, surRaw === undefined || surRaw.trim() === '' ? undefined : Number(surRaw), cp.amount_cents);
   if (!split) {
     await sb.from('card_payments').update({ ...patch, status: 'error', needs_review: true, review_note: `Terminal approved ${paid} cents, sale was ${cp.amount_cents}` }).eq('id', cp.id);
-    return { state: 'error', text: 'Amount mismatch. Check with your payment provider.' };
+    return { state: 'error', text: 'Amount mismatch. Check with your payment provider.', receipt: rc ?? undefined };
   }
   const { data: won } = await sb.from('card_payments').update({ ...patch, tip_cents: split.tip, surcharge_cents: split.surcharge, status: 'approved' }).eq('id', cp.id).eq('status', 'pending').select('id');
-  if (!won?.length) return { state: 'approved' }; // another check got here first and finishes the sale
+  if (!won?.length) return { state: 'approved', receipt: rc ?? latestReceipt(cp.receipts) }; // another check got here first and finishes the sale
   const { error } = await sb.rpc('finalize_sale', { p_sale: cp.sale_id, p_method: 'card' });
   if (error) await sb.from('card_payments').update({ needs_review: true, review_note: `Approved but sale not finalised: ${error.message}` }).eq('id', cp.id);
-  return { state: 'approved' };
+  return { state: 'approved', receipt: rc ?? undefined };
 }
 
 /** A button the terminal asked the POS to show (such as YES / NO at a signature). Only a button the terminal's latest reply allowed is sent. */
@@ -290,6 +292,35 @@ export async function cancelTerminal(txn: string): Promise<boolean> {
   try { await hit(c, { Station: c.station!, TxnType: 'UI', UiType: 'Bn', Name: b.name, Val: 'CANCEL', TxnRef: txn }); return true; } catch { return false; }
 }
 
+/** The receipts kept for a payment or refund, exactly as the terminal sent them. */
+export async function storedReceipts(txn: string): Promise<HitReceipt[]> {
+  const { data } = await supabaseAdmin().from('card_payments').select('receipts').eq('txn_ref', txn).eq('kind', 'terminal').maybeSingle();
+  return ((data?.receipts ?? []) as HitReceipt[]);
+}
+
+/**
+ * The merchant copy of a payment's receipt, asked for from the terminal (Receipt request, type 3). The terminal only keeps its most recent transaction,
+ * so for an older payment the copy saved earlier is used, and if there is none that is said.
+ */
+export async function terminalMerchantReceipt(txn: string): Promise<{ receipt?: HitReceipt; error?: string }> {
+  const sb = supabaseAdmin();
+  const { data: cp } = await sb.from('card_payments').select('id,salon_id,status,receipts,resolved_at').eq('txn_ref', txn).eq('kind', 'terminal').maybeSingle();
+  if (!cp) return { error: 'Payment not found.' };
+  if (cp.status === 'pending') return { error: 'Wait until the payment has finished.' };
+  const saved = ((cp.receipts ?? []) as HitReceipt[]).find((r) => r.stage === 'merchant');
+  const c = await getCreds(cp.salon_id);
+  if (c.hitUser && c.hitKey && c.station) {
+    // A copy asked for long after the payment is marked as a duplicate.
+    const old = cp.resolved_at ? Date.now() - new Date(cp.resolved_at).getTime() > 10 * 60e3 : false;
+    try {
+      const out = await hit(c, { Station: c.station, TxnType: 'Receipt', TxnRef: txn, DuplicateFlag: old ? 1 : 0, ReceiptType: 3 });
+      const r = receiptOf(out, 'merchant');
+      if (r) { await sb.from('card_payments').update({ receipts: withReceipt(cp.receipts, r) }).eq('id', cp.id); return { receipt: r }; }
+    } catch { /* the saved copy, if there is one, is used below */ }
+  }
+  return saved ? { receipt: saved } : { error: 'The terminal can only give the merchant copy of its most recent payment, and none was saved for this one.' };
+}
+
 /* ---------------- Refunds ---------------- */
 /** A matched refund on the terminal (spec: Refund with the original DpsTxnRef). Returns the reference to watch, like a payment. */
 export async function startRefund(saleId: string, origin?: string, unmatched = false): Promise<{ txn?: string; error?: string }> {
@@ -309,19 +340,28 @@ export async function startRefund(saleId: string, origin?: string, unmatched = f
   return dispatch(c, { Station: c.station, Amount: dollars(cp.amount_cents), Cur: sale.salons.currency, TxnType: 'Refund', TxnRef: txn, ...(unmatched ? {} : { DpsTxnRef: cp.dps_txn_ref }), MRef: sale.salons.name.slice(0, 60) }, txn, origin);
 }
 
-type Poll = { state: 'pending' | 'approved' | 'declined' | 'error'; text?: string; buttons?: { name: string; label: string }[]; canCancel?: boolean };
+type Poll = { state: 'pending' | 'approved' | 'declined' | 'error'; text?: string; buttons?: { name: string; label: string }[]; canCancel?: boolean; receipt?: HitReceipt };
 type Btn = { name: string; label: string };
 const isCancel = (b: Btn) => b.label.toUpperCase() === 'CANCEL';
 /** A reply that is not final: what to show, and which buttons the terminal allows right now. They are remembered, so Cancel and the signature buttons only ever send what is valid at that moment. */
 async function stillRunning(cp: any, out: string): Promise<Poll> {
   const all = hitButtons(out);
-  if (JSON.stringify(all) !== JSON.stringify(cp.ui_buttons ?? [])) await supabaseAdmin().from('card_payments').update({ ui_buttons: all }).eq('id', cp.id);
-  return { state: 'pending', text: [pick(out, 'DL1'), pick(out, 'DL2')].filter((x) => x && x.trim()).join(' ').trim() || undefined, buttons: all.filter((b) => !isCancel(b)), canCancel: all.some(isCancel) };
+  // At the signature step the terminal sends the receipt to sign: it is kept, and shown and printed by the POS.
+  const sig = receiptOf(out, 'signature');
+  const receipts = sig && !((cp.receipts ?? []) as HitReceipt[]).some((r) => r.stage === 'signature' && r.text === sig.text) ? withReceipt(cp.receipts, sig) : null;
+  if (receipts || JSON.stringify(all) !== JSON.stringify(cp.ui_buttons ?? [])) await supabaseAdmin().from('card_payments').update({ ui_buttons: all, ...(receipts ? { receipts } : {}) }).eq('id', cp.id);
+  return { state: 'pending', text: [pick(out, 'DL1'), pick(out, 'DL2')].filter((x) => x && x.trim()).join(' ').trim() || undefined, buttons: all.filter((b) => !isCancel(b)), canCancel: all.some(isCancel), receipt: sig ?? latestReceipt(cp.receipts) };
+}
+/** The receipt text in a reply, exactly as sent (only the XML escapes are turned back). The terminal has no printer, so the POS shows and prints it. */
+function receiptOf(out: string, stage: HitReceipt['stage']): HitReceipt | null {
+  const text = pick(out, 'Rcpt');
+  if (text === undefined || !text.trim()) return null;
+  return { stage, width: Number(pick(out, 'RcptW') ?? '') || 0, text: decodeXml(text) };
 }
 async function pollRefund(cp: any): Promise<Poll> {
   const sb = supabaseAdmin();
-  if (cp.status === 'refunded') return { state: 'approved' };
-  if (cp.status !== 'pending') return { state: cp.status === 'declined' || cp.status === 'cancelled' ? 'declined' : 'error', text: cp.response_text ?? undefined };
+  if (cp.status === 'refunded') return { state: 'approved', receipt: latestReceipt(cp.receipts) };
+  if (cp.status !== 'pending') return { state: cp.status === 'declined' || cp.status === 'cancelled' ? 'declined' : 'error', text: cp.response_text ?? undefined, receipt: latestReceipt(cp.receipts) };
   const c = await getCreds(cp.salon_id);
   if (!c.station) return { state: 'error' };
   let out: string;
@@ -333,21 +373,22 @@ async function pollRefund(cp: any): Promise<Poll> {
     return { state: 'error', text: bad };
   }
   if (pick(out, 'Complete') !== '1') return stillRunning(cp, out);
-  const patch = { response_code: pick(out, 'RC') ?? pick(out, 'ReCo') ?? null, response_text: pick(out, 'RT') || pick(out, 'DL1') || null, dps_txn_ref: pick(out, 'TR') ?? null, resolved_at: new Date().toISOString(), ui_buttons: null };
+  const rc = receiptOf(out, 'final');
+  const patch = { response_code: pick(out, 'RC') ?? pick(out, 'ReCo') ?? null, response_text: pick(out, 'RT') || pick(out, 'DL1') || null, dps_txn_ref: pick(out, 'TR') ?? null, resolved_at: new Date().toISOString(), ui_buttons: null, receipts: rc ? withReceipt(cp.receipts, rc) : cp.receipts ?? [] };
   if (pick(out, 'AP') !== '1') {
     await sb.from('card_payments').update({ ...patch, status: 'declined' }).eq('id', cp.id);
-    return { state: 'declined', text: patch.response_text ?? undefined };
+    return { state: 'declined', text: patch.response_text ?? undefined, receipt: rc ?? undefined };
   }
   // Approved: claim it once, then mark the card payment and the sale refunded.
   const { data: won } = await sb.from('card_payments').update({ ...patch, status: 'refunded' }).eq('id', cp.id).eq('status', 'pending').select('id');
-  if (!won?.length) return { state: 'approved' };
+  if (!won?.length) return { state: 'approved', receipt: rc ?? latestReceipt(cp.receipts) };
   await sb.from('card_payments').update({ status: 'refunded' }).eq('sale_id', cp.sale_id).eq('kind', 'terminal').eq('status', 'approved');
   const { error } = await sb.rpc('refund_sale_internal', { p_sale: cp.sale_id });
   if (error) {
     await sb.from('card_payments').update({ needs_review: true, review_note: `Refunded on the terminal but sale not updated: ${error.message}` }).eq('id', cp.id);
-    return { state: 'error', text: 'The terminal refunded the card, but the sale could not be updated. Contact support.' };
+    return { state: 'error', text: 'The terminal refunded the card, but the sale could not be updated. Contact support.', receipt: rc ?? undefined };
   }
-  return { state: 'approved' };
+  return { state: 'approved', receipt: rc ?? undefined };
 }
 
 /** Refund a card sale: on the terminal it returns the reference to watch, an on-screen payment is refunded at once. */

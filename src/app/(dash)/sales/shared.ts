@@ -3,7 +3,7 @@ import { PAYMENT_STATUS } from '@/lib/status';
 import type { ToneName } from '@/lib/tones';
 export type SaleRow = {
   id: string; ref: string; staffId: string | null; clientId: string | null; bookingId: string; bookingDay: string; client: string; service: string; staffName: string; staffPhoto: string | null; firstName: string; time: string; method: string;
-  status: 'Paid' | 'Pending' | 'Refunded'; amount: number; tip: number; /** Surcharge the card host added on top of the ticket (shown beside it, never part of it). */ surcharge?: number; tax: number; total: number; canEdit: boolean; txn?: string /* a card payment still open on the terminal */; discount: number; discountNote: string; taxRate: number; taxIncl: boolean;
+  status: 'Paid' | 'Pending' | 'Refunded'; amount: number; tip: number; /** Surcharge the card host added on top of the ticket (shown beside it, never part of it). */ surcharge?: number; /** The terminal payment (and refund) of this sale, for its saved EFTPOS receipts. */ cardTxn?: string; refundTxn?: string; tax: number; total: number; canEdit: boolean; txn?: string /* a card payment still open on the terminal */; discount: number; discountNote: string; taxRate: number; taxIncl: boolean;
   dayShort: string; gst: number; range: string; lines: { label: string; qty: number; cents: number; dur: number | null; svc: boolean; productId: string | null; serviceId: string | null }[];
 };
 export type PayMethod = { id: 'terminal' | 'online' | 'cash' | 'gift_card'; label: string };

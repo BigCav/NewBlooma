@@ -2,11 +2,15 @@
 // The last step of a card payment: waiting on the EFTPOS terminal, then a tick or a cross.
 import { S } from './pickers';
 import type { TermBtn, TermPhase } from '../sales/useTerminal';
+import { ReceiptBox } from '@/components/ReceiptBox';
+import type { HitReceipt } from '@/lib/hit-receipt';
 
 export type TermView = {
   phase: TermPhase; text: string; btns: TermBtn[]; cancelling: boolean; hasTxn: boolean;
   /** Whether the terminal currently allows cancelling: null before its first reply, false once the card has been read. */
   canCancel: boolean | null;
+  /** The EFTPOS receipt the terminal sent (the copy to sign while it waits, then the final one) and the payment it belongs to. */
+  receipt: HitReceipt | null; receiptTxn: string;
   onCancel: () => void; onPress: (b: TermBtn) => void;
   /** Approved: finish up. */
   onDone: () => void;
@@ -56,6 +60,7 @@ export function TerminalStatus({ t, amount, refund }: { t: TermView; amount: str
             {t.btns.map((b) => <button key={b.name} onClick={() => t.onPress(b)} style={S(SECOND + ';flex:1 1 0;width:auto')}>{b.label}</button>)}
           </div>
         )}
+        {!!t.receipt && !!t.receiptTxn && (phase !== 'pending' || t.receipt.stage === 'signature') && <ReceiptBox key={t.receiptTxn + t.receipt.stage} txn={t.receiptTxn} receipt={t.receipt} signing={phase === 'pending'} />}
       </div>
       <div style={S('flex:0 0 auto;padding:14px 20px 28px;background:#FFFFFF;border-top:1px solid #EEF0F3;display:flex;flex-direction:column;gap:12px')}>
         {phase === 'pending' && t.canCancel === true && <button onClick={t.onCancel} disabled={!t.hasTxn || t.cancelling} style={S(SECOND + ';opacity:' + (!t.hasTxn || t.cancelling ? 0.45 : 1))}>{t.cancelling ? 'Cancelling' : 'Cancel ' + what}</button>}

@@ -18,6 +18,7 @@ import { ActiveFilter, FilterButton, FilterSheet } from '@/components/FilterBits
 import { S } from '../calendar/pickers';
 import { CheckoutFlow } from '../calendar/CheckoutFlow';
 import { NewSaleFlow } from './NewSaleFlow';
+import { CardReceiptPage } from '@/components/ReceiptBox';
 import { createWalkin, payFlow, refundSale, sendReceipt, setPrice, } from './actions';
 import { useTerminal } from './useTerminal';
 import { TerminalStatus } from '../calendar/TerminalStatus';
@@ -28,7 +29,7 @@ type Props = {
   rows: SaleRow[]; bars: { day: string; cents: number; today: boolean }[]; todayTotal: number; paidCount: number; subtitle: string;
   methods: PayMethod[]; acceptCard: boolean; services: SvcOpt[]; products: CoProduct[]; catalog: CalService[]; offers: Record<string, string[]>; packages: Record<string, CoPackage[]>; askTip: boolean; canDiscount: boolean; initial: { sale: string | null; pay: boolean; card: string };
 };
-type Mode = 'view' | 'pay' | 'edit' | 'new' | 'refund';
+type Mode = 'view' | 'pay' | 'edit' | 'new' | 'refund' | 'receipt';
 const CARD_MSG: Record<string, string> = { declined: 'The card payment was not completed.', pending: 'Still waiting for the bank. Refresh in a moment.', unknown: 'The card payment could not be confirmed.' };
 
 function useSales(props: Props) {
@@ -235,6 +236,7 @@ function Panel({ c }: { c: C }) {
   const err = !!c.error && <FieldError>{c.error}</FieldError>;
   if (!s) return <Note>No sales yet. Record one with New sale.</Note>;
   if (c.mode === 'refund' && c.termView.phase !== 'idle') return <TerminalStatus t={c.termView} amount={dollars(s.total)} refund />;
+  if (c.mode === 'receipt' && s.cardTxn) return <CardReceiptPage txn={s.cardTxn} refundTxn={s.refundTxn} onBack={() => c.setMode('view')} />;
   if (c.mode === 'pay') return <SaleCheckout c={c} s={s} />;
   if (c.mode === 'edit') return (
     <div style={S('display:flex;flex-direction:column;gap:18px')}>
@@ -372,6 +374,7 @@ function Mobile({ c, drawer }: { c: C; drawer?: boolean }) {
             <QaGroup first={!q.clientId && !q.bookingDay}>
               {q.status === 'Pending' && q.canEdit && <button onClick={() => { c.setQa(false); c.setEditAmount(String(q.amount / 100)); c.setMode('edit'); c.setError(''); }} style={S(QA_ITEM)}>Edit sale price</button>}
               {q.status !== 'Pending' && <button onClick={() => { c.setQa(false); c.receipt(); }} style={S(QA_ITEM)}>Send receipt</button>}
+              {!!q.cardTxn && <button onClick={() => { c.setQa(false); c.setMode('receipt'); c.setError(''); }} style={S(QA_ITEM)}>Card receipt</button>}
               {q.status === 'Paid' && <button onClick={() => { c.setQa(false); c.setConfirmRefund(true); }} style={S(QA_ITEM)}>Refund</button>}
             </QaGroup>
           </QuickActions>

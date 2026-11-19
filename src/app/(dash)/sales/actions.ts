@@ -3,9 +3,10 @@ import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireCtx, friendly, ownsTxn } from '@/lib/session';
-import { getCreds, releaseOnline, startOnline, startTerminal, terminalInFlight, refundByCard, pollTerminal, pressTerminalButton, cancelTerminal } from '@/lib/windcave';
+import { getCreds, releaseOnline, startOnline, startTerminal, terminalInFlight, refundByCard, pollTerminal, pressTerminalButton, cancelTerminal, storedReceipts, terminalMerchantReceipt } from '@/lib/windcave';
+import { latestReceipt, receiptLines, type HitReceipt } from '@/lib/hit-receipt';
 import { sendCustomMessage } from '@/lib/notify';
-import { mailP } from '@/lib/email-layout';
+import { esc, mailP } from '@/lib/email-layout';
 import { dateLong, dollars, toCents } from '@/lib/format';
 import { bookingRef } from '@/lib/display';
 import { firstName } from '@/lib/people';
@@ -91,6 +92,25 @@ export async function payFlow(saleId: string, method: 'terminal' | 'online' | 'c
 }
 
 export async function terminalPoll(txn: string) { if (!(await ownsTxn(txn))) return { state: 'error' as const }; return pollTerminal(txn); }
+/** The receipts the terminal sent for a payment or refund, as saved (exactly as received). */
+export async function cardReceipts(txn: string): Promise<{ receipts: HitReceipt[] }> { return (await ownsTxn(txn)) ? { receipts: await storedReceipts(txn) } : { receipts: [] }; }
+/** The merchant copy of a payment's receipt, asked for from the terminal. */
+export async function cardMerchantReceipt(txn: string): Promise<{ receipt?: HitReceipt; error?: string }> { return (await ownsTxn(txn)) ? terminalMerchantReceipt(txn) : { error: 'Payment not found.' }; }
+/** Emails the receipt exactly as the terminal sent it (the customer's copy, or the merchant copy). */
+export async function emailCardReceipt(txn: string, which: 'customer' | 'merchant', to: string): Promise<Res> {
+  const { salon } = await requireCtx();
+  if (!(await ownsTxn(txn))) return { error: 'Payment not found.' };
+  const addr = to.trim();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(addr) || addr.length > 254) return { error: 'Enter a valid email address.' };
+  let r: HitReceipt | undefined;
+  if (which === 'merchant') { const m = await terminalMerchantReceipt(txn); if (m.error) return { error: m.error }; r = m.receipt; }
+  else r = latestReceipt(await storedReceipts(txn));
+  if (!r) return { error: 'There is no receipt for this payment.' };
+  const text = receiptLines(r.text, r.width).join('\n');
+  const html = `<pre style="margin:0 0 14px;font:13px/1.3 'Courier New',Courier,monospace;white-space:pre;color:#0E1116">${esc(text)}</pre>`;
+  const sent = await sendCustomMessage(salon.id, { email: addr }, text, { subject: `Your card receipt from ${salon.name}`, heading: 'Your card receipt', html });
+  return sent.ok ? { notice: 'Receipt sent' } : { error: sent.error };
+}
 export async function terminalCancel(txn: string) { if (await ownsTxn(txn)) await cancelTerminal(txn); }
 export async function terminalPress(txn: string, name: string, label: string) { if (await ownsTxn(txn)) await pressTerminalButton(txn, name, label); }
 
