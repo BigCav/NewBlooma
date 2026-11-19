@@ -97,10 +97,16 @@ export async function cardReceipts(txn: string): Promise<{ receipts: HitReceipt[
 /** The merchant copy of a payment's receipt, asked for from the terminal. */
 export async function cardMerchantReceipt(txn: string): Promise<{ receipt?: HitReceipt; error?: string }> { return (await ownsTxn(txn)) ? terminalMerchantReceipt(txn) : { error: 'Payment not found.' }; }
 /** Emails the receipt exactly as the terminal sent it (the customer's copy, or the merchant copy). */
-export async function emailCardReceipt(txn: string, which: 'customer' | 'merchant', to: string): Promise<Res> {
-  const { salon } = await requireCtx();
+export async function emailCardReceipt(txn: string, which: 'customer' | 'merchant', to = ''): Promise<Res & { needsEmail?: boolean }> {
+  const { sb, salon } = await requireCtx();
   if (!(await ownsTxn(txn))) return { error: 'Payment not found.' };
-  const addr = to.trim();
+  let addr = to.trim();
+  // No address typed: it goes to the email on the sale's client. A walk-in with none on file is asked for one.
+  if (!addr) {
+    const { data: own } = await sb.from('card_payments').select('sales(clients(email))').eq('txn_ref', txn).maybeSingle();
+    addr = String((own as any)?.sales?.clients?.email ?? '').trim();
+    if (!addr) return { needsEmail: true };
+  }
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(addr) || addr.length > 254) return { error: 'Enter a valid email address.' };
   let r: HitReceipt | undefined;
   if (which === 'merchant') { const m = await terminalMerchantReceipt(txn); if (m.error) return { error: m.error }; r = m.receipt; }
@@ -109,7 +115,7 @@ export async function emailCardReceipt(txn: string, which: 'customer' | 'merchan
   const text = receiptLines(r.text, r.width).join('\n');
   const html = `<pre style="margin:0 0 14px;font:13px/1.3 'Courier New',Courier,monospace;white-space:pre;color:#0E1116">${esc(text)}</pre>`;
   const sent = await sendCustomMessage(salon.id, { email: addr }, text, { subject: `Your card receipt from ${salon.name}`, heading: 'Your card receipt', html });
-  return sent.ok ? { notice: 'Receipt sent' } : { error: sent.error };
+  return sent.ok ? { notice: 'Receipt sent to ' + addr } : { error: sent.error };
 }
 export async function terminalCancel(txn: string) { if (await ownsTxn(txn)) await cancelTerminal(txn); }
 export async function terminalPress(txn: string, name: string, label: string) { if (await ownsTxn(txn)) await pressTerminalButton(txn, name, label); }

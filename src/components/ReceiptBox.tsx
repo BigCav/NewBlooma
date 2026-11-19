@@ -17,8 +17,9 @@ export function ReceiptBox({ txn, receipt, signing = false }: { txn: string; rec
   const [asking, setAsking] = useState(false);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
+  const [hint, setHint] = useState('');
   const [error, setError] = useState('');
-  useEffect(() => { setMerchant(null); setAsking(false); setNote(''); setError(''); }, [txn]);
+  useEffect(() => { setMerchant(null); setAsking(false); setNote(''); setHint(''); setError(''); }, [txn]);
   const r = merchant ?? receipt;
   const lines = receiptLines(r.text, r.width);
   const title = merchant ? 'Merchant copy' : signing || r.stage === 'signature' ? 'Receipt to sign' : 'Customer receipt';
@@ -28,28 +29,38 @@ export function ReceiptBox({ txn, receipt, signing = false }: { txn: string; rec
     catch { setError('Could not reach the terminal. Try again.'); }
     finally { setBusy(false); }
   };
-  const send = async () => {
-    setBusy(true); setError(''); setNote('');
-    try { const x = await emailCardReceipt(txn, merchant ? 'merchant' : 'customer', to); if (x.error) setError(x.error); else { setNote(x.notice ?? 'Receipt sent'); setAsking(false); } }
+  // Email goes straight to the customer's email on file; with none on file (a walk-in) an address is asked for.
+  const send = async (typed = false) => {
+    setBusy(true); setError(''); setNote(''); setHint('');
+    try {
+      const x = await emailCardReceipt(txn, merchant ? 'merchant' : 'customer', typed ? to : '');
+      if (x.needsEmail) { setAsking(true); setHint('There is no email on file for this customer. Enter one to send the receipt.'); }
+      else if (x.error) setError(x.error);
+      else { setNote(x.notice ?? 'Receipt sent'); setAsking(false); }
+    }
     catch { setError('Could not send. Try again.'); }
     finally { setBusy(false); }
   };
   return (
-    <section aria-label={title} style={S('width:100%;max-width:360px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;text-align:left')}>
+    <section aria-label={title} style={S('width:100%;max-width:360px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;text-align:center')}>
       <div style={S('font-size:13px;font-weight:600;color:#5E6673')}>{title}</div>
-      <pre style={S(`margin:0;padding:14px;border:1px solid #E6E8EC;border-radius:14px;background:#FFFFFF;color:#0E1116;font:12.5px/1.3 ${MONO};white-space:pre;overflow-x:auto;max-height:260px;overflow-y:auto`)}>{lines.join('\n')}</pre>
-      <div style={S('display:flex;flex-wrap:wrap;gap:8px')}>
+      {/* The receipt keeps its own spacing; the block as a whole sits in the middle of the box. */}
+      <div style={S('padding:14px;border:1px solid #E6E8EC;border-radius:14px;background:#FFFFFF;overflow:auto;max-height:280px')}>
+        <pre style={S(`margin:0 auto;width:max-content;max-width:none;text-align:left;color:#0E1116;font:12.5px/1.3 ${MONO};white-space:pre`)}>{lines.join('\n')}</pre>
+      </div>
+      <div style={S('display:flex;flex-wrap:wrap;justify-content:center;gap:8px')}>
         <button type="button" className="ghost" onClick={() => printReceipt(lines, r.width)} style={S(SMALL)}>Print</button>
-        {!signing && r.stage !== 'signature' && !asking && <button type="button" className="ghost" onClick={() => { setAsking(true); setNote(''); setError(''); }} style={S(SMALL)}>Email</button>}
+        {!signing && r.stage !== 'signature' && !asking && <button type="button" className="ghost" onClick={() => send()} disabled={busy} style={S(SMALL + dim(busy))}>{busy && !asking ? 'Sending…' : 'Email'}</button>}
         {!signing && r.stage !== 'signature' && !merchant && <button type="button" className="ghost" onClick={getMerchant} disabled={busy} style={S(SMALL + dim(busy))}>Merchant copy</button>}
         {!!merchant && <button type="button" className="ghost" onClick={() => setMerchant(null)} style={S(SMALL)}>Customer copy</button>}
       </div>
       {asking && (
-        <div style={S('display:flex;gap:8px')}>
+        <div style={S('display:flex;gap:8px;text-align:left')}>
           <input type="email" inputMode="email" autoComplete="email" aria-label="Email address for the receipt" value={to} onChange={(e) => { setTo(e.target.value); setError(''); }} placeholder="Email address" style={S(FIELD_IN + ';flex:1 1 auto;min-width:0')} />
-          <button type="button" onClick={send} disabled={busy} style={S(SMALL + ';background:#0E1116;color:#FFFFFF;border-color:#0E1116' + dim(busy))}>{busy ? 'Sending…' : 'Send'}</button>
+          <button type="button" onClick={() => send(true)} disabled={busy} style={S(SMALL + ';background:#0E1116;color:#FFFFFF;border-color:#0E1116' + dim(busy))}>{busy ? 'Sending…' : 'Send'}</button>
         </div>
       )}
+      {!!hint && <p style={S('margin:0;font-size:13px;color:#5E6673')}>{hint}</p>}
       {!!note && <Notice>{note}</Notice>}
       {!!error && <FieldError>{error}</FieldError>}
     </section>
