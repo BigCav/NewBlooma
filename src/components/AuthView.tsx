@@ -90,12 +90,13 @@ export function AuthView({ mode: initial, invite }: { mode: Mode; invite?: { tok
               {mode === 'up' && !invite && <LabelledField id="si-name" label="Your name"><input id="si-name" className="bkf" type="text" value={name} onChange={(e) => { setName(e.target.value); setError(''); }} placeholder="Full name" autoComplete="name" style={S(INPUT)} /></LabelledField>}
               {mode !== 'new' && <LabelledField id="si-email" label="Email"><input id="si-email" className="bkf" type="email" value={email} onChange={(e) => { setEmail(e.target.value); setError(''); }} placeholder="you@salon.com" autoComplete="email" style={S(INPUT)} /></LabelledField>}
               {mode !== 'reset' && (
-                <div style={S('display:flex;flex-direction:column;gap:6px')}>
-                  <div style={S('display:flex;align-items:center;justify-content:space-between;gap:12px')}>
-                    <label htmlFor="si-pw" style={S('font-size:14px;font-weight:600')}>{mode === 'new' ? 'New password' : 'Password'}</label>
-                    {mode === 'in' && <button type="button" onClick={() => goMode('reset')} style={S('border:0;background:transparent;padding:4px 0;color:#5B3DF5;font-size:13.5px;font-weight:600')}>Forgot password?</button>}
+                <div style={S('display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px 12px')}>
+                  {/* Forgot password sits after the password box in the page's order (so Tab from Email goes to the password), and is drawn at the top right of it. */}
+                  <label htmlFor="si-pw" style={S('grid-column:1;grid-row:1;font-size:14px;font-weight:600')}>{mode === 'new' ? 'New password' : 'Password'}</label>
+                  <div style={S('grid-column:1 / -1;grid-row:2;min-width:0')}>
+                    <PasswordInput id="si-pw" value={pw} onChange={(v) => { setPw(v); setError(''); }} show={show} onToggle={() => setShow(!show)} placeholder="Password" autoComplete={mode === 'in' ? 'current-password' : 'new-password'} />
                   </div>
-                  <PasswordInput id="si-pw" value={pw} onChange={(v) => { setPw(v); setError(''); }} show={show} onToggle={() => setShow(!show)} placeholder="Password" autoComplete={mode === 'in' ? 'current-password' : 'new-password'} />
+                  {mode === 'in' && <button type="button" onClick={() => goMode('reset')} style={S('grid-column:2;grid-row:1;border:0;background:transparent;padding:4px 0;color:#5B3DF5;font-size:13.5px;font-weight:600')}>Forgot password?</button>}
                 </div>
               )}
               {!!error && <FieldError>{error}</FieldError>}
