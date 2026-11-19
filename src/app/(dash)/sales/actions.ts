@@ -170,7 +170,12 @@ export async function sendReceipt(saleId: string): Promise<Res> {
   if (!it) return { error: 'Sale not found.' };
   if (!it.c) return { error: 'This sale has no client to send a receipt to.' };
   const text = `Hi ${it.first}, here is your receipt${it.when ? ` from ${it.when}` : ''}.\n${it.text} Thank you!`;
-  const html = mailP(`Hi ${it.first}, thanks for visiting. Here is your receipt.`) + it.meta + it.table;
-  const r = await sendCustomMessage(salon.id, { phone: it.c.phone, email: it.c.email }, text, { subject: `Your receipt from ${salon.name}`, heading: 'Your receipt', html, footer: it.refNo ? `${salon.name} · Booking ${bookingRef(it.refNo)}` : undefined });
+  // A sale paid on the terminal: the card receipt the terminal sent goes along as a PDF.
+  const { data: cp } = await sb.from('card_payments').select('txn_ref').eq('sale_id', saleId).eq('kind', 'terminal').eq('status', 'approved').order('created_at', { ascending: false }).limit(1).maybeSingle();
+  const slip = cp?.txn_ref ? latestReceipt(await storedReceipts(cp.txn_ref)) : undefined;
+  const attachments = slip ? [{ filename: 'card-receipt.pdf', content: Buffer.from(await cardReceiptPdf(receiptLines(slip.text, slip.width), slip.width)).toString('base64') }] : undefined;
+  const html = mailP(`Hi ${it.first}, thanks for visiting. Here is your receipt.`) + it.meta + it.table
+    + (slip ? `<p style="margin:18px 0 0;font-size:13.5px;color:#5E6673">Your card receipt is attached as a PDF.</p>` : '');
+  const r = await sendCustomMessage(salon.id, { phone: it.c.phone, email: it.c.email }, text, { subject: `Your receipt from ${salon.name}`, heading: 'Your receipt', html, footer: it.refNo ? `${salon.name} · Booking ${bookingRef(it.refNo)}` : undefined, attachments });
   return r.ok ? { notice: `Receipt sent to ${it.first}` } : { error: r.error };
 }
