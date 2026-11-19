@@ -6,7 +6,8 @@ import { requireCtx, friendly, ownsTxn } from '@/lib/session';
 import { getCreds, releaseOnline, startOnline, startTerminal, terminalInFlight, refundByCard, pollTerminal, pressTerminalButton, cancelTerminal, storedReceipts, terminalMerchantReceipt } from '@/lib/windcave';
 import { latestReceipt, receiptLines, type HitReceipt } from '@/lib/hit-receipt';
 import { sendCustomMessage } from '@/lib/notify';
-import { esc, mailP } from '@/lib/email-layout';
+import { mailP } from '@/lib/email-layout';
+import { cardReceiptBody, cardSlipPanel, itemisedEmail } from '@/lib/receipt-email';
 import { dateLong, dollars, toCents } from '@/lib/format';
 import { bookingRef } from '@/lib/display';
 import { firstName } from '@/lib/people';
@@ -117,10 +118,7 @@ export async function emailCardReceipt(txn: string, which: 'customer' | 'merchan
   const { data: own } = txn.startsWith('TM') && which === 'customer' ? await sb.from('card_payments').select('sale_id').eq('txn_ref', txn).maybeSingle() : { data: null };
   const it = own?.sale_id ? await itemisedReceipt(sb, own.sale_id, salon.timezone) : null;
   const text = it ? `${it.text}\n\nCard receipt\n${eftpos}` : eftpos;
-  // A full-width panel with the receipt centred in it (the receipt's own spacing is untouched).
-  const panel = `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;margin:0 0 14px;border-collapse:separate"><tr><td align="center" bgcolor="#F4F5F7" style="background:#F4F5F7;border:1px solid #E6E8EC;border-radius:14px;padding:20px 8px"><pre style="display:inline-block;margin:0 auto;text-align:left;font:14px/1.4 'Courier New',Courier,monospace;white-space:pre;color:#0E1116">${esc(text)}</pre></td></tr></table>`;
-  const label = (t: string) => `<p style="margin:18px 0 8px;font-size:13px;font-weight:600;color:#5E6673">${t}</p>`;
-  const html = it ? mailP(`Hi ${it.first}, thanks for visiting. Here is your receipt.`) + it.meta + it.table + label('Card receipt') + panel : panel;
+  const html = it ? cardReceiptBody(it, eftpos) : cardSlipPanel(eftpos);
   const sent = await sendCustomMessage(salon.id, { email: addr }, text, { subject: it ? `Your receipt from ${salon.name}` : `Your card receipt from ${salon.name}`, heading: it ? 'Your receipt' : 'Your card receipt', html, footer: it?.refNo ? `${salon.name} · Booking ${bookingRef(it.refNo)}` : undefined });
   return sent.ok ? { notice: 'Receipt sent to ' + addr } : { error: sent.error };
 }
@@ -150,32 +148,12 @@ export async function refundSale(saleId: string, unmatched = false): Promise<Res
   revalidatePath('/sales'); return { notice: 'Refund issued' };
 }
 
-/** A sale's itemised receipt (services, discount, tip, GST, total) as plain text and as email html: the part of a receipt email that lists what was bought. */
+/** A sale with its itemised receipt made up for an email (see lib/receipt-email), or null if there is no such sale. */
 async function itemisedReceipt(sb: any, saleId: string, tz: string) {
   const { data: s } = await sb.from('sales').select('bookings(ref_no),status,method,subtotal_cents,discount_cents,discount_note,tip_cents,tax_cents,tax_inclusive,total_cents,paid_at,clients(name,phone,email),sale_items(label,qty,price_cents)').eq('id', saleId).single();
   if (!s) return null;
   const c: any = s.clients;
-  const first = firstName(c?.name, 'there');
-  const lines = (s.sale_items as any[]).map((i) => `${i.label}${i.qty > 1 ? ` x${i.qty}` : ''} ${dollars(i.price_cents * i.qty)}`);
-  if (s.discount_cents) lines.push(`Discount${s.discount_note ? ` (${s.discount_note})` : ''} -${dollars(s.discount_cents)}`);
-  if (s.tip_cents) lines.push(`Tip ${dollars(s.tip_cents)}`);
-  if (!s.tax_inclusive && s.tax_cents) lines.push(`GST ${dollars(s.tax_cents)}`);
-  const how = s.method === 'gift_card' ? 'gift card' : s.method;
-  const when = s.paid_at ? dateLong(s.paid_at, tz) : '';
-  const text = `${lines.join('\n')}\nTotal ${dollars(s.total_cents)}${how ? `, paid by ${how}` : ''}.`;
-  const e = (x: string) => x.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]!));
-  const row = (l: string, v: string, bold = false, top = false) => `<tr><td style="padding:${top ? '12px' : '6px'} 0 6px;${top ? 'border-top:1px solid #E6E8EC;' : ''}font-size:${bold ? 16 : 14.5}px;font-weight:${bold ? 600 : 400};color:${bold ? '#0E1116' : '#3A414B'}">${e(l)}</td><td style="padding:${top ? '12px' : '6px'} 0 6px;${top ? 'border-top:1px solid #E6E8EC;' : ''}text-align:right;white-space:nowrap;font-size:${bold ? 16 : 14.5}px;font-weight:${bold ? 600 : 400}">${e(v)}</td></tr>`;
-  const rows = [
-    ...(s.sale_items as any[]).map((i) => row(`${i.label}${i.qty > 1 ? ` × ${i.qty}` : ''}`, dollars(i.price_cents * i.qty))),
-    ...(s.discount_cents ? [row(`Discount${s.discount_note ? ` (${s.discount_note})` : ''}`, '-' + dollars(s.discount_cents))] : []),
-    ...(s.tip_cents ? [row('Tip', dollars(s.tip_cents))] : []),
-    ...(!s.tax_inclusive && s.tax_cents ? [row('GST', dollars(s.tax_cents))] : []),
-    row('Total', dollars(s.total_cents), true, true),
-    ...(s.tax_inclusive && s.tax_cents ? [`<tr><td colspan="2" style="padding:0 0 4px;font-size:12.5px;color:#5E6673">Includes ${e(dollars(s.tax_cents))} GST</td></tr>`] : []),
-  ].join('');
-  const meta = `<div style="font-size:13px;color:#5E6673;margin:-6px 0 14px">${[when, how ? 'Paid by ' + e(how) : ''].filter(Boolean).join(' · ')}</div>`;
-  const table = `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse">${rows}</table>`;
-  return { c, first, text, when, how, meta, table, refNo: (s.bookings?.ref_no as number | undefined) ?? null };
+  return { c, refNo: (s.bookings?.ref_no as number | undefined) ?? null, ...itemisedEmail({ ...s, clientName: c?.name }, tz) };
 }
 
 export async function sendReceipt(saleId: string): Promise<Res> {
