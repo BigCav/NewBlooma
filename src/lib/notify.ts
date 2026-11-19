@@ -23,7 +23,8 @@ type Row = { id: string; salon_id: string; booking_id: string | null; channel: '
 
 const footerFor = (salon: { name: string; phone?: string | null }) => `${salon.name}${salon.phone ? ` · ${salon.phone}` : ''}`;
 
-type Mail = { subject: string; text: string; html: string; from: string; replyTo?: string };
+type Attachment = { filename: string; content: string /* base64 */ };
+type Mail = { subject: string; text: string; html: string; from: string; replyTo?: string; attachments?: Attachment[] };
 
 async function compose(r: Row): Promise<Mail | null> {
   const sb = supabaseAdmin();
@@ -83,13 +84,13 @@ async function compose(r: Row): Promise<Mail | null> {
 async function sendEmail(to: string, m: Mail) {
   if (!viaSupabase() && process.env.RESEND_API_KEY) {
     const res = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: m.from, to, subject: m.subject, text: m.text, html: m.html, ...(m.replyTo ? { reply_to: m.replyTo } : {}) }) });
+      body: JSON.stringify({ from: m.from, to, subject: m.subject, text: m.text, html: m.html, ...(m.replyTo ? { reply_to: m.replyTo } : {}), ...(m.attachments?.length ? { attachments: m.attachments } : {}) }) });
     if (!res.ok) { const b = await res.json().catch(() => ({})) as { message?: string }; throw new Error(`email ${res.status}${b.message ? ': ' + b.message : ''}`); }
     return;
   }
   const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-email`, { method: 'POST',
     headers: { Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: m.from, to, subject: m.subject, text: m.text, html: m.html, ...(m.replyTo ? { reply_to: m.replyTo } : {}) }) });
+    body: JSON.stringify({ from: m.from, to, subject: m.subject, text: m.text, html: m.html, ...(m.replyTo ? { reply_to: m.replyTo } : {}), ...(m.attachments?.length ? { attachments: m.attachments } : {}) }) });
   const b = await res.json().catch(() => ({})) as { sent?: boolean; error?: string };
   if (!res.ok || !b.sent) throw new Error(`email ${res.status}${b.error ? ': ' + b.error : ''}`);
 }
@@ -131,7 +132,7 @@ export async function processOutbox(limit = 50) {
 type Action = string | { label: string; url: string };
 
 /** Sends a one-off message typed by staff, right away, and keeps a record of it in the outbox. `email` customises the subject, heading and body of the email version. */
-export async function sendCustomMessage(salonId: string, to: { phone?: string | null; email?: string | null }, text: string, email?: { subject: string; html?: string; heading?: string; footer?: string }, action?: Action): Promise<{ ok: true; via: 'sms' | 'email' } | { ok: false; error: string }> {
+export async function sendCustomMessage(salonId: string, to: { phone?: string | null; email?: string | null }, text: string, email?: { subject: string; html?: string; heading?: string; footer?: string; attachments?: Attachment[] }, action?: Action): Promise<{ ok: true; via: 'sms' | 'email' } | { ok: false; error: string }> {
   const sb = supabaseAdmin();
   const { data: salon } = await sb.from('salons').select('name,phone,email').eq('id', salonId).single();
   if (!salon) return { ok: false, error: 'Salon not found.' };
@@ -149,7 +150,7 @@ export async function sendCustomMessage(salonId: string, to: { phone?: string | 
       const htmlHasAction = !!act && !!email?.html && email.html.includes(esc(act.url));
       const body = (email?.html ?? text.split(/\n+/).map(mailP).join('')) + (act && !htmlHasAction ? mailButton(act.label, act.url) : '');
       await sendEmail(address, { from: fromFor(salon.name), subject: email?.subject ?? `Message from ${salon.name}`, text: `${text}${act && !textHasAction ? `\n\n${act.label}: ${act.url}` : ''}\n\n${foot}`,
-        html: mailShell({ brand: salon.name, heading: email?.heading ?? 'You have a message', body, footer: foot, preheader: text.slice(0, 90) }), replyTo: salon.email || undefined });
+        html: mailShell({ brand: salon.name, heading: email?.heading ?? 'You have a message', body, footer: foot, preheader: text.slice(0, 90) }), replyTo: salon.email || undefined, attachments: email?.attachments });
     }
   } catch (e: any) {
     await sb.from('notifications_outbox').insert({ ...row, status: 'failed', attempts: 1, error: String(e.message).slice(0, 200) });

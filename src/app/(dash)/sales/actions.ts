@@ -7,7 +7,8 @@ import { getCreds, releaseOnline, startOnline, startTerminal, terminalInFlight, 
 import { latestReceipt, receiptLines, type HitReceipt } from '@/lib/hit-receipt';
 import { sendCustomMessage } from '@/lib/notify';
 import { mailP } from '@/lib/email-layout';
-import { cardReceiptBody, cardSlipPanel, itemisedEmail } from '@/lib/receipt-email';
+import { cardReceiptBody, itemisedEmail } from '@/lib/receipt-email';
+import { cardReceiptPdf } from '@/lib/receipt-pdf';
 import { dateLong, dollars, toCents } from '@/lib/format';
 import { bookingRef } from '@/lib/display';
 import { firstName } from '@/lib/people';
@@ -113,13 +114,20 @@ export async function emailCardReceipt(txn: string, which: 'customer' | 'merchan
   if (which === 'merchant') { const m = await terminalMerchantReceipt(txn); if (m.error) return { error: m.error }; r = m.receipt; }
   else r = latestReceipt(await storedReceipts(txn));
   if (!r) return { error: 'There is no receipt for this payment.' };
-  const eftpos = receiptLines(r.text, r.width).join('\n');
+  const slipLines = receiptLines(r.text, r.width);
+  const eftpos = slipLines.join('\n');
   // A payment's email lists what was bought first (the same itemised receipt as Send receipt), then the card slip exactly as the terminal sent it.
   const { data: own } = txn.startsWith('TM') && which === 'customer' ? await sb.from('card_payments').select('sale_id').eq('txn_ref', txn).maybeSingle() : { data: null };
   const it = own?.sale_id ? await itemisedReceipt(sb, own.sale_id, salon.timezone) : null;
-  const text = it ? `${it.text}\n\nCard receipt\n${eftpos}` : eftpos;
-  const html = it ? cardReceiptBody(it, eftpos) : cardSlipPanel(eftpos);
-  const sent = await sendCustomMessage(salon.id, { email: addr }, text, { subject: it ? `Your receipt from ${salon.name}` : `Your card receipt from ${salon.name}`, heading: it ? 'Your receipt' : 'Your card receipt', html, footer: it?.refNo ? `${salon.name} · Booking ${bookingRef(it.refNo)}` : undefined });
+  const refund = txn.startsWith('RF');
+  const attached = refund ? 'Your card refund receipt is attached as a PDF.' : which === 'merchant' ? 'The merchant copy of the card receipt is attached as a PDF.' : 'Your card receipt is attached as a PDF.';
+  // The plain-text version of the email carries the slip too, for mail apps that show no attachments.
+  const text = `${it ? it.text + '\n\n' : ''}${attached}\n\n${eftpos}`;
+  const html = it ? cardReceiptBody(it) : mailP(attached);
+  // The card receipt itself is a PDF attachment: the terminal's lines exactly as sent, on one receipt-sized page.
+  const pdf = Buffer.from(await cardReceiptPdf(slipLines, r.width, refund ? 'Card refund receipt' : which === 'merchant' ? 'Merchant copy' : 'Card receipt')).toString('base64');
+  const filename = refund ? 'refund-receipt.pdf' : which === 'merchant' ? 'merchant-copy.pdf' : 'card-receipt.pdf';
+  const sent = await sendCustomMessage(salon.id, { email: addr }, text, { subject: it ? `Your receipt from ${salon.name}` : `Your card receipt from ${salon.name}`, heading: it ? 'Your receipt' : 'Your card receipt', html, footer: it?.refNo ? `${salon.name} · Booking ${bookingRef(it.refNo)}` : undefined, attachments: [{ filename, content: pdf }] });
   return sent.ok ? { notice: 'Receipt sent to ' + addr } : { error: sent.error };
 }
 export async function terminalCancel(txn: string) { if (await ownsTxn(txn)) await cancelTerminal(txn); }

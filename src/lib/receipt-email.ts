@@ -32,11 +32,7 @@ export function itemisedEmail(s: SaleForReceipt, tz: string) {
   return { first, text, when, how, meta, table };
 }
 
-/** The card slip exactly as the terminal sent it: a full-width panel with the receipt centred in it (its own spacing is untouched). */
-export const cardSlipPanel = (slip: string) =>
-  `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;margin:0 0 14px;border-collapse:separate"><tr><td align="center" bgcolor="#F4F5F7" style="background:#F4F5F7;border:1px solid #E6E8EC;border-radius:14px;padding:20px 8px"><pre style="display:inline-block;margin:0 auto;text-align:left;font:14px/1.4 'Courier New',Courier,monospace;white-space:pre;color:#0E1116">${esc(slip)}</pre></td></tr></table>`;
-
-/** The body of the card receipt email: what was bought, then the card slip. */
-export const cardReceiptBody = (it: ReturnType<typeof itemisedEmail>, slip: string) =>
+/** The body of the card receipt email: what was bought, and a line saying the card receipt (exactly as the terminal sent it) is attached as a PDF. */
+export const cardReceiptBody = (it: ReturnType<typeof itemisedEmail>) =>
   mailP(`Hi ${it.first}, thanks for visiting. Here is your receipt.`) + it.meta + it.table
-  + `<p style="margin:18px 0 8px;font-size:13px;font-weight:600;color:#5E6673">Card receipt</p>` + cardSlipPanel(slip);
+  + `<p style="margin:18px 0 0;font-size:13.5px;color:#5E6673">Your card receipt is attached as a PDF.</p>`;
