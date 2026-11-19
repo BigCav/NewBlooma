@@ -9,5 +9,5 @@ export default async function Home() {
   const sb = await supabaseServer();
   const { data: { user } } = await sb.auth.getUser();
   // Signed-in owners can still see the landing page; the header offers a way back to the dashboard.
-  return <LandingView dash={user ? clientHome(user.user_metadata) ?? '/calendar' : null} />;
+  return <LandingView dash={user && !clientHome(user.user_metadata) ? '/calendar' : null} />;
 }

@@ -12,6 +12,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ i
   if (invite && !inv) redirect(`/join/${encodeURIComponent(invite)}`);
   const sb = await supabaseServer();
   const { data: { user } } = await sb.auth.getUser();
-  if (user) redirect(inv ? `/join/${encodeURIComponent(inv.token)}` : clientHome(user.user_metadata) ?? '/calendar');
+  // A customer's sign-in (made when saving details at booking) is not a staff session: show the form so a staff member can sign in over it.
+  if (user && (inv || !clientHome(user.user_metadata))) redirect(inv ? `/join/${encodeURIComponent(inv.token)}` : '/calendar');
   return <AuthView mode="in" invite={inv} />;
 }

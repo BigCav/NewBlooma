@@ -199,13 +199,13 @@ label:has(> input:focus-visible),label:has(> textarea:focus-visible),label:has(>
 @keyframes moFade{from{opacity:0}}
 @keyframes moToast{from{opacity:0;transform:translateY(12px)}}
 /* Cards, tiles, stat boxes, rows and form fields: the children of a page's sections rise in, the first few staggered by 40ms. */
-.enter :is(main,section,form,fieldset,.page,.flow,.d-cal,.bk-flow,.acct-wrap,[data-rise])>:where(:not(nav,.sk,.sheet,[hidden],[aria-hidden=true],[data-close],script,style)):nth-child(-n+12){animation:moRise .34s cubic-bezier(.2,.7,.2,1) backwards}
-.enter :is(main,section,form,fieldset,.page,.flow,.d-cal,.bk-flow,.acct-wrap,[data-rise])>:where(:not(nav,.sk,.sheet,[hidden],[aria-hidden=true],[data-close],script,style)):nth-child(2){animation-delay:40ms}
-.enter :is(main,section,form,fieldset,.page,.flow,.d-cal,.bk-flow,.acct-wrap,[data-rise])>:where(:not(nav,.sk,.sheet,[hidden],[aria-hidden=true],[data-close],script,style)):nth-child(3){animation-delay:80ms}
-.enter :is(main,section,form,fieldset,.page,.flow,.d-cal,.bk-flow,.acct-wrap,[data-rise])>:where(:not(nav,.sk,.sheet,[hidden],[aria-hidden=true],[data-close],script,style)):nth-child(4){animation-delay:120ms}
-.enter :is(main,section,form,fieldset,.page,.flow,.d-cal,.bk-flow,.acct-wrap,[data-rise])>:where(:not(nav,.sk,.sheet,[hidden],[aria-hidden=true],[data-close],script,style)):nth-child(5){animation-delay:160ms}
-.enter :is(main,section,form,fieldset,.page,.flow,.d-cal,.bk-flow,.acct-wrap,[data-rise])>:where(:not(nav,.sk,.sheet,[hidden],[aria-hidden=true],[data-close],script,style)):nth-child(6){animation-delay:200ms}
-.enter :is(main,section,form,fieldset,.page,.flow,.d-cal,.bk-flow,.acct-wrap,[data-rise])>:where(:not(nav,.sk,.sheet,[hidden],[aria-hidden=true],[data-close],script,style)):nth-child(n+7){animation-delay:240ms}
+.enter :is(main,section,form,fieldset,.page,.flow,.d-cal,.bk-flow,.acct-wrap,[data-rise])>:where(:not(nav,.sk,.sk-desk,.sk-page,.cal-root,.sheet,[hidden],[aria-hidden=true],[data-close],script,style)):nth-child(-n+12){animation:moRise .34s cubic-bezier(.2,.7,.2,1) backwards}
+.enter :is(main,section,form,fieldset,.page,.flow,.d-cal,.bk-flow,.acct-wrap,[data-rise])>:where(:not(nav,.sk,.sk-desk,.sk-page,.cal-root,.sheet,[hidden],[aria-hidden=true],[data-close],script,style)):nth-child(2){animation-delay:40ms}
+.enter :is(main,section,form,fieldset,.page,.flow,.d-cal,.bk-flow,.acct-wrap,[data-rise])>:where(:not(nav,.sk,.sk-desk,.sk-page,.cal-root,.sheet,[hidden],[aria-hidden=true],[data-close],script,style)):nth-child(3){animation-delay:80ms}
+.enter :is(main,section,form,fieldset,.page,.flow,.d-cal,.bk-flow,.acct-wrap,[data-rise])>:where(:not(nav,.sk,.sk-desk,.sk-page,.cal-root,.sheet,[hidden],[aria-hidden=true],[data-close],script,style)):nth-child(4){animation-delay:120ms}
+.enter :is(main,section,form,fieldset,.page,.flow,.d-cal,.bk-flow,.acct-wrap,[data-rise])>:where(:not(nav,.sk,.sk-desk,.sk-page,.cal-root,.sheet,[hidden],[aria-hidden=true],[data-close],script,style)):nth-child(5){animation-delay:160ms}
+.enter :is(main,section,form,fieldset,.page,.flow,.d-cal,.bk-flow,.acct-wrap,[data-rise])>:where(:not(nav,.sk,.sk-desk,.sk-page,.cal-root,.sheet,[hidden],[aria-hidden=true],[data-close],script,style)):nth-child(6){animation-delay:200ms}
+.enter :is(main,section,form,fieldset,.page,.flow,.d-cal,.bk-flow,.acct-wrap,[data-rise])>:where(:not(nav,.sk,.sk-desk,.sk-page,.cal-root,.sheet,[hidden],[aria-hidden=true],[data-close],script,style)):nth-child(n+7){animation-delay:240ms}
 /* A step whose whole body is one wrapper: the wrapper stays still and its own children rise instead. */
 .enter [data-rise]>:only-child{animation:none}
 .enter [data-rise]>:only-child>:where(:not(nav,.sk,[hidden],[aria-hidden=true])):nth-child(-n+12){animation:moRise .34s cubic-bezier(.2,.7,.2,1) backwards}
